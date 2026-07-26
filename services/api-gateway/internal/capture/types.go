@@ -176,6 +176,23 @@ type IssuedTemplateBarcodes struct {
 	Pages               []IssuedPageBarcode `json:"pages"`
 }
 
+type IssueStudentBarcodesInput struct {
+	StudentIDs []string `json:"student_ids"`
+}
+
+type IssuedStudentBarcodeSet struct {
+	StudentID   string              `json:"student_id"`
+	SheetSerial string              `json:"sheet_serial"`
+	Pages       []IssuedPageBarcode `json:"pages"`
+}
+
+type IssuedStudentBarcodes struct {
+	TemplateID          string                    `json:"template_id"`
+	TemplateContentHash string                    `json:"template_content_hash"`
+	KeyID               string                    `json:"kid"`
+	Students            []IssuedStudentBarcodeSet `json:"students"`
+}
+
 type FileResultInput struct {
 	TaskID              string             `json:"task_id"`
 	LeaseToken          string             `json:"lease_token"`
@@ -373,6 +390,7 @@ type BatchDetail struct {
 
 type Store interface {
 	IssueTemplateBarcodes(ctx context.Context, tenantID, templateID string) (IssuedTemplateBarcodes, error)
+	IssueStudentBarcodes(ctx context.Context, tenantID, templateID string, input IssueStudentBarcodesInput) (IssuedStudentBarcodes, error)
 	CreateBatch(ctx context.Context, tenantID, examID, actorID string, input CreateBatchInput) (Batch, error)
 	ListBatches(ctx context.Context, tenantID, examID string) ([]Batch, error)
 	GetBatch(ctx context.Context, tenantID, batchID string) (Batch, error)

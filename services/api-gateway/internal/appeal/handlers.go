@@ -61,9 +61,11 @@ func (h *Handler) ListAppeals(w http.ResponseWriter, r *http.Request) {
 		filter.AssignedTo = user.ID
 	} else if !hasPermission(user, "appeal:manage") {
 		studentID, ok := scopedStudentID(user)
-		if ok {
-			filter.StudentID = studentID
+		if !ok {
+			httpx.Error(w, r, http.StatusForbidden, "student_scope_required", "student scope is required")
+			return
 		}
+		filter.StudentID = studentID
 	}
 	items, err := h.store.ListAppeals(r.Context(), user.TenantID, filter)
 	if err != nil {
@@ -80,6 +82,15 @@ func (h *Handler) ListAppeals(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetAppeal(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
+	scopedID := ""
+	if !hasPermission(user, "appeal:manage") && !hasPermission(user, "appeal:work") {
+		studentID, ok := scopedStudentID(user)
+		if !ok {
+			httpx.Error(w, r, http.StatusForbidden, "student_scope_required", "student scope is required")
+			return
+		}
+		scopedID = studentID
+	}
 	item, err := h.store.GetAppeal(r.Context(), user.TenantID, r.PathValue("id"))
 	if err != nil {
 		writeStoreError(w, r, err)
@@ -92,8 +103,7 @@ func (h *Handler) GetAppeal(w http.ResponseWriter, r *http.Request) {
 		}
 		item = teacherAppealView(item)
 	} else if !hasPermission(user, "appeal:manage") {
-		studentID, ok := scopedStudentID(user)
-		if ok && item.StudentID != studentID {
+		if item.StudentID != scopedID {
 			httpx.Error(w, r, http.StatusForbidden, "appeal_student_scope_violation", "student can only view own appeal")
 			return
 		}

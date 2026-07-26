@@ -390,12 +390,6 @@ JOIN submission sub ON sub.tenant_id = ot.tenant_id AND sub.id = ot.submission_i
 WHERE ot.tenant_id = $1 AND sub.exam_id::text = $2 AND ot.deleted_at IS NULL AND ot.status = 'failed'`,
 		},
 		{
-			code:    "score_anomaly_unconfirmed",
-			message: "there are unconfirmed score anomalies",
-			query: `SELECT COUNT(*) FROM review_task
-WHERE tenant_id = $1 AND exam_id::text = $2 AND deleted_at IS NULL AND source = 'score_anomaly' AND status NOT IN ('submitted', 'completed')`,
-		},
-		{
 			code:    "missing_final_grades",
 			message: "there are answer segments without final grades",
 			query: `SELECT COUNT(*) FROM answer_segment seg

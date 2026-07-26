@@ -91,5 +91,13 @@
 | STORY-054 | 考试配置、试卷模板、题目、Rubric 和开考准备 | Approved |
 | STORY-055 | 采集批次、扫描导入、页面处理、模板配准和自动切题 | Approved |
 | STORY-056 | 客观题评分引擎和专业人工阅卷工作台 | Approved |
+| STORY-057 | Grading Agent 生产契约（lab 智能体接入线） | Approved |
+| STORY-058 | Grading Agent 服务实现（lab 智能体接入线） | Approved |
+| STORY-059 | 平台接入与评分结果落库（lab 智能体接入线） | Approved |
+| STORY-060 | 客观题自动化产能兑现与答卷完整性保障 | Planned |
 
-STORY-053～061 按 V1.0 正式产品交付总控任务继续推进，不提前宣称 Production Ready。
+## 编号语义说明（2026-07-26）
+
+`docs/deployment/production-readiness-roadmap.md` 中 V1.0 总控计划的 STORY-057～059（主观题 AI/质量中心/学生端）与实际实施的 STORY-057～059（lab 智能体接入三部曲）存在历史错位。**以本索引为准**：057～059 已被 lab 接入线占用并完成；总控计划中对应的能力（阅卷质量中心、学生端/申诉/报告）顺延至 STORY-061 之后重新编号。规划文档中引用旧编号处以本表为准，不再回改历史文档。
+
+STORY-053 之后按 V1.0 正式产品交付总控任务继续推进，不提前宣称 Production Ready。

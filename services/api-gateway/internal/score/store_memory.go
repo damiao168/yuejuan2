@@ -50,7 +50,6 @@ type MemoryStore struct {
 	reviewTasks  []TaskSeed
 	arbTasks     []TaskSeed
 	ocrTasks     []TaskSeed
-	scoreAnomaly []TaskSeed
 }
 
 func NewMemoryStore() *MemoryStore {
@@ -143,12 +142,6 @@ func (s *MemoryStore) AddOCRTask(seed TaskSeed) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.ocrTasks = append(s.ocrTasks, seed)
-}
-
-func (s *MemoryStore) AddScoreAnomaly(seed TaskSeed) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.scoreAnomaly = append(s.scoreAnomaly, seed)
 }
 
 func (s *MemoryStore) FinalizeExam(_ context.Context, tenantID string, examID string, actorID string) (FinalizeResult, error) {
@@ -423,9 +416,6 @@ func (s *MemoryStore) qualityLocked(examID string, requirePendingPublish bool) Q
 	}
 	if count := countTasks(s.ocrTasks, examID, func(status string) bool { return status == "failed" }); count > 0 {
 		issues = append(issues, QualityIssue{Code: "ocr_failed_unhandled", Message: "there are failed OCR tasks", Blocking: true, Count: count})
-	}
-	if count := countTasks(s.scoreAnomaly, examID, func(status string) bool { return status != "confirmed" }); count > 0 {
-		issues = append(issues, QualityIssue{Code: "score_anomaly_unconfirmed", Message: "there are unconfirmed score anomalies", Blocking: true, Count: count})
 	}
 	missing := 0
 	for _, seg := range s.segments {

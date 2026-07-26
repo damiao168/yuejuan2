@@ -354,6 +354,7 @@ func NewRouterComplete(cfg config.Config, logg *logger.Logger, checkers []deps.C
 	mux.Handle("POST /api/v1/answer-sheet-templates/{id}/lock", requireExamManage(paperHandler.LockTemplate))
 	mux.Handle("POST /api/v1/answer-sheet-templates/{id}/clone", requireExamManage(paperHandler.CloneTemplate))
 	mux.Handle("POST /api/v1/answer-sheet-templates/{id}/page-barcodes", requireExamManage(captureHandler.IssueTemplateBarcodes))
+	mux.Handle("POST /api/v1/answer-sheet-templates/{id}/student-barcodes", requireExamManage(captureHandler.IssueStudentBarcodes))
 	mux.Handle("GET /api/v1/exams/{examId}/readiness", requireExamManage(paperHandler.GetReadiness))
 	mux.Handle("POST /api/v1/exams/{examId}/readiness/confirm", requireExamManage(paperHandler.ConfirmReadiness))
 	mux.Handle("POST /api/v1/exams/{examId}/start-collection", requireExamManage(paperHandler.StartCollection))

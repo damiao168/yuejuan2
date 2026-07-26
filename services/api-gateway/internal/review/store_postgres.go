@@ -182,15 +182,16 @@ FOR UPDATE
 	grade, err := scanGrade(tx.QueryRowContext(ctx, `
 INSERT INTO human_grade (
   tenant_id, review_task_id, answer_segment_id, reviewer_id, score, max_score,
-  rubric_selections, comments, private_note, student_feedback, reason, grade_round
+  rubric_selections, comments, private_note, student_feedback, reason, grade_round, ai_grade_id
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NULLIF($13, '')::uuid)
 RETURNING id::text, tenant_id::text, review_task_id::text, answer_segment_id::text, reviewer_id::text,
   score::float8, max_score::float8, rubric_selections, comments, private_note, student_feedback,
-  reason, grade_round, created_at
+  reason, grade_round, COALESCE(ai_grade_id::text, ''), created_at
 `, tenantID, task.ID, task.AnswerSegmentID, reviewerID, input.Score, taskContext.Question.Score,
 		selections, stringsTrim(input.Comments), stringsTrim(input.PrivateNote),
-		stringsTrim(input.StudentFeedback), stringsTrim(input.Reason), task.GradeRound))
+		stringsTrim(input.StudentFeedback), stringsTrim(input.Reason), task.GradeRound,
+		aiGradeIDFromContext(taskContext)))
 	if err != nil {
 		return SubmitResult{}, err
 	}
@@ -1003,6 +1004,7 @@ func scanGrade(row gradeScanner) (HumanGrade, error) {
 		&out.StudentFeedback,
 		&out.Reason,
 		&out.GradeRound,
+		&out.AIGradeID,
 		&out.CreatedAt,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -1121,7 +1123,7 @@ func (s *PostgresStore) latestGradeTx(ctx context.Context, tx *sql.Tx, tenantID 
 	grade, err := scanGrade(tx.QueryRowContext(ctx, `
 SELECT id::text, tenant_id::text, review_task_id::text, answer_segment_id::text, reviewer_id::text,
   score::float8, max_score::float8, rubric_selections, comments, private_note, student_feedback,
-  reason, grade_round, created_at
+  reason, grade_round, COALESCE(ai_grade_id::text, ''), created_at
 FROM human_grade
 WHERE tenant_id = $1 AND review_task_id::text = $2 AND deleted_at IS NULL
 ORDER BY created_at DESC

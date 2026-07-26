@@ -63,6 +63,21 @@ func (h *Handler) IssueTemplateBarcodes(w http.ResponseWriter, r *http.Request) 
 	httpx.JSON(w, http.StatusOK, map[string]any{"barcodes": out})
 }
 
+func (h *Handler) IssueStudentBarcodes(w http.ResponseWriter, r *http.Request) {
+	user := mustUser(r)
+	var input IssueStudentBarcodesInput
+	if !decodeStrict(w, r, &input) {
+		return
+	}
+	out, err := h.store.IssueStudentBarcodes(r.Context(), user.TenantID, r.PathValue("id"), input)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	h.auditAction(r, "answer_sheet_template.student_barcodes_issued", "answer_sheet_template", out.TemplateID, "issue student-bound sheet barcodes")
+	httpx.JSON(w, http.StatusOK, map[string]any{"barcodes": out})
+}
+
 func (h *Handler) CreateRegistrationCorrection(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	var input CreateRegistrationCorrectionInput

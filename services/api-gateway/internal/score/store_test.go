@@ -185,7 +185,6 @@ func TestPublishBlocksForArbitrationOCRAndMissingFinalGrade(t *testing.T) {
 	store.AddSegment(SegmentSeed{ExamID: "exam-1", SubmissionID: "submission-1", StudentID: "student-1", AnonymousCode: "ANON-001", AnswerSegmentID: "segment-1", QuestionID: "question-1", QuestionNo: "Q1", MaxScore: 5})
 	store.AddArbitrationTask(TaskSeed{ExamID: "exam-1", Status: "pending"})
 	store.AddOCRTask(TaskSeed{ExamID: "exam-1", Status: "failed"})
-	store.AddScoreAnomaly(TaskSeed{ExamID: "exam-1", Status: "pending"})
 	if _, err := store.FinalizeExam(context.Background(), tenantID, "exam-1", "manager-1"); err != nil {
 		t.Fatalf("finalize exam: %v", err)
 	}
@@ -197,7 +196,7 @@ func TestPublishBlocksForArbitrationOCRAndMissingFinalGrade(t *testing.T) {
 	for _, issue := range result.Quality.Issues {
 		codes[issue.Code] = true
 	}
-	for _, expected := range []string{"unfinished_arbitration_tasks", "ocr_failed_unhandled", "score_anomaly_unconfirmed", "missing_final_grades"} {
+	for _, expected := range []string{"unfinished_arbitration_tasks", "ocr_failed_unhandled", "missing_final_grades"} {
 		if !codes[expected] {
 			t.Fatalf("missing quality issue %s in %#v", expected, result.Quality.Issues)
 		}

@@ -1368,7 +1368,8 @@ export function GradingWorkbenchPage({ canWork, canManageTasks, canViewOriginalI
         </div>
       );
     }
-    const confidence = Math.round(selectedGrade.confidence * 100);
+    // confidence 恒为 0 是治理信号（生产校准未完成），显示 0% 会误导教师，改为显式状态文案。
+    const confidenceCalibrated = selectedGrade.confidence > 0;
     return (
       <div className="evidence-stack">
         <div className="ai-score-strip">
@@ -1380,7 +1381,11 @@ export function GradingWorkbenchPage({ canWork, canManageTasks, canViewOriginalI
           </div>
           <div>
             <span>置信度</span>
-            <strong>{confidence}%</strong>
+            {confidenceCalibrated ? (
+              <strong>{Math.round(selectedGrade.confidence * 100)}%</strong>
+            ) : (
+              <StatusTag tone="neutral">尚未完成生产校准</StatusTag>
+            )}
           </div>
           <div>
             <span>判定</span>

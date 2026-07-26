@@ -328,7 +328,7 @@
 
   .scoring-candidate-rail {
     display: flex;
-    overflow-x: auto;
+    flex-wrap: wrap;
     border-right: 0;
     border-bottom: 1px solid #e1e6ee;
   }
@@ -3765,7 +3765,7 @@ select {
 
 .score-summary-strip {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0;
   overflow: hidden;
 }

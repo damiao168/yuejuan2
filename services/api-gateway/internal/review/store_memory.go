@@ -186,6 +186,7 @@ func (s *MemoryStore) SubmitGrade(_ context.Context, tenantID string, id string,
 		StudentFeedback:  strings.TrimSpace(input.StudentFeedback),
 		Reason:           strings.TrimSpace(input.Reason),
 		GradeRound:       task.GradeRound,
+		AIGradeID:        aiGradeIDFromContext(ctx),
 		CreatedAt:        now,
 	}
 	task.Status = "submitted"
@@ -804,6 +805,15 @@ func validateSubmit(input SubmitGradeInput, ctx Context) error {
 		return ErrInvalidInput
 	}
 	return nil
+}
+
+// aiGradeIDFromContext resolves the AI suggestion identifier from the
+// server-loaded task context. Client input is never consulted: the value is
+// copied from the ai_grade row the reviewer saw when submitting. An empty
+// string means no AI suggestion existed and NULL is stored.
+func aiGradeIDFromContext(ctx Context) string {
+	value, _ := ctx.AISuggestion["ai_grade_id"].(string)
+	return strings.TrimSpace(value)
 }
 
 func validScore(score float64) bool {

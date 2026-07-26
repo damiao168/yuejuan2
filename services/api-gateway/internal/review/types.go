@@ -79,6 +79,7 @@ type HumanGrade struct {
 	StudentFeedback  string            `json:"student_feedback,omitempty"`
 	Reason           string            `json:"reason,omitempty"`
 	GradeRound       string            `json:"grade_round"`
+	AIGradeID        string            `json:"ai_grade_id,omitempty"`
 	CreatedAt        time.Time         `json:"created_at"`
 }
 

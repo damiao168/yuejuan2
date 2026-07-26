@@ -407,6 +407,57 @@ func TestSubmitGradeAllowsDirectScoreWithoutRubric(t *testing.T) {
 	}
 }
 
+func TestSubmitGradeRecordsAISuggestionLinkFromContext(t *testing.T) {
+	store := NewMemoryStore()
+	withAI := reviewContext()
+	withAI.AISuggestion["ai_grade_id"] = "ai-grade-77"
+	store.AddContext(tenantID, "segment-1", withAI)
+	task, err := store.CreateTask(context.Background(), tenantID, "manager-1", CreateTaskInput{
+		AnswerSegmentID: "segment-1",
+		Source:          "ai_low_confidence",
+		AssignedTo:      "reviewer-1",
+	})
+	if err != nil {
+		t.Fatalf("create task: %v", err)
+	}
+	submission, err := store.SubmitGrade(context.Background(), tenantID, task.ID, "reviewer-1", SubmitGradeInput{
+		Score:            4,
+		RubricSelections: []RubricSelection{{PointID: "p1", Score: 4}},
+	})
+	if err != nil {
+		t.Fatalf("submit grade: %v", err)
+	}
+	if submission.Grade.AIGradeID != "ai-grade-77" {
+		t.Fatalf("human grade must record the AI suggestion it overrode, got %#v", submission.Grade)
+	}
+	stored := store.grades[key(tenantID, task.ID)]
+	if len(stored) != 1 || stored[0].AIGradeID != "ai-grade-77" {
+		t.Fatalf("persisted grade must keep ai_grade_id from context, got %#v", stored)
+	}
+
+	withoutAI := reviewContext()
+	withoutAI.AISuggestion = nil
+	store.AddContext(tenantID, "segment-2", withoutAI)
+	task, err = store.CreateTask(context.Background(), tenantID, "manager-1", CreateTaskInput{
+		AnswerSegmentID: "segment-2",
+		Source:          "manual_sample",
+		AssignedTo:      "reviewer-1",
+	})
+	if err != nil {
+		t.Fatalf("create task without AI suggestion: %v", err)
+	}
+	submission, err = store.SubmitGrade(context.Background(), tenantID, task.ID, "reviewer-1", SubmitGradeInput{
+		Score:            4,
+		RubricSelections: []RubricSelection{{PointID: "p1", Score: 4}},
+	})
+	if err != nil {
+		t.Fatalf("submit grade without AI suggestion: %v", err)
+	}
+	if submission.Grade.AIGradeID != "" {
+		t.Fatalf("grade without AI suggestion must not fabricate a link, got %#v", submission.Grade)
+	}
+}
+
 func TestCreateTaskRejectsInvalidSource(t *testing.T) {
 	store := NewMemoryStore()
 	store.AddContext(tenantID, "segment-1", reviewContext())

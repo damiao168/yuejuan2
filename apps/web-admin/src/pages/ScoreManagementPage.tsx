@@ -35,7 +35,6 @@ interface ScoreSummary {
   unfinishedReviews: number;
   pendingArbitrations: number;
   ocrFailures: number;
-  anomalies: number;
   canPublish: boolean;
 }
 
@@ -63,7 +62,6 @@ const qualityLabels: Record<string, string> = {
   unfinished_review_tasks: "未完成阅卷",
   unfinished_arbitration_tasks: "未完成仲裁",
   ocr_failed_unhandled: "OCR 失败",
-  score_anomaly_unconfirmed: "异常分未确认",
   missing_final_grades: "缺失最终题目分",
   grades_not_confirmed: "成绩未确认",
   no_submission_grades: "无成绩可发布"
@@ -125,7 +123,6 @@ function createSummary(submissions: Submission[], grades: SubmissionGrade[], qua
     unfinishedReviews: issueCount(quality, "unfinished_review_tasks"),
     pendingArbitrations: issueCount(quality, "unfinished_arbitration_tasks"),
     ocrFailures: issueCount(quality, "ocr_failed_unhandled"),
-    anomalies: issueCount(quality, "score_anomaly_unconfirmed"),
     canPublish: Boolean(quality?.can_publish)
   };
 }
@@ -585,10 +582,6 @@ export function ScoreManagementPage({
         <div>
           <span>识别失败</span>
           <strong>{summary.ocrFailures}</strong>
-        </div>
-        <div>
-          <span>其他异常</span>
-          <strong>{summary.anomalies}</strong>
         </div>
         <div>
           <span>{mode === "teacher" ? "当前状态" : publishedOrLocked ? "发布状态" : "是否可发布"}</span>

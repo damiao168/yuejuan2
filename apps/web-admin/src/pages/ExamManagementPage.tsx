@@ -12,7 +12,6 @@ import {
   Select,
   Space,
   Switch,
-  Table,
   type MenuProps,
   type SelectProps,
   type TableColumnsType
@@ -32,6 +31,7 @@ import {
 } from "../api/exams";
 import { listClasses, listGrades, listSchools, type Grade, type School, type SchoolClass } from "../api/org";
 import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
+import { ResponsiveTable } from "../components/ResponsiveTable";
 import { StatusTag } from "../components/StatusTag";
 import type { StatusTone } from "../types";
 import type { ProductExperience } from "../router/experience";
@@ -541,15 +541,13 @@ export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspa
               <p>{filteredExams.length} 条考试记录</p>
             </div>
           </div>
-          <Table<Exam>
+          <ResponsiveTable<Exam>
             rowKey="id"
             dataSource={filteredExams}
             columns={columns}
             pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 场考试` }}
             locale={{ emptyText: <EmptyState title="暂无考试" description="当前筛选条件下没有后端返回的考试记录。" /> }}
             size="middle"
-            scroll={{ x: 1185 }}
-            tableLayout="fixed"
             className="exam-management-table"
           />
         </section>
@@ -590,7 +588,12 @@ export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspa
             <Form.Item label="总分" name="total_score" rules={[{ required: true, message: "请输入总分" }]}>
               <InputNumber min={1} max={1000} precision={1} className="full-width-control" />
             </Form.Item>
-            <Form.Item label="阅卷模式" name="grading_mode" rules={[{ required: true, message: "请选择阅卷模式" }]}>
+            <Form.Item
+              label="阅卷模式"
+              name="grading_mode"
+              rules={[{ required: true, message: "请选择阅卷模式" }]}
+              extra="当前版本双评/多评需在阅卷环节按题目配置双评策略，本字段仅作登记、不会自动触发双评流程"
+            >
               <Select options={gradingModeOptions} placeholder="选择阅卷模式" />
             </Form.Item>
             <Form.Item label="成绩发布策略" name="publish_policy" rules={[{ required: true, message: "请选择发布策略" }]}>
