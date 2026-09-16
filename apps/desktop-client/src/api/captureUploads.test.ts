@@ -17,6 +17,22 @@ function scanFile(bytes: number[]) {
 }
 
 describe("resumable capture upload", () => {
+  it("retries completion of a finalizing checkpoint without resending chunks", async () => {
+    const file = scanFile([1, 2, 3]);
+    const sha256 = await sha256ForFile(file);
+    const upload = {remote_upload_id:"saved-upload", exam:"exam", batch:"batch", sha256,
+      size:file.size, mime:file.type, chunk_size:4, confirmed_offset:file.size, status:"finalizing"};
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response({command_id:"stable-command", status:"processing", upload}))
+      .mockResolvedValueOnce(response({...upload, status:"completed", capture_file_id:"capture"}));
+    vi.stubGlobal("fetch", fetchMock);
+    const completed = await resumeCaptureUpload(new DesktopApiClient({baseUrl:"https://grading.example.edu"}), {
+      file, exam:"exam", batch:"batch", idempotency_key:"stable-command", remoteUploadId:"saved-upload"
+    }, () => {});
+    expect(completed.status).toBe("completed");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toContain("/saved-upload/complete");
+  });
   it("recovers a completed durable upload without init or byte transfer", async () => {
     const file = scanFile([1,2,3]);
     const sha256 = await sha256ForFile(file);

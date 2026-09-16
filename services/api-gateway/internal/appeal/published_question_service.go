@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 	"strings"
+	"unicode/utf8"
 )
 
 // PublishedQuestionAppealService keeps all entry points on the immutable
@@ -68,7 +69,7 @@ func (s *PublishedQuestionAppealService) Decide(ctx context.Context, tenantID, a
 }
 
 func (s *PublishedQuestionAppealService) Resolve(ctx context.Context, tenantID, appealID, actorID string, input ResolveQuestionAppealInput) (PublishedQuestionAppeal, error) {
-	if !validPublishedQuestionAppealActor(tenantID, appealID, actorID) || input.ExpectedRevision <= 0 || strings.TrimSpace(input.NewReleaseID) == "" || len(strings.TrimSpace(input.PublicResponse)) > 2000 || len(strings.TrimSpace(input.PrivateNote)) > 4000 {
+	if !validPublishedQuestionAppealActor(tenantID, appealID, actorID) || input.ExpectedRevision <= 0 || strings.TrimSpace(input.NewReleaseID) == "" || utf8.RuneCountInString(strings.TrimSpace(input.PublicResponse)) > 2000 || utf8.RuneCountInString(strings.TrimSpace(input.PrivateNote)) > 4000 {
 		return PublishedQuestionAppeal{}, ErrInvalidInput
 	}
 	input.NewReleaseID, input.PublicResponse, input.PrivateNote = strings.TrimSpace(input.NewReleaseID), strings.TrimSpace(input.PublicResponse), strings.TrimSpace(input.PrivateNote)
@@ -84,7 +85,7 @@ func (s *PublishedQuestionAppealService) Events(ctx context.Context, tenantID, a
 
 func validPublishedQuestionAppealCreate(input CreatePublishedQuestionAppealInput) bool {
 	return strings.TrimSpace(input.ExamID) != "" && strings.TrimSpace(input.SourceReleaseID) != "" && strings.TrimSpace(input.QuestionID) != "" &&
-		validPublishedQuestionAppealReason(input.ReasonCode) && strings.TrimSpace(input.Reason) != "" && len(strings.TrimSpace(input.Reason)) <= 2000 &&
+		validPublishedQuestionAppealReason(input.ReasonCode) && strings.TrimSpace(input.Reason) != "" && utf8.RuneCountInString(strings.TrimSpace(input.Reason)) <= 2000 &&
 		validPublishedQuestionAppealRegion(input.SelectedRegion)
 }
 
@@ -137,7 +138,7 @@ func validPublishedQuestionAppealStatus(value string) bool {
 }
 
 func validPublishedQuestionAppealDecision(input DecideQuestionAppealInput) bool {
-	if len(strings.TrimSpace(input.PublicResponse)) == 0 || len(strings.TrimSpace(input.PublicResponse)) > 2000 || len(strings.TrimSpace(input.PrivateNote)) > 4000 {
+	if strings.TrimSpace(input.PublicResponse) == "" || utf8.RuneCountInString(strings.TrimSpace(input.PublicResponse)) > 2000 || utf8.RuneCountInString(strings.TrimSpace(input.PrivateNote)) > 4000 {
 		return false
 	}
 	switch strings.TrimSpace(input.Decision) {

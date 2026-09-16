@@ -1,13 +1,181 @@
+EduGrade Enterprise Proprietary Source-Available License
+专有源代码可查看许可
+Version 1.0, 2026
+
 Copyright © 2026 damiao168. All Rights Reserved.
 
-This repository and its source code are proprietary.
+======================================================================
+中文条款
+======================================================================
 
-No permission is granted to use, copy, modify, distribute,
-sublicense, sell, deploy, host, or create derivative works
-from this software, in whole or in part, without prior
-written permission from the copyright holder.
+1. 项目性质
 
-The source code is made publicly available for viewing
-and educational reference purposes only.
+本软件及其源代码为版权所有者的专有作品。本仓库公开源代码仅用于项目展示、个人学习、教育研究和技术参考。
 
-For licensing inquiries, please contact the copyright holder.
+本项目不是开放源代码软件（Open Source Software）。源代码公开不代表授予任何开源许可、商业许可、部署许可或其他软件使用许可。
+
+2. 允许的行为
+
+在遵守本许可全部条款的前提下，你仅被允许：
+
+- 通过本仓库界面查看和阅读源代码；
+- 为个人学习、教育研究和非商业技术研究理解本项目的设计、架构和实现思路；
+- 进行正常浏览源代码所必需的临时性、技术性复制。
+
+上述允许不包含将本项目源代码复制到其他项目、运行本软件、部署本系统、修改本软件、制作衍生作品或向第三方提供本软件的权利。
+
+3. 未经书面授权禁止的行为
+
+除非事先获得版权所有者明确的书面许可，否则不得直接或间接：
+
+- 复制、摘取、转载、镜像、重新发布或大规模保存本软件或其源代码的全部或实质性部分；
+- 将本软件或其源代码的全部或部分整合、移植或复用于其他软件、产品、服务或项目；
+- 修改、改编、翻译、重构或基于本软件制作衍生作品并用于实际项目；
+- 编译、运行、部署、托管或向任何个人、学校、机构、企业或其他主体提供本软件；
+- 将本软件用于生产环境、教学业务、考试阅卷业务或其他实际运营环境；
+- 将本软件用于任何商业、营利、收费、企业或机构用途；
+- 基于本软件提供 SaaS、托管服务、私有化部署、咨询、集成或其他在线或离线服务；
+- 出售、出租、转授权、许可、转让、分发或以其他方式向第三方提供本软件；
+- 删除、隐藏或修改本项目中的版权、许可、作者或权利声明；
+- 以任何方式表示本项目为你本人或其他主体原创，或暗示版权所有者已对你的使用行为进行授权、背书或合作。
+
+4. 学习和研究不等于获得代码使用权
+
+你可以学习本项目体现的通用技术思想、算法原理、工程方法和架构概念，但不得以“学习”“研究”“教育”或类似理由直接复制、搬运或改写本项目代码并用于其他项目、产品、服务或部署环境。
+
+本许可不限制法律明确允许且不能通过合同排除的行为。
+
+5. GitHub 平台行为
+
+本许可不试图限制 GitHub 为托管本公共仓库而依据其服务条款必须获得的权利，也不改变 GitHub 平台自身提供的技术功能。
+
+仓库在技术上可被访问、下载或 Fork，不代表版权所有者授予你在本许可之外复制、使用、修改、部署、分发或商业化本软件的权利。
+
+6. 第三方组件
+
+本仓库可能包含或依赖由第三方提供的软件、库、模型、字体、数据、资源或其他材料。此类第三方材料分别受其各自许可证和权利声明约束。
+
+本许可仅适用于版权所有者对本项目拥有权利的代码和其他材料，不取代或修改第三方许可证。
+
+7. 单独授权
+
+如需以下任何用途，应事先取得版权所有者单独的书面授权：
+
+- 部署或运行本系统；
+- 学校、教育机构、企业或其他组织使用；
+- 商业使用；
+- 二次开发；
+- 集成到其他系统；
+- SaaS、托管或私有化服务；
+- 再分发或发布衍生版本；
+- 其他超出第 2 条明确允许范围的用途。
+
+版权所有者可自行决定是否授权，并可针对不同用途采用单独协议、费用、期限和附加条件。
+
+8. 无保证
+
+在适用法律允许的最大范围内，本软件及其源代码按“现状”（AS IS）和“可用状态”（AS AVAILABLE）提供，仅供查看、学习和参考，不附带任何明示或默示保证，包括但不限于适销性、特定用途适用性、准确性、可靠性、安全性、不侵权或持续可用性的保证。
+
+9. 责任限制
+
+在适用法律允许的最大范围内，版权所有者不对因访问、阅读、依赖、未经授权使用或其他与本软件有关的行为产生的任何直接、间接、特殊、附带、惩罚性或后果性损失承担责任。
+
+10. 终止
+
+如你违反本许可任何条款，本许可授予你的有限查看和学习权限自动终止。终止后，你应停止任何未经授权的使用，并在法律要求或版权所有者依法提出要求时删除你控制范围内未经许可保存的副本。
+
+11. 保留权利
+
+除本许可第 2 条明确授予的有限权限外，所有权利均由版权所有者保留。任何未明确授予的权利均不得推定授予。
+
+======================================================================
+English Terms
+======================================================================
+
+1. Nature of the Project
+
+This software and its source code are proprietary works of the copyright holder. The source code is made publicly viewable solely for project presentation, personal learning, educational research, and technical reference.
+
+This project is NOT Open Source Software. Public availability of the source code does not grant any open-source license, commercial license, deployment license, or other software-use license.
+
+2. Limited Permission
+
+Subject to full compliance with this License, you are permitted only to:
+
+- view and read the source code through this repository;
+- study the design, architecture, and implementation concepts for personal learning, educational research, and non-commercial technical research; and
+- make transient technical copies strictly necessary for ordinary browsing of the source code.
+
+This limited permission does not include any right to copy the source code into another project, run the software, deploy the system, modify the software, create derivative works, or provide the software to any third party.
+
+3. Prohibited Uses Without Prior Written Permission
+
+Unless you first obtain the copyright holder's explicit written permission, you may not, directly or indirectly:
+
+- copy, extract, reproduce, mirror, republish, or retain substantial portions of the software or source code;
+- incorporate, port, reuse, or integrate any substantial portion of the software or source code into another software product, service, or project;
+- modify, adapt, translate, refactor, or create derivative works from the software for use in another project or practical environment;
+- compile, run, deploy, host, or provide the software for any individual, school, institution, company, or other entity;
+- use the software in production, educational operations, examination grading, or any other operational environment;
+- use the software for any commercial, for-profit, fee-based, enterprise, or institutional purpose;
+- provide SaaS, hosted services, private deployment, consulting, integration, or other online or offline services based on the software;
+- sell, rent, sublicense, license, transfer, distribute, or otherwise provide the software to any third party;
+- remove, conceal, or alter copyright, license, authorship, or rights notices; or
+- represent the project as your own original work, or imply authorization, endorsement, or partnership by the copyright holder where none exists.
+
+4. Learning Does Not Grant Code-Reuse Rights
+
+You may learn from general technical ideas, algorithmic principles, engineering methods, and architectural concepts embodied in this project. However, learning, research, education, or similar purposes do not authorize direct copying, substantial rewriting, or reuse of this project's source code in another project, product, service, or deployment.
+
+Nothing in this License restricts rights that applicable law expressly grants and does not permit to be waived or excluded by contract.
+
+5. GitHub Platform
+
+This License does not attempt to restrict rights that GitHub must receive under its Terms of Service in order to host this public repository, nor does it alter technical functionality provided by the GitHub platform.
+
+The technical ability to access, download, or fork this repository does not grant permission to copy, use, modify, deploy, distribute, or commercialize the software beyond the limited permissions expressly stated in this License.
+
+6. Third-Party Components
+
+This repository may contain or depend on third-party software, libraries, models, fonts, data, assets, or other materials. Such third-party materials remain subject to their respective licenses and rights notices.
+
+This License applies only to code and other materials for which the copyright holder owns the applicable rights and does not replace or modify third-party licenses.
+
+7. Separate Authorization
+
+Prior written authorization from the copyright holder is required for, including but not limited to:
+
+- running or deploying the system;
+- use by schools, educational institutions, companies, or other organizations;
+- commercial use;
+- secondary development or customization;
+- integration into another system;
+- SaaS, hosting, or private-deployment services;
+- redistribution or publication of derivative versions; or
+- any use beyond the limited permission expressly granted in Section 2.
+
+The copyright holder may grant or refuse authorization at their sole discretion and may require a separate agreement, fees, time limits, or additional conditions.
+
+8. Disclaimer of Warranty
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE SOFTWARE AND SOURCE CODE ARE PROVIDED "AS IS" AND "AS AVAILABLE" FOR VIEWING, STUDY, AND REFERENCE ONLY, WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, ACCURACY, RELIABILITY, SECURITY, NON-INFRINGEMENT, OR CONTINUOUS AVAILABILITY.
+
+9. Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE COPYRIGHT HOLDER SHALL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL, INCIDENTAL, PUNITIVE, OR CONSEQUENTIAL DAMAGES ARISING FROM ACCESS TO, STUDY OF, RELIANCE ON, UNAUTHORIZED USE OF, OR OTHER DEALINGS WITH THE SOFTWARE.
+
+10. Termination
+
+If you violate any term of this License, the limited permission granted to you to view and study the source code terminates automatically. Upon termination, you must cease unauthorized use and, where required by law or lawfully requested by the copyright holder, delete unauthorized copies under your control.
+
+11. Reservation of Rights
+
+Except for the limited permissions expressly granted in Section 2, all rights are reserved by the copyright holder. No rights are granted by implication.
+
+======================================================================
+Language
+======================================================================
+
+The Chinese and English texts are intended to express the same licensing terms. If an inconsistency arises, the English text shall prevail to the extent permitted by applicable law.
+
+Copyright © 2026 damiao168. All Rights Reserved.

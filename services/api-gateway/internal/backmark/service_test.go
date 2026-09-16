@@ -19,7 +19,7 @@ func TestBackmarkListsAreCursorPaginated(t *testing.T) {
 		id := fmt.Sprintf("task-%03d", index)
 		store.SeedSource(SourceTask{ReviewTaskID: id, OriginalGradeID: "grade-" + id, OriginalReviewer: "grader-a", OriginalScore: 1, MaxScore: 2, GradedAt: now})
 	}
-	service := NewService(store)
+	service := NewService(store).WithContextSource(backmarkContextSource{})
 	summary, err := service.Create(context.Background(), "tenant-1", "exam-1", "question-1", "manager-1", CreateInput{
 		SourceIncidentID: "incident-page", ReassignedTo: "grader-b", Policy: Policy{Disposition: DispositionConfirm},
 	})
@@ -62,7 +62,7 @@ func TestBackmarkSeparatesCandidateGradeFromOriginalFact(t *testing.T) {
 	now := time.Date(2026, 8, 11, 9, 0, 0, 0, time.UTC)
 	store.now = func() time.Time { return now }
 	store.SeedSource(SourceTask{ReviewTaskID: "task-1", OriginalGradeID: "grade-1", OriginalReviewer: "grader-a", OriginalScore: 4, MaxScore: 5, GradedAt: now.Add(-time.Hour)})
-	service := NewService(store)
+	service := NewService(store).WithContextSource(backmarkContextSource{})
 
 	preview, err := service.Preview(context.Background(), "tenant-1", "exam-1", "question-1", Selector{GraderID: "grader-a"})
 	if err != nil || preview.AffectedCount != 1 || len(preview.ScoreBands) != 1 || preview.ScoreBands[0].Score != 4 {
@@ -144,7 +144,7 @@ func TestBackmarkGraderContextIsBlindAndUsesFrozenEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := service.Submit(context.Background(), "tenant-1", claimed.ID, "grader-b", SubmitInput{Score: 3, ExpectedRevision: claimed.Revision}); err != nil {
+	if _, _, err := service.Submit(context.Background(), "tenant-1", claimed.ID, "grader-b", SubmitInput{Score: 3, RubricSelections: []RubricSelection{{PointID: "point-1", Score: 3}}, ExpectedRevision: claimed.Revision}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := service.GetSegmentID(context.Background(), "tenant-1", summary.Items[0].ID, "grader-b"); !errors.Is(err, ErrStateConflict) {
@@ -177,7 +177,7 @@ func TestBackmarkRegradeSelectionRequiresCompletedBatchAndIncludesOnlyRegradeIte
 	store.now = func() time.Time { return now }
 	store.SeedSource(SourceTask{ReviewTaskID: "task-regrade", OriginalGradeID: "grade-regrade", OriginalReviewer: "grader-a", OriginalScore: 4, MaxScore: 5, GradedAt: now})
 	store.SeedSource(SourceTask{ReviewTaskID: "task-same-score", OriginalGradeID: "grade-same", OriginalReviewer: "grader-a", OriginalScore: 3, MaxScore: 5, GradedAt: now})
-	service := NewService(store).WithTaskSource(backmarkTaskSource{
+	service := NewService(store).WithContextSource(backmarkContextSource{}).WithTaskSource(backmarkTaskSource{
 		"task-regrade":    {SubmissionID: "submission-1"},
 		"task-same-score": {SubmissionID: "submission-2"},
 	})

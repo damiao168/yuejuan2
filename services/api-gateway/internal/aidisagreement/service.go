@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 )
@@ -79,7 +80,7 @@ func (s *Service) List(ctx context.Context, tenantID string, filter Filter) ([]D
 
 func (s *Service) Classify(ctx context.Context, tenantID, id, reviewerID string, input ClassifyInput) (Disagreement, error) {
 	if s.store == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(id) == "" || strings.TrimSpace(reviewerID) == "" ||
-		!input.Taxonomy.Valid() || input.ExpectedRevision <= 0 || len(strings.TrimSpace(input.Notes)) > 2000 {
+		!input.Taxonomy.Valid() || input.ExpectedRevision <= 0 || utf8.RuneCountInString(strings.TrimSpace(input.Notes)) > 2000 {
 		return Disagreement{}, ErrInvalidInput
 	}
 	return s.store.Classify(ctx, tenantID, id, reviewerID, input, s.now().UTC())

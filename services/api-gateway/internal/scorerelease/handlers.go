@@ -319,6 +319,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.Error(w, r, http.StatusConflict, "score_release_gate_blocked", "score release is blocked by the current quality gate")
 	case errors.Is(err, ErrInvalidTransition):
 		httpx.Error(w, r, http.StatusConflict, "score_release_invalid_transition", "score release is not in a valid state for this action")
+	case errors.Is(err, ErrStaleSource):
+		httpx.Error(w, r, http.StatusConflict, "score_release_stale_source", "published scores have changed; prepare the regrade again from the current release")
 	default:
 		httpx.Error(w, r, http.StatusInternalServerError, "score_release_operation_failed", "score release operation failed")
 	}

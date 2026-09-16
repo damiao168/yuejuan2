@@ -740,6 +740,7 @@ export function QuestionBankPage({ user }: { user: SessionUser }) {
 							/>
 						) : (
 							<ResponsiveTable<QuestionBankItem>
+								className="dense-data-table"
 								rowKey="id"
 								loading={items.isLoading}
 								dataSource={items.data?.items ?? []}
@@ -1159,7 +1160,7 @@ export function QuestionBankPage({ user }: { user: SessionUser }) {
 					<Input placeholder="知识点 ID" value={searchFilters.knowledge_point} onChange={event=>{setSearchOffset(0);setSearchFilters(current=>({...current,knowledge_point:event.target.value}))}} />
 					<Select value={searchFilters.mode} options={[{value:"default",label:"已发布 + 我的草稿"},{value:"published",label:"当前发布版"},{value:"my_drafts",label:"我的草稿"},{value:"all",label:"全部可见版本"}]} onChange={value=>{setSearchOffset(0);setSearchFilters(current=>({...current,mode:value}))}} />
 				</div>
-				<ResponsiveTable<QuestionBankSearchItem> rowKey={record=>record.version.id} loading={searchResults.isLoading} dataSource={searchResults.data?.items ?? []} columns={[
+				<ResponsiveTable<QuestionBankSearchItem> className="dense-data-table" rowKey={record=>record.version.id} loading={searchResults.isLoading} dataSource={searchResults.data?.items ?? []} columns={[
 					{title:"编号",render:(_,record)=><Button type="link" onClick={()=>{selectItem(record.item);setVersionId(record.version.id);setSearchOpen(false)}}>{record.item.item_code}</Button>},
 					{title:"题干",dataIndex:["version","stem"],ellipsis:true},
 					{title:"版本",render:(_,record)=>`v${record.version.version_no} · ${workflowLabels[record.version.workflow_status]}`},

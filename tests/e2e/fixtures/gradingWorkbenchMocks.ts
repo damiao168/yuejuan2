@@ -1,4 +1,5 @@
 import type { Page, Route } from "@playwright/test";
+import { emptyBackmarkBatchPage } from "./backmarkContractFixtures";
 import { installApiMocks } from "./apiMocks";
 
 const now = "2026-08-13T08:00:00Z";
@@ -284,7 +285,7 @@ export async function installGradingWorkbenchMocks(page: Page, state = createGra
     }
 
     if (path === "/api/v1/review-annotations" && method === "GET") return json(route, { annotations: [] });
-    if (path === "/api/v1/backmark/batches" && method === "GET") return json(route, { batches: [], next_cursor: "", has_more: false });
+    if (path === "/api/v1/backmark-batches" && method === "GET") return json(route, emptyBackmarkBatchPage);
     if (path === "/api/v1/regrade-jobs" && method === "GET") return json(route, { jobs: [], next_cursor: "", has_more: false });
 
     return route.fallback();

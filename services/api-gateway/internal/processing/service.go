@@ -75,6 +75,15 @@ func (s *Service) Retry(ctx context.Context, tenantID, exceptionID string) (work
 	if task.Status != workerruntime.StatusFailed && task.Status != workerruntime.StatusDeadLetter {
 		return workerruntime.Task{}, ErrRetryForbidden
 	}
+	if target.SourceType == "image_quality_run" {
+		coordinator, ok := s.store.(interface {
+			RetryImageQuality(context.Context, string, string, string) (workerruntime.Task, error)
+		})
+		if !ok {
+			return workerruntime.Task{}, ErrRetryForbidden
+		}
+		return coordinator.RetryImageQuality(ctx, tenantID, target.SourceID, task.ID)
+	}
 	return s.runtime.Requeue(ctx, tenantID, task.ID)
 }
 

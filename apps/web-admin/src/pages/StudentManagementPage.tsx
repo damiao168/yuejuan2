@@ -16,6 +16,7 @@ import {
 import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
 import { ResponsiveTable } from "../components/ResponsiveTable";
 import { StatusTag } from "../components/StatusTag";
+import { prepareStudentImport, remapStudentImportError } from "../features/members/students/studentImport";
 
 interface StudentFormValues {
   class_id: string;
@@ -166,11 +167,22 @@ export function StudentManagementPage() {
 
   const submitImport = async () => {
     if (!csv.trim()) return;
+    const prepared = prepareStudentImport(csv, classes);
+    if (!prepared.csv) {
+      const firstError = prepared.errors[0];
+      message.warning(firstError ? `没有可导入的学生：第 ${firstError.row} 行，${firstError.message}` : "没有可导入的学生记录");
+      return;
+    }
     setSaving(true);
     try {
-      const result = await importStudentsCSV(csv);
-      if (result.result.errors.length) {
-        message.warning(`已导入 ${result.result.created} 名，${result.result.errors.length} 行未导入：${result.result.errors[0]?.message ?? "请检查名单内容"}`);
+      const result = await importStudentsCSV(prepared.csv);
+      const errors = [
+        ...prepared.errors,
+        ...result.result.errors.map((item) => remapStudentImportError(item, prepared.sourceRows))
+      ].sort((left, right) => left.row - right.row);
+      if (errors.length) {
+        const firstError = errors[0];
+        message.warning(`已导入 ${result.result.created} 名，${errors.length} 行未导入：第 ${firstError.row} 行，${firstError.message}`);
       } else {
         message.success(`已导入 ${result.result.created} 名学生`);
         setImportOpen(false);
@@ -223,7 +235,7 @@ export function StudentManagementPage() {
 
       <section className="student-management-table">
         <div className="section-head"><div><h2>学生名册</h2><p>{filtered.length} 名学生</p></div></div>
-        <ResponsiveTable rowKey="id" size="small" columns={columns} dataSource={filtered} scroll={{ x: 760 }} pagination={{ size: "small", pageSize: 20, showSizeChanger: true }} locale={{ emptyText: <EmptyState title="暂无学生" description="可新增学生，或下载模板后批量导入。" /> }} />
+        <ResponsiveTable className="dense-data-table" rowKey="id" size="small" columns={columns} dataSource={filtered} scroll={{ x: 760 }} pagination={{ size: "small", pageSize: 20, showSizeChanger: true }} locale={{ emptyText: <EmptyState title="暂无学生" description="可新增学生，或下载模板后批量导入。" /> }} />
       </section>
 
       <Modal title="新增学生" open={createOpen} okText="保存" cancelText="取消" confirmLoading={saving} onOk={() => void submitStudent()} onCancel={() => { setCreateOpen(false); form.resetFields(); }}>
@@ -236,7 +248,7 @@ export function StudentManagementPage() {
       </Modal>
 
       <Modal title="批量导入学生" open={importOpen} okText="开始导入" cancelText="取消" okButtonProps={{ disabled: !csv.trim() }} confirmLoading={saving} onOk={() => void submitImport()} onCancel={() => { setImportOpen(false); setCSV(""); }}>
-        <div className="student-import-copy"><p>使用 CSV 模板填写学号、姓名和班级代码。导入不会修改已有学生。</p><Button size="small" icon={<Download size={15} />} onClick={downloadTemplate}>下载模板</Button></div>
+        <div className="student-import-copy"><p>使用 CSV 模板填写学号、姓名和班级代码；班级代码需唯一。导入不会修改已有学生。</p><Button size="small" icon={<Download size={15} />} onClick={downloadTemplate}>下载模板</Button></div>
         <Upload.Dragger accept=".csv,text/csv" maxCount={1} beforeUpload={async (file) => { setCSV(await file.text()); return false; }} onRemove={() => { setCSV(""); return true; }}><UploadIcon size={22} /><p>选择或拖入 CSV 文件</p></Upload.Dragger>
       </Modal>
     </div>

@@ -166,7 +166,8 @@ func (s *PostgresStore) ListBatchItems(ctx context.Context, tenantID, batchID st
 	rows, err := s.db.QueryContext(ctx, `SELECT `+itemColumns+` FROM backmark_item
 WHERE tenant_id=$1::uuid AND batch_id=$2::uuid
   AND ($3::timestamptz IS NULL OR (created_at,id) > ($3::timestamptz,$4::uuid))
-ORDER BY created_at ASC,id ASC LIMIT $5`, tenantID, batchID, cursorTime, nullableCursorID(page.CursorID), page.Limit)
+  AND ($6='' OR status=$6)
+ORDER BY created_at ASC,id ASC LIMIT $5`, tenantID, batchID, cursorTime, nullableCursorID(page.CursorID), page.Limit, page.Status)
 	if err != nil {
 		return nil, err
 	}
@@ -202,6 +203,17 @@ GROUP BY diff ORDER BY diff`, tenantID, batchID)
 		out = append(out, value)
 	}
 	return out, rows.Err()
+}
+
+func (s *PostgresStore) GetStatusCounts(ctx context.Context, tenantID, batchID string) (StatusCounts, error) {
+	var counts StatusCounts
+	err := s.db.QueryRowContext(ctx, `SELECT
+count(*) FILTER (WHERE status='regrade_required'),
+count(*) FILTER (WHERE status IN ('pending','in_progress')),
+count(*) FILTER (WHERE status IN ('diff_ready','arbitration_required','regrade_required'))
+FROM backmark_item WHERE tenant_id=$1::uuid AND batch_id=$2::uuid`, tenantID, batchID).Scan(
+		&counts.RegradeRequiredCount, &counts.PendingCount, &counts.CompletedCount)
+	return counts, err
 }
 
 func (s *PostgresStore) ListBatches(ctx context.Context, tenantID, examID, questionID string, page PageOptions) ([]Batch, error) {

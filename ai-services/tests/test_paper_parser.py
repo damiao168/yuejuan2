@@ -153,6 +153,17 @@ def test_rejects_ocr_ref_with_fabricated_confidence():
     with pytest.raises(AgentError): PaperParser(FakeStructuredModel(output("answer", answers=[answer]))).parse(request)
 
 
+def test_candidate_confidence_never_exceeds_its_grounded_ocr_confidence():
+    ocr_ref = {**ref(), "page_no": 1, "block_id": "b1", "bbox": [1, 2, 3, 4], "text_start": None, "text_end": None, "ocr_confidence": .52}
+    answer = {"candidate_id": "a1", "question_no_hint": "1", "question_no_normalized": "1", "subquestion_no_hint": None, "standard_answer": "A", "equivalent_answers": [], "tolerance": None, "confidence": .99, "source_refs": [ocr_ref], "issues": []}
+    request = payload()
+    request["documents"][0]["blocks"] = [{"source_id": "source-1", "document_index": 0, "block_id": "b1", "page_no": 1, "text": "1.A", "bbox": [1, 2, 3, 4], "confidence": .52}]
+
+    result = PaperParser._validate(output("answer", answers=[answer]), "job-1", "mathematics", request["documents"])
+
+    assert result["answer_candidates"][0]["confidence"] == .52
+
+
 def test_explicit_rubric_is_preserved_with_nullable_scores_and_provenance():
     rubric = {"candidate_id": "r1", "question_no_hint": "18(1)", "question_no_normalized": "18(1)", "subquestion_no_hint": None, "max_score": 6, "points": [{"id": "p1", "description": "列出关系式", "score": None, "required": True, "evidence_requirements": []}], "deductions": [], "examples": [], "confidence": .94, "source_refs": [ref()], "issues": []}
     result = PaperParser(FakeStructuredModel(output("rubric", rubrics=[rubric]))).parse(payload("评分标准：列出关系式"))

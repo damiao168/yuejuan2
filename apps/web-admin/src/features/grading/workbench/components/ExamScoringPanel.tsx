@@ -104,7 +104,7 @@ export function ExamScoringPanel({
               <span>失败 <strong>{scoring.summary.run.failed_count}</strong></span>
             </div>
           ) : <Alert type="info" showIcon message="尚未开始评分" description="请先完成答题卡上传与题目切分，再点击右上角“开始评分”；无法自动判分的答案会转入人工阅卷。" />}
-          <ResponsiveTable size="small" pagination={false} loading={scoring.loading} rowKey="question_id" dataSource={scoring.summary?.questions ?? []} columns={[
+          <ResponsiveTable className="dense-data-table" size="small" pagination={false} loading={scoring.loading} rowKey="question_id" dataSource={scoring.summary?.questions ?? []} columns={[
             { title: "题号", dataIndex: "question_no", width: 90 },
             { title: "题型", dataIndex: "question_type", width: 140, render: (value: string) => <span title={value}>{questionTypeLabels[value] ?? "其他题型"}</span> },
             { title: "答卷", dataIndex: "total", width: 80 },
@@ -135,7 +135,7 @@ export function ExamScoringPanel({
             <span className="muted">{scoring.filteredItems.length} 条</span>
           </div>
           <ResponsiveTable<ScoringRunItem>
-            className="automation-result-table"
+            className="automation-result-table dense-data-table"
             size="small"
             rowKey="answer_segment_id"
             dataSource={scoring.filteredItems}

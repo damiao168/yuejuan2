@@ -122,7 +122,7 @@ export async function resumeCaptureUpload(
   if (initialized.status === "completed") {
     return initialized;
   }
-  if (initialized.status !== "uploading") {
+  if (initialized.status !== "uploading" && initialized.status !== "finalizing") {
     throw new ApiClientError(409, "capture_upload_not_resumable", `capture upload is ${initialized.status}`);
   }
   while (confirmedOffset < input.file.size) {

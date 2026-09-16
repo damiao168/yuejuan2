@@ -514,6 +514,7 @@ export function AuditLogPage({ canRead, canExport, tenantName }: AuditLogPagePro
         ) : (
           <>
             <ResponsiveTable
+              className="dense-data-table"
               rowKey="id"
               size="small"
               columns={columns}

@@ -631,6 +631,7 @@ export function ArbitrationPage({ canAssign, canWork, canReadAudit, canReadExams
         ) : (
           <>
             <ResponsiveTable
+              className="dense-data-table"
               rowKey="id"
               size="small"
               columns={columns}

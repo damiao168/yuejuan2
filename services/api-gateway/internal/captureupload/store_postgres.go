@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -21,7 +22,7 @@ const sessionColumns = `
 id::text, tenant_id::text, exam_id::text, capture_batch_id::text,
 idempotency_key, original_name, content_type, expected_sha256, total_size,
 chunk_size, confirmed_offset, status, COALESCE(file_asset_id::text, ''),
-COALESCE(capture_file_id::text, ''), COALESCE(error_code, ''), created_at, completed_at`
+COALESCE(capture_file_id::text, ''), COALESCE(error_code, ''), created_at, completed_at, COALESCE(completion_token::text, ''), COALESCE(completion_lease_until, 'epoch'::timestamptz)`
 
 func (s *PostgresStore) Init(ctx context.Context, tenantID, _ string, input InitInput, chunkSize int64) (Session, bool, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -168,16 +169,20 @@ func (s *PostgresStore) BeginComplete(ctx context.Context, tenantID, uploadID st
 		}
 		return session, false, nil
 	}
-	if session.Status == "finalizing" || session.Status == "failed" {
+	var databaseNow time.Time
+	if err := tx.QueryRowContext(ctx, `SELECT clock_timestamp()`).Scan(&databaseNow); err != nil {
+		return Session{}, false, err
+	}
+	if (session.Status == "finalizing" && session.CompletionLeaseUntil.After(databaseNow)) || session.Status == "failed" {
 		return Session{}, false, ErrConflict
 	}
-	if session.Status != "uploading" || session.ConfirmedOffset != session.Size {
+	if (session.Status != "uploading" && session.Status != "finalizing") || session.ConfirmedOffset != session.Size {
 		return Session{}, false, ErrIncomplete
 	}
 	row := tx.QueryRowContext(ctx, `
-UPDATE capture_upload_session SET status='finalizing', updated_at=now()
-WHERE tenant_id=$1 AND id::text=$2 AND status='uploading'
-RETURNING `+sessionColumns, tenantID, uploadID)
+UPDATE capture_upload_session SET status='finalizing', updated_at=now(), completion_token=$3::uuid, completion_lease_until=clock_timestamp()+($4 * interval '1 millisecond')
+WHERE tenant_id=$1 AND id::text=$2 AND status IN ('uploading','finalizing')
+RETURNING `+sessionColumns, tenantID, uploadID, uuid.NewString(), completionLeaseDuration.Milliseconds())
 	updated, err := scanSession(row)
 	if err != nil {
 		return Session{}, false, err
@@ -227,7 +232,7 @@ ORDER BY offset_bytes ASC
 	return nil
 }
 
-func (s *PostgresStore) Complete(ctx context.Context, tenantID, uploadID, fileAssetID, captureFileID string) (Session, error) {
+func (s *PostgresStore) Complete(ctx context.Context, tenantID, uploadID, fileAssetID, captureFileID, completionToken string) (Session, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Session{}, err
@@ -237,9 +242,12 @@ func (s *PostgresStore) Complete(ctx context.Context, tenantID, uploadID, fileAs
 UPDATE capture_upload_session
 SET status='completed', file_asset_id=$3::uuid, capture_file_id=$4::uuid,
     error_code=NULL, completed_at=now(), updated_at=now()
-WHERE tenant_id=$1 AND id::text=$2 AND status='finalizing'
-RETURNING `+sessionColumns, tenantID, uploadID, fileAssetID, captureFileID)
+WHERE tenant_id=$1 AND id::text=$2 AND status='finalizing' AND completion_token=$5::uuid
+RETURNING `+sessionColumns, tenantID, uploadID, fileAssetID, captureFileID, completionToken)
 	session, err := scanSession(row)
+	if errors.Is(err, ErrNotFound) {
+		return Session{}, ErrConflict
+	}
 	if err != nil {
 		return Session{}, err
 	}
@@ -252,11 +260,11 @@ RETURNING `+sessionColumns, tenantID, uploadID, fileAssetID, captureFileID)
 	return session, nil
 }
 
-func (s *PostgresStore) Resume(ctx context.Context, tenantID, uploadID, errorCode string) error {
-	return s.setFinalizingStatus(ctx, tenantID, uploadID, "uploading", errorCode)
+func (s *PostgresStore) Resume(ctx context.Context, tenantID, uploadID, errorCode, completionToken string) error {
+	return s.setFinalizingStatus(ctx, tenantID, uploadID, "uploading", errorCode, completionToken)
 }
 
-func (s *PostgresStore) Fail(ctx context.Context, tenantID, uploadID, errorCode string) error {
+func (s *PostgresStore) Fail(ctx context.Context, tenantID, uploadID, errorCode, completionToken string) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -264,8 +272,8 @@ func (s *PostgresStore) Fail(ctx context.Context, tenantID, uploadID, errorCode 
 	defer func() { _ = tx.Rollback() }()
 	result, err := tx.ExecContext(ctx, `
 UPDATE capture_upload_session SET status='failed', error_code=NULLIF($3, ''), updated_at=now()
-WHERE tenant_id=$1 AND id::text=$2 AND status='finalizing'
-`, tenantID, uploadID, errorCode)
+WHERE tenant_id=$1 AND id::text=$2 AND status='finalizing' AND completion_token=$4::uuid
+`, tenantID, uploadID, errorCode, completionToken)
 	if err != nil {
 		return err
 	}
@@ -284,11 +292,11 @@ WHERE tenant_id=$1 AND id::text=$2 AND status='finalizing'
 	return tx.Commit()
 }
 
-func (s *PostgresStore) setFinalizingStatus(ctx context.Context, tenantID, uploadID, status, errorCode string) error {
+func (s *PostgresStore) setFinalizingStatus(ctx context.Context, tenantID, uploadID, status, errorCode, completionToken string) error {
 	result, err := s.db.ExecContext(ctx, `
 UPDATE capture_upload_session SET status=$3, error_code=NULLIF($4, ''), updated_at=now()
-WHERE tenant_id=$1 AND id::text=$2 AND status='finalizing'
-`, tenantID, uploadID, status, errorCode)
+WHERE tenant_id=$1 AND id::text=$2 AND status='finalizing' AND completion_token=$5::uuid
+`, tenantID, uploadID, status, errorCode, completionToken)
 	if err != nil {
 		return err
 	}
@@ -318,7 +326,7 @@ func scanSession(scanner interface{ Scan(...any) error }) (Session, error) {
 		&session.ID, &session.TenantID, &session.ExamID, &session.BatchID,
 		&session.IdempotencyKey, &session.OriginalName, &session.ContentType, &session.SHA256, &session.Size,
 		&session.ChunkSize, &session.ConfirmedOffset, &session.Status, &session.FileAssetID, &session.CaptureFileID,
-		&session.ErrorCode, &session.CreatedAt, &session.CompletedAt,
+		&session.ErrorCode, &session.CreatedAt, &session.CompletedAt, &session.CompletionToken, &session.CompletionLeaseUntil,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Session{}, ErrNotFound

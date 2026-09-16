@@ -1158,7 +1158,7 @@ export function CaptureBatchPage({
                               <Space><Button icon={<RefreshCw size={15} />} loading={actioning} disabled={!batchCanManage} onClick={() => void startProcessing()}>重试原文件</Button><Button icon={<FileUp size={15} />} disabled={!batchCanManage} onClick={() => { setActiveTab("files"); message.info("可重新导入修复后的同一文件，系统会保留原失败记录"); }}>上传修复文件</Button></Space>
                             </div>
                           ))}
-                          {issuePages.length > 0 ? <ResponsiveTable rowKey="id" columns={pageColumns} dataSource={issuePages} pagination={false} size="small" /> : null}
+                          {issuePages.length > 0 ? <ResponsiveTable className="dense-data-table" rowKey="id" columns={pageColumns} dataSource={issuePages} pagination={false} size="small" /> : null}
                         </div>
                       ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="当前没有需要人工处理的页面" />,
                     },
@@ -1168,6 +1168,7 @@ export function CaptureBatchPage({
                       children: (
                         <div className="capture-detail-stack">
                           <ResponsiveTable
+                            className="dense-data-table"
                             rowKey="id"
                             columns={fileColumns}
                             dataSource={detail.files}
@@ -1175,6 +1176,7 @@ export function CaptureBatchPage({
                             size="small"
                           />
                           <ResponsiveTable
+                            className="dense-data-table"
                             rowKey="id"
                             columns={pageColumns}
                             dataSource={detail.pages}

@@ -8,6 +8,7 @@ from .paper_compact import (
     compact_paper_import_schema,
     expand_compact_output,
     needs_compact_protocol,
+    page_furniture_issues,
 )
 
 QUESTION_TYPES = {
@@ -416,6 +417,7 @@ class PaperParser:
                 message="检测到可靠题号与答案锚点，正在确定性重建",
             )
             result = self._validate(anchored, request_id, subject, cleaned)
+            result["issues"].extend(page_furniture_issues(cleaned))
             self._progress(
                 progress,
                 phase="deterministic_structuring",
@@ -426,8 +428,11 @@ class PaperParser:
             )
             return result
         if needs_compact_protocol(cleaned):
-            return self._parse_compact(request_id, subject, cleaned, progress)
-        return self._parse_full(request_id, subject, cleaned, progress)
+            result = self._parse_compact(request_id, subject, cleaned, progress)
+        else:
+            result = self._parse_full(request_id, subject, cleaned, progress)
+        result["issues"].extend(page_furniture_issues(cleaned))
+        return result
 
     @staticmethod
     def _progress(callback, **event):
@@ -778,6 +783,13 @@ class PaperParser:
                         request_id=request_id,
                     )
                 PaperParser._validate_refs(refs, documents_by_id, request_id)
+                evidence_confidences = [
+                    ref["ocr_confidence"]
+                    for ref in refs
+                    if ref.get("ocr_confidence") is not None
+                ]
+                if evidence_confidences:
+                    candidate["confidence"] = min(confidence, *evidence_confidences)
         for rubric in output["rubric_candidates"]:
             max_score = rubric.get("max_score")
             if max_score is not None and (

@@ -419,7 +419,7 @@ export interface operations {
   "previewBackmarkBatch": { args: { path: { "examId": string; "questionId": string; }; body: BackmarkPreviewRequest; signal?: AbortSignal; }; response: BackmarkPreviewResponse; };
   "createBackmarkBatch": { args: { path: { "examId": string; "questionId": string; }; body: CreateBackmarkBatchRequest; signal?: AbortSignal; }; response: BackmarkSummaryResponse; };
   "listBackmarkBatches": { args: { query?: { "exam_id"?: string; "question_id"?: string; "limit"?: number; "cursor"?: string; }; signal?: AbortSignal; }; response: BackmarkBatchListResponse; };
-  "getBackmarkBatch": { args: { path: { "batchId": string; }; query?: { "limit"?: number; "cursor"?: string; }; signal?: AbortSignal; }; response: BackmarkSummaryResponse; };
+  "getBackmarkBatch": { args: { path: { "batchId": string; }; query?: { "limit"?: number; "cursor"?: string; "status"?: "pending" | "in_progress" | "diff_ready" | "arbitration_required" | "regrade_required" | "cancelled"; }; signal?: AbortSignal; }; response: BackmarkSummaryResponse; };
   "previewBackmarkBatchRegrade": { args: { path: { "batchId": string; }; body: BackmarkRegradeInput; signal?: AbortSignal; }; response: RegradePreviewResponse; };
   "createBackmarkBatchRegradeJob": { args: { path: { "batchId": string; }; body: BackmarkRegradeInput; signal?: AbortSignal; }; response: RegradeSummaryResponse; };
   "listMyBackmarkItems": { args: { query?: { "limit"?: number; "cursor"?: string; }; signal?: AbortSignal; }; response: BackmarkGraderItemListResponse; };

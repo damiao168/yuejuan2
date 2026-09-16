@@ -442,6 +442,7 @@ export function ModelEvaluationWorkspace({
       </div>
       <div className="model-governance-table">
         <ResponsiveTable
+          className="dense-data-table"
           rowKey="id"
           columns={columns}
           dataSource={filteredRuns}

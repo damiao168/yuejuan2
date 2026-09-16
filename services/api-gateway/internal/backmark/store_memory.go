@@ -112,7 +112,25 @@ func (s *MemoryStore) ListBatchItems(_ context.Context, _ string, batchID string
 		return nil, ErrNotFound
 	}
 	items := s.itemsForBatchLocked(batchID)
+	if page.Status != "" {
+		filtered := items[:0]
+		for _, item := range items {
+			if item.Status == page.Status {
+				filtered = append(filtered, item)
+			}
+		}
+		items = filtered
+	}
 	return pageItems(items, page, false), nil
+}
+
+func (s *MemoryStore) GetStatusCounts(_ context.Context, _ string, batchID string) (StatusCounts, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.batches[batchID]; !ok {
+		return StatusCounts{}, ErrNotFound
+	}
+	return statusCounts(s.itemsForBatchLocked(batchID)), nil
 }
 
 func (s *MemoryStore) GetHistogram(_ context.Context, _ string, batchID string) ([]Histogram, error) {

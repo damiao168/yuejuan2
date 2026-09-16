@@ -2,10 +2,14 @@ package backmark
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"math"
 	"sort"
 	"strings"
 
+	"edugrade-enterprise/services/api-gateway/internal/paper"
 	"edugrade-enterprise/services/api-gateway/internal/review"
 )
 
@@ -45,7 +49,15 @@ func (s *Service) Preview(ctx context.Context, tenantID, examID, questionID stri
 	if !validScope(tenantID, examID, questionID) || !validSelector(selector) {
 		return Preview{}, ErrInvalidInput
 	}
-	return s.store.Preview(ctx, tenantID, examID, questionID, normalizeSelector(selector))
+	selector = normalizeSelector(selector)
+	sources, err := s.store.SelectSourceTasks(ctx, tenantID, examID, questionID, selector, MaxSynchronousItems+1)
+	if err != nil {
+		return Preview{}, err
+	}
+	if len(sources) > MaxSynchronousItems {
+		return s.store.Preview(ctx, tenantID, examID, questionID, selector)
+	}
+	return previewSources(tenantID, examID, questionID, selector, sources), nil
 }
 
 func (s *Service) Create(ctx context.Context, tenantID, examID, questionID, actorID string, input CreateInput) (Summary, error) {
@@ -59,6 +71,9 @@ func (s *Service) Create(ctx context.Context, tenantID, examID, questionID, acto
 	sources, err := s.store.SelectSourceTasks(ctx, tenantID, examID, questionID, input.Selector, MaxSynchronousItems+1)
 	if err != nil {
 		return Summary{}, err
+	}
+	if input.SelectorHash != "" && input.SelectorHash != sourceHash(tenantID, examID, questionID, input.Selector, sources) {
+		return Summary{}, ErrPreviewStale
 	}
 	if len(sources) == 0 {
 		return Summary{}, ErrNoAffectedTasks
@@ -75,7 +90,7 @@ func (s *Service) Create(ctx context.Context, tenantID, examID, questionID, acto
 	if err != nil {
 		return Summary{}, err
 	}
-	return Summary{Batch: batch, Items: items, Histogram: histogram(items)}, nil
+	return Summary{Batch: batch, Items: items, Histogram: histogram(items), StatusCounts: statusCounts(items)}, nil
 }
 
 func (s *Service) Get(ctx context.Context, tenantID, batchID string) (Summary, error) {
@@ -101,7 +116,11 @@ func (s *Service) GetPage(ctx context.Context, tenantID, batchID string, page Pa
 	if err != nil {
 		return Summary{}, err
 	}
-	return Summary{Batch: batch, Items: items, Histogram: histogram}, nil
+	counts, err := s.store.GetStatusCounts(ctx, tenantID, batchID)
+	if err != nil {
+		return Summary{}, err
+	}
+	return Summary{Batch: batch, Items: items, Histogram: histogram, StatusCounts: counts}, nil
 }
 
 // RegradeSelection returns exactly the submissions whose independently
@@ -276,7 +295,118 @@ func (s *Service) Submit(ctx context.Context, tenantID, itemID, graderID string,
 		input.ExpectedRevision <= 0 || !finiteNonNegative(input.Score) || !validSelections(input.RubricSelections) {
 		return Item{}, Grade{}, ErrInvalidInput
 	}
+	item, err := s.store.GetAssigned(ctx, tenantID, itemID, graderID)
+	if err != nil {
+		return Item{}, Grade{}, err
+	}
+	if item.ReassignedTo != graderID || item.OriginalReviewer == graderID {
+		return Item{}, Grade{}, ErrAssigneeForbidden
+	}
+	if item.Status != ItemInProgress {
+		return Item{}, Grade{}, ErrStateConflict
+	}
+	if item.Revision != input.ExpectedRevision {
+		return Item{}, Grade{}, ErrRevisionConflict
+	}
+	if input.Score > item.MaxScore {
+		return Item{}, Grade{}, ErrInvalidInput
+	}
+	if s.context == nil {
+		return Item{}, Grade{}, ErrNotFound
+	}
+	taskContext, err := s.context.GetTaskContext(ctx, tenantID, item.ReviewTaskID)
+	if err != nil {
+		return Item{}, Grade{}, err
+	}
+	if !validFrozenSelections(input, taskContext.FrozenRubric) {
+		return Item{}, Grade{}, ErrInvalidInput
+	}
 	return s.store.Submit(ctx, tenantID, itemID, graderID, input)
+}
+
+// Match normal review scoring: a rubric-backed grade equals the sum of its
+// awarded points. Required describes the rubric criterion, not a requirement
+// that a student's answer earn positive credit for it.
+func validFrozenSelections(input SubmitInput, rubric paper.Rubric) bool {
+	hasRubric := rubric.ID != "" || len(rubric.Points) > 0
+	if hasRubric && (!finiteNonNegative(rubric.MaxScore) || input.Score > rubric.MaxScore) {
+		return false
+	}
+	allowed := make(map[string]float64, len(rubric.Points))
+	for _, point := range rubric.Points {
+		if strings.TrimSpace(point.ID) == "" || !finiteNonNegative(point.Score) {
+			return false
+		}
+		if _, duplicate := allowed[point.ID]; duplicate {
+			return false
+		}
+		allowed[point.ID] = point.Score
+	}
+	seen := make(map[string]bool, len(input.RubricSelections))
+	sum := 0.0
+	for _, selection := range input.RubricSelections {
+		max, exists := allowed[selection.PointID]
+		if !exists || seen[selection.PointID] || !finiteNonNegative(selection.Score) || selection.Score > max {
+			return false
+		}
+		seen[selection.PointID] = true
+		sum += selection.Score
+	}
+	return finiteNonNegative(sum) && (!hasRubric || math.Abs(sum-input.Score) <= 0.0001)
+}
+
+func sourceHash(tenantID, examID, questionID string, selector Selector, sources []SourceTask) string {
+	ordered := append([]SourceTask{}, sources...)
+	sort.Slice(ordered, func(i, j int) bool { return ordered[i].ReviewTaskID < ordered[j].ReviewTaskID })
+	for i := range ordered {
+		ordered[i].GradedAt = ordered[i].GradedAt.UTC()
+	}
+	encoded, err := json.Marshal(struct {
+		TenantID, ExamID, QuestionID string
+		Selector                     Selector
+		Sources                      []SourceTask
+	}{tenantID, examID, questionID, selector, ordered})
+	if err != nil {
+		return ""
+	}
+	hash := sha256.Sum256(encoded)
+	return hex.EncodeToString(hash[:])
+}
+
+func previewSources(tenantID, examID, questionID string, selector Selector, sources []SourceTask) Preview {
+	preview := Preview{AffectedCount: len(sources), ScoreBands: []Band{}, SelectorHash: sourceHash(tenantID, examID, questionID, selector, sources)}
+	counts := map[float64]int{}
+	for _, source := range sources {
+		counts[source.OriginalScore]++
+		gradedAt := source.GradedAt.UTC()
+		if preview.TimeRange.From == nil || gradedAt.Before(*preview.TimeRange.From) {
+			preview.TimeRange.From = &gradedAt
+		}
+		if preview.TimeRange.To == nil || gradedAt.After(*preview.TimeRange.To) {
+			preview.TimeRange.To = &gradedAt
+		}
+	}
+	for score, count := range counts {
+		preview.ScoreBands = append(preview.ScoreBands, Band{Score: score, Count: count})
+	}
+	sort.Slice(preview.ScoreBands, func(i, j int) bool { return preview.ScoreBands[i].Score < preview.ScoreBands[j].Score })
+	return preview
+}
+
+func statusCounts(items []Item) StatusCounts {
+	var counts StatusCounts
+	for _, item := range items {
+		switch item.Status {
+		case ItemPending, ItemInProgress:
+			counts.PendingCount++
+		case ItemDiffReady, ItemArbitrationRequired, ItemRegradeRequired:
+			counts.CompletedCount++
+		}
+		if item.Status == ItemRegradeRequired {
+			counts.RegradeRequiredCount++
+		}
+	}
+	return counts
 }
 
 func validScope(tenantID, examID, questionID string) bool {
@@ -317,8 +447,16 @@ func validSelector(value Selector) bool {
 }
 
 func validPage(page PageOptions) bool {
-	return page.Limit > 0 && page.Limit <= MaxPageSize+1 &&
+	return validItemStatus(page.Status) && page.Limit > 0 && page.Limit <= MaxPageSize+1 &&
 		(page.CursorCreatedAt.IsZero() == (strings.TrimSpace(page.CursorID) == ""))
+}
+
+func validItemStatus(status string) bool {
+	switch status {
+	case "", ItemPending, ItemInProgress, ItemDiffReady, ItemArbitrationRequired, ItemRegradeRequired, ItemCancelled:
+		return true
+	}
+	return false
 }
 
 func validPolicy(value Policy) bool {
@@ -337,6 +475,24 @@ func normalizePolicy(value Policy) Policy {
 
 func normalizeSelector(value Selector) Selector {
 	value.GraderID = strings.TrimSpace(value.GraderID)
+	if value.TimeRange != nil {
+		rangeValue := *value.TimeRange
+		if rangeValue.From != nil {
+			from := rangeValue.From.UTC()
+			rangeValue.From = &from
+		}
+		if rangeValue.To != nil {
+			to := rangeValue.To.UTC()
+			rangeValue.To = &to
+		}
+		value.TimeRange = &rangeValue
+		if rangeValue.From == nil && rangeValue.To == nil {
+			value.TimeRange = nil
+		}
+	}
+	if value.ScoreBand != nil && value.ScoreBand.Min == nil && value.ScoreBand.Max == nil {
+		value.ScoreBand = nil
+	}
 	if len(value.TaskIDs) == 0 {
 		value.TaskIDs = nil
 		return value

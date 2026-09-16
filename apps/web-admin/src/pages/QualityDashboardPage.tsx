@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, App, Button, Collapse, DatePicker, Descriptions, Drawer, Empty, Form, Input, InputNumber, Select, Space, Statistic, Switch, Table, Tag } from "antd";
 import { RefreshCw, ShieldAlert, ShieldCheck } from "lucide-react";
 import type { Dayjs } from "dayjs";
@@ -8,7 +8,7 @@ import { ApiClientError, getUserErrorMessage } from "../api/client";
 import { getSeedPolicy, listBackmarkBatches, putSeedPolicy, type BackmarkBatch, type SeedPolicy } from "../api/qualityOperations";
 import { createBackmarkBatch, createBackmarkBatchRegradeJob, getBackmarkBatch, previewBackmarkBatch, previewBackmarkBatchRegrade, type BackmarkPolicy, type BackmarkPreview, type BackmarkSelector, type BackmarkSummary } from "../api/backmark";
 import { listScoreReleases, type RegradePreview, type ScoreRelease } from "../api/scoreReleases";
-import { listManagedUsers, type ManagedUser } from "../api/users";
+import { listAllActiveGraders, type ManagedUser } from "../api/users";
 import { listGradingQualityIncidents, recomputeGraderDrift, resolveGradingQualityIncident, type GradingQualityIncident } from "../api/graderDrift";
 import { ErrorState, LoadingState } from "../components/PageState";
 
@@ -45,6 +45,7 @@ export function QualityDashboardPage({ examId, canManage = false }: { examId: st
   const [backmarkLoading, setBackmarkLoading] = useState(false);
   const [backmarkQuestionId, setBackmarkQuestionId] = useState("");
   const [backmarkPreview, setBackmarkPreview] = useState<BackmarkPreview>();
+  const backmarkPreviewRevision = useRef(0);
   const [backmarkReviewers, setBackmarkReviewers] = useState<ManagedUser[]>([]);
   const [backmarkSummary, setBackmarkSummary] = useState<BackmarkSummary>();
   const [backmarkSummaryNextCursor, setBackmarkSummaryNextCursor] = useState("");
@@ -61,7 +62,7 @@ export function QualityDashboardPage({ examId, canManage = false }: { examId: st
     question_id: string; source_incident_id: string; reassigned_to: string; disposition: BackmarkPolicy["disposition"]; arbitration_delta: number;
     date_range?: [Dayjs, Dayjs]; score_min?: number; score_max?: number; grader_id?: string;
   }>();
-  const [policyForm] = Form.useForm();
+  const [policyForm] = Form.useForm<{ rate: number; min_interval: number; max_interval: number; enabled: boolean }>();
 
   const load = useCallback(async (signal?: AbortSignal) => {
     if (!examId) return;
@@ -93,11 +94,11 @@ export function QualityDashboardPage({ examId, canManage = false }: { examId: st
     try {
       const response = await getSeedPolicy(examId, questionId);
       setSeedPolicy(response.policy);
-      policyForm.setFieldsValue(response.policy);
+      policyForm.setFieldsValue({ ...response.policy, enabled: response.policy.status === "active" });
     } catch (reason) {
       if (reason instanceof ApiClientError && reason.status === 404) {
         setSeedPolicy(undefined);
-        policyForm.setFieldsValue({ rate: 0.1, min_interval: 10, max_interval: 30, status: "paused" });
+        policyForm.setFieldsValue({ rate: 0.1, min_interval: 10, max_interval: 30, enabled: false });
       } else {
         message.error(errorMessage(reason));
       }
@@ -121,11 +122,11 @@ export function QualityDashboardPage({ examId, canManage = false }: { examId: st
         rate: values.rate,
         min_interval: values.min_interval,
         max_interval: values.max_interval,
-        status: values.status ? "active" : "paused",
+        status: values.enabled ? "active" : "paused",
         expected_revision: seedPolicy?.revision ?? 0
       });
       setSeedPolicy(response.policy);
-      policyForm.setFieldsValue(response.policy);
+      policyForm.setFieldsValue({ ...response.policy, enabled: response.policy.status === "active" });
       message.success("盲测策略已保存");
       void load();
     } catch (reason) {
@@ -134,13 +135,14 @@ export function QualityDashboardPage({ examId, canManage = false }: { examId: st
   };
 
   const openBackmark = (initial?: Partial<ReturnType<typeof backmarkForm.getFieldsValue>>) => {
+    invalidateBackmarkPreview();
     setBackmarkOpen(true);
     setBackmarkLoading(true);
-    void Promise.all([listBackmarkBatches(examId), listManagedUsers({ limit: 200 })])
+    void Promise.all([listBackmarkBatches(examId), listAllActiveGraders()])
       .then(([response, users]) => {
         setBackmarkBatches(response.backmark_batches);
         setBackmarkBatchesNextCursor(response.has_more ? response.next_cursor : "");
-        setBackmarkReviewers(users.users.filter((user) => user.status === "active" && user.roles.includes("grader")));
+        setBackmarkReviewers(users);
         const questionId = backmarkQuestionId || data.questions[0]?.question.id || "";
         setBackmarkQuestionId(questionId);
         backmarkForm.setFieldsValue({ question_id: questionId, disposition: "arbitrate", arbitration_delta: 1, ...initial });
@@ -167,9 +169,13 @@ export function QualityDashboardPage({ examId, canManage = false }: { examId: st
     score_band: values.score_min === undefined && values.score_max === undefined ? undefined : { min: values.score_min, max: values.score_max }
   });
   const previewBackmark = async () => {
+    invalidateBackmarkPreview();
+    const revision = backmarkPreviewRevision.current;
     try {
       const values = await backmarkForm.validateFields(["question_id", "date_range", "score_min", "score_max", "grader_id"]);
+      if (revision !== backmarkPreviewRevision.current) return;
       const response = await previewBackmarkBatch(examId, values.question_id, selectorFromForm(values));
+      if (revision !== backmarkPreviewRevision.current) return;
       setBackmarkQuestionId(values.question_id);
       setBackmarkPreview(response.preview);
       if (response.preview.affected_count === 0) message.warning("当前筛选没有匹配已完成的阅卷任务");
@@ -178,19 +184,29 @@ export function QualityDashboardPage({ examId, canManage = false }: { examId: st
     }
   };
   const createBackmark = async () => {
+    if (!backmarkPreview?.affected_count || !backmarkPreview.selector_hash) return;
+    const preview = backmarkPreview;
+    const revision = backmarkPreviewRevision.current;
     try {
       const values = await backmarkForm.validateFields();
+      if (revision !== backmarkPreviewRevision.current) return;
       const response = await createBackmarkBatch(examId, values.question_id, {
+        selector_hash: preview.selector_hash,
         source_incident_id: values.source_incident_id.trim(), selector: selectorFromForm(values), reassigned_to: values.reassigned_to,
         policy: { disposition: values.disposition, arbitration_delta: values.disposition === "arbitrate" ? values.arbitration_delta : 0 }
       });
       setBackmarkBatches((current) => [response.backmark.batch, ...current]);
-      setBackmarkPreview(undefined);
+      invalidateBackmarkPreview();
       message.success(`已创建 ${response.backmark.batch.affected_count} 份独立回标任务`);
     } catch (reason) {
+      if (reason instanceof ApiClientError && reason.code === "backmark_preview_stale") invalidateBackmarkPreview();
       if (reason instanceof ApiClientError) message.error(errorMessage(reason));
     }
   };
+  function invalidateBackmarkPreview() {
+    backmarkPreviewRevision.current += 1;
+    setBackmarkPreview(undefined);
+  }
   const loadIncidents = async () => {
     setIncidentsLoading(true);
     try {
@@ -248,16 +264,16 @@ export function QualityDashboardPage({ examId, canManage = false }: { examId: st
     setBackmarkRegradeLoading(true);
     try {
       const [summaryResponse, releasesResponse, usersResponse] = await Promise.all([
-        getBackmarkBatch(batch.id),
+        getBackmarkBatch(batch.id, { status: "regrade_required" }),
         listScoreReleases(batch.exam_id),
-        listManagedUsers({ limit: 200 })
+        listAllActiveGraders()
       ]);
       setBackmarkSummary(summaryResponse.backmark);
       setBackmarkSummaryNextCursor(summaryResponse.has_more ? summaryResponse.next_cursor : "");
       const published = releasesResponse.score_releases.filter((release) => release.status === "published");
       setBackmarkRegradeReleases(published);
       setBackmarkRegradeReleaseID(published[0]?.id ?? "");
-      const graders = usersResponse.users.filter((user) => user.status === "active" && user.roles.includes("grader"));
+      const graders = usersResponse;
       setBackmarkReviewers(graders);
       setBackmarkRegradeAssignee(graders[0]?.id ?? "");
     } catch (reason) {
@@ -271,7 +287,7 @@ export function QualityDashboardPage({ examId, canManage = false }: { examId: st
     if (!backmarkSummary || !backmarkSummaryNextCursor) return;
     setBackmarkRegradeLoading(true);
     try {
-      const response = await getBackmarkBatch(backmarkSummary.batch.id, { limit: 50, cursor: backmarkSummaryNextCursor });
+      const response = await getBackmarkBatch(backmarkSummary.batch.id, { limit: 50, cursor: backmarkSummaryNextCursor, status: "regrade_required" });
       setBackmarkSummary((current) => current ? { ...response.backmark, items: [...current.items, ...response.backmark.items] } : response.backmark);
       setBackmarkSummaryNextCursor(response.has_more ? response.next_cursor : "");
     } catch (reason) {
@@ -281,7 +297,7 @@ export function QualityDashboardPage({ examId, canManage = false }: { examId: st
     }
   };
 
-  const hasRegradeCandidates = Boolean(backmarkSummary?.items.some((item) => item.status === "regrade_required"));
+  const hasRegradeCandidates = (backmarkSummary?.regrade_required_count ?? 0) > 0;
   const previewBackmarkRegrade = async () => {
     if (!backmarkSummary || !backmarkRegradeReleaseID || !backmarkRegradeAssignee) return;
     setBackmarkRegradeLoading(true);
@@ -387,7 +403,7 @@ export function QualityDashboardPage({ examId, canManage = false }: { examId: st
                   {
                     key: "findings",
                     label: `待处理事项（${row.findings.length}）`,
-                    children: row.findings.length ? <Table size="small" pagination={false} rowKey={(item) => `${item.code}-${item.incident_ref ?? item.question_id}`} dataSource={row.findings} columns={[
+                    children: row.findings.length ? <Table className="dense-data-table" size="small" pagination={false} rowKey={(item) => `${item.code}-${item.incident_ref ?? item.question_id}`} dataSource={row.findings} columns={[
                       { title: "状态", dataIndex: "status", render: (value: Gate) => <Tag color={gateColor(value)}>{gateLabel(value)}</Tag> },
                       { title: "原因", dataIndex: "reason" },
                       { title: "负责人", dataIndex: "owner" },
@@ -408,14 +424,16 @@ export function QualityDashboardPage({ examId, canManage = false }: { examId: st
           <Form.Item name="rate" label="抽样比例" rules={[{ required: true, message: "请输入抽样比例" }]}><InputNumber min={0.001} max={1} step={0.01} precision={3} style={{ width: "100%" }} /></Form.Item>
           <Form.Item name="min_interval" label="最小间隔（正常阅卷题数）" rules={[{ required: true }]}><InputNumber min={1} max={100000} style={{ width: "100%" }} /></Form.Item>
           <Form.Item name="max_interval" label="最大间隔（正常阅卷题数）" rules={[{ required: true }]}><InputNumber min={1} max={100000} style={{ width: "100%" }} /></Form.Item>
-          <Form.Item name="status" label="启用盲测" valuePropName="checked" getValueProps={(value) => ({ checked: value === "active" || value === true })} normalize={(value) => value ? "active" : "paused"}><Switch /></Form.Item>
+          <Form.Item name="enabled" label="启用盲测" valuePropName="checked"><Switch /></Form.Item>
         </Form>
         <Alert type="info" showIcon message="盲测题通过正常阅卷入口呈现；阅卷员不会看到标准卷答案或参考分。" />
       </Drawer>
       <Drawer title="创建回标批次" width={720} open={backmarkOpen} onClose={() => setBackmarkOpen(false)} extra={<Button icon={<RefreshCw size={15} />} loading={backmarkLoading} onClick={() => openBackmark()}>刷新</Button>}>
         <Alert type="info" showIcon message="独立回标不会直接改分" description="先确认影响范围，再分配给非原阅卷人独立评分；差异只进入后续仲裁或重评流程。" />
-        <Form form={backmarkForm} layout="vertical" disabled={backmarkLoading} initialValues={{ disposition: "arbitrate", arbitration_delta: 1 }}>
-          <Form.Item name="question_id" label="题目" rules={[{ required: true, message: "请选择题目" }]}><Select options={data.questions.map((item) => ({ value: item.question.id, label: `${item.question.question_no} · ${item.question.archetype_code || "未配置"}` }))} onChange={() => setBackmarkPreview(undefined)} /></Form.Item>
+        <Form form={backmarkForm} layout="vertical" disabled={backmarkLoading} initialValues={{ disposition: "arbitrate", arbitration_delta: 1 }} onValuesChange={(changed) => {
+          if (["question_id", "date_range", "score_min", "score_max", "grader_id"].some((field) => field in changed)) invalidateBackmarkPreview();
+        }}>
+          <Form.Item name="question_id" label="题目" rules={[{ required: true, message: "请选择题目" }]}><Select options={data.questions.map((item) => ({ value: item.question.id, label: `${item.question.question_no} · ${item.question.archetype_code || "未配置"}` }))} /></Form.Item>
           <Form.Item name="date_range" label="完成阅卷时间（可选）"><DatePicker.RangePicker style={{ width: "100%" }} /></Form.Item>
           <Space.Compact block>
             <Form.Item name="score_min" label="原分下限" style={{ flex: 1 }}><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
@@ -428,14 +446,15 @@ export function QualityDashboardPage({ examId, canManage = false }: { examId: st
             { key: "time", label: "完成时间", children: backmarkPreview.time_range.from && backmarkPreview.time_range.to ? `${new Date(backmarkPreview.time_range.from).toLocaleString("zh-CN", { hour12: false })} 至 ${new Date(backmarkPreview.time_range.to).toLocaleString("zh-CN", { hour12: false })}` : "无匹配记录" },
             { key: "band", label: "原分分布", children: backmarkPreview.score_bands.map((item) => `${item.score}分 · ${item.count}份`).join("，") || "无" }
           ]} /> : null}
+          {backmarkPreview && backmarkPreview.affected_count > 1000 ? <Alert type="warning" showIcon message="单个回标批次最多分配 1000 份答卷，请缩小范围后重新预览。" /> : null}
           <Form.Item name="source_incident_id" label="质量事件编号" rules={[{ required: true, whitespace: true, message: "请填写触发回标的质量事件编号" }]}><Input placeholder="例如 drift-20260812-001" /></Form.Item>
           <Form.Item name="reassigned_to" label="指定回标阅卷员" rules={[{ required: true, message: "请选择非原阅卷人" }]}><Select showSearch optionFilterProp="label" options={backmarkReviewers.map((user) => ({ value: user.id, label: user.display_name || user.username }))} placeholder="选择一名阅卷员" /></Form.Item>
           <Form.Item name="disposition" label="出现差异后的去向"><Select options={[{ value: "confirm", label: "记录差异，待人工确认" }, { value: "arbitrate", label: "达到阈值进入仲裁" }, { value: "regrade", label: "进入题目重评流程" }]} /></Form.Item>
           <Form.Item noStyle shouldUpdate={(previous, current) => previous.disposition !== current.disposition}>{({ getFieldValue }) => getFieldValue("disposition") === "arbitrate" ? <Form.Item name="arbitration_delta" label="仲裁分差阈值" rules={[{ required: true }]}><InputNumber min={0} style={{ width: "100%" }} /></Form.Item> : null}</Form.Item>
         </Form>
-        <Space><Button onClick={() => setBackmarkOpen(false)}>取消</Button><Button type="primary" disabled={!backmarkPreview?.affected_count} loading={backmarkLoading} onClick={() => void createBackmark()}>创建并分配回标</Button></Space>
+        <Space><Button onClick={() => setBackmarkOpen(false)}>取消</Button><Button type="primary" disabled={!backmarkPreview?.affected_count || !backmarkPreview.selector_hash} loading={backmarkLoading} onClick={() => void createBackmark()}>创建并分配回标</Button></Space>
         <div className="section-header backmark-batch-history"><div><h3>已有回标批次</h3></div></div>
-        <Table rowKey="id" loading={backmarkLoading} pagination={false} dataSource={backmarkBatches} footer={backmarkBatchesNextCursor ? () => <Button block loading={backmarkLoading} onClick={() => void loadMoreBackmarkBatches()}>加载更多批次</Button> : undefined} columns={[
+        <Table className="dense-data-table" size="small" rowKey="id" loading={backmarkLoading} pagination={false} dataSource={backmarkBatches} footer={backmarkBatchesNextCursor ? () => <Button block loading={backmarkLoading} onClick={() => void loadMoreBackmarkBatches()}>加载更多批次</Button> : undefined} columns={[
           { title: "批次", dataIndex: "id", ellipsis: true },
           { title: "题目", dataIndex: "question_id", ellipsis: true },
           { title: "影响答卷", dataIndex: "affected_count" },
@@ -451,21 +470,22 @@ export function QualityDashboardPage({ examId, canManage = false }: { examId: st
             { key: "batch", label: "回标批次", children: backmarkSummary.batch.id },
             { key: "status", label: "批次状态", children: <Tag>{backmarkSummary.batch.status === "completed" ? "已完成" : backmarkSummary.batch.status === "cancelled" ? "已取消" : backmarkSummary.batch.status === "ready_for_confirmation" ? "待确认" : "处理中"}</Tag> },
             { key: "count", label: "受影响答卷", children: `${backmarkSummary.batch.affected_count} 份` },
+            { key: "regrade", label: "需重评", children: `${backmarkSummary.regrade_required_count ?? 0} 份` },
             { key: "policy", label: "差异去向", children: backmarkSummary.batch.policy.disposition }
           ]} />
           <div className="section-header backmark-batch-history"><div><h3>分差分布</h3></div></div>
-          {backmarkSummary.diff_histogram.length ? <Table size="small" rowKey={(item) => `${item.delta}`} pagination={false} dataSource={backmarkSummary.diff_histogram} columns={[
+          {backmarkSummary.diff_histogram.length ? <Table className="dense-data-table" size="small" rowKey={(item) => `${item.delta}`} pagination={false} dataSource={backmarkSummary.diff_histogram} columns={[
             { title: "新旧分差", dataIndex: "delta", render: (value: number) => `${value > 0 ? "+" : ""}${value} 分` },
             { title: "答卷数", dataIndex: "count", render: (value: number) => `${value} 份` }
           ]} /> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="尚未有完成的回标评分" />}
           <div className="section-header backmark-batch-history"><div><h3>严重变更清单</h3><p>仅列出需要进入题目复评的回标结果。</p></div></div>
-          <Table size="small" rowKey="id" pagination={false} dataSource={backmarkSummary.items.filter((item) => item.status === "regrade_required")} columns={[
+          <Table className="dense-data-table" size="small" rowKey="id" pagination={false} dataSource={backmarkSummary.items.filter((item) => item.status === "regrade_required")} columns={[
             { title: "回标项", dataIndex: "id", ellipsis: true },
             { title: "原分", dataIndex: "original_score" },
             { title: "新评分", dataIndex: "new_score", render: (value?: number) => value ?? "待完成" },
             { title: "分差", dataIndex: "diff", render: (value?: number) => value === undefined ? "-" : `${value > 0 ? "+" : ""}${value}` },
             { title: "状态", dataIndex: "status", render: () => <Tag color="error">需重评</Tag> }
-          ]} locale={{ emptyText: "没有需要题目复评的严重差异" }} />
+          ]} locale={{ emptyText: hasRegradeCandidates ? "当前页暂无需重评项，请加载更多结果" : "没有需要题目复评的严重差异" }} />
           {backmarkSummaryNextCursor ? <Button block loading={backmarkRegradeLoading} onClick={() => void loadMoreBackmarkSummary()}>加载更多回标结果</Button> : null}
           {canManage && hasRegradeCandidates ? <>
             <div className="section-header backmark-batch-history"><div><h3>转入题目复评</h3><p>系统将从已发布成绩版本重新冻结本批次对应的学生范围；不会直接采用回标候选分。</p></div></div>
@@ -484,7 +504,7 @@ export function QualityDashboardPage({ examId, canManage = false }: { examId: st
       </Drawer>
       <Drawer title="阅卷质量事件" width={760} open={incidentsOpen} onClose={() => setIncidentsOpen(false)} extra={<Button icon={<RefreshCw size={15} />} loading={incidentsLoading} onClick={() => void loadIncidents()}>刷新</Button>}>
         <Alert type="info" showIcon message="仅展示汇总质量信号" description="不会展示标准卷答案、学生答卷或教师私密评分。可从事件创建独立回标，或在处置完成后关闭事件。" />
-        <Table rowKey="id" loading={incidentsLoading} pagination={false} dataSource={incidents} columns={[
+        <Table className="dense-data-table" size="small" rowKey="id" loading={incidentsLoading} pagination={false} dataSource={incidents} columns={[
           { title: "题目", dataIndex: "question_id", ellipsis: true },
           { title: "类型", dataIndex: "type", render: (value: string) => <Tag>{value}</Tag> },
           { title: "级别", dataIndex: "severity", render: (value: string) => <Tag color={value === "critical" ? "error" : "warning"}>{value === "critical" ? "严重" : "警告"}</Tag> },

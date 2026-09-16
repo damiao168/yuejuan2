@@ -23,7 +23,7 @@ from .math_layout import (
 from .recognition_router import PaddleFormulaNetEngine, canonicalize_latex
 from .runner import WorkerConfig, _LeaseHeartbeat
 
-FORMULA_VALIDATION_VERSION = "latex-structure-render-v1"
+FORMULA_VALIDATION_VERSION = "latex-structure-render-v2"
 
 
 class PaperFormulaRunner:

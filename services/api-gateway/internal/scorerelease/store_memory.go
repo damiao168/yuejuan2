@@ -198,6 +198,9 @@ func (s *MemoryStore) Publish(_ context.Context, tenantID, id, actorID string) (
 	if !gate.Passed {
 		return Release{}, ErrGateBlocked
 	}
+	if release.Source == SourceRegrade && release.SourceReleaseID != "" && release.SourceReleaseID != s.current[tenantID+":"+release.ExamID] {
+		return Release{}, ErrStaleSource
+	}
 	now := s.now().UTC()
 	release.Status, release.PublishedBy, release.PublishedAt, release.GateSnapshot = StatusPublished, actorID, &now, gate
 	release.SupersedesReleaseID = s.current[tenantID+":"+release.ExamID]

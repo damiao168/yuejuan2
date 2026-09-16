@@ -6,7 +6,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/assessment"
 )
 
-const paperRecognitionPolicyVersion = "paper-recognition.v4"
+const paperRecognitionPolicyVersion = "paper-recognition.v5"
 
 type PaperRecognitionPolicy struct {
 	Version                   string  `json:"version"`
@@ -54,7 +54,7 @@ func paperRecognitionPolicy(subject string) (PaperRecognitionPolicy, bool) {
 		// the immutable semantic recognition policy. Older v3 tasks retain
 		// their snapshotted numeric batch size for reproducibility.
 		policy.FormulaBatchMode = "deployment_profile"
-		policy.ValidationVersion = "latex-structure-render-v1"
+		policy.ValidationVersion = "latex-structure-render-v2"
 		policy.RenderSimilarityThreshold = 0.34
 	}
 	return policy, true

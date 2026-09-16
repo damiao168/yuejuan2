@@ -241,6 +241,7 @@ export function ModelApprovalWorkspace({
       />
       <div className="model-governance-table">
         <ResponsiveTable
+          className="dense-data-table"
           rowKey="id"
           columns={columns}
           dataSource={approvals}

@@ -1073,6 +1073,7 @@ export function ScoreManagementPage({
             </div>
             {loadingScores ? <LoadingState label="正在核对考试名册" /> : (
               <ResponsiveTable
+                className="dense-data-table"
                 rowKey="key"
                 size="small"
                 columns={rosterColumns}
@@ -1129,6 +1130,7 @@ export function ScoreManagementPage({
               <LoadingState label="正在读取成绩" />
             ) : (
               <ResponsiveTable
+                className="dense-data-table"
                 rowKey="id"
                 size="small"
                 columns={columns}

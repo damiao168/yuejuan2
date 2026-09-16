@@ -15,6 +15,7 @@ var (
 	ErrInvalidTransition = errors.New("invalid score release transition")
 	ErrGateBlocked       = errors.New("score release gate is blocked")
 	ErrForbidden         = errors.New("score release access forbidden")
+	ErrStaleSource       = errors.New("score release source is no longer current")
 )
 
 const (

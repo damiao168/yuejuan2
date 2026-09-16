@@ -891,6 +891,7 @@ export function PaperRubricPage({
 		? latestPaperImport.structured_issues.filter((issue) => issue.severity !== "info")
 		: (latestPaperImport?.issues ?? []).map((message) => ({ message, certainty: "unknown" as const }));
 	const importSummary = latestPaperImport ? paperImportSummary(latestPaperImport) : null;
+	const excludedPageFurniture = importCancelled || latestPaperImport?.status === "processing" ? [] : (latestPaperImport?.structured_issues ?? []).filter((issue) => issue.code === "PAGE_FURNITURE_EXCLUDED");
 	const importProgress = latestPaperImport ? paperImportProgress(latestPaperImport) : null;
 	const progressTiming = importProgress?.startedAt
 		? `已运行 ${Math.max(0, Math.floor((Date.now() - new Date(importProgress.startedAt).getTime()) / 1000))} 秒 · ${Math.max(0, Math.floor((Date.now() - new Date(importProgress.changedAt ?? importProgress.startedAt).getTime()) / 1000))} 秒前有新进展 · 心跳 ${Math.max(0, Math.floor((Date.now() - new Date(importProgress.updatedAt ?? importProgress.startedAt).getTime()) / 1000))} 秒前`
@@ -979,7 +980,7 @@ export function PaperRubricPage({
 							<Select<PaperImportRole> key="role" size="small" aria-label="资料类型" value={source.role_hint} options={importRoleOptions} disabled={!canEditImportSources || updatingImportSources} onChange={(roleHint) => void replaceImportSources(latestPaperImport, sourcesAfterRoleChange(latestPaperImport.sources, source.id, roleHint))} />,
 							<Button key="remove" type="text" danger size="small" aria-label="删除资料" icon={<Trash2 size={14} />} disabled={!canEditImportSources || updatingImportSources} onClick={() => void removeImportSource(latestPaperImport, source.id)} />
 						]} extra={<StatusTag tone={importCancelled ? "neutral" : source.processing_status === "processed" ? "success" : source.processing_status === "failed" ? "danger" : "processing"}>{importCancelled ? "已停止" : source.processing_status === "processed" ? "已识别" : source.processing_status === "failed" ? "失败" : "处理中"}</StatusTag>}>
-							<List.Item.Meta title={`${source.document_index + 1}. ${source.original_name || "考试资料"}`} description={`识别内容：${source.detected_role === "question" ? "题目" : source.detected_role === "answer" ? "答案" : source.detected_role === "solution" ? "解析" : source.detected_role === "rubric" ? "评分标准" : source.detected_role === "mixed" ? "混合内容" : "识别中"}${source.role_confidence ? ` · 置信度 ${Math.round(source.role_confidence * 100)}%` : ""}`} />
+							<List.Item.Meta title={`${source.document_index + 1}. ${source.original_name || "考试资料"}`} description={`识别内容：${source.detected_role === "question" ? "题目" : source.detected_role === "answer" ? "答案" : source.detected_role === "solution" ? "解析" : source.detected_role === "rubric" ? "评分标准" : source.detected_role === "mixed" ? "混合内容" : "识别中"}${source.role_confidence ? ` · 资料类型判断 ${Math.round(source.role_confidence * 100)}%（不代表逐字准确率）` : ""}`} />
 						</List.Item>
 					)} />
 				) : null}
@@ -1041,6 +1042,13 @@ export function PaperRubricPage({
                 </div>
               ) : null}
 			{latestPaperImport.status === "review_required" && reviewDrafts.length ? <PaperImportReviewPanel job={latestPaperImport} drafts={reviewDrafts} onChange={updateReviewDraft} onOpenSource={(ref) => void openImportSource(ref.file_asset_id, ref.page_no)} /> : null}
+			{excludedPageFurniture.length ? <details>
+				<summary>已自动排除 {excludedPageFurniture.length} 项页眉、页脚或水印</summary>
+				<ul className="validation-issue-list">{excludedPageFurniture.map((issue, index) => <li key={`${issue.message}-${index}`}>
+					{issue.message}{issue.source_refs?.[0]?.file_asset_id ? <Button type="link" size="small" onClick={() => void openImportSource(issue.source_refs[0].file_asset_id, issue.source_refs[0].page_no)}>核对来源</Button> : null}
+				</li>)}</ul>
+				<p>原图和 OCR 原文仍保留；如果正文被误排除，请对照来源补充。</p>
+			</details> : null}
 			{latestPaperImport.status === "applied" ? <div className="paper-import-result"><div className="paper-import-facts"><span>已写入题目：<strong>{latestPaperImport.questions.length}</strong></span><span>已配置答案：<strong>{latestPaperImport.questions.filter((item) => item.answer_key).length}</strong></span><span>已导入解析：<strong>{latestPaperImport.questions.filter((item) => item.solution).length}</strong></span><span>已配置评分标准：<strong>{latestPaperImport.questions.filter((item) => item.rubric).length}</strong></span><span>已锁定评分标准：<strong>{latestPaperImport.questions.filter((item) => item.rubric?.status === "locked").length}</strong></span><span>仍需处理：<strong>{latestPaperImport.questions.filter((item) => rubricRequiredArchetypes.has(item.assessment_archetype ?? "") && item.rubric?.status !== "locked").length}</strong></span></div><Space wrap><Button onClick={() => document.getElementById("paper-question-summary")?.scrollIntoView({ behavior: "smooth", block: "start" })}>去逐题校对</Button>{initialExamId && onNavigate ? <Button type="primary" onClick={() => onNavigate(`/exams/${encodeURIComponent(initialExamId)}/settings`)}>去考试准备</Button> : null}</Space></div> : null}
 			  {visibleImportIssues.length ? (
 				<Alert type={latestPaperImport.status === "failed" || (latestPaperImport.structured_issues ?? []).some((item) => item.severity === "error") ? "error" : "warning"} showIcon message={noExamContentDetected ? "未识别到考试内容" : "需要核对"} description={

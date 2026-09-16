@@ -67,7 +67,7 @@ export function PaperImportReviewPanel({ job, drafts, onChange, onOpenSource }: 
         <label>题号<Input value={item.question_no} onChange={(event) => onChange(index, "question_no", { question_no: event.target.value })} /></label>
         <label>题型<Select value={item.question_type || undefined} options={questionTypeOptions} onChange={(value) => onChange(index, "question_type", { question_type: value })} /></label>
         <label>分值<InputNumber min={0} value={item.score} onChange={(value) => onChange(index, "score", { score: Number(value ?? 0) })} /></label>
-        <span>置信度 {Math.round(item.confidence * 100)}%</span>
+        <span title="取结构提取、OCR 及公式来源证据的较低参考值；未经逐字准确率校准，不代表整题正确概率">提取证据参考 {Math.round(item.confidence * 100)}%</span>
       </div>
       <div className="paper-import-field-with-source"><label>题干<Input.TextArea autoSize={{ minRows: 2, maxRows: 6 }} value={item.stem} onChange={(event) => onChange(index, "stem", { stem: event.target.value })} /></label><SourceLink label="查看题干来源" refs={questionRefs(item)} onOpen={onOpenSource} /></div>
       <div className="paper-import-field-with-source"><label>标准答案<Input.TextArea autoSize={{ minRows: 1, maxRows: 5 }} value={displayPaperImportValue(item.answer_key?.standard_answer)} onChange={(event) => onChange(index, "answer", { answer_key: { standard_answer: event.target.value, equivalent_answers: item.answer_key?.equivalent_answers ?? [], tolerance: item.answer_key?.tolerance ?? {} } })} /></label><SourceLink label="查看答案来源" refs={answerRefs(item)} onOpen={onOpenSource} /></div>

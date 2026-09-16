@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"math"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -90,6 +91,10 @@ func (s *Service) SubmitAttempt(ctx context.Context, tenantID, sessionID string,
 	}
 	for _, previous := range attempts {
 		if previous.GoldPaperID == input.GoldPaperID {
+			if len(attempts) == len(references) && previous.SubmittedScore == input.SubmittedScore &&
+				reflect.DeepEqual(cloneObject(previous.RubricSelections), cloneObject(input.RubricSelections)) {
+				return s.finishSession(ctx, tenantID, session, policy, attempts, previous)
+			}
 			return Attempt{}, Session{}, nil, ErrConflict
 		}
 	}
@@ -118,6 +123,11 @@ func (s *Service) SubmitAttempt(ctx context.Context, tenantID, sessionID string,
 	if len(attempts) < len(references) {
 		return attempt, session, nil, nil
 	}
+	return s.finishSession(ctx, tenantID, session, policy, attempts, attempt)
+}
+
+func (s *Service) finishSession(ctx context.Context, tenantID string, session Session, policy Policy, attempts []Attempt, attempt Attempt) (Attempt, Session, *Qualification, error) {
+	now := s.now()
 	metrics := calculateMetrics(attempts)
 	passed := passes(policy, metrics)
 	session.Status, session.Metrics, session.CompletedAt = SessionFailed, &metrics, &now
@@ -132,7 +142,7 @@ func (s *Service) SubmitAttempt(ctx context.Context, tenantID, sessionID string,
 		qualification.Status = QualificationRevoked
 		qualification.ValidUntil = now
 	}
-	session, qualification, err = s.store.CompleteSession(ctx, tenantID, session, qualification)
+	session, qualification, err := s.store.CompleteSession(ctx, tenantID, session, qualification)
 	if err != nil {
 		return Attempt{}, Session{}, nil, err
 	}

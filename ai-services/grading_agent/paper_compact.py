@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import math
 import re
+import unicodedata
 from dataclasses import dataclass
 
 from .errors import AgentError
@@ -31,6 +32,15 @@ _ANSWER_MARKER = re.compile(r"^\s*[【\[]?答案[】\]]?\s*[:：]?\s*(.*)$")
 _SOLUTION_MARKER = re.compile(r"^\s*[【\[]?(?:详解|解析|分析)[】\]]?\s*[:：]?\s*(.*)$")
 _OPTION = re.compile(r"(?:^|\s)([A-DＡ-Ｄ])[.．、]\s*")
 _SCORE = re.compile(r"(?:本题|每题)?\s*(\d+(?:\.\d+)?)\s*分")
+_PAGE_FOOTER = re.compile(
+    r"(?:试卷|答题卡)?\s*第\s*\d+\s*页\s*[,，、]?\s*(?:共\s*\d+\s*页)?"
+)
+_DISTRIBUTION_MARKER = re.compile(
+    r"公众号|资料分享|微信(?:公众)?号|更多资料|版权所有|扫码(?:关注|领取|下载|获取)|关注(?:公众号|我们)"
+)
+_REPEATED_FURNITURE_MARKER = re.compile(
+    r"试卷|考试|学年度|学期|命题|学校|考生|姓名|班级|密封|装订|资料|公众号|版权|https?://|www\."
+)
 
 
 def _nullable(kind):
@@ -291,6 +301,7 @@ def anchored_paper_result(documents):
 def _anchored_segments(document, blocks):
     ordered = []
     by_page = {}
+    retained = {id(block) for block in _without_page_furniture(blocks)}
     for sequence, block in enumerate(blocks):
         if not isinstance(block, dict) or not _block_text(block):
             continue
@@ -300,7 +311,11 @@ def _anchored_segments(document, blocks):
             page_no = 0
         by_page.setdefault(page_no, []).append((sequence, block))
     for page_no in sorted(by_page):
-        ordered.extend(_reading_order(by_page[page_no]))
+        ordered.extend(
+            entry
+            for entry in _reading_order(by_page[page_no])
+            if id(entry[1]) in retained
+        )
 
     segments = []
     current = []
@@ -390,7 +405,9 @@ def _anchored_candidate(document, question_no, section, entries, sequence):
         "question_type": question_type,
         "score": score,
         "knowledge_point_hints": [],
-        "confidence": 0.94 if answer_index is not None else 0.88,
+        "confidence": _evidence_confidence(
+            question_entries, 0.94 if answer_index is not None else 0.88
+        ),
         "source_refs": question_refs,
         "issues": [],
     }
@@ -414,7 +431,7 @@ def _anchored_candidate(document, question_no, section, entries, sequence):
                 "standard_answer": value,
                 "equivalent_answers": [],
                 "tolerance": None,
-                "confidence": 0.98,
+                "confidence": _evidence_confidence(answer_entries, 0.98),
                 "source_refs": [
                     _trusted_block_ref(document, entry[1]) for entry in answer_entries
                 ],
@@ -442,7 +459,7 @@ def _anchored_candidate(document, question_no, section, entries, sequence):
                     {"step_no": index, "content": content}
                     for index, content in enumerate(contents, 1)
                 ],
-                "confidence": 0.93,
+                "confidence": _evidence_confidence(solution_entries, 0.93),
                 "source_refs": [
                     _trusted_block_ref(document, entry[1]) for entry in solution_entries
                 ],
@@ -509,6 +526,119 @@ def _block_text(block):
     return str(block.get("text", "")).strip()
 
 
+def _evidence_confidence(entries, structural_cap):
+    values = []
+    for entry in entries:
+        value = entry[1].get("confidence")
+        if (
+            isinstance(value, (int, float))
+            and not isinstance(value, bool)
+            and math.isfinite(value)
+        ):
+            values.append(max(0.0, min(1.0, float(value))))
+    return min(float(structural_cap), min(values)) if values else float(structural_cap)
+
+
+def _furniture_signature(text):
+    value = unicodedata.normalize("NFKC", str(text or "")).lower()
+    value = re.sub(r"\d+", "#", value)
+    return re.sub(r"[\s,，、.．·:：_\-—]+", "", value)
+
+
+def _without_page_furniture(blocks):
+    """Exclude strong page furniture while retaining raw OCR in storage.
+
+    Single-page imports need explicit footer/watermark markers; repeated text
+    near the top or bottom of multiple pages is also treated as furniture.
+    Position alone never removes content, so a last question near the page edge
+    remains available to the parser.
+    """
+
+    valid = [block for block in blocks if isinstance(block, dict)]
+    page_bounds = {}
+    signatures = {}
+    for block in valid:
+        box = _box((0, block))
+        if box is None:
+            continue
+        try:
+            page_no = int(block.get("page_no", 0))
+        except (TypeError, ValueError):
+            page_no = 0
+        top, bottom = box[1], box[1] + box[3]
+        previous = page_bounds.get(page_no)
+        page_bounds[page_no] = (
+            min(previous[0], top) if previous else top,
+            max(previous[1], bottom) if previous else bottom,
+        )
+        signature = _furniture_signature(_block_text(block))
+        if len(signature) >= 6:
+            signatures.setdefault(signature, set()).add(page_no)
+
+    repeated = {
+        signature for signature, pages in signatures.items() if len(pages) >= 2
+    }
+    result = []
+    for block in valid:
+        text = _block_text(block)
+        box = _box((0, block))
+        try:
+            page_no = int(block.get("page_no", 0))
+        except (TypeError, ValueError):
+            page_no = 0
+        bounds = page_bounds.get(page_no)
+        if box is None or bounds is None or bounds[1] <= bounds[0]:
+            result.append(block)
+            continue
+        page_height = bounds[1] - bounds[0]
+        center = box[1] + box[3] / 2
+        near_top = center <= bounds[0] + page_height * 0.08
+        near_bottom = center >= bounds[0] + page_height * 0.90
+        protected_anchor = any(
+            pattern.match(text)
+            for pattern in (_QUESTION_START, _ANSWER_MARKER, _SOLUTION_MARKER, _OPTION)
+        )
+        strong_footer = not protected_anchor and near_bottom and (
+            _PAGE_FOOTER.fullmatch(text.strip()) is not None
+            or (len(text) <= 80 and _DISTRIBUTION_MARKER.search(text) is not None)
+        )
+        repeated_edge = not protected_anchor and (near_top or near_bottom) and (
+            _furniture_signature(text) in repeated
+            and _REPEATED_FURNITURE_MARKER.search(text) is not None
+        )
+        if not strong_footer and not repeated_edge:
+            result.append(block)
+    return result
+
+
+def page_furniture_issues(documents):
+    """Keep excluded blocks discoverable by their original source provenance."""
+
+    issues = []
+    for document in documents:
+        blocks = document.get("blocks")
+        if not isinstance(blocks, list):
+            continue
+        retained = {id(block) for block in _without_page_furniture(blocks)}
+        for block in blocks:
+            if not isinstance(block, dict) or id(block) in retained:
+                continue
+            issues.append(
+                {
+                    "code": "PAGE_FURNITURE_EXCLUDED",
+                    "severity": "info",
+                    "certainty": "suspected",
+                    "question_no": None,
+                    "section": None,
+                    "message": f"已排除页眉、页脚或水印：{_block_text(block)[:80]}",
+                    "confidence": None,
+                    "source_refs": [_trusted_block_ref(document, block)],
+                    "resolution_hint": "原图及 OCR 块仍保留；若误排除，请对照来源人工补充",
+                }
+            )
+    return issues
+
+
 def build_compact_chunks(documents):
     chunks = []
     for document in documents:
@@ -522,6 +652,7 @@ def build_compact_chunks(documents):
 
 def _ocr_chunks(document, blocks):
     by_page = {}
+    retained = {id(block) for block in _without_page_furniture(blocks)}
     for sequence, block in enumerate(blocks):
         if not isinstance(block, dict) or not str(block.get("text", "")).strip():
             continue
@@ -533,7 +664,11 @@ def _ocr_chunks(document, blocks):
 
     chunks = []
     for page_no in sorted(by_page):
-        ordered = _reading_order(by_page[page_no])
+        ordered = [
+            entry
+            for entry in _reading_order(by_page[page_no])
+            if id(entry[1]) in retained
+        ]
         for block_group in _split_block_groups(ordered):
             references = {}
             compact_blocks = []

@@ -118,6 +118,9 @@ def normalize_latex(value: str) -> str:
     # Keep LaTeX row separators intact, but collapse duplicates before letters.
     text = re.sub(r"\\\\(?=[A-Za-z])", r"\\", text)
     text = re.sub(r"\\(?:t|d)frac\b", r"\\frac", text)
+    # LaTeX uses a dot after left/right to mean an invisible delimiter, not a
+    # decimal point. Dropping only the command adds spurious dots to sets.
+    text = re.sub(r"\\(?:left|right)\s*\.", "", text)
     text = re.sub(r"\\(?:left|right)\s*", "", text)
     text = re.sub(r"\s+", " ", text)
     text = re.sub(r"\\([A-Za-z]+)\s+\{", r"\\\1{", text)
@@ -175,6 +178,25 @@ def validate_latex_structure(value: str) -> tuple[bool, bool, tuple[str, ...]]:
         reasons.append("unknown_macro")
     if re.search(r"(?:\^|_)\s*(?:$|[=+\-*/&])", latex):
         reasons.append("missing_script_operand")
+    # Formula layout occasionally selects the tail of a surrounding Chinese
+    # sentence. FormulaNet can reproduce that prose and the render-back check
+    # may still look similar, so syntax + pixels alone are not proof that this
+    # is a mathematical expression. Chinese labels are allowed only when the
+    # model explicitly places them inside a text-style LaTeX command.
+    prose_check = re.sub(
+        r"\\(?:text|textrm|mathrm)\s*\{[^{}]*\}", "", latex
+    )
+    if re.search(r"[\u4e00-\u9fff]", prose_check):
+        reasons.append("formula_contains_prose")
+    for match in re.finditer(r"\\frac\b", latex):
+        argument_start = match.end()
+        for _ in range(2):
+            argument = _braced_argument(latex, argument_start)
+            if argument is None:
+                break
+            content, argument_start = argument
+            if _contains_top_level_relation(content):
+                reasons.append("fraction_contains_relation")
     if not re.search(r"[A-Za-z0-9\u4e00-\u9fff]|\\(?:frac|sqrt|sum|int|pi|theta|angle)", latex):
         reasons.append("missing_math_content")
 
@@ -184,6 +206,49 @@ def validate_latex_structure(value: str) -> tuple[bool, bool, tuple[str, ...]]:
     )
     structure_valid = syntax_valid and not reasons
     return syntax_valid, structure_valid, tuple(dict.fromkeys(reasons))
+
+
+def _braced_argument(latex: str, start: int) -> tuple[str, int] | None:
+    while start < len(latex) and latex[start].isspace():
+        start += 1
+    if start >= len(latex) or latex[start] != "{":
+        return None
+    depth, escaped = 1, False
+    for index in range(start + 1, len(latex)):
+        char = latex[index]
+        if escaped:
+            escaped = False
+        elif char == "\\":
+            escaped = True
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return latex[start + 1:index], index + 1
+    return None
+
+
+def _contains_top_level_relation(latex: str) -> bool:
+    depth = 0
+    index = 0
+    while index < len(latex):
+        char = latex[index]
+        if char == "\\":
+            command = re.match(r"\\([A-Za-z]+|.)", latex[index:])
+            if command:
+                if depth == 0 and command.group(1) in {"le", "leq", "ge", "geq", "ne", "neq", "approx", "equiv"}:
+                    return True
+                index += command.end()
+                continue
+        elif char in "{([":
+            depth += 1
+        elif char in "})]":
+            depth = max(0, depth - 1)
+        elif depth == 0 and char in "=<>":
+            return True
+        index += 1
+    return False
 
 
 class FormulaValidator:
@@ -232,12 +297,12 @@ class FormulaValidator:
         except ModuleNotFoundError:
             rendered = None
             reasons.append("render_validator_unavailable")
-            return FormulaValidationResult(True, True, None, True, None, FormulaAction.ACCEPT, tuple(reasons))
+            return FormulaValidationResult(True, True, None, True, None, FormulaAction.REVIEW, tuple(reasons))
         except Exception:  # noqa: BLE001 - renderer backends expose heterogeneous parse errors.
             rendered = b""
         if rendered is None:
             reasons.append("render_validator_unavailable")
-            return FormulaValidationResult(True, True, None, True, None, FormulaAction.ACCEPT, tuple(reasons))
+            return FormulaValidationResult(True, True, None, True, None, FormulaAction.REVIEW, tuple(reasons))
         if not rendered:
             reasons.append("latex_render_failed")
             return FormulaValidationResult(True, True, False, True, None, FormulaAction.RETRY_L, tuple(reasons))

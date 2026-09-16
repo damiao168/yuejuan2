@@ -48,6 +48,23 @@ export async function listManagedUsers(filter: { q?: string; role?: string; limi
   return apiClient.request<{ users: ManagedUser[]; next_cursor: string; has_more: boolean }>(`/api/v1/users${buildQueryString(filter)}`);
 }
 
+export async function listAllActiveGraders(): Promise<ManagedUser[]> {
+  const users = new Map<string, ManagedUser>();
+  const seenCursors = new Set<string>();
+  let cursor: string | undefined;
+  do {
+    const page = await listManagedUsers({ role: "grader", limit: 200, cursor });
+    for (const user of page.users) {
+      if (user.status === "active" && user.roles.includes("grader")) users.set(user.id, user);
+    }
+    if (!page.has_more) break;
+    if (!page.next_cursor || seenCursors.has(page.next_cursor)) throw new Error("阅卷员分页异常，请刷新后重试");
+    seenCursors.add(page.next_cursor);
+    cursor = page.next_cursor;
+  } while (cursor);
+  return [...users.values()];
+}
+
 export async function listAssignableRoles() {
   return apiClient.request<{ roles: AssignableRole[] }>("/api/v1/roles");
 }

@@ -22,6 +22,7 @@ var (
 	ErrNoAffectedTasks   = errors.New("backmark selector matched no completed review tasks")
 	ErrNoRegradeItems    = errors.New("backmark batch has no items that require regrade")
 	ErrTooManyItems      = errors.New("backmark batch exceeds synchronous item limit")
+	ErrPreviewStale      = errors.New("backmark preview no longer matches selection or source facts")
 )
 
 const (
@@ -180,6 +181,7 @@ type SourceTask struct {
 }
 
 type Preview struct {
+	SelectorHash  string    `json:"selector_hash,omitempty"`
 	AffectedCount int       `json:"affected_count"`
 	ScoreBands    []Band    `json:"score_bands"`
 	TimeRange     TimeRange `json:"time_range"`
@@ -196,18 +198,29 @@ type Histogram struct {
 }
 
 type Summary struct {
+	StatusCounts
 	Batch     Batch       `json:"batch"`
 	Items     []Item      `json:"items"`
 	Histogram []Histogram `json:"diff_histogram"`
 }
 
+type StatusCounts struct {
+	RegradeRequiredCount int `json:"regrade_required_count"`
+	PendingCount         int `json:"pending_count"`
+	CompletedCount       int `json:"completed_count"`
+}
+
 type PageOptions struct {
+	Status          string
 	Limit           int
 	CursorCreatedAt time.Time
 	CursorID        string
 }
 
 type CreateInput struct {
+	// Optional for existing API clients; the quality dashboard always submits
+	// the hash returned by Preview to bind creation to its confirmed snapshot.
+	SelectorHash     string   `json:"selector_hash,omitempty"`
 	SourceIncidentID string   `json:"source_incident_id"`
 	Selector         Selector `json:"selector"`
 	Policy           Policy   `json:"policy"`
@@ -228,6 +241,7 @@ type Store interface {
 	GetBatch(context.Context, string, string) (Batch, error)
 	ListBatchItems(context.Context, string, string, PageOptions) ([]Item, error)
 	GetHistogram(context.Context, string, string) ([]Histogram, error)
+	GetStatusCounts(context.Context, string, string) (StatusCounts, error)
 	ListBatches(context.Context, string, string, string, PageOptions) ([]Batch, error)
 	ListAssigned(context.Context, string, string, PageOptions) ([]Item, error)
 	GetAssigned(context.Context, string, string, string) (Item, error)

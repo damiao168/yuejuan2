@@ -5,6 +5,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"unicode/utf8"
 )
 
 type Service struct {
@@ -156,7 +157,7 @@ func (s *Service) Claim(ctx context.Context, tenantID, itemID, actorID string) (
 }
 
 func (s *Service) RecordCandidate(ctx context.Context, tenantID, itemID, actorID string, input CandidateInput) (Item, error) {
-	if !validActor(tenantID, itemID, actorID) || input.ExpectedRevision <= 0 || !finiteNonNegative(input.Score) || !validRubricSelections(input.RubricSelections) || len(strings.TrimSpace(input.Comment)) > 2000 {
+	if !validActor(tenantID, itemID, actorID) || input.ExpectedRevision <= 0 || !finiteNonNegative(input.Score) || !validRubricSelections(input.RubricSelections) || utf8.RuneCountInString(strings.TrimSpace(input.Comment)) > 2000 {
 		return Item{}, ErrInvalidInput
 	}
 	input.CandidateGradeID, input.Comment = strings.TrimSpace(input.CandidateGradeID), strings.TrimSpace(input.Comment)
@@ -212,7 +213,7 @@ func validSelector(value Selector) bool {
 
 func validCreate(value CreateInput) bool {
 	return strings.TrimSpace(value.SourceReleaseID) != "" && validReason(value.ReasonCode) && strings.TrimSpace(value.ReasonText) != "" &&
-		len(strings.TrimSpace(value.ReasonText)) <= 2000 && validStrategy(value.Strategy) && validSelector(value.Selector) &&
+		utf8.RuneCountInString(strings.TrimSpace(value.ReasonText)) <= 2000 && validStrategy(value.Strategy) && validSelector(value.Selector) &&
 		len(strings.TrimSpace(value.IdempotencyKey)) >= 8 && len(strings.TrimSpace(value.IdempotencyKey)) <= 200
 }
 func validReason(value string) bool {
@@ -230,7 +231,7 @@ func validStrategy(value string) bool {
 	return false
 }
 func validReview(value ReviewInput) bool {
-	if len(strings.TrimSpace(value.Note)) > 2000 {
+	if utf8.RuneCountInString(strings.TrimSpace(value.Note)) > 2000 {
 		return false
 	}
 	switch strings.TrimSpace(value.Decision) {

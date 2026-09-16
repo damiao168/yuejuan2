@@ -231,7 +231,7 @@ export function TeacherManagementPage({ currentUser }: { currentUser: SessionUse
       ]} />
       {!isTeacherView ? <Alert className="member-administrator-alert" showIcon type={schoolsNeedingBackup.length ? "warning" : "success"} message={schoolsNeedingBackup.length ? "管理员配置需要完善" : "管理员配置正常"} description={administratorNotice} /> : null}
       <div className="member-management-filters"><Input.Search allowClear value={query} placeholder="搜索姓名、手机号或工号" onChange={(event) => setQuery(event.target.value)} /><span>共 {visible.length} 人</span></div>
-      <ResponsiveTable rowKey="id" size="small" columns={isTeacherView ? teacherColumns : administratorColumns} dataSource={visible} pagination={{ pageSize: 20 }} scroll={{ x: 930 }} />
+      <ResponsiveTable className="dense-data-table" rowKey="id" size="small" columns={isTeacherView ? teacherColumns : administratorColumns} dataSource={visible} pagination={{ pageSize: 20 }} scroll={{ x: 930 }} />
     </section>
     <Modal title={createMode === "administrator" ? "新增学校管理员" : "新增教师"} open={open} footer={null} destroyOnHidden onCancel={() => setOpen(false)}>
       <Form form={form} layout="vertical" onFinish={(values) => void submit(values)}>

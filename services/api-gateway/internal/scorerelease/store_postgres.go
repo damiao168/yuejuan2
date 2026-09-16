@@ -285,7 +285,13 @@ func (s *PostgresStore) Publish(ctx context.Context, tenantID, id, actorID strin
 		return Release{}, err
 	}
 	var supersedes sql.NullString
-	_ = tx.QueryRowContext(ctx, `SELECT release_id::text FROM score_release_current WHERE tenant_id = $1 AND exam_id = $2::uuid FOR UPDATE`, tenantID, release.ExamID).Scan(&supersedes)
+	err = tx.QueryRowContext(ctx, `SELECT release_id::text FROM score_release_current WHERE tenant_id = $1 AND exam_id = $2::uuid FOR UPDATE`, tenantID, release.ExamID).Scan(&supersedes)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return Release{}, err
+	}
+	if release.Source == SourceRegrade && release.SourceReleaseID != "" && release.SourceReleaseID != supersedes.String {
+		return Release{}, ErrStaleSource
+	}
 	now := s.now().UTC()
 	if _, err := tx.ExecContext(ctx, `
 UPDATE score_release
@@ -320,7 +326,7 @@ func (s *PostgresStore) CurrentPublished(ctx context.Context, tenantID, examID s
 }
 
 func (s *PostgresStore) StudentResult(ctx context.Context, tenantID, examID, studentID string) (StudentResult, error) {
-	detail, err := s.CurrentPublished(ctx, tenantID, examID)
+	detail, err := s.studentDetail(ctx, tenantID, examID, studentID)
 	if err != nil {
 		return StudentResult{}, err
 	}
@@ -358,6 +364,10 @@ func (s *PostgresStore) StudentResult(ctx context.Context, tenantID, examID, stu
 		if !detail.Release.VisibilityPolicy.ShowQuestionScores {
 			return result, nil
 		}
+		detail.Questions, err = s.questions(ctx, tenantID, detail.Release.ID, item.SubmissionID)
+		if err != nil {
+			return StudentResult{}, err
+		}
 		presentation, pages, err := s.studentPaperPresentation(ctx, tenantID, item.SubmissionID)
 		if err != nil {
 			return StudentResult{}, err
@@ -377,7 +387,14 @@ func (s *PostgresStore) StudentResult(ctx context.Context, tenantID, examID, stu
 					return StudentResult{}, pageErr
 				}
 				highPaper := &StudentHighScorePaper{Available: len(highPages) > 0, TotalScore: top.TotalScore, MaxScore: top.MaxScore, Pages: highPages}
-				for _, question := range detail.Questions {
+				highQuestions := detail.Questions
+				if top.SubmissionID != item.SubmissionID {
+					highQuestions, err = s.questions(ctx, tenantID, detail.Release.ID, top.SubmissionID)
+					if err != nil {
+						return StudentResult{}, err
+					}
+				}
+				for _, question := range highQuestions {
 					if question.SubmissionID != top.SubmissionID {
 						continue
 					}
@@ -395,7 +412,9 @@ func (s *PostgresStore) StudentResult(ctx context.Context, tenantID, examID, stu
 			if question.SubmissionID != item.SubmissionID {
 				continue
 			}
-			view := studentQuestionView(question, detail.Questions, detail.Release.VisibilityPolicy)
+			viewPolicy := detail.Release.VisibilityPolicy
+			viewPolicy.ShowQuestionStatistics = false // PostgreSQL already computed scoped statistics above.
+			view := studentQuestionView(question, nil, viewPolicy)
 			if result.Exam != nil {
 				view.Subject = result.Exam.Subject
 			}
@@ -841,7 +860,17 @@ func (s *PostgresStore) releaseTx(ctx context.Context, tx *sql.Tx, tenantID, id 
 }
 
 func (s *PostgresStore) items(ctx context.Context, tenantID, releaseID string) ([]ReleaseItem, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT release_id::text, COALESCE(student_id::text, ''), submission_id::text, total_score::float8, max_score::float8, status, snapshot_hash FROM score_release_item WHERE tenant_id = $1 AND release_id = $2::uuid ORDER BY submission_id`, tenantID, releaseID)
+	return s.filteredItems(ctx, tenantID, releaseID, "")
+}
+
+func (s *PostgresStore) filteredItems(ctx context.Context, tenantID, releaseID, studentID string) ([]ReleaseItem, error) {
+	query := `SELECT release_id::text, COALESCE(student_id::text, ''), submission_id::text, total_score::float8, max_score::float8, status, snapshot_hash FROM score_release_item WHERE tenant_id = $1 AND release_id = $2::uuid`
+	args := []any{tenantID, releaseID}
+	if studentID != "" {
+		query += " AND student_id=$3::uuid"
+		args = append(args, studentID)
+	}
+	rows, err := s.db.QueryContext(ctx, query+" ORDER BY submission_id", args...)
 	if err != nil {
 		return nil, err
 	}

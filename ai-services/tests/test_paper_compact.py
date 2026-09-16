@@ -5,6 +5,7 @@ from grading_agent.paper_compact import (
     anchored_paper_result,
     build_compact_chunks,
     expand_compact_output,
+    page_furniture_issues,
 )
 
 
@@ -191,6 +192,115 @@ def test_explicit_number_answer_and_solution_markers_use_rule_fast_path():
     ]
     assert result["solution_candidates"][0]["raw_text"] == "根据补集定义可得。"
     assert result["answer_candidates"][0]["source_refs"][0]["block_id"] == "a1"
+
+
+def test_rule_fast_path_excludes_bottom_page_number_and_distribution_watermark():
+    blocks = [
+        _block("q1", "1. 计算1+1（ ）", [50, 100, 500, 20]),
+        _block("a1", "【答案】C", [50, 130, 100, 20]),
+        _block("s1", "【详解】计算可得2。", [50, 160, 400, 20]),
+        _block("q2", "2. 计算2+2（ ）", [50, 220, 500, 20]),
+        _block("a2", "【答案】D", [50, 250, 100, 20]),
+        _block("s2", "【详解】计算可得4。", [50, 280, 400, 20]),
+        _block("page", "试卷第1页，共1页", [350, 950, 180, 20]),
+        _block("watermark", "公众号·资料分享", [650, 948, 260, 24]),
+    ]
+
+    result = anchored_paper_result([_document(blocks)])
+
+    assert result is not None
+    final_solution = result["solution_candidates"][-1]
+    assert final_solution["raw_text"] == "计算可得4。"
+    assert {ref["block_id"] for ref in final_solution["source_refs"]} == {"s2"}
+    excluded = page_furniture_issues([_document(blocks)])
+    assert {issue["source_refs"][0]["block_id"] for issue in excluded} == {"page", "watermark"}
+    assert all(issue["severity"] == "info" for issue in excluded)
+    assert len(blocks) == 8  # Raw OCR evidence is never mutated.
+
+
+def test_furniture_filter_keeps_question_about_public_account_at_bottom():
+    blocks = [
+        _block("header", "数学考试", [50, 10, 500, 20]),
+        _block("q1", "1. 调查某公众号的关注人数", [50, 850, 500, 20]),
+        _block("s1", "【详解】该公众号的关注人数为100。", [50, 900, 500, 20]),
+        _block("q2", "2. 求二维码面积", [50, 950, 500, 20]),
+    ]
+
+    chunks = build_compact_chunks([_document(blocks)])
+    texts = [text for chunk in chunks for _, text in chunk.model_document["ordered_blocks"]]
+    assert set(texts) == {block["text"] for block in blocks}
+    assert page_furniture_issues([_document(blocks)]) == []
+
+
+def test_furniture_filter_keeps_repeated_math_steps_at_page_edges():
+    blocks = []
+    for page in (1, 2):
+        for block_id, text, box in (
+            ("header", "明德中学期末数学考试", [50, 10, 500, 20]),
+            ("q", f"{page}. 求解方程", [50, 100, 500, 20]),
+            ("step", "所以x=1或x=-1", [50, 950, 500, 20]),
+        ):
+            block = _block(f"{block_id}-{page}", text, box)
+            block["page_no"] = page
+            blocks.append(block)
+
+    chunks = build_compact_chunks([_document(blocks)])
+    texts = [text for chunk in chunks for _, text in chunk.model_document["ordered_blocks"]]
+    assert texts.count("所以x=1或x=-1") == 2
+    assert "明德中学期末数学考试" not in texts
+
+
+def test_furniture_filter_keeps_unanchored_question_continuation_about_qr_code():
+    blocks = [
+        _block("header", "数学考试", [50, 10, 500, 20]),
+        _block("q1", "1. 已知正方形图案", [50, 100, 500, 20]),
+        _block("continuation", "请关注二维码中黑色区域的面积", [50, 950, 500, 20]),
+    ]
+
+    assert page_furniture_issues([_document(blocks)]) == []
+
+
+def test_rule_fast_path_confidence_is_bounded_by_weakest_ocr_or_formula_evidence():
+    blocks = [
+        _block("q1", "1. 已知x2=4（ ）", [50, 100, 500, 20]),
+        _block("formula1", r"\(x^{2}=4\)", [150, 100, 120, 20]),
+        _block("a1", "【答案】A", [50, 130, 100, 20]),
+        _block("q2", "2. 计算2+2（ ）", [50, 180, 500, 20]),
+        _block("a2", "【答案】D", [50, 210, 100, 20]),
+    ]
+    blocks[1]["confidence"] = 0.47
+
+    result = anchored_paper_result([_document(blocks)])
+
+    assert result is not None
+    assert result["question_candidates"][0]["confidence"] == 0.47
+    assert result["question_candidates"][1]["confidence"] == 0.91
+
+
+def test_furniture_exclusion_preserves_two_column_seven_question_sequence():
+    blocks = [_block("header", "期末数学考试", [218, 93, 845, 33])]
+    for row in range(4):
+        for question_no, x in ((row + 1, 77), (row + 5, 661)):
+            if question_no > 7:
+                continue
+            y = 190 + row * 340
+            blocks.extend([
+                _block(f"q{question_no}", f"{question_no}. 求解方程", [x, y, 537, 27]),
+                _block(f"o{question_no}", "A. 1 B. 2 C. 3 D. 4", [x, y + 40, 537, 27]),
+                _block(f"a{question_no}", "【答案】A", [x, y + 80, 108, 27]),
+                _block(f"s{question_no}", "【详解】计算得到1。", [x, y + 120, 537, 27]),
+            ])
+    blocks.extend([
+        _block("footer", "试卷第1页，共1页", [540, 1739, 199, 20]),
+        _block("watermark", "公众号·资料分享", [896, 1737, 345, 30]),
+    ])
+
+    result = anchored_paper_result([_document(blocks)])
+
+    assert result is not None
+    assert [q["question_no_normalized"] for q in result["question_candidates"]] == [str(n) for n in range(1, 8)]
+    assert len(result["solution_candidates"]) == 7
+    assert all(s["raw_text"] == "计算得到1。" for s in result["solution_candidates"])
 
 
 def test_rule_fast_path_declines_unanchored_or_sparse_answer_material():

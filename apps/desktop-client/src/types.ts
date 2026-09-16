@@ -19,6 +19,7 @@ export interface LoginResult {
 
 export interface ReviewTask {
   id: string;
+  revision: number;
   exam_id: string;
   question_id: string;
   question_no: string;

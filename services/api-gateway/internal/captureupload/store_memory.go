@@ -18,12 +18,13 @@ type memoryChunk struct {
 
 type MemoryStore struct {
 	mu       sync.RWMutex
+	now      func() time.Time
 	sessions map[string]Session
 	chunks   map[string]map[int64]memoryChunk
 }
 
 func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{sessions: map[string]Session{}, chunks: map[string]map[int64]memoryChunk{}}
+	return &MemoryStore{now: time.Now, sessions: map[string]Session{}, chunks: map[string]map[int64]memoryChunk{}}
 }
 
 func (s *MemoryStore) Init(_ context.Context, tenantID, _ string, input InitInput, chunkSize int64) (Session, bool, error) {
@@ -98,13 +99,15 @@ func (s *MemoryStore) BeginComplete(_ context.Context, tenantID, uploadID string
 	if session.Status == "completed" {
 		return session, false, nil
 	}
-	if session.Status == "finalizing" || session.Status == "failed" {
+	if (session.Status == "finalizing" && session.CompletionLeaseUntil.After(s.now())) || session.Status == "failed" {
 		return Session{}, false, ErrConflict
 	}
-	if session.Status != "uploading" || session.ConfirmedOffset != session.Size {
+	if (session.Status != "uploading" && session.Status != "finalizing") || session.ConfirmedOffset != session.Size {
 		return Session{}, false, ErrIncomplete
 	}
 	session.Status = "finalizing"
+	session.CompletionToken = uuid.NewString()
+	session.CompletionLeaseUntil = s.now().Add(completionLeaseDuration)
 	s.sessions[uploadID] = session
 	return session, true, nil
 }
@@ -138,7 +141,7 @@ func (s *MemoryStore) ReadChunks(_ context.Context, tenantID, uploadID string, c
 	return nil
 }
 
-func (s *MemoryStore) Complete(_ context.Context, tenantID, uploadID, fileAssetID, captureFileID string) (Session, error) {
+func (s *MemoryStore) Complete(_ context.Context, tenantID, uploadID, fileAssetID, captureFileID, completionToken string) (Session, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	session, ok := s.sessions[uploadID]
@@ -148,7 +151,7 @@ func (s *MemoryStore) Complete(_ context.Context, tenantID, uploadID, fileAssetI
 	if session.Status == "completed" {
 		return session, nil
 	}
-	if session.Status != "finalizing" {
+	if session.Status != "finalizing" || session.CompletionToken != completionToken || completionToken == "" {
 		return Session{}, ErrConflict
 	}
 	now := time.Now().UTC()
@@ -162,18 +165,18 @@ func (s *MemoryStore) Complete(_ context.Context, tenantID, uploadID, fileAssetI
 	return session, nil
 }
 
-func (s *MemoryStore) Resume(_ context.Context, tenantID, uploadID, errorCode string) error {
-	return s.transition(tenantID, uploadID, "uploading", errorCode)
+func (s *MemoryStore) Resume(_ context.Context, tenantID, uploadID, errorCode, completionToken string) error {
+	return s.transition(tenantID, uploadID, "uploading", errorCode, completionToken)
 }
 
-func (s *MemoryStore) Fail(_ context.Context, tenantID, uploadID, errorCode string) error {
+func (s *MemoryStore) Fail(_ context.Context, tenantID, uploadID, errorCode, completionToken string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	session, ok := s.sessions[uploadID]
 	if !ok || session.TenantID != tenantID {
 		return ErrNotFound
 	}
-	if session.Status != "finalizing" {
+	if session.Status != "finalizing" || session.CompletionToken != completionToken || completionToken == "" {
 		return ErrConflict
 	}
 	session.Status = "failed"
@@ -183,14 +186,14 @@ func (s *MemoryStore) Fail(_ context.Context, tenantID, uploadID, errorCode stri
 	return nil
 }
 
-func (s *MemoryStore) transition(tenantID, uploadID, status, errorCode string) error {
+func (s *MemoryStore) transition(tenantID, uploadID, status, errorCode, completionToken string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	session, ok := s.sessions[uploadID]
 	if !ok || session.TenantID != tenantID {
 		return ErrNotFound
 	}
-	if session.Status != "finalizing" {
+	if session.Status != "finalizing" || session.CompletionToken != completionToken || completionToken == "" {
 		return ErrConflict
 	}
 	session.Status = status

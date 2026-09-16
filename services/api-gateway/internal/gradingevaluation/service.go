@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"edugrade-enterprise/services/api-gateway/internal/assessment"
 )
@@ -524,7 +525,8 @@ func validKey(value string) bool {
 }
 
 func safeText(value string, max int) bool {
-	return len(strings.TrimSpace(value)) > 0 && len(strings.TrimSpace(value)) <= max
+	length := utf8.RuneCountInString(strings.TrimSpace(value))
+	return length > 0 && length <= max
 }
 func validSliceValue(value string) bool { return validKey(value) }
 func validSHA(value string) bool {

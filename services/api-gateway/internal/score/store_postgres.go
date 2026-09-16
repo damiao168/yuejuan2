@@ -487,7 +487,16 @@ WHERE NOT EXISTS (
 
 func (s *PostgresStore) createFinalsFromRuleTx(ctx context.Context, tx *sql.Tx, tenantID string, examID string, actorID string) (int64, error) {
 	result, err := tx.ExecContext(ctx, `
-WITH latest_rule AS (
+WITH confirmed_rule AS (
+  SELECT g.tenant_id, g.exam_id, g.question_id, seg.question_no, g.answer_segment_id,
+    seg.submission_id, COALESCE(NULLIF(sub.candidate_no, ''), seg.id::text) AS anonymous_code,
+    g.score, g.max_score
+  FROM question_grade g
+  JOIN answer_segment seg ON seg.tenant_id=g.tenant_id AND seg.id=g.answer_segment_id AND seg.deleted_at IS NULL
+  JOIN submission sub ON sub.tenant_id=seg.tenant_id AND sub.id=seg.submission_id AND sub.deleted_at IS NULL
+  WHERE g.tenant_id=$1 AND g.exam_id::text=$2 AND g.deleted_at IS NULL
+    AND g.is_current AND g.status='confirmed' AND g.source='rule_confirmed'
+), latest_legacy_rule AS (
   SELECT DISTINCT ON (ag.answer_segment_id)
     ag.tenant_id, sub.exam_id, ag.question_id, ag.question_no, ag.answer_segment_id,
     seg.submission_id, COALESCE(NULLIF(sub.candidate_no, ''), seg.id::text) AS anonymous_code,
@@ -503,7 +512,15 @@ WITH latest_rule AS (
     AND ag.needs_human_review = false
     AND ag.mock = false
     AND ag.status = 'succeeded'
+    AND NOT EXISTS (
+      SELECT 1 FROM question_grade g
+      WHERE g.tenant_id=ag.tenant_id AND g.answer_segment_id=ag.answer_segment_id AND g.deleted_at IS NULL
+    )
   ORDER BY ag.answer_segment_id, ag.created_at DESC
+), latest_rule AS (
+  SELECT * FROM confirmed_rule
+  UNION ALL
+  SELECT * FROM latest_legacy_rule
 )
 INSERT INTO final_grade (
   tenant_id, exam_id, question_id, question_no, answer_segment_id, submission_id, anonymous_code,

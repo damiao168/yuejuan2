@@ -567,6 +567,7 @@ export function PlatformModelConfigPage() {
       <section className="platform-model-table-shell">
         {selectedTenantID ? (
           <ResponsiveTable<ManagedModelAPIConfig>
+            className="dense-data-table"
             rowKey="id"
             loading={configLoading}
             columns={columns}

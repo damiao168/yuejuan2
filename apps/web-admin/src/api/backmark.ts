@@ -1,6 +1,7 @@
 import { EduGradeApi } from "@edugrade/sdk";
 import type {
   BackmarkBatch,
+  CreateBackmarkBatchRequest,
   BackmarkGraderContext,
   BackmarkGraderItem,
   BackmarkPolicy,
@@ -30,7 +31,7 @@ export function previewBackmarkBatch(examId: string, questionId: string, selecto
 export function createBackmarkBatch(
   examId: string,
   questionId: string,
-  payload: { source_incident_id: string; selector: BackmarkSelector; policy: BackmarkPolicy; reassigned_to: string }
+  payload: CreateBackmarkBatchRequest
 ) {
   return generatedApi.createBackmarkBatch({ path: { examId, questionId }, body: payload });
 }
@@ -39,7 +40,7 @@ export function listBackmarkBatches(examId: string, questionId?: string, page: B
   return generatedApi.listBackmarkBatches({ query: { exam_id: examId, question_id: questionId, ...page } });
 }
 
-export function getBackmarkBatch(batchId: string, page: BackmarkPageOptions = {}) {
+export function getBackmarkBatch(batchId: string, page: NonNullable<Parameters<typeof generatedApi.getBackmarkBatch>[0]["query"]> = {}) {
   return generatedApi.getBackmarkBatch({ path: { batchId }, query: page });
 }
 

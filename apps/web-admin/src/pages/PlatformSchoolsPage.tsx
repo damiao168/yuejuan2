@@ -130,7 +130,7 @@ export function PlatformSchoolsPage() {
           cancelText="取消"
           onConfirm={() => void changeStatus(school)}
         >
-          <Button danger={school.status === "active"}>
+          <Button size="small" danger={school.status === "active"}>
             {school.status === "active" ? "停用" : "启用"}
           </Button>
         </Popconfirm>
@@ -152,6 +152,7 @@ export function PlatformSchoolsPage() {
       </section>
 
       <ResponsiveTable<Tenant>
+        className="dense-data-table"
         rowKey="id"
         loading={loading}
         columns={columns}

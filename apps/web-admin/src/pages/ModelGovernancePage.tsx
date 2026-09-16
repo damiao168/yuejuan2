@@ -542,12 +542,12 @@ export function ModelGovernancePage({
               >
                 {activeView === "providers" ? (
                   <div className="model-governance-table">
-                    <ResponsiveTable rowKey="id" columns={providerColumns} dataSource={providers} pagination={false} />
+                    <ResponsiveTable className="dense-data-table" rowKey="id" columns={providerColumns} dataSource={providers} pagination={false} />
                   </div>
                 ) : null}
                 {activeView === "deployments" ? (
                   <div className="model-governance-table">
-                    <ResponsiveTable rowKey="id" columns={deploymentColumns} dataSource={deployments} pagination={false} />
+                    <ResponsiveTable className="dense-data-table" rowKey="id" columns={deploymentColumns} dataSource={deployments} pagination={false} />
                   </div>
                 ) : null}
                 {activeView === "prompts" ? <PromptVersionWorkspace /> : null}

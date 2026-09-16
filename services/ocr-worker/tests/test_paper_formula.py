@@ -61,6 +61,11 @@ def test_latex_normalizer_and_parser_cover_printed_math() -> None:
     assert normalize_latex("x²+2x+1") == r"x^{2}+2x+1"
     assert validate_latex_structure(r"\begin{cases}x+1&x>0\\0&x\leq0\end{cases}")[:2] == (True, True)
     assert not validate_latex_structure(r"\input{secret}")[1]
+    assert not validate_latex_structure("得 f(x)在")[1]
+    assert not validate_latex_structure(r"\{a_n\}公")[1]
+    assert validate_latex_structure(r"x\in\text{实数}")[:2] == (True, True)
+    assert normalize_latex(r"A=\left\{x\left|-2<x<2\right.\right\}") == r"A=\{x|-2<x<2\}"
+    assert normalize_latex(r"\left.0.25\right|") == "0.25|"
 
 
 def test_render_validation_routes_only_visual_mismatch_to_l() -> None:
@@ -77,6 +82,22 @@ def test_render_validation_routes_only_visual_mismatch_to_l() -> None:
     )
     assert accepted.action is FormulaAction.ACCEPT and accepted.render_similarity is not None and accepted.render_similarity > .99
     assert rejected.action is FormulaAction.RETRY_L and not rejected.render_valid
+
+
+def test_fraction_gate_rejects_an_entire_equation_misread_as_numerator() -> None:
+    wrong = r"\frac{S_{10}=10a_{1}+\frac{10\times9}{2}d=70-90=-20}{2}"
+    assert "fraction_contains_relation" in validate_latex_structure(wrong)[2]
+    assert not validate_latex_structure(wrong)[1]
+    assert validate_latex_structure(r"\frac{\sum_{i=1}^{n}a_i}{n}")[1]
+    assert validate_latex_structure(r"\frac{x-3}{x+1}\leq0")[1]
+
+
+def test_missing_render_validator_never_auto_accepts_formula() -> None:
+    missing = FormulaValidator(renderer=lambda _latex: None).validate(
+        "x+1", b"unused", detector_score=.9, crop_complete=True,
+    )
+    assert missing.action is FormulaAction.REVIEW
+    assert "render_validator_unavailable" in missing.reason_codes
 
 
 def test_adaptive_crop_expands_clipped_formula_before_recognition() -> None:

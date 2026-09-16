@@ -505,7 +505,7 @@ export function ScoringAssuranceWorkspace({
 
       {canManageEvaluations ? <Card size="small" title={<Space><FlaskConical size={17} />离线评测与置信度校准</Space>} extra={<Space><Button icon={<RefreshCw size={15} />} loading={assuranceLoading} onClick={() => void loadAssurance()}>刷新</Button><Button type="primary" onClick={() => setEvaluationDrawerOpen(true)}>新建评测</Button></Space>}>
         {assuranceError ? <Alert showIcon type="error" message="加载评分保障证据失败" description={assuranceError} action={<Button onClick={() => void loadAssurance()}>重试</Button>} /> : null}
-        <Table rowKey="id" size="small" pagination={false} columns={evaluationColumns} dataSource={evaluationRuns} locale={{ emptyText: <Empty description="尚无离线评测" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }} />
+        <Table className="dense-data-table" rowKey="id" size="small" pagination={false} columns={evaluationColumns} dataSource={evaluationRuns} locale={{ emptyText: <Empty description="尚无离线评测" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }} />
         {selectedEvaluation ? <section className="model-assurance-detail">
           <Divider orientation="left">{selectedEvaluation.display_name}</Divider>
           <Space wrap>
@@ -530,7 +530,7 @@ export function ScoringAssuranceWorkspace({
           </div>
         </section> : null}
         <Divider orientation="left">校准工件</Divider>
-        <Table rowKey="id" size="small" pagination={false} columns={calibrationColumns} dataSource={calibrations} locale={{ emptyText: "尚无校准工件" }} />
+        <Table className="dense-data-table" rowKey="id" size="small" pagination={false} columns={calibrationColumns} dataSource={calibrations} locale={{ emptyText: "尚无校准工件" }} />
         {selectedCalibration ? <section className="model-assurance-detail">
           <Space wrap><Typography.Text>方法：{selectedCalibration.method}</Typography.Text><Typography.Text>证据：{calibrationEvidence.length} 条</Typography.Text><Typography.Text>工件：{selectedCalibration.artifact_sha256 ? shortID(selectedCalibration.artifact_sha256) : "尚未生成"}</Typography.Text></Space>
           <Space wrap style={{ marginTop: 12 }}>

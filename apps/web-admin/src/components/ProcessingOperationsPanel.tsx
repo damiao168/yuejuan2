@@ -351,6 +351,7 @@ export function ProcessingOperationsPanel({ examId, canManage }: { examId: strin
         </Space>
       </div>
       <ResponsiveTable<ProcessingException>
+        className="dense-data-table"
         rowKey="id"
         columns={exceptionColumns}
         dataSource={exceptions}

@@ -193,6 +193,7 @@ export function BankQuestionPicker({
 					<Alert type="error" message="题库加载失败，请重新打开选题窗口" />
 				) : null}
 				<ResponsiveTable
+					className="dense-data-table"
 					rowKey="id"
 					loading={items.isLoading}
 					dataSource={items.data?.items ?? []}

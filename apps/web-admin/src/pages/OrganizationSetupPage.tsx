@@ -304,7 +304,7 @@ export function OrganizationSetupPage({ onNavigate }: { onNavigate: (path: strin
                   <label>姓名字段<Select value={mapping.name || undefined} options={csvHeaders.map((value) => ({ value }))} onChange={(value) => setMapping((current) => ({ ...current, name: value }))} /></label>
                   <label>班级代码字段<Select value={mapping.classCode || undefined} options={csvHeaders.map((value) => ({ value }))} onChange={(value) => setMapping((current) => ({ ...current, classCode: value }))} /></label>
                 </div>
-                <ResponsiveTable rowKey="key" size="small" columns={importColumns} dataSource={importRows} pagination={{ pageSize: 8 }} className="setup-preview-table" />
+                <ResponsiveTable rowKey="key" size="small" columns={importColumns} dataSource={importRows} pagination={{ pageSize: 8 }} className="setup-preview-table dense-data-table" />
                 <Space wrap>
                   <Button type="primary" icon={<FileUp size={16} />} loading={saving} disabled={!validImportRows.length} onClick={() => void submitStudents()}>导入 {validImportRows.length} 行</Button>
                   {importRows.some((row) => row.error) ? <Button icon={<Download size={16} />} onClick={() => downloadCSV("学生导入错误.csv", importRows.filter((row) => row.error).map((row) => ({ row: row.sourceRow, student_no: row.studentNo, name: row.name, class_code: row.classCode, error: row.error ?? "" })))}>下载错误行</Button> : null}

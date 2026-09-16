@@ -2,6 +2,7 @@ export const DEFAULT_USER_ERROR_MESSAGE = "操作失败，请稍后重试。";
 export const NETWORK_USER_ERROR_MESSAGE = "网络连接异常，请检查网络后重试。";
 
 const apiErrorMessages: Record<string, string> = {
+  backmark_preview_stale: "回标范围或原评分已变化，请重新预览影响范围后再创建。",
   question_bank_invalid_input: "请检查题干、分值、题型和元数据，分值最多保留两位小数。",
   question_bank_revision_conflict: "草稿已变更或编号已被使用，请刷新核对后重试。",
   question_bank_content_locked: "题库已归档或内容已锁定，当前不能编辑。",

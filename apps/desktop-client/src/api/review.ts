@@ -27,6 +27,7 @@ export async function listAiGrades(client: DesktopApiClient, segmentId: string) 
 }
 
 export interface SubmitHumanGradePayload {
+  expected_revision: number;
   score: number;
   rubric_selections: RubricSelection[];
   comments: string;

@@ -676,6 +676,7 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
               </div>
             </div>
             <ResponsiveTable
+              className="dense-data-table"
               rowKey="question_id"
               size="small"
               columns={questionColumns}
@@ -693,6 +694,7 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
               </div>
             </div>
             <ResponsiveTable
+              className="dense-data-table"
               rowKey="class_id"
               size="small"
               columns={classColumns}
@@ -710,6 +712,7 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
               </div>
             </div>
             <ResponsiveTable
+              className="dense-data-table"
               rowKey="key"
               size="small"
               columns={errorColumns}

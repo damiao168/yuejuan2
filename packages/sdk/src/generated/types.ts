@@ -702,11 +702,11 @@ export type BackmarkPolicy = { "disposition": "confirm" | "arbitrate" | "regrade
 
 export type BackmarkPreviewRequest = { "selector": BackmarkSelector; };
 
-export type CreateBackmarkBatchRequest = { "source_incident_id": string; "selector": BackmarkSelector; "policy": BackmarkPolicy; "reassigned_to": string; };
+export type CreateBackmarkBatchRequest = { "source_incident_id": string; "selector": BackmarkSelector; "policy": BackmarkPolicy; "reassigned_to": string; "selector_hash"?: string; };
 
 export type BackmarkBand = { "score": number; "count": number; };
 
-export type BackmarkPreview = { "affected_count": number; "score_bands": Array<BackmarkBand>; "time_range": BackmarkTimeRange; };
+export type BackmarkPreview = { "affected_count": number; "score_bands": Array<BackmarkBand>; "time_range": BackmarkTimeRange; "selector_hash"?: string; };
 
 export type BackmarkPreviewResponse = { "preview": BackmarkPreview; };
 
@@ -716,7 +716,7 @@ export type BackmarkItem = { "id": string; "batch_id": string; "review_task_id":
 
 export type BackmarkHistogram = { "delta": number; "count": number; };
 
-export type BackmarkSummary = { "batch": BackmarkBatch; "items": Array<BackmarkItem>; "diff_histogram": Array<BackmarkHistogram>; };
+export type BackmarkSummary = { "batch": BackmarkBatch; "items": Array<BackmarkItem>; "diff_histogram": Array<BackmarkHistogram>; "regrade_required_count"?: number; "pending_count"?: number; "completed_count"?: number; };
 
 export type BackmarkSummaryResponse = { "backmark": BackmarkSummary; "next_cursor": string; "has_more": boolean; };
 

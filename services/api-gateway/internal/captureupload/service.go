@@ -9,6 +9,7 @@ import (
 	"io"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/capture"
 	"edugrade-enterprise/services/api-gateway/internal/config"
@@ -88,18 +89,27 @@ func (s *Service) AppendChunk(ctx context.Context, tenantID, uploadID string, in
 }
 
 func (s *Service) Complete(ctx context.Context, tenantID, actorID, uploadID string, input CompleteInput) (Session, error) {
+	ctx, cancel := context.WithTimeout(ctx, completionTimeout)
+	defer cancel()
 	input.SHA256 = normalizeSHA256(input.SHA256)
 	session, shouldMaterialize, err := s.store.BeginComplete(ctx, tenantID, uploadID)
 	if err != nil {
 		return Session{}, err
 	}
 	if input.SHA256 != "" && input.SHA256 != session.SHA256 {
-		_ = s.store.Fail(ctx, tenantID, uploadID, "final_hash_request_mismatch")
+		_ = s.store.Fail(ctx, tenantID, uploadID, "final_hash_request_mismatch", session.CompletionToken)
 		return Session{}, ErrHashMismatch
 	}
 	if !shouldMaterialize {
 		return session, nil
 	}
+	// Best-effort recovery also runs when the request context has expired.
+	// The token prevents an old finalizer from resetting a newer lease.
+	defer func() {
+		cleanup, stop := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer stop()
+		_ = s.store.Resume(cleanup, tenantID, uploadID, "completion_interrupted", session.CompletionToken)
+	}()
 
 	// First hash the exact persisted chunk sequence.  This prevents a partial
 	// or corrupted upload from being materialized as a capture source asset.
@@ -116,32 +126,32 @@ func (s *Service) Complete(ctx context.Context, tenantID, actorID, uploadID stri
 		_, writeErr := digest.Write(chunk)
 		return writeErr
 	}); err != nil {
-		_ = s.store.Resume(ctx, tenantID, uploadID, "chunk_read_failed")
+		_ = s.store.Resume(ctx, tenantID, uploadID, "chunk_read_failed", session.CompletionToken)
 		return Session{}, fmt.Errorf("%w: %v", ErrStorage, err)
 	}
 	if hex.EncodeToString(digest.Sum(nil)) != session.SHA256 {
-		_ = s.store.Fail(ctx, tenantID, uploadID, "final_hash_mismatch")
+		_ = s.store.Fail(ctx, tenantID, uploadID, "final_hash_mismatch", session.CompletionToken)
 		return Session{}, ErrHashMismatch
 	}
 	if _, err := files.ValidateFileType(session.OriginalName, session.ContentType, files.SniffContentType(sample), s.fileConfig.AllowedExtensions); err != nil {
-		_ = s.store.Fail(ctx, tenantID, uploadID, "content_type_mismatch")
+		_ = s.store.Fail(ctx, tenantID, uploadID, "content_type_mismatch", session.CompletionToken)
 		return Session{}, ErrUnsupportedType
 	}
 
 	asset, reused, err := s.findOrCreateAsset(ctx, tenantID, actorID, session)
 	if err != nil {
-		_ = s.store.Resume(ctx, tenantID, uploadID, "asset_prepare_failed")
+		_ = s.store.Resume(ctx, tenantID, uploadID, "asset_prepare_failed", session.CompletionToken)
 		return Session{}, err
 	}
 	if !reused {
 		if err := s.streamToObject(ctx, session, asset); err != nil {
 			_, _ = s.fileStore.MarkUploadFailed(ctx, tenantID, asset.ID, asset.Revision, "resumable_upload_object_put_failed")
-			_ = s.store.Resume(ctx, tenantID, uploadID, "object_put_failed")
+			_ = s.store.Resume(ctx, tenantID, uploadID, "object_put_failed", session.CompletionToken)
 			return Session{}, fmt.Errorf("%w: %v", ErrStorage, err)
 		}
 		asset, err = s.fileStore.Activate(ctx, tenantID, asset.ID, asset.Revision)
 		if err != nil {
-			_ = s.store.Resume(ctx, tenantID, uploadID, "asset_activate_failed")
+			_ = s.store.Resume(ctx, tenantID, uploadID, "asset_activate_failed", session.CompletionToken)
 			return Session{}, fmt.Errorf("%w: %v", ErrStorage, err)
 		}
 	}
@@ -150,10 +160,10 @@ func (s *Service) Complete(ctx context.Context, tenantID, actorID, uploadID stri
 		ID: asset.ID, ExamID: asset.ExamID, OriginalName: asset.OriginalName, ContentType: asset.ContentType, SizeBytes: asset.SizeBytes, SHA256: asset.HashSHA256,
 	})
 	if err != nil {
-		_ = s.store.Resume(ctx, tenantID, uploadID, "capture_file_register_failed")
+		_ = s.store.Resume(ctx, tenantID, uploadID, "capture_file_register_failed", session.CompletionToken)
 		return Session{}, translateCaptureError(err)
 	}
-	return s.store.Complete(ctx, tenantID, uploadID, asset.ID, captureFile.ID)
+	return s.store.Complete(ctx, tenantID, uploadID, asset.ID, captureFile.ID, session.CompletionToken)
 }
 
 func (s *Service) validateInit(input InitInput) (InitInput, error) {
@@ -184,6 +194,9 @@ func (s *Service) findOrCreateAsset(ctx context.Context, tenantID, actorID strin
 	if existing, found, err := s.fileStore.FindDuplicate(ctx, tenantID, "capture_batch", session.BatchID, session.SHA256); err != nil {
 		return files.FileAsset{}, false, err
 	} else if found {
+		if existing.Lifecycle == files.LifecyclePendingUpload || existing.Lifecycle == files.LifecycleUploadFailed {
+			return existing, false, nil
+		}
 		if existing.Lifecycle != files.LifecycleActive {
 			return files.FileAsset{}, false, ErrConflict
 		}

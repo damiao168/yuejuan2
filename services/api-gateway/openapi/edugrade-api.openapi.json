@@ -8136,6 +8136,16 @@
           "403": {
             "$ref": "#/components/responses/Forbidden"
           },
+          "409": {
+            "description": "backmark_preview_stale: selector or original grade snapshot changed; preview again.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "No affected tasks",
             "content": {
@@ -8211,6 +8221,22 @@
           },
           {
             "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "in_progress",
+                "diff_ready",
+                "arbitration_required",
+                "regrade_required",
+                "cancelled"
+              ]
+            }
           }
         ],
         "responses": {
@@ -26487,6 +26513,11 @@
           "reassigned_to": {
             "type": "string",
             "minLength": 1
+          },
+          "selector_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "description": "Binds the normalized tenant/exam/question selector and original grade snapshot. Submit the preview hash when creating; a changed snapshot returns 409 backmark_preview_stale. Optional for existing API clients."
           }
         }
       },
@@ -26528,6 +26559,11 @@
           },
           "time_range": {
             "$ref": "#/components/schemas/BackmarkTimeRange"
+          },
+          "selector_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "description": "Binds the normalized tenant/exam/question selector and original grade snapshot. Submit the preview hash when creating; a changed snapshot returns 409 backmark_preview_stale. Optional for existing API clients."
           }
         }
       },
@@ -26715,6 +26751,21 @@
             "items": {
               "$ref": "#/components/schemas/BackmarkHistogram"
             }
+          },
+          "regrade_required_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Count across the entire batch, independent of item pagination and status filter."
+          },
+          "pending_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Count across the entire batch, independent of item pagination and status filter."
+          },
+          "completed_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Count across the entire batch, independent of item pagination and status filter."
           }
         }
       },

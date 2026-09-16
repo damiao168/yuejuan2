@@ -435,6 +435,15 @@ func mergePaperFormulaResult(input PaperImportParseRequest, regions []PaperImpor
 					}
 					if !mergedInline {
 						if mixed, ok := mergeInlineFormulaSegment(block, region); ok {
+							if mixed.ReviewStatus == "review_required" {
+								input.ExtraIssues = append(input.ExtraIssues, formulaMergeReviewIssue(*document, region))
+							}
+							kept = append(kept, mixed)
+							mergedInline = true
+							continue
+						}
+						if mixed, ok := mergeInlineFormulaByGeometry(block, region); ok {
+							input.ExtraIssues = append(input.ExtraIssues, formulaMergeReviewIssue(*document, region))
 							kept = append(kept, mixed)
 							mergedInline = true
 							continue
@@ -479,7 +488,8 @@ func validPaperFormulaResult(documents []PaperImportParseDocument, regions []Pap
 	seen := map[string]bool{}
 	for _, region := range regions {
 		key := fmt.Sprintf("%s:%d:%d:%s", region.SourceID, region.DocumentIndex, region.PageNo, region.RegionID)
-		if seen[key] || !documentKeys[fmt.Sprintf("%s:%d", region.SourceID, region.DocumentIndex)] || region.PageNo <= 0 || region.RegionID == "" || len(region.BBox) != 4 || region.DetectorModel != "PP-DocLayout_plus-L" || !finiteUnit(region.DetectorConfidence) || !finiteUnit(region.EdgeInkRatio) || len(region.CropSHA256) != 64 || (region.Status != "accepted" && region.Status != "review_required") || len(region.Candidates) > 2 || region.RecropCount < 0 || region.RecropCount > 8 || region.ValidationVersion != "latex-structure-render-v1" {
+		validValidationVersion := region.ValidationVersion == "latex-structure-render-v1" || region.ValidationVersion == "latex-structure-render-v2"
+		if seen[key] || !documentKeys[fmt.Sprintf("%s:%d", region.SourceID, region.DocumentIndex)] || region.PageNo <= 0 || region.RegionID == "" || len(region.BBox) != 4 || region.DetectorModel != "PP-DocLayout_plus-L" || !finiteUnit(region.DetectorConfidence) || !finiteUnit(region.EdgeInkRatio) || len(region.CropSHA256) != 64 || (region.Status != "accepted" && region.Status != "review_required") || len(region.Candidates) > 2 || region.RecropCount < 0 || region.RecropCount > 8 || !validValidationVersion {
 			return false
 		}
 		if region.Status == "accepted" && (!region.CropComplete || len(region.Candidates) == 0) {
@@ -523,7 +533,18 @@ func finiteUnit(value float64) bool {
 func selectedFormulaConfidence(region PaperImportFormulaRegion) float64 {
 	for _, candidate := range region.Candidates {
 		if candidate.ModelVersion == region.SelectedModel {
-			return candidate.Confidence
+			// Current Paddle FormulaRecognition builds do not always expose a
+			// recognition score. Treat that zero as unavailable rather than as
+			// certain failure, but never replace it with the detector score alone:
+			// render-back similarity is the only recognition-level evidence we
+			// have in that case.
+			if candidate.Confidence > 0 {
+				return min(region.DetectorConfidence, candidate.Confidence)
+			}
+			if candidate.RenderSimilarity != nil {
+				return min(region.DetectorConfidence, *candidate.RenderSimilarity)
+			}
+			return min(region.DetectorConfidence, 0.5)
 		}
 	}
 	return 0
@@ -590,6 +611,9 @@ func paperFormulaReplacementSafe(block PaperImportOCRBlock, region PaperImportFo
 }
 
 func mergeInlineFormulaSegment(block PaperImportOCRBlock, region PaperImportFormulaRegion) (PaperImportOCRBlock, bool) {
+	if block.Kind == "formula" {
+		return block, false
+	}
 	plainFormula := formulaSearchText(region.SelectedLatex)
 	if len([]rune(plainFormula)) < 3 {
 		return block, false
@@ -597,21 +621,116 @@ func mergeInlineFormulaSegment(block PaperImportOCRBlock, region PaperImportForm
 	searchable, starts, ends := normalizeFormulaSearchWithOffsets(block.Text)
 	start := strings.Index(searchable, plainFormula)
 	if start < 0 {
-		return block, false
+		sourceStart, sourceEnd, ok := approximateFormulaRange(block.Text, plainFormula)
+		if !ok {
+			return block, false
+		}
+		mixed, ok := replaceInlineFormulaRange(block, region, sourceStart, sourceEnd)
+		if ok {
+			mixed.ReviewStatus = "review_required"
+			mixed.Confidence = min(mixed.Confidence, 0.6)
+		}
+		return mixed, ok
 	}
 	end := start + len(plainFormula)
 	if start >= len(starts) || end <= 0 || end > len(ends) {
 		return block, false
 	}
 	sourceStart, sourceEnd := starts[start], ends[end-1]
+	return replaceInlineFormulaRange(block, region, sourceStart, sourceEnd)
+}
+
+func replaceInlineFormulaRange(block PaperImportOCRBlock, region PaperImportFormulaRegion, sourceStart, sourceEnd int) (PaperImportOCRBlock, bool) {
+	if sourceStart < 0 || sourceEnd <= sourceStart || sourceEnd > len(block.Text) {
+		return block, false
+	}
+	// Never replace a substring inside an already inserted formula. A second
+	// ROI must not create nested math delimiters or mutate prior evidence.
+	if strings.Count(block.Text[:sourceStart], "\\(") > strings.Count(block.Text[:sourceStart], "\\)") || strings.Contains(block.Text[sourceStart:sourceEnd], "\\(") || strings.Contains(block.Text[sourceStart:sourceEnd], "\\)") {
+		return block, false
+	}
 	if block.RawText == "" {
 		block.RawText = block.Text
 	}
+	previousRequiresReview := block.ReviewStatus == "review_required"
 	block.Text = block.Text[:sourceStart] + "\\(" + region.SelectedLatex + "\\)" + block.Text[sourceEnd:]
 	block.Kind = "mixed"
 	block.ReviewStatus = "accepted"
+	if previousRequiresReview {
+		block.ReviewStatus = "review_required"
+	}
+	block.Confidence = mergedFormulaConfidence(block.Confidence, selectedFormulaConfidence(region))
 	block.Segments = inlineFormulaSegments(block.Text, block.BlockID, block.Segments, region)
 	return block, true
+}
+
+func mergeInlineFormulaByGeometry(block PaperImportOCRBlock, region PaperImportFormulaRegion) (PaperImportOCRBlock, bool) {
+	// Paddle text OCR returns line boxes, while the formula detector returns a
+	// sub-line ROI. When OCR has already lost a superscript or vertical bar,
+	// textual matching cannot find the formula. Use the trusted horizontal ROI
+	// to replace only that part of the line. Do not repeat this approximation on
+	// an already mixed block because inserted LaTeX no longer has the source
+	// line's character geometry.
+	if block.Kind == "mixed" || block.Kind == "formula" || strings.TrimSpace(block.Text) == "" {
+		return block, false
+	}
+	box, ok := paperBBox(block.BBox)
+	if !ok || len(region.BBox) != 4 {
+		return block, false
+	}
+	tx, ty, tw, th := box[0], box[1], box[2], box[3]
+	fx, fy, fw, fh := region.BBox[0], region.BBox[1], region.BBox[2], region.BBox[3]
+	verticalOverlap := min(ty+th, fy+fh) - max(ty, fy)
+	if verticalOverlap <= 0 || verticalOverlap/min(th, fh) < 0.55 {
+		return block, false
+	}
+	overlapLeft, overlapRight := max(tx, fx), min(tx+tw, fx+fw)
+	if overlapRight <= overlapLeft {
+		return block, false
+	}
+	runes := []rune(block.Text)
+	coverage := (overlapRight - overlapLeft) * verticalOverlap / (tw * th)
+	if coverage < 0.70 && len(runes) > 12 {
+		return block, false
+	}
+	start := max(0, min(len(runes), int(math.Round((overlapLeft-tx)/tw*float64(len(runes))))))
+	end := max(start, min(len(runes), int(math.Round((overlapRight-tx)/tw*float64(len(runes))))))
+	if end <= start {
+		return block, false
+	}
+	for _, char := range runes[start:end] {
+		if unicode.In(char, unicode.Han) {
+			return block, false
+		}
+	}
+	if block.RawText == "" {
+		block.RawText = block.Text
+	}
+	block.Text = string(runes[:start]) + "\\(" + region.SelectedLatex + "\\)" + string(runes[end:])
+	block.Kind = "mixed"
+	block.ReviewStatus = "review_required"
+	block.Confidence = min(mergedFormulaConfidence(block.Confidence, selectedFormulaConfidence(region)), 0.6)
+	block.Segments = inlineFormulaSegments(block.Text, block.BlockID, block.Segments, region)
+	return block, true
+}
+
+func formulaMergeReviewIssue(document PaperImportParseDocument, region PaperImportFormulaRegion) PaperImportIssue {
+	return PaperImportIssue{
+		Code: "FORMULA_ALIGNMENT_REVIEW_REQUIRED", Severity: "warning", Certainty: "suspected",
+		Message:        fmt.Sprintf("第 %d 页有公式与正文的对齐位置需要人工核对", region.PageNo),
+		SourceRefs:     []PaperImportSourceRef{{SourceID: document.SourceID, FileAssetID: document.FileAssetID, DocumentIndex: document.DocumentIndex, PageNo: region.PageNo, BlockID: region.RegionID, BBox: region.BBox}},
+		ResolutionHint: "公式已作为候选替换 OCR 片段，原文已保留；请核对公式两侧文字及符号是否完整",
+	}
+}
+
+func mergedFormulaConfidence(textConfidence, formulaConfidence float64) float64 {
+	if formulaConfidence <= 0 {
+		return 0
+	}
+	if textConfidence <= 0 {
+		return formulaConfidence
+	}
+	return min(textConfidence, formulaConfidence)
 }
 
 func inlineFormulaSegments(text, sourceBlockID string, previous []PaperImportContentSegment, current PaperImportFormulaRegion) []PaperImportContentSegment {
@@ -650,11 +769,93 @@ var formulaCommandPattern = regexp.MustCompile(`\\[A-Za-z]+`)
 func formulaSearchText(value string) string {
 	value = strings.NewReplacer(
 		`\times`, "*", `\cdot`, "*", `\div`, "/", `\leq`, "<=", `\geq`, ">=", `\neq`, "!=",
-		`\left`, "", `\right`, "", "^{", "{", "_{", "{",
+		`\left`, "", `\right`, "", `\{`, "", `\}`, "", `\|`, "|", `\.`, ".", "^{", "{", "_{", "{",
 	).Replace(value)
 	value = formulaCommandPattern.ReplaceAllString(value, "")
 	value = strings.NewReplacer("{", "", "}", "", "^", "", "_", "").Replace(value)
 	return normalizeFormulaSearchText(value)
+}
+
+func approximateFormulaRange(value, formula string) (int, int, bool) {
+	searchable, starts, ends := normalizeFormulaSearchRunesWithOffsets(value)
+	target := []rune(formula)
+	if len(target) < 4 || len(target) > 128 || len(searchable) < 2 || len(searchable) > 1024 {
+		return 0, 0, false
+	}
+	maxEdits := min(6, max(1, int(math.Ceil(float64(len(target))*0.30))))
+	minLength := max(2, len(target)-maxEdits)
+	maxLength := min(len(searchable), len(target)+maxEdits)
+	bestDistance, bestStart, bestEnd := maxEdits+1, -1, -1
+	for start := range searchable {
+		for length := minLength; length <= maxLength && start+length <= len(searchable); length++ {
+			containsProse := false
+			for _, char := range searchable[start : start+length] {
+				if unicode.In(char, unicode.Han) || char == '\\' {
+					containsProse = true
+					break
+				}
+			}
+			if containsProse {
+				continue
+			}
+			distance := formulaEditDistance(searchable[start:start+length], target, bestDistance)
+			if distance < bestDistance {
+				bestDistance, bestStart, bestEnd = distance, start, start+length
+			}
+		}
+	}
+	if bestStart < 0 || bestDistance > maxEdits {
+		return 0, 0, false
+	}
+	return starts[bestStart], ends[bestEnd-1], true
+}
+
+func normalizeFormulaSearchRunesWithOffsets(value string) ([]rune, []int, []int) {
+	output := []rune{}
+	starts := []int{}
+	ends := []int{}
+	for sourceStart, char := range value {
+		sourceEnd := sourceStart + len(string(char))
+		normalized := strings.ToLower(norm.NFKC.String(string(char)))
+		normalized = strings.NewReplacer("×", "*", "·", "*", "÷", "/", "−", "-").Replace(normalized)
+		for _, normalizedChar := range normalized {
+			if unicode.IsSpace(normalizedChar) {
+				continue
+			}
+			output = append(output, normalizedChar)
+			starts = append(starts, sourceStart)
+			ends = append(ends, sourceEnd)
+		}
+	}
+	return output, starts, ends
+}
+
+func formulaEditDistance(left, right []rune, stopAfter int) int {
+	previous := make([]int, len(right)+1)
+	for index := range previous {
+		previous[index] = index
+	}
+	for leftIndex, leftChar := range left {
+		current := make([]int, len(right)+1)
+		current[0] = leftIndex + 1
+		rowMinimum := current[0]
+		for rightIndex, rightChar := range right {
+			cost := 0
+			if leftChar != rightChar {
+				cost = 1
+			}
+			current[rightIndex+1] = min(
+				min(current[rightIndex]+1, previous[rightIndex+1]+1),
+				previous[rightIndex]+cost,
+			)
+			rowMinimum = min(rowMinimum, current[rightIndex+1])
+		}
+		previous = current
+		if rowMinimum > stopAfter && leftIndex >= len(right) {
+			return stopAfter + 1
+		}
+	}
+	return previous[len(right)]
 }
 
 func normalizeFormulaSearchText(value string) string {

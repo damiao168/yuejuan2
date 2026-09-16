@@ -967,6 +967,7 @@ export function SubmissionCapturePage({
           description={`${filteredRows.length} / ${rows.length} 条记录，已完成 ${summary.completed} 份${summary.failed > 0 ? `；${summary.failed} 份处理失败，可直接重试` : ""}`}
         >
           <ResponsiveTable<SubmissionView>
+            className="dense-data-table"
             rowKey={(row) => row.submission.id}
             dataSource={filteredRows}
             columns={columns}
@@ -998,6 +999,7 @@ export function SubmissionCapturePage({
               <Descriptions.Item label="质量状态">{qualityStatusLabels[pageDrawer.submission.quality_status] ?? pageDrawer.submission.quality_status}</Descriptions.Item>
             </Descriptions>
             <ResponsiveTable<SubmissionPage>
+              className="dense-data-table"
               rowKey="id"
               dataSource={pageDrawer.pages}
               columns={pageColumns}
@@ -1047,6 +1049,7 @@ export function SubmissionCapturePage({
               <Descriptions.Item label="识别状态">{ocrLabel(ocrDrawer.row.ocrTasks)}</Descriptions.Item>
             </Descriptions>
             <ResponsiveTable<OcrTask>
+              className="dense-data-table"
               rowKey="id"
               dataSource={ocrDrawer.tasks}
               columns={ocrTaskColumns}
@@ -1070,6 +1073,7 @@ export function SubmissionCapturePage({
                       </div>
                     </div>
                     <ResponsiveTable
+                      className="dense-data-table"
                       rowKey="id"
                       dataSource={task.results ?? []}
                       pagination={false}

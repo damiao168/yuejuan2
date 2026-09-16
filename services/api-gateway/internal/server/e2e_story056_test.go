@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/files"
+	"edugrade-enterprise/services/api-gateway/internal/score"
 )
 
 const (
@@ -176,6 +177,14 @@ func TestStory056ObjectiveScoringRecoveryE2EWithPostgresTestDatabase(t *testing.
 	completedItems := e2eStory056RunItems(t, completedDetail)
 	e2eAssertStory056ItemStates(t, completedItems, story056AcceptanceAnswerCount, 0)
 	e2eAssertStory056ConfirmedScores(t, db, fixture.TenantID, runID, story056AcceptanceAutoConfirmedCount, story056AcceptanceHumanReviewCount)
+	finals, err := score.NewPostgresStore(db).FinalizeExam(t.Context(), fixture.TenantID, fixture.ExamID, fixture.AdminID)
+	if err != nil || finals.CreatedFinals != story056AcceptanceAnswerCount || !finals.Quality.Passed {
+		t.Fatalf("completed scoring must finalize every answer: %+v err=%v", finals, err)
+	}
+	repeated, err := score.NewPostgresStore(db).FinalizeExam(t.Context(), fixture.TenantID, fixture.ExamID, fixture.AdminID)
+	if err != nil || repeated.CreatedFinals != 0 || !repeated.Quality.Passed {
+		t.Fatalf("repeated finalization must not duplicate grades: %+v err=%v", repeated, err)
+	}
 
 	segmentID := e2eString(t, completedItems[0], "answer_segment_id")
 	reprocessKey := "story056-reprocess-" + suffix

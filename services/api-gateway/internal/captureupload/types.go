@@ -23,6 +23,9 @@ var (
 
 const DefaultChunkSize int64 = 4 * 1024 * 1024
 
+const completionTimeout = 2 * time.Minute
+const completionLeaseDuration = 3 * time.Minute
+
 type InitInput struct {
 	SHA256         string `json:"sha256"`
 	Size           int64  `json:"size"`
@@ -47,23 +50,25 @@ type CompleteInput struct {
 }
 
 type Session struct {
-	ID              string     `json:"remote_upload_id"`
-	TenantID        string     `json:"-"`
-	ExamID          string     `json:"exam"`
-	BatchID         string     `json:"batch"`
-	IdempotencyKey  string     `json:"-"`
-	OriginalName    string     `json:"-"`
-	ContentType     string     `json:"mime"`
-	SHA256          string     `json:"sha256"`
-	Size            int64      `json:"size"`
-	ChunkSize       int64      `json:"chunk_size"`
-	ConfirmedOffset int64      `json:"confirmed_offset"`
-	Status          string     `json:"status"`
-	FileAssetID     string     `json:"file_asset_id,omitempty"`
-	CaptureFileID   string     `json:"capture_file_id,omitempty"`
-	ErrorCode       string     `json:"error_code,omitempty"`
-	CreatedAt       time.Time  `json:"created_at"`
-	CompletedAt     *time.Time `json:"completed_at,omitempty"`
+	CompletionToken      string     `json:"-"`
+	CompletionLeaseUntil time.Time  `json:"-"`
+	ID                   string     `json:"remote_upload_id"`
+	TenantID             string     `json:"-"`
+	ExamID               string     `json:"exam"`
+	BatchID              string     `json:"batch"`
+	IdempotencyKey       string     `json:"-"`
+	OriginalName         string     `json:"-"`
+	ContentType          string     `json:"mime"`
+	SHA256               string     `json:"sha256"`
+	Size                 int64      `json:"size"`
+	ChunkSize            int64      `json:"chunk_size"`
+	ConfirmedOffset      int64      `json:"confirmed_offset"`
+	Status               string     `json:"status"`
+	FileAssetID          string     `json:"file_asset_id,omitempty"`
+	CaptureFileID        string     `json:"capture_file_id,omitempty"`
+	ErrorCode            string     `json:"error_code,omitempty"`
+	CreatedAt            time.Time  `json:"created_at"`
+	CompletedAt          *time.Time `json:"completed_at,omitempty"`
 }
 
 type InitResponse struct {
@@ -99,7 +104,7 @@ type Store interface {
 	AppendChunk(context.Context, string, string, ChunkInput) (Session, error)
 	BeginComplete(context.Context, string, string) (Session, bool, error)
 	ReadChunks(context.Context, string, string, func([]byte) error) error
-	Complete(context.Context, string, string, string, string) (Session, error)
-	Resume(context.Context, string, string, string) error
-	Fail(context.Context, string, string, string) error
+	Complete(context.Context, string, string, string, string, string) (Session, error)
+	Resume(context.Context, string, string, string, string) error
+	Fail(context.Context, string, string, string, string) error
 }

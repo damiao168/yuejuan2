@@ -520,6 +520,16 @@ func (s *PostgresStore) Requeue(ctx context.Context, tenantID string, taskID str
 		return Task{}, err
 	}
 	defer tx.Rollback()
+	task, err := RequeueTaskInTx(ctx, tx, tenantID, taskID)
+	if err != nil {
+		return Task{}, err
+	}
+	return task, tx.Commit()
+}
+
+// RequeueTaskInTx lets a source coordinator restore source and runtime state
+// together. The caller owns the transaction and source lock.
+func RequeueTaskInTx(ctx context.Context, tx *sql.Tx, tenantID, taskID string) (Task, error) {
 	task, err := getTaskForUpdate(ctx, tx, tenantID, taskID)
 	if err != nil {
 		return Task{}, err
@@ -538,7 +548,7 @@ RETURNING `+taskColumns, tenantID, taskID)
 	if err != nil {
 		return Task{}, err
 	}
-	return task, tx.Commit()
+	return task, nil
 }
 
 func (s *PostgresStore) Get(ctx context.Context, tenantID string, taskID string) (Task, error) {

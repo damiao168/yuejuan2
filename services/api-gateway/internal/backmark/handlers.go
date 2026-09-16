@@ -130,6 +130,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	page.Status = strings.TrimSpace(r.URL.Query().Get("status"))
 	summary, err := h.service.GetPage(r.Context(), user.TenantID, r.PathValue("batchId"), page)
 	if err != nil {
 		writeError(w, r, err)
@@ -372,6 +373,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.Error(w, r, http.StatusForbidden, "backmark_assignee_forbidden", "backmark must be completed by its assigned non-original grader")
 	case errors.Is(err, ErrRevisionConflict):
 		httpx.Error(w, r, http.StatusConflict, "backmark_revision_conflict", "backmark item changed; reload before submitting")
+	case errors.Is(err, ErrPreviewStale):
+		httpx.Error(w, r, http.StatusConflict, "backmark_preview_stale", "backmark selection or source facts changed; preview again before creating")
 	case errors.Is(err, ErrStateConflict):
 		httpx.Error(w, r, http.StatusConflict, "backmark_state_conflict", "backmark item is not ready for this action")
 	case errors.Is(err, regrade.ErrSourceRelease):

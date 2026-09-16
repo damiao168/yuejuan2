@@ -231,6 +231,7 @@ export function OfflineWorkbench({ client, token, user, isOnline, onLog }: Offli
         .filter(([, score]) => Number(score) > 0)
         .map(([point_id, score]) => ({ point_id, score: Number(score) }));
       await submitHumanGrade(client, pkg.task.id, {
+        expected_revision: pkg.task.revision,
         score: Number(draft.score),
         rubric_selections: selections,
         comments: draft.comments,
@@ -535,7 +536,13 @@ async function buildTaskPackage(client: DesktopApiClient, task: ReviewTask): Pro
 }
 
 async function detectConflict(client: DesktopApiClient, pkg: OfflineTaskPackage, user: AuthUser | null) {
+  if (!Number.isInteger(pkg.task.revision) || pkg.task.revision <= 0) {
+    return "本地任务包缺少版本，请重新下载任务包后核对草稿。";
+  }
   const latest = await getReviewTask(client, pkg.task.id);
+  if (latest.task.revision !== pkg.task.revision) {
+    return "服务端任务版本已变化，请重新下载任务包后核对草稿。";
+  }
   const status = latest.task.status;
   if (["submitted", "completed", "cancelled", "withdrawn", "revoked"].includes(status)) {
     return `服务端任务状态为 ${status}，本地草稿不能提交。`;

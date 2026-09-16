@@ -37,6 +37,11 @@ func AllowsResourceBoundary(scope AccessScope, boundary ResourceBoundary) bool {
 	if scope.syntheticUnbounded {
 		return true
 	}
+	// Hidden tasks use the workbench URLs, but their assignment is held in
+	// seed_task rather than the ordinary review-task scope list.
+	if boundary.ResourceType == "seed_task" {
+		return scope.ActorID != "" && boundary.AssignedTo == scope.ActorID
+	}
 	if scope.IsPlatform || scope.TenantWide {
 		return true
 	}
@@ -200,6 +205,18 @@ func (s *PostgresStore) ResolveResourceBoundary(ctx context.Context, scope Acces
 		&boundary.TenantID, &boundary.SchoolID, &boundary.GradeID, pqArray(&boundary.ClassIDs),
 		&boundary.ExamID, &boundary.StudentID, &boundary.SubmissionID, &boundary.AssignedTo,
 	)
+	if errors.Is(err, sql.ErrNoRows) && resourceType == "review_task" {
+		boundary.ResourceType = "seed_task"
+		err = s.db.QueryRowContext(ctx, `SELECT st.tenant_id::text,e.school_id::text,''::text,
+COALESCE(array_agg(DISTINCT ec.class_id::text) FILTER(WHERE ec.class_id IS NOT NULL),'{}'),
+st.exam_id::text,''::text,''::text,st.grader_id::text
+FROM seed_task st JOIN exam e ON e.tenant_id=st.tenant_id AND e.id=st.exam_id AND e.deleted_at IS NULL
+LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL
+WHERE st.tenant_id=$1::uuid AND st.id=$2::uuid GROUP BY st.id,e.id`, scope.TenantID, resourceID).Scan(
+			&boundary.TenantID, &boundary.SchoolID, &boundary.GradeID, pqArray(&boundary.ClassIDs),
+			&boundary.ExamID, &boundary.StudentID, &boundary.SubmissionID, &boundary.AssignedTo,
+		)
+	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return ResourceBoundary{}, ErrResourceBoundaryNotFound
 	}

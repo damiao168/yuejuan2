@@ -263,7 +263,7 @@ services:
         BUILD_TIME: ${EDUGRADE_BUILD_TIME:-unknown}
         IMAGE_DIGEST: ${EDUGRADE_IMAGE_DIGEST:-unknown}
         RELEASE_ID: ${EDUGRADE_RELEASE_ID:-local}
-        SCHEMA_VERSION: ${EDUGRADE_SCHEMA_VERSION:-000150}
+        SCHEMA_VERSION: ${EDUGRADE_SCHEMA_VERSION:-000151}
         GOPROXY: ${EDUGRADE_GO_PROXY:-}
     image: ${EDUGRADE_API_GATEWAY_IMAGE:-edugrade/api-gateway:local}
     container_name: edugrade-api-gateway
