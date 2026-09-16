@@ -18,6 +18,7 @@ COPY packages/design-tokens packages/design-tokens
 COPY packages/sdk packages/sdk
 COPY packages/ui packages/ui
 COPY apps/web-admin apps/web-admin
+COPY tests/e2e/fixtures tests/e2e/fixtures
 ARG VITE_API_BASE_URL=
 ARG VITE_RELEASE_ID=local
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
