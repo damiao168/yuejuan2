@@ -184,7 +184,7 @@ export function SubjectiveGradingBatchPage({ scopeKey }: { scopeKey: string }) {
       </Card>
       {batch ? <Card title={<Space>批次进度 <Tag color={batch.status === "failed" ? "red" : batch.status === "completed" ? "green" : "blue"}>{batchStatusLabels[batch.status] ?? "未知状态"}</Tag></Space>} extra={<Space><Button icon={<Play size={15} />} disabled={batch.status !== "planned" && batch.status !== "processing"} loading={loading} onClick={() => void enqueue()}>入队评分</Button><Button icon={<RefreshCw size={15} />} loading={loading} onClick={() => void refresh()}>刷新</Button></Space>}>
         <Progress percent={progress} status={batch.failed_count ? "exception" : undefined} />
-        <div className="operations-counts"><span><strong>{batch.total_count}</strong>总量</span><span><strong>{batch.queued_count}</strong>排队</span><span><strong>{batch.processing_count}</strong>处理中</span><span><strong>{batch.succeeded_count}</strong>成功</span><span className={batch.failed_count ? "danger" : ""}><strong>{batch.failed_count}</strong>失败</span></div>
+        <div className="subjective-batch-counts"><span><strong>{batch.total_count}</strong>总量</span><span><strong>{batch.queued_count}</strong>排队</span><span><strong>{batch.processing_count}</strong>处理中</span><span><strong>{batch.succeeded_count}</strong>成功</span><span className={batch.failed_count ? "danger" : ""}><strong>{batch.failed_count}</strong>失败</span></div>
       </Card> : null}
     </div>
   );

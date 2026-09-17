@@ -1,15 +1,56 @@
 package paper
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"edugrade-enterprise/services/api-gateway/internal/files"
 )
+
+func TestPaperParserLoadsOnlyVerifiedTenantPageImages(t *testing.T) {
+	raw := []byte("synthetic-page-image")
+	digest := fmt.Sprintf("%x", sha256.Sum256(raw))
+	fileStore := files.NewMemoryStore()
+	objects := files.NewMemoryObjectStorage()
+	if err := objects.Put(context.Background(), "paper-pages", "page-1.png", bytes.NewReader(raw), int64(len(raw)), "image/png"); err != nil {
+		t.Fatal(err)
+	}
+	asset, err := fileStore.Create(context.Background(), files.CreateAssetInput{
+		TenantID: "school-a", OwnerType: "paper_import_page", OwnerID: "import-1",
+		OriginalName: "page-1.png", ContentType: "image/png", SizeBytes: int64(len(raw)),
+		HashSHA256: digest, StorageBucket: "paper-pages", StorageKey: "page-1.png",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := NewDocumentImportService(nil, fileStore, objects, "http://unused", strings.Repeat("t", 32), time.Second)
+	documents := []normalizedImportDocument{{SourceID: "source-1", FileAssetID: "original-file", DocumentIndex: 0, Content: "OCR"}}
+	pages := []PaperImportDecodedPage{{SourceID: "source-1", DocumentIndex: 0, PageNo: 1, FileAssetID: asset.ID, SHA256: digest, Width: 1200, Height: 1800}}
+
+	visual, err := service.loadDocumentVisualPages(context.Background(), "school-a", documents, pages)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(visual) != 1 || visual[0].MediaType != "image/png" || visual[0].SHA256 != digest || visual[0].DataBase64 == "" {
+		t.Fatalf("unexpected visual page: %#v", visual)
+	}
+	pages[0].SHA256 = strings.Repeat("0", 64)
+	if _, err = service.loadDocumentVisualPages(context.Background(), "school-a", documents, pages); err == nil {
+		t.Fatal("checksum mismatch must be rejected")
+	}
+	if _, err = service.loadDocumentVisualPages(context.Background(), "school-b", documents, []PaperImportDecodedPage{{SourceID: "source-1", DocumentIndex: 0, PageNo: 1, FileAssetID: asset.ID}}); err == nil {
+		t.Fatal("cross-tenant page asset must be rejected")
+	}
+}
 
 func TestPaperParserResolvesSchoolModelOnlyForInternalRequest(t *testing.T) {
 	var received documentParseRequest

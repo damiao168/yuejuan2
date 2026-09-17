@@ -139,7 +139,9 @@ Set-Location ..\..
 powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1
 ```
 
-只有依赖或源码发生变化、确实需要重建镜像时才追加 `-Build`。不要把
+只有依赖或源码发生变化、确实需要重建镜像时才追加 `-Build`。该参数默认只重建
+API、管理端和多模态服务，不会重建 OCR/Paddle 镜像；修改 Worker 时使用
+`-BuildWorkers`，或用 `-BuildService ocr-worker` 只重建指定服务。不要把
 `docker compose up -d --build` 当作每次启动命令。
 
 需要同时启用 Prometheus 和 Grafana 时，增加 `-EnableObservability`：

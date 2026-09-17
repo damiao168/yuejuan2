@@ -21,12 +21,16 @@
     "@tanstack/react-router": "^1.170.23",
     "antd": "^5.27.6",
     "framer-motion": "^12.23.0",
+    "katex": "^0.18.7",
     "lucide-react": "^0.468.0",
     "papaparse": "^5.5.3",
     "pdfjs-dist": "^5.4.149",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "recharts": "^2.15.0"
+    "react-markdown": "^10.1.0",
+    "recharts": "^2.15.0",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0"
   },
   "devDependencies": {
     "@types/papaparse": "^5.3.16",

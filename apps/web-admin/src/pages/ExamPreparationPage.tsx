@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, App, Button, Checkbox, Progress, Space } from "antd";
-import { ArrowRight, CheckCircle2, CircleAlert, ClipboardCheck, Play, RefreshCw, Save } from "lucide-react";
+import { ArrowRight, CircleAlert, ClipboardCheck, Play, RefreshCw, Save } from "lucide-react";
 import { ApiClientError, getSafeUserText, getUserErrorMessage } from "../api/client";
 import { confirmExamReadiness, getExamReadiness, startExamCollection, type ExamReadiness } from "../api/configuration";
 import { getExam, refreshExamCandidates, updateExam, type Exam } from "../api/exams";
@@ -123,6 +123,7 @@ export function ExamReadinessPage({ examId, canManage, onNavigate, onExamChanged
   const percent = total ? Math.round((passed / total) * 100) : 0;
   const studentChecks = readiness?.checks.filter((item) => item.section === "students") ?? [];
   const materialChecks = readiness?.checks.filter((item) => ["paper", "questions", "template"].includes(item.section)) ?? [];
+  const failedChecks = readiness?.checks.filter((item) => !item.passed) ?? [];
 
   async function confirm() {
     setWorking(true);
@@ -164,12 +165,14 @@ export function ExamReadinessPage({ examId, canManage, onNavigate, onExamChanged
         <div><span><strong>开考检查</strong><small>{readiness.ready ? "所有真实检查项均已通过" : `${total - passed} 项仍需完成`}</small></span><StatusTag tone={readiness.ready ? "success" : "warning"}>{readiness.ready ? "可确认" : "待完成"}</StatusTag></div>
       </section>
 
-      <section className="readiness-details" aria-labelledby="readiness-details-title">
-        <div className="readiness-details-heading"><h3 id="readiness-details-title">配置明细</h3><span>状态与说明来自开考检查</span></div>
-        <div className="readiness-check-list">
-          {readiness.checks.map((check) => <button type="button" key={check.code} className={check.passed ? "passed" : "failed"} onClick={() => onNavigate(readinessCheckRoute(examId, check.section))}><span className="readiness-icon">{check.passed ? <CheckCircle2 size={20} /> : <CircleAlert size={20} />}</span><span><strong>{getSafeUserText(check.label, "准备检查")}</strong><small>{getSafeUserText(check.message, check.passed ? "检查已通过" : "检查未通过，请完成相关设置")}</small></span><StatusTag tone={check.passed ? "success" : "warning"}>{check.passed ? "已完成" : "待完成"}</StatusTag><span>{check.passed ? "查看" : "去处理"}</span><ArrowRight size={17} /></button>)}
-        </div>
-      </section>
+      {failedChecks.length ? (
+        <section className="readiness-attention" aria-labelledby="readiness-attention-title">
+          <div className="readiness-attention-heading"><h3 id="readiness-attention-title">还需处理 {failedChecks.length} 项</h3><span>只显示会阻止考试进入下一阶段的问题</span></div>
+          <div className="readiness-attention-list">
+            {failedChecks.map((check) => <button type="button" key={check.code} onClick={() => onNavigate(readinessCheckRoute(examId, check.section))}><CircleAlert size={18} /><span><strong>{getSafeUserText(check.label, "准备检查")}</strong><small>{getSafeUserText(check.message, "检查未通过，请完成相关设置")}</small></span><span>去处理</span><ArrowRight size={16} /></button>)}
+          </div>
+        </section>
+      ) : null}
 
       {readiness.ready && !readiness.confirmed ? <Alert type="info" showIcon message="所有检查已通过" description="请由考试负责人确认准备完成。确认后若修改题目、答案、模板或学生范围，系统会自动撤销本次确认。" /> : null}
       {exam.status === "collecting" ? <Alert type="success" showIcon message="考试已进入答卷导入阶段" description="后续答卷导入与页面处理将在答卷导入工作区完成。" /> : null}

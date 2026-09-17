@@ -1,4 +1,4 @@
-import type { PaperImportDraftQuestion, PaperImportJob, PaperImportRole, PaperImportSource } from "../../api/papers";
+import type { PaperImportDraftQuestion, PaperImportIssue, PaperImportJob, PaperImportRole, PaperImportSource } from "../../api/papers";
 
 const supportedExtensions = [".pdf", ".docx", ".png", ".jpg", ".jpeg", ".tif", ".tiff"];
 const supportedMimeTypes = new Set([
@@ -78,8 +78,41 @@ export function paperImportSummary(job: PaperImportJob) {
     questions: job.question_candidates?.length ?? job.questions.length,
     answers: job.answer_candidates?.length ?? 0,
     solutions: job.solution_candidates?.length ?? 0,
-    reviewIssues: (job.structured_issues ?? []).filter((issue) => issue.severity !== "info").length
+    reviewIssues: paperImportReviewIssues(job).length
   };
+}
+
+const configurationMismatchCodes = new Set(["QUESTION_COUNT_MISMATCH", "SECTION_COUNT_MISMATCH", "SCORE_TOTAL_MISMATCH"]);
+
+/**
+ * Keep the review panel focused on distinct actions instead of repeating one
+ * warning for every question. The full issue list remains stored on the job.
+ */
+export function paperImportReviewIssues(job: Pick<PaperImportJob, "structured_issues">): PaperImportIssue[] {
+  const issues = (job.structured_issues ?? []).filter((issue) => issue.severity !== "info");
+  const visible = issues.filter((issue) => issue.code !== "HUMAN_REVIEW_REQUIRED" && issue.code !== "MISSING_SCORE" && !configurationMismatchCodes.has(issue.code));
+  const missingScores = issues.filter((issue) => issue.code === "MISSING_SCORE");
+  const questionCountMismatch = issues.find((issue) => issue.code === "QUESTION_COUNT_MISMATCH");
+  const configurationMismatch = questionCountMismatch ?? issues.find((issue) => configurationMismatchCodes.has(issue.code));
+
+  if (missingScores.length) {
+    visible.push({
+      ...missingScores[0],
+      question_no: undefined,
+      message: `${missingScores.length} 道题尚未填写分值`,
+      source_refs: []
+    });
+  }
+  if (configurationMismatch) {
+    visible.push({
+      ...configurationMismatch,
+      code: "EXAM_CONFIGURATION_MISMATCH",
+      question_no: undefined,
+      message: questionCountMismatch?.message ?? "识别题量、题型或总分与考试配置不一致",
+      source_refs: []
+    });
+  }
+  return visible;
 }
 
 export function hasNoExamContentDetected(job: PaperImportJob) {

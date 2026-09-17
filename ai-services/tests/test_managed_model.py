@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 
 from grading_agent.errors import AgentError
 from grading_agent.managed_model import paper_model, public_json_transport
+from grading_agent.model import _decode_structured_content
 from helpers import settings
 
 
@@ -44,6 +45,59 @@ class ManagedPaperModelTests(unittest.TestCase):
             with self.assertRaises(AgentError) as error:
                 model.request_structured("test", [], {"type": "object", "required": ["ok"]}, "test")
             self.assertEqual(error.exception.code, "model_output_invalid")
+
+    def test_compatible_model_accepts_a_single_json_object_inside_provider_wrapping(self):
+        self.assertEqual(
+            _decode_structured_content("```json\n{\"ok\":true}\n```", "wrapped"),
+            {"ok": True},
+        )
+        self.assertEqual(
+            _decode_structured_content("以下是结果：\n{\"ok\":true}", "prefixed"),
+            {"ok": True},
+        )
+
+    def test_openai_compatible_model_preserves_visual_parts_and_expands_output_budget(self):
+        model = paper_model(self.app, {"managed_model": config()})
+        messages = [{"role": "user", "content": [
+            {"type": "text", "text": "page 1"},
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,cG5n", "detail": "original"}},
+        ]}]
+        schema = {"type": "object", "required": ["ok"], "properties": {"ok": {"type": "boolean"}}}
+        with patch("grading_agent.managed_model.public_json_transport", return_value={
+            "choices": [{"message": {"content": '{"ok":true}'}}],
+            "usage": {
+                "prompt_tokens": 2400, "completion_tokens": 600, "total_tokens": 3000,
+                "prompt_tokens_details": {"cached_tokens": 120},
+                "prompt_cache_hit_tokens": 180,
+            },
+        }) as send:
+            self.assertEqual(model.request_structured("visual", messages, schema, "visual"), {"ok": True})
+
+        body = send.call_args.args[1]
+        self.assertEqual(body["messages"][0]["role"], "system")
+        self.assertIn("Return a JSON object matching this schema", body["messages"][0]["content"])
+        self.assertEqual(body["messages"][-1]["content"][1]["type"], "image_url")
+        self.assertEqual(body["messages"][-1]["content"][1]["image_url"]["detail"], "original")
+        self.assertEqual(body["max_tokens"], 8_192)
+        self.assertEqual(model.last_usage(), {
+            "input_tokens": 2400, "cached_input_tokens": 180,
+            "output_tokens": 600, "reasoning_tokens": 0, "total_tokens": 3000,
+        })
+
+    def test_deepseek_visual_request_explicitly_disables_default_thinking(self):
+        deepseek = {
+            **config("deepseek-flash"),
+            "base_url": "https://api.deepseek.com",
+            "model_version": "v4.1",
+        }
+        model = paper_model(self.app, {"managed_model": deepseek})
+        schema = {"type": "object", "required": ["ok"], "properties": {"ok": {"type": "boolean"}}}
+        with patch("grading_agent.managed_model.public_json_transport", return_value={"choices": [{"message": {"content": '{"ok":true}'}}]}) as send:
+            model.request_structured("deepseek-visual", [{"role": "user", "content": "exam"}], schema, "visual")
+
+        body = send.call_args.args[1]
+        self.assertEqual(body["thinking"], {"type": "disabled"})
+        self.assertEqual(body["reasoning_effort"], "none")
 
     def test_invalid_managed_config_never_falls_back_to_local_model(self):
         for changes in [{"base_url": "http://example.test"}, {"adapter_type": "unsupported"},

@@ -8,7 +8,7 @@
 
 .eg-workspace-stages {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--eg-stage-count, 4), minmax(0, 1fr));
   overflow: hidden;
   border: 1px solid var(--eg-color-border);
   border-radius: var(--eg-radius-md);
@@ -19,8 +19,8 @@
   display: flex;
   align-items: center;
   gap: var(--eg-space-2);
-  min-height: 52px;
-  padding: var(--eg-space-3) var(--eg-space-4);
+  min-height: 58px;
+  padding: 9px var(--eg-space-4);
   color: var(--eg-color-muted);
   background: transparent;
   border: 0;
@@ -40,7 +40,8 @@
 }
 .eg-workspace-stage > div { min-width: 0; }
 .eg-workspace-stage strong, .eg-workspace-stage small { display: block; }
-.eg-workspace-stage small { overflow: hidden; margin-top: 2px; color: var(--eg-color-muted); font-size: var(--eg-font-caption); font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+.eg-workspace-stage strong { line-height: 1.35; }
+.eg-workspace-stage small { overflow: hidden; margin-top: 1px; color: var(--eg-color-muted); font-size: var(--eg-font-caption); font-weight: 400; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
 .eg-workspace-stage.is-current { color: var(--eg-color-action); background: var(--eg-color-action-soft); }
 .eg-workspace-stage.is-current > span { color: var(--eg-color-on-action); background: var(--eg-color-action); border-color: var(--eg-color-action); }
 .eg-workspace-stage.is-completed { color: var(--eg-color-success); }
@@ -112,8 +113,8 @@
 
 @media (max-width: 900px) {
   .eg-page-header, .eg-data-table-heading { display: grid; }
-  .eg-workspace-stages { grid-template-columns: 1fr; }
-  .eg-workspace-stage { border-right: 0; border-bottom: 1px solid var(--eg-color-border); }
+  .eg-workspace-stages { display: flex; overflow-x: auto; }
+  .eg-workspace-stage { flex: 0 0 190px; border-right: 1px solid var(--eg-color-border); border-bottom: 0; }
   .eg-workspace-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .eg-workspace-overview-grid, .eg-subject-summary { grid-template-columns: 1fr; }
 }

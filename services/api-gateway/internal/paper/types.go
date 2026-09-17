@@ -210,6 +210,14 @@ type PaperImportRuntimeProgress struct {
 	UpdatedAt         time.Time  `json:"updated_at"`
 }
 
+type PaperImportModelUsage struct {
+	InputTokens       int64 `json:"input_tokens,omitempty"`
+	CachedInputTokens int64 `json:"cached_input_tokens,omitempty"`
+	OutputTokens      int64 `json:"output_tokens,omitempty"`
+	ReasoningTokens   int64 `json:"reasoning_tokens,omitempty"`
+	TotalTokens       int64 `json:"total_tokens,omitempty"`
+}
+
 type PaperImportJob struct {
 	dispatchLeaseOwner       string
 	ID                       string                      `json:"id"`
@@ -231,6 +239,7 @@ type PaperImportJob struct {
 	FormulaRegionCount       int                         `json:"formula_region_count,omitempty"`
 	FormulaReviewCount       int                         `json:"formula_review_count,omitempty"`
 	RuntimeProgress          *PaperImportRuntimeProgress `json:"runtime_progress,omitempty"`
+	ModelUsage               PaperImportModelUsage       `json:"model_usage,omitempty"`
 	Sources                  []PaperImportSource         `json:"sources"`
 	QuestionCandidates       []QuestionCandidate         `json:"question_candidates"`
 	AnswerCandidates         []AnswerCandidate           `json:"answer_candidates"`
@@ -398,6 +407,7 @@ type PaperImportParseDocument struct {
 type PaperImportParseRequest struct {
 	Documents   []PaperImportParseDocument `json:"documents"`
 	ExtraIssues []PaperImportIssue         `json:"extra_issues"`
+	Pages       []PaperImportDecodedPage   `json:"pages,omitempty"`
 }
 
 type PaperImportRunBinding struct {

@@ -81,7 +81,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   const { message } = App.useApp();
   const hasSession = true;
   const [taskFilter, setTaskFilter] = useState<TaskFilter>("active");
-  const [queueScope, setQueueScope] = useState<"mine" | "all">(canWork ? "mine" : "all");
+  const [queueScope, setQueueScope] = useState<"mine" | "all">(canManageTasks ? "all" : "mine");
   const [keyword, setKeyword] = useState("");
   const [tasks, setTasks] = useState<ReviewTask[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState("");

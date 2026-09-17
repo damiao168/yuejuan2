@@ -109,6 +109,18 @@ powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1
 powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1 -Build
 ```
 
+`-Build` 只重建日常修改的 `api-gateway`、`grading-agent` 和
+`web-admin`，不会重建或重新下载体积较大的 PaddleOCR 镜像。只有修改
+Worker 时才显式执行：
+
+```powershell
+# 重建全部 Worker（包括 OCR）
+powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1 -Build -BuildWorkers
+
+# 只重建一个指定服务
+powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1 -Build -BuildService ocr-worker
+```
+
 等价手工命令：
 
 ```powershell

@@ -26,3 +26,41 @@ func TestPossiblePageMissingIssueIsSuspectedAndGrounded(t *testing.T) {
 		t.Fatalf("unexpected possible page issue: %#v", issues)
 	}
 }
+
+func TestDirectVisualMediaTypesBypassPageDecoder(t *testing.T) {
+	for _, contentType := range []string{"image/png", "image/jpeg; charset=binary", "IMAGE/WEBP"} {
+		if !isDirectVisualMediaType(contentType) {
+			t.Fatalf("%s should be sent directly to the visual model", contentType)
+		}
+	}
+	for _, contentType := range []string{"image/tiff", "application/pdf", "image/gif"} {
+		if isDirectVisualMediaType(contentType) {
+			t.Fatalf("%s still requires page rendering", contentType)
+		}
+	}
+}
+
+func TestBuildDecodedVisualParseInputPreservesTextAndUsesRawPages(t *testing.T) {
+	job := PaperImportJob{Sources: []PaperImportSource{
+		{ID: "scan", FileAssetID: "scan-pdf", DocumentIndex: 0, RoleHint: "question"},
+		{ID: "answer", FileAssetID: "answer-docx", DocumentIndex: 1, RoleHint: "answer"},
+	}}
+	baseDocuments := []PaperImportParseDocument{{
+		SourceID: "answer", FileAssetID: "answer-docx", DocumentIndex: 1,
+		RoleHint: "answer", Content: "第1题答案A", Blocks: []PaperImportOCRBlock{},
+	}}
+	pages := []PaperImportDecodedPage{{
+		SourceID: "scan", DocumentIndex: 0, PageNo: 1, FileAssetID: "rendered-page",
+	}}
+
+	input, err := buildDecodedVisualParseInput(job, baseDocuments, pages)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(input.Documents) != 2 || len(input.Pages) != 1 {
+		t.Fatalf("unexpected parse input: %#v", input)
+	}
+	if input.Documents[0].Content != directVisualDocumentPlaceholder || input.Documents[1].Content != "第1题答案A" {
+		t.Fatalf("decoded visual input lost a source: %#v", input.Documents)
+	}
+}

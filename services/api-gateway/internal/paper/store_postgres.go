@@ -818,8 +818,8 @@ func (s *PostgresStore) loadPaperImportDetails(ctx context.Context, tenantID str
 	if err := s.hydratePaperImportRun(ctx, tenantID, &job); err != nil {
 		return PaperImportJob{}, err
 	}
-	var q, a, so, r, si []byte
-	if err := s.db.QueryRowContext(ctx, `SELECT question_candidates,answer_candidates,solution_candidates,rubric_candidates,structured_issues FROM paper_import_job WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, job.ID).Scan(&q, &a, &so, &r, &si); err != nil {
+	var q, a, so, r, si, usage []byte
+	if err := s.db.QueryRowContext(ctx, `SELECT question_candidates,answer_candidates,solution_candidates,rubric_candidates,structured_issues,model_usage FROM paper_import_job WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, job.ID).Scan(&q, &a, &so, &r, &si, &usage); err != nil {
 		return PaperImportJob{}, err
 	}
 	_ = json.Unmarshal(q, &job.QuestionCandidates)
@@ -827,6 +827,7 @@ func (s *PostgresStore) loadPaperImportDetails(ctx context.Context, tenantID str
 	_ = json.Unmarshal(so, &job.SolutionCandidates)
 	_ = json.Unmarshal(r, &job.RubricCandidates)
 	_ = json.Unmarshal(si, &job.StructuredIssues)
+	_ = json.Unmarshal(usage, &job.ModelUsage)
 	rows, err := s.db.QueryContext(ctx, `SELECT s.id::text,s.file_asset_id::text,s.document_index,s.role_hint,s.detected_role,s.role_confidence::float8,s.processing_status,f.original_name,f.content_type,s.created_at FROM paper_import_source s JOIN file_asset f ON f.tenant_id=s.tenant_id AND f.id=s.file_asset_id WHERE s.tenant_id=$1 AND s.paper_import_id=$2::uuid AND s.deleted_at IS NULL ORDER BY s.document_index`, tenantID, job.ID)
 	if err != nil {
 		return PaperImportJob{}, err

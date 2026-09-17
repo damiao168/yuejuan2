@@ -59,7 +59,7 @@ import { AssessmentProfileEditor } from "../components/features/assessment/Asses
 import { isFormulaEvidenceSubject } from "../features/grading/workbench/mathEvidenceSubjects";
 import type { StatusTone } from "../types";
 import { questionTypeOptions } from "../constants/examCatalog";
-import { filesFromClipboard, hasBlockingImportIssues, hasNoExamContentDetected, isPaperImportCancelled, isSupportedPaperImportFile, isTextPasteTarget, markImportFieldConfirmed, orderedSourcesAfterMove, orderedSourcesAfterRemoval, paperImportProgress, paperImportSummary, sourcesAfterRoleChange } from "../features/paper-import/materials";
+import { filesFromClipboard, hasBlockingImportIssues, hasNoExamContentDetected, isPaperImportCancelled, isSupportedPaperImportFile, isTextPasteTarget, markImportFieldConfirmed, orderedSourcesAfterMove, orderedSourcesAfterRemoval, paperImportProgress, paperImportReviewIssues, paperImportSummary, sourcesAfterRoleChange } from "../features/paper-import/materials";
 import { PaperImportReviewPanel } from "../features/paper-import/PaperImportReviewPanel";
 import { BankQuestionPicker } from "../features/question-bank/BankQuestionPicker";
 import { HistoryQuestionImporter } from "../features/question-bank/HistoryQuestionImporter";
@@ -888,7 +888,7 @@ export function PaperRubricPage({
 	const visibleImportIssues = importCancelled || latestPaperImport?.status === "processing" ? [] : noExamContentDetected
 		? (latestPaperImport?.structured_issues ?? []).filter((issue) => issue.code === "NO_EXAM_CONTENT_DETECTED")
 		: latestPaperImport?.structured_issues?.length
-		? latestPaperImport.structured_issues.filter((issue) => issue.severity !== "info")
+		? paperImportReviewIssues(latestPaperImport)
 		: (latestPaperImport?.issues ?? []).map((message) => ({ message, certainty: "unknown" as const }));
 	const importSummary = latestPaperImport ? paperImportSummary(latestPaperImport) : null;
 	const excludedPageFurniture = importCancelled || latestPaperImport?.status === "processing" ? [] : (latestPaperImport?.structured_issues ?? []).filter((issue) => issue.code === "PAGE_FURNITURE_EXCLUDED");
@@ -1051,8 +1051,8 @@ export function PaperRubricPage({
 			</details> : null}
 			{latestPaperImport.status === "applied" ? <div className="paper-import-result"><div className="paper-import-facts"><span>已写入题目：<strong>{latestPaperImport.questions.length}</strong></span><span>已配置答案：<strong>{latestPaperImport.questions.filter((item) => item.answer_key).length}</strong></span><span>已导入解析：<strong>{latestPaperImport.questions.filter((item) => item.solution).length}</strong></span><span>已配置评分标准：<strong>{latestPaperImport.questions.filter((item) => item.rubric).length}</strong></span><span>已锁定评分标准：<strong>{latestPaperImport.questions.filter((item) => item.rubric?.status === "locked").length}</strong></span><span>仍需处理：<strong>{latestPaperImport.questions.filter((item) => rubricRequiredArchetypes.has(item.assessment_archetype ?? "") && item.rubric?.status !== "locked").length}</strong></span></div><Space wrap><Button onClick={() => document.getElementById("paper-question-summary")?.scrollIntoView({ behavior: "smooth", block: "start" })}>去逐题校对</Button>{initialExamId && onNavigate ? <Button type="primary" onClick={() => onNavigate(`/exams/${encodeURIComponent(initialExamId)}/settings`)}>去考试准备</Button> : null}</Space></div> : null}
 			  {visibleImportIssues.length ? (
-				<Alert type={latestPaperImport.status === "failed" || (latestPaperImport.structured_issues ?? []).some((item) => item.severity === "error") ? "error" : "warning"} showIcon message={noExamContentDetected ? "未识别到考试内容" : "需要核对"} description={
-					<ul className="validation-issue-list">{visibleImportIssues.map((issue, index) => <li key={`${issue.message}-${index}`}><strong>{"question_no" in issue && issue.question_no ? `第${issue.question_no}题：` : ""}</strong>{getPaperImportUserMessage(issue.message, "考试资料存在需要核对的内容")}{issue.certainty === "suspected" ? "（疑似）" : ""}{"source_refs" in issue && issue.source_refs?.[0]?.file_asset_id ? <Button type="link" size="small" onClick={() => void openImportSource(issue.source_refs[0].file_asset_id, issue.source_refs[0].page_no)}>查看来源</Button> : null}</li>)}</ul>
+				<Alert type={latestPaperImport.status === "failed" || noExamContentDetected ? "error" : "warning"} showIcon message={noExamContentDetected ? "未识别到考试内容" : "还需完善"} description={
+					<ul className="validation-issue-list">{visibleImportIssues.map((issue, index) => <li key={`${issue.message}-${index}`}><strong>{"question_no" in issue && issue.question_no ? `第${issue.question_no}题：` : ""}</strong>{getPaperImportUserMessage(issue.message, "考试资料存在需要核对的内容")}{issue.certainty === "suspected" ? "（疑似）" : ""}</li>)}</ul>
 				} />
               ) : null}
             </section>

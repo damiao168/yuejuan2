@@ -16,13 +16,11 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-COPY packages/worker-runtime-python /tmp/worker-runtime-python
-COPY services/ocr-worker/pyproject.toml ./pyproject.toml
-
-RUN python -m pip install --no-cache-dir --index-url "$PIP_INDEX_URL" \
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
+    python -m pip install --index-url "$PIP_INDEX_URL" \
       "pip==26.1.2" "setuptools==83.0.0" \
     && if [ "$INSTALL_PADDLEOCR" = "true" ]; then \
-      python -m pip install --no-cache-dir --index-url "$PIP_INDEX_URL" \
+      python -m pip install --index-url "$PIP_INDEX_URL" \
         "paddleocr==3.7.0" "paddlepaddle==3.3.1" "tokenizers==0.22.1" "Pillow>=10,<12" "matplotlib>=3.9,<4"; \
       if [ "$INSTALL_PADDLEOCR_HPI" = "true" ]; then \
         paddlex --install hpi-cpu; \
@@ -33,7 +31,8 @@ RUN python -m pip install --no-cache-dir --index-url "$PIP_INDEX_URL" \
 # guarded formula path uses MathText for render-back validation. Keep these in
 # the always-installed layer so a dependency-complete base image can be reused
 # with INSTALL_PADDLEOCR=false.
-RUN python -m pip install --no-cache-dir --index-url "$PIP_INDEX_URL" "ftfy==6.3.1" "matplotlib>=3.9,<4"
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
+    python -m pip install --index-url "$PIP_INDEX_URL" "ftfy==6.3.1" "matplotlib>=3.9,<4"
 
 # System libraries change far less often than application source. Keep this
 # before the source COPY so editing the OCR worker does not invalidate apt's
@@ -46,6 +45,11 @@ RUN sed -i \
     && apt-get install -y --no-install-recommends libgomp1 libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy frequently changed shared/runtime source only after the large Paddle and
+# operating-system dependency layers. Normal worker code edits can now reuse
+# those layers without downloading the same packages again.
+COPY packages/worker-runtime-python /tmp/worker-runtime-python
+COPY services/ocr-worker/pyproject.toml ./pyproject.toml
 COPY services/ocr-worker/ocr_worker ./ocr_worker
 # setuptools is already pinned above. Avoid creating two isolated build
 # environments (and downloading setuptools twice) on every source rebuild.

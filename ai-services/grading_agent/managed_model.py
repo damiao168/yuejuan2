@@ -37,7 +37,17 @@ def public_json_transport(url, payload, headers, timeout):
         raise AgentError("model_request_rejected", "provider must use a public HTTPS endpoint", status=502)
     address = addresses[0][4]
     body = json.dumps(payload, ensure_ascii=False, allow_nan=False).encode("utf-8")
-    if len(body) > 2_000_000:
+    multimodal = any(
+        isinstance(message, dict)
+        and isinstance(message.get("content"), list)
+        and any(
+            isinstance(part, dict) and part.get("type") == "image_url"
+            for part in message["content"]
+        )
+        for message in payload.get("messages", [])
+    )
+    max_body_bytes = 48 * 1024 * 1024 if multimodal else 2_000_000
+    if len(body) > max_body_bytes:
         raise AgentError("invalid_request", "document model request is too large", status=413)
     connection = http.client.HTTPSConnection(parsed.hostname, parsed.port or 443, timeout=timeout, context=ssl.create_default_context())
     # HTTPSConnection retains the original hostname for SNI/certificate checks;
@@ -84,9 +94,31 @@ def paper_model(application, payload):
         def compatible_transport(url, body, headers, timeout):
             body.pop("chat_template_kwargs", None)
             body.pop("seed", None)
+            if parsed.hostname == "api.deepseek.com" or config["model_name"].strip().lower().startswith("deepseek"):
+                # V4.1 Flash defaults to high-effort thinking. Paper
+                # transcription is a constrained perception task, so disable
+                # hidden reasoning tokens explicitly instead of relying on a
+                # prompt suffix that the provider may ignore.
+                body["thinking"] = {"type": "disabled"}
+                body["reasoning_effort"] = "none"
             schema = body["response_format"]["json_schema"]["schema"]
             body["response_format"] = {"type": "json_object"}
-            body["messages"] = [*body["messages"], {"role": "system", "content": "Return a JSON object matching this schema: " + json.dumps(schema, ensure_ascii=False)}]
+            if any(isinstance(message.get("content"), list) for message in body["messages"] if isinstance(message, dict)):
+                # The visual paper contract is compact and expanded locally.
+                # Keep enough room for a dense one-page exam while preventing
+                # an accidental verbose response from running to 16K tokens.
+                body["max_tokens"] = max(int(body.get("max_tokens", 0)), 8_192)
+            schema_instruction = "Return a JSON object matching this schema: " + json.dumps(
+                schema, ensure_ascii=False, separators=(",", ":")
+            )
+            messages = list(body["messages"])
+            if messages and messages[0].get("role") == "system" and isinstance(messages[0].get("content"), str):
+                messages[0] = {**messages[0], "content": messages[0]["content"] + "\n" + schema_instruction}
+            else:
+                messages.insert(0, {"role": "system", "content": schema_instruction})
+            # Keep the stable prompt + schema before the per-paper image so
+            # DeepSeek's automatic prefix cache can reuse it across imports.
+            body["messages"] = messages
             return public_json_transport(url, body, headers, timeout)
         return LocalLlamaCppAdapter(settings, transport=compatible_transport)
     except (ValueError, TypeError) as exc:

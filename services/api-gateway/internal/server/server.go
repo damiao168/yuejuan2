@@ -407,7 +407,11 @@ func NewRouterComplete(dependencies RouterDependencies) http.Handler {
 	}
 	requirePlatformModelManage := func(handler http.HandlerFunc) http.Handler {
 		return authenticate(auth.RequireRequestResourceBoundary(resourceResolver)(auth.RequireAnyRole("platform_admin")(
-			auth.RequirePermission("model:provider:manage")(auth.RequireRecentAuthForMutations(cfg.Auth.RecentAuthTTL)(idempotent(handler))),
+			// A signed-in platform administrator may manage encrypted provider
+			// credentials without typing the same login password again. Current
+			// role/permission/resource checks still run on every request, and the
+			// model-governance store keeps the existing immutable audit trail.
+			auth.RequirePermission("model:provider:manage")(idempotent(handler)),
 		)))
 	}
 	requireModelPolicyManage := func(handler http.HandlerFunc) http.Handler {

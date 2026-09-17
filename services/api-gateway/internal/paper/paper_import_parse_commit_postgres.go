@@ -97,8 +97,9 @@ WHERE tenant_id=$1 AND id=$2::uuid AND paper_import_id=$3::uuid AND run_id=$4::u
 	d, _ := json.Marshal(drafts)
 	si, _ := json.Marshal(structured)
 	messages, _ := json.Marshal(issueMessages(structured))
-	update, err := tx.ExecContext(ctx, `UPDATE paper_import_job SET status='review_required',question_candidates=$4,answer_candidates=$5,solution_candidates=$6,rubric_candidates=$7,draft_questions=$8,structured_issues=$9,issues=$10,error_code='',result_generation=$3,result_task_id=$11::uuid,result_payload_hash=$12,updated_at=now()
-WHERE tenant_id=$1 AND id=$2::uuid AND current_generation=$3 AND source_revision=$13 AND status='processing' AND deleted_at IS NULL`, tenantID, binding.ImportID, binding.Generation, q, a, so, ru, d, si, messages, taskID, resultHash, binding.SourceRevision)
+	usage, _ := json.Marshal(parsed.ModelUsage)
+	update, err := tx.ExecContext(ctx, `UPDATE paper_import_job SET status='review_required',question_candidates=$4,answer_candidates=$5,solution_candidates=$6,rubric_candidates=$7,draft_questions=$8,structured_issues=$9,issues=$10,error_code='',result_generation=$3,result_task_id=$11::uuid,result_payload_hash=$12,model_usage=$14::jsonb,updated_at=now()
+WHERE tenant_id=$1 AND id=$2::uuid AND current_generation=$3 AND source_revision=$13 AND status='processing' AND deleted_at IS NULL`, tenantID, binding.ImportID, binding.Generation, q, a, so, ru, d, si, messages, taskID, resultHash, binding.SourceRevision, string(usage))
 	if err != nil {
 		return PaperImportJob{}, err
 	}

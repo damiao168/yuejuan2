@@ -98,9 +98,6 @@ func TestSensitiveRouteFamiliesRejectStaleAuthentication(t *testing.T) {
 		{http.MethodPost, "/api/v1/release-gate-waivers/waiver-1/decision"},
 		{http.MethodPost, "/api/v1/exams/exam-1/reports/export"},
 		{http.MethodGet, "/api/v1/report-commands/command-1"},
-		{http.MethodPost, "/api/v1/platform/model-api-configs"},
-		{http.MethodPatch, "/api/v1/platform/model-api-configs/config-1"},
-		{http.MethodDelete, "/api/v1/platform/model-api-configs/config-1"},
 		{http.MethodPost, "/api/v1/model-secrets/probe"},
 		{http.MethodPut, "/api/v1/ai-eligibility/policy"},
 	} {
@@ -117,4 +114,33 @@ func TestSensitiveRouteFamiliesRejectStaleAuthentication(t *testing.T) {
 	}
 	// Daily reads must not force teachers to re-enter their password.
 	e2eGetJSON(t, router, "/api/v1/exams/exam-1/score-releases", token, http.StatusOK)
+}
+
+func TestPlatformModelConfigDoesNotRepeatPasswordChallenge(t *testing.T) {
+	store := &recentAuthTestStore{
+		MemoryStore:  testAuthStoreWithPermissions(t, []string{"model:provider:manage"}),
+		stale:        true,
+		platformRole: true,
+	}
+	stores := NewMemoryApplicationStores()
+	stores.Identity.Auth = store
+	router := NewRouterWithApplicationStores(testConfig(), logger.New(io.Discard, "error"), nil, files.NewMemoryObjectStorage(), stores)
+	token := serverLogin(t, router)
+
+	for _, target := range []struct{ method, path, body string }{
+		{http.MethodPost, "/api/v1/platform/model-api-configs", `{}`},
+		{http.MethodPatch, "/api/v1/platform/model-api-configs/config-1", `{}`},
+		{http.MethodDelete, "/api/v1/platform/model-api-configs/config-1", ""},
+	} {
+		t.Run(target.method+" "+target.path, func(t *testing.T) {
+			req := httptest.NewRequest(target.method, target.path, strings.NewReader(target.body))
+			req.Header.Set("Authorization", "Bearer "+token)
+			req.Header.Set("Idempotency-Key", "platform-model-config-no-password")
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+			if rec.Code == http.StatusPreconditionRequired || strings.Contains(rec.Body.String(), "recent_auth_required") {
+				t.Fatalf("platform model config unexpectedly requested the login password again: %d %s", rec.Code, rec.Body.String())
+			}
+		})
+	}
 }

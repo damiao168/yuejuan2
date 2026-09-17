@@ -148,6 +148,20 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
             result = parser.parse(payload, progress=lambda value: emit("progress", value))
             emit("result", result)
         except AgentError as exc:
+            print(
+                json.dumps(
+                    {
+                        "event": "grading_agent_paper_parse_rejected",
+                        "request_id": exc.request_id,
+                        "error_code": exc.code,
+                        "error_message": exc.message,
+                    },
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                ),
+                file=sys.stderr,
+                flush=True,
+            )
             emit("error", {"status": exc.status, **exc.payload()})
         except (BrokenPipeError, ConnectionResetError):
             return
@@ -195,7 +209,10 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
         if self.path == "/grading/grade-v2":
             max_bytes = 8 * 1024 * 1024
         elif self.path == "/paper/parse":
-            max_bytes = max(self.server.application.settings.max_request_bytes, 2_000_000)
+            max_bytes = max(
+                self.server.application.settings.max_request_bytes,
+                48 * 1024 * 1024,
+            )
         else:
             max_bytes = self.server.application.settings.max_request_bytes
         if length <= 0 or length > max_bytes:

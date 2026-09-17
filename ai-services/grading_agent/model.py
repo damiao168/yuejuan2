@@ -66,15 +66,70 @@ def _decode_structured_content(content, request_id):
             status=502,
             request_id=request_id,
         )
+    stripped = content.strip()
     try:
-        return json.loads(content)
-    except json.JSONDecodeError as exc:
+        return json.loads(stripped)
+    except json.JSONDecodeError as original_error:
+        # Some OpenAI-compatible multimodal providers still wrap json_object
+        # responses in Markdown fences or a short explanatory prefix. Decode
+        # exactly one complete object and let the JSON Schema validator remain
+        # the authoritative structural gate.
+        decoder = json.JSONDecoder()
+        candidates = []
+        for start, character in enumerate(stripped):
+            if character != "{":
+                continue
+            try:
+                value, end = decoder.raw_decode(stripped, start)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(value, dict):
+                candidates.append((end - start, value))
+        if candidates:
+            return max(candidates, key=lambda item: item[0])[1]
         raise AgentError(
             "model_output_invalid",
             "model response was not valid JSON",
             status=502,
             request_id=request_id,
-        ) from exc
+        ) from original_error
+
+
+def _openai_usage(response):
+    """Normalize provider usage without trusting it for billing decisions."""
+    usage = response.get("usage") if isinstance(response, dict) else None
+    if not isinstance(usage, dict):
+        return {}
+
+    def count(name):
+        value = usage.get(name, 0)
+        return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else 0
+
+    prompt = count("prompt_tokens") or count("input_tokens")
+    completion = count("completion_tokens") or count("output_tokens")
+    total = count("total_tokens") or prompt + completion
+    prompt_details = usage.get("prompt_tokens_details")
+    completion_details = usage.get("completion_tokens_details")
+    cached_from_details = prompt_details.get("cached_tokens", 0) if isinstance(prompt_details, dict) else 0
+    cached_from_deepseek = usage.get("prompt_cache_hit_tokens", 0)
+    cached = max(
+        cached_from_details if isinstance(cached_from_details, int) and not isinstance(cached_from_details, bool) else 0,
+        cached_from_deepseek if isinstance(cached_from_deepseek, int) and not isinstance(cached_from_deepseek, bool) else 0,
+    )
+    reasoning = (
+        completion_details.get("reasoning_tokens", 0)
+        if isinstance(completion_details, dict)
+        else 0
+    )
+    cached = cached if cached >= 0 else 0
+    reasoning = reasoning if isinstance(reasoning, int) and not isinstance(reasoning, bool) and reasoning >= 0 else 0
+    return {
+        "input_tokens": prompt,
+        "cached_input_tokens": cached,
+        "output_tokens": completion,
+        "reasoning_tokens": reasoning,
+        "total_tokens": total,
+    }
 
 
 def _map_model_http_error(exc, request_id, provider="local model"):
@@ -378,6 +433,10 @@ class LocalLlamaCppAdapter:
         self.transport = transport or _default_transport
         self.ready_transport = ready_transport
         self._semaphore = threading.BoundedSemaphore(value=1)
+        self._usage = threading.local()
+
+    def last_usage(self):
+        return dict(getattr(self._usage, "value", {}))
 
     @contextmanager
     def session(self, request_id):
@@ -450,6 +509,7 @@ class LocalLlamaCppAdapter:
         )
 
     def request_structured(self, request_id, messages, schema, name):
+        self._usage.value = {}
         payload = {
             "model": self.settings.model_name,
             "messages": messages,
@@ -465,6 +525,7 @@ class LocalLlamaCppAdapter:
             headers["Authorization"] = f"Bearer {self.settings.model_api_key}"
         try:
             response = self.transport(f"{self.settings.model_base_url}/chat/completions", payload, headers, self.settings.model_timeout_seconds)
+            self._usage.value = _openai_usage(response)
             output = self._parse_content(response, request_id)
             return _validate_structured_output(output, schema, request_id)
         except AgentError:

@@ -117,7 +117,7 @@ const productionRouteDefinitions: AppRoute[] = [
     mock: false,
     productionReady: true,
     workspaces: ["tenant_admin", "school_admin", "exam_owner", "teacher", "grader"],
-    experiences: { admin: { title: "阅卷任务", group: "阅卷与成绩" }, teacher: { title: "我的阅卷", group: "阅卷工作" } }
+    experiences: { admin: { title: "阅卷管理", group: "阅卷与成绩" }, teacher: { title: "我的阅卷", group: "阅卷工作" } }
   },
   {
     key: "arbitration", path: "/arbitration", title: "质量与仲裁", group: "阅卷与质量", icon: <Gavel size={18} />, permissions: [], anyPermissions: ["arbitration:manage", "arbitration:work"], mock: false, productionReady: true,

@@ -51,27 +51,30 @@ export function WorkbenchHeader({
   onRelease,
   onReloadConflict
 }: WorkbenchHeaderProps) {
+  const showReviewerActions = !canManageTasks || queueScope === "mine";
   return (
     <>
       <section className="grading-topbar">
         <div className="grading-work-title">
-          <h1>阅卷</h1>
+          <h1>{canManageTasks ? "阅卷管理" : "阅卷"}</h1>
           <span>
             {!canManageTasks
               ? `已完成 ${myProgress?.completed ?? 0} / 共 ${myProgress?.total ?? 0}`
-              : hasContext ? `剩余 ${remainingCount} 份` : "请选择任务"}
+              : hasContext ? `剩余 ${remainingCount} 份` : "分配任务、查看进度和处理异常"}
           </span>
         </div>
         <Space wrap>
-          <span className={`draft-save-status ${draftSaveStatus}`}>{draftStatusLabel[draftSaveStatus]}</span>
+          {hasContext ? <span className={`draft-save-status ${draftSaveStatus}`}>{draftStatusLabel[draftSaveStatus]}</span> : null}
           <Button icon={<RefreshCw size={16} />} onClick={() => void onRefresh()} loading={loading}>刷新</Button>
-          <Button icon={<ArrowRight size={16} />} onClick={() => void onNext()} disabled={!canWork}>下一份</Button>
+          {showReviewerActions ? <Button icon={<ArrowRight size={16} />} onClick={() => void onNext()} disabled={!canWork}>下一份</Button> : null}
           {!canManageTasks ? <BackmarkQueue canWork={canWork} /> : null}
           {!canManageTasks ? <RegradeQueue canWork={canWork} /> : null}
-          {canWork && (!canManageTasks || queueScope === "mine") ? <Button type="primary" icon={<BadgeCheck size={16} />} loading={actioning === "claim-task"} onClick={() => void onClaim()}>开始处理</Button> : null}
-          <Tooltip title="把这份答卷放回队列，稍后可继续，草稿会保留">
-            <Button icon={<LogOut size={16} />} disabled={!ownsSelectedTask} loading={actioning === "release"} onClick={() => void onRelease()}>暂放</Button>
-          </Tooltip>
+          {canWork && showReviewerActions ? <Button type="primary" icon={<BadgeCheck size={16} />} loading={actioning === "claim-task"} onClick={() => void onClaim()}>开始处理</Button> : null}
+          {showReviewerActions ? (
+            <Tooltip title="把这份答卷放回队列，稍后可继续，草稿会保留">
+              <Button icon={<LogOut size={16} />} disabled={!ownsSelectedTask} loading={actioning === "release"} onClick={() => void onRelease()}>暂放</Button>
+            </Tooltip>
+          ) : null}
         </Space>
       </section>
 

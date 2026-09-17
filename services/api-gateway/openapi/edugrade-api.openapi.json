@@ -28986,6 +28986,32 @@
           "runtime_progress": {
             "$ref": "#/components/schemas/PaperImportRuntimeProgress"
           },
+          "model_usage": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "input_tokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cached_input_tokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "output_tokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "reasoning_tokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total_tokens": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
           "sources": {
             "type": "array",
             "items": {

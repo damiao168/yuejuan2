@@ -93,6 +93,13 @@ export interface PaperImportJob {
 	formula_status?: "pending" | "running" | "succeeded" | "review_required" | "failed";
 	formula_region_count?: number;
 	formula_review_count?: number;
+	model_usage?: {
+		input_tokens?: number;
+		cached_input_tokens?: number;
+		output_tokens?: number;
+		reasoning_tokens?: number;
+		total_tokens?: number;
+	};
 	runtime_progress?: {
 		task_type: string;
 		task_status: string;

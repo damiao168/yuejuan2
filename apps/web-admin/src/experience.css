@@ -24,9 +24,10 @@ body { font-family: var(--eg-font-family); font-size: var(--eg-font-body); line-
 .responsive-record-field dd { font-size: var(--eg-font-body); overflow-wrap: anywhere; }
 .responsive-record-details summary { min-height: 40px; padding-block: 10px; }
 .ant-form-item-explain-error, .quality-issue-list small, .quality-inspector-heading span,
-.quality-dimension-row, .quality-section-label, .readiness-details-heading span,
-.eg-workspace-notice p, .eg-workspace-stage small, .eg-status-badge, .grading-submit-note { font-size: var(--eg-font-body); line-height: 1.6; }
-.eg-workspace-stage small, .eg-workspace-metric p { white-space: normal; overflow: visible; }
+.quality-dimension-row, .quality-section-label,
+.eg-workspace-notice p, .eg-status-badge, .grading-submit-note { font-size: var(--eg-font-body); line-height: 1.6; }
+.eg-workspace-stage small { overflow: hidden; font-size: var(--eg-font-caption); line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.eg-workspace-metric p { white-space: normal; overflow: visible; }
 .eg-rubric-criterion { align-items: flex-start; min-height: 48px; }
 .eg-rubric-criterion-main { align-items: flex-start; font-size: var(--eg-font-reading); line-height: var(--eg-line-reading); }
 .eg-rubric-criterion-main > span { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
@@ -90,8 +91,7 @@ body { font-family: var(--eg-font-family); font-size: var(--eg-font-body); line-
   .exam-create-page-header .ant-steps { margin-block: 12px; }
   .exam-context-header { align-items: flex-start; }
   .eg-workspace-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .eg-workspace-stages { display: flex; overflow-x: auto; }
-  .eg-workspace-stage { flex: 0 0 180px; }
+  .eg-workspace-stage { flex-basis: 180px; }
   .immersive-workspace .grading-shell, .immersive-workspace .grading-main,
   .immersive-workspace .grading-workspace, .immersive-workspace .grading-panels { height: auto; overflow: visible; }
   .immersive-workspace .grading-panels { display: flex; flex-direction: column; }

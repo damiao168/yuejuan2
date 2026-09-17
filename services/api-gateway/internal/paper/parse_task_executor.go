@@ -326,7 +326,7 @@ func normalizedParseProgress(progress map[string]any) (phase string, completed, 
 	phase, _ = progress["phase"].(string)
 	route, _ = progress["route"].(string)
 	allowedPhases := map[string]bool{"routing": true, "deterministic_structuring": true, "model_request": true, "model_response_validation": true}
-	allowedRoutes := map[string]bool{"pending": true, "unrelated_guard": true, "anchored": true, "full_model": true, "compact_model": true}
+	allowedRoutes := map[string]bool{"pending": true, "unrelated_guard": true, "anchored": true, "full_model": true, "compact_model": true, "visual_model": true}
 	if !allowedPhases[phase] {
 		phase = "structuring"
 	}
@@ -368,11 +368,17 @@ func parseProgressMessage(phase string, completed, total int, route string) stri
 		}
 		return "正在按可靠题号和答案锚点重建结构"
 	case "model_request":
+		if route == "visual_model" {
+			return "多模态模型正在读取原始试卷页面"
+		}
 		if total > 0 {
 			return fmt.Sprintf("大模型已完成 %d/%d 个实际解析块", completed, total)
 		}
 		return "大模型正在处理需消歧的内容"
 	case "model_response_validation":
+		if route == "visual_model" {
+			return "原图识别已返回，正在与 OCR 结果交叉校验"
+		}
 		return "模型解析块已返回，正在校验来源并合并"
 	default:
 		if route == "" {

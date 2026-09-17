@@ -1,6 +1,17 @@
+import base64
+import base64
+import hashlib
+import json
+from pathlib import Path
+
 import pytest
 from grading_agent.errors import AgentError
-from grading_agent.paper_parser import PaperParser
+from grading_agent.paper_parser import (
+    PaperParser,
+    visual_model_output_schema,
+    visual_paper_import_schema,
+)
+from jsonschema import validate
 
 
 def ref(source_id="source-1"):
@@ -12,9 +23,13 @@ class FakeStructuredModel:
         def __enter__(self): return None
         def __exit__(self, *_args): return False
 
-    def __init__(self, output): self.output = output
+    def __init__(self, output):
+        self.output = output
+        self.calls = []
     def session(self, _request_id): return self._Session()
-    def request_structured(self, *_args): return self.output
+    def request_structured(self, *args):
+        self.calls.append(args)
+        return self.output
 
 
 def output(role, questions=None, answers=None, solutions=None, rubrics=None):
@@ -23,6 +38,187 @@ def output(role, questions=None, answers=None, solutions=None, rubrics=None):
 
 def payload(content="1.A"):
     return {"request_id": "job-1", "subject": "数学", "documents": [{"source_id": "source-1", "file_asset_id": "file-1", "document_index": 0, "role_hint": "auto", "content": content, "blocks": []}]}
+
+
+def visual_ref(page_no=1):
+    return {**ref(), "page_no": page_no, "text_start": None, "text_end": None}
+
+
+def with_visual_page(request, raw=b"synthetic-png-page", page_no=1):
+    request["visual_pages"] = [{
+        "source_id": "source-1",
+        "document_index": 0,
+        "page_no": page_no,
+        "media_type": "image/png",
+        "data_base64": base64.b64encode(raw).decode("ascii"),
+        "sha256": hashlib.sha256(raw).hexdigest(),
+        "width": 1200,
+        "height": 1800,
+    }]
+    return request
+
+
+def test_visual_page_is_authoritative_and_forces_multimodal_model_route():
+    answer = {"candidate_id": "a1", "question_no_hint": "1", "question_no_normalized": "1", "subquestion_no_hint": None, "standard_answer": "A", "equivalent_answers": [], "tolerance": None, "confidence": .95, "source_refs": [visual_ref()], "issues": []}
+    model = FakeStructuredModel(output("mixed", answers=[answer]))
+    request = with_visual_page(payload("1. 错误OCR文本\n【答案】B"))
+    request["documents"][0]["blocks"] = [{"source_id": "source-1", "document_index": 0, "block_id": "b1", "page_no": 1, "text": "错误OCR文本", "bbox": [1, 2, 3, 4], "confidence": .3}]
+    events = []
+
+    result = PaperParser(model).parse(request, progress=events.append)
+
+    assert result["answer_candidates"][0]["standard_answer"] == "A"
+    normalized_ref = result["answer_candidates"][0]["source_refs"][0]
+    assert normalized_ref == {
+        "source_id": "source-1", "file_asset_id": "file-1", "document_index": 0,
+        "page_no": 1, "block_id": None, "bbox": None, "text_start": None,
+        "text_end": None, "ocr_confidence": None,
+    }
+    messages = model.calls[0][1]
+    image_parts = [part for part in messages[1]["content"] if part["type"] == "image_url"]
+    assert len(image_parts) == 1
+    assert image_parts[0]["image_url"]["url"].startswith("data:image/png;base64,")
+    assert image_parts[0]["image_url"]["detail"] == "original"
+    assert "错误OCR文本" not in str(messages[1]["content"])
+    assert events[1]["route"] == "visual_model"
+
+
+def test_visual_schema_accepts_transport_metadata_for_gateway_grounding():
+    reference_schema = visual_paper_import_schema()["properties"][
+        "question_candidates"
+    ]["items"]["properties"]["source_refs"]["items"]
+    validate(
+        {
+            "source_id": "source-1", "file_asset_id": None,
+            "document_index": None, "page_no": 1, "block_id": None,
+            "bbox": None, "text_start": None, "text_end": None,
+            "ocr_confidence": None,
+        },
+        reference_schema,
+    )
+
+
+def test_visual_provider_contract_is_compact_and_expands_durable_fields_locally():
+    compact = {
+        "documents": [{"id": "source-1", "role": "mixed", "confidence": .98}],
+        "questions": [{
+            "no": "1", "parent_no": None, "sub_no": None, "section": "单选题",
+            "stem": "若 $x^2=4$，则", "options": ["A. $x=2$", "B. $x=-2$"],
+            "type": "single_choice", "score": None, "confidence": .97,
+            "source": {"id": "source-1", "page": 1}, "issues": [],
+        }],
+        "answers": [{
+            "no": "1", "value": "A", "confidence": .99,
+            "source": {"id": "source-1", "page": 1}, "issues": [],
+        }],
+        "solutions": [{
+            "no": "1", "text": "由 $x^2=4$ 得 $x=\\pm2$。", "confidence": .96,
+            "source": {"id": "source-1", "page": 1}, "issues": [],
+        }],
+        "rubrics": [],
+        "issues": [],
+    }
+    model = FakeStructuredModel(compact)
+
+    result = PaperParser(model).parse(with_visual_page(payload("仅用于差异检查")))
+
+    assert result["question_candidates"][0]["candidate_id"] == "visual-question-1"
+    assert result["answer_candidates"][0]["standard_answer"] == "A"
+    assert result["solution_candidates"][0]["steps"] == []
+    assert result["solution_candidates"][0]["source_refs"][0]["file_asset_id"] == "file-1"
+    sent_schema = model.calls[0][2]
+    assert sent_schema == visual_model_output_schema()
+    compact_size = len(json.dumps(sent_schema, ensure_ascii=False, separators=(",", ":")))
+    durable_size = len(json.dumps(visual_paper_import_schema(), ensure_ascii=False, separators=(",", ":")))
+    assert compact_size < durable_size * 0.6
+
+
+def test_saved_expected_visual_json_replays_without_a_provider_call():
+    fixture = json.loads(
+        (Path(__file__).parent / "fixtures" / "expected_multimodal_math_paper.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    validate(fixture, visual_paper_import_schema())
+    model = FakeStructuredModel(fixture)
+
+    result = PaperParser(model).parse(
+        with_visual_page(payload("原始页面图片由多模态模型直接识别"))
+    )
+
+    assert len(result["question_candidates"]) == 7
+    assert [item["standard_answer"] for item in result["answer_candidates"]] == [
+        "B", "C", "D", "A", "D", "A", "B",
+    ]
+    stems = [item["stem"] for item in result["question_candidates"]]
+    rendered = json.dumps(result, ensure_ascii=False)
+    assert "x|-2<x<2" in stems[0]
+    assert r"\sigma^2" in stems[1]
+    assert r"2\ln x+x^2-ax" in stems[3]
+    assert "公众号" not in rendered
+    assert "宇桐资料分享" not in rendered
+
+
+def test_visual_page_checksum_is_verified_before_model_call():
+    request = with_visual_page(payload())
+    request["visual_pages"][0]["sha256"] = "0" * 64
+    model = FakeStructuredModel(output("unknown"))
+
+    with pytest.raises(AgentError) as raised:
+        PaperParser(model).parse(request)
+
+    assert raised.value.code == "invalid_request"
+    assert model.calls == []
+
+
+def test_visual_ref_requires_an_actual_supplied_page_when_source_has_many_pages():
+    answer = {"candidate_id": "a1", "question_no_hint": "1", "question_no_normalized": "1", "subquestion_no_hint": None, "standard_answer": "A", "equivalent_answers": [], "tolerance": None, "confidence": .95, "source_refs": [visual_ref(None)], "issues": []}
+    request = with_visual_page(payload(), page_no=1)
+    second = dict(request["visual_pages"][0])
+    second["page_no"] = 2
+    request["visual_pages"].append(second)
+
+    with pytest.raises(AgentError) as raised:
+        PaperParser(FakeStructuredModel(output("answer", answers=[answer]))).parse(request)
+
+    assert raised.value.code == "model_output_invalid"
+
+
+def test_visual_route_keeps_text_only_sources_and_grounds_their_refs():
+    request = with_visual_page(payload("原始页面图片由多模态模型直接识别"))
+    text_content = "答案资料：第1题选A"
+    request["documents"].append({
+        "source_id": "source-2",
+        "file_asset_id": "file-2",
+        "document_index": 1,
+        "role_hint": "answer",
+        "content": text_content,
+        "blocks": [],
+    })
+    answer = {
+        "candidate_id": "a1", "question_no_hint": "1",
+        "question_no_normalized": "1", "subquestion_no_hint": None,
+        "standard_answer": "A", "equivalent_answers": [], "tolerance": None,
+        "confidence": .95,
+        "source_refs": [{**visual_ref(), "source_id": "source-2"}],
+        "issues": [],
+    }
+    parsed = output("question", answers=[answer])
+    parsed["documents"].append({
+        "source_id": "source-2", "detected_role": "answer", "role_confidence": .98,
+    })
+    model = FakeStructuredModel(parsed)
+
+    result = PaperParser(model).parse(request)
+
+    message_parts = model.calls[0][1][1]["content"]
+    assert text_content in str(message_parts)
+    normalized_ref = result["answer_candidates"][0]["source_refs"][0]
+    assert normalized_ref["source_id"] == "source-2"
+    assert normalized_ref["file_asset_id"] == "file-2"
+    assert normalized_ref["page_no"] is None
+    assert normalized_ref["text_start"] == 0
+    assert normalized_ref["text_end"] == len(text_content)
 
 
 def test_answer_only_is_valid_and_does_not_hallucinate_question():

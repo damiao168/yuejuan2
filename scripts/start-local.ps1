@@ -1,5 +1,7 @@
 param(
-    [switch]$Build
+    [switch]$Build,
+    [switch]$BuildWorkers,
+    [string[]]$BuildService = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,19 +23,41 @@ $composeArguments = @(
     "compose",
     "--env-file", $envFile,
     "-f", $composeFile,
-    "--profile", "*",
-    "up", "-d"
+    "--profile", "*"
 )
-if ($Build) {
-    $composeArguments += "--build"
-}
+
+$dailyBuildServices = @("api-gateway", "grading-agent", "web-admin")
+$workerBuildServices = @(
+    "image-quality-worker",
+    "subjective-grading-worker",
+    "math-verification-worker",
+    "page-processing-worker",
+    "ocr-worker"
+)
+$knownBuildServices = $dailyBuildServices + $workerBuildServices
 
 Write-Host "OCR model cache: $ocrModelCache"
 if ($Build) {
-    Write-Host "Starting services and rebuilding changed images..."
+    if ($BuildService.Count -gt 0) {
+        $buildTargets = @($BuildService | Select-Object -Unique)
+    } elseif ($BuildWorkers) {
+        $buildTargets = @($knownBuildServices | Select-Object -Unique)
+    } else {
+        # Daily application changes do not need the large PaddleOCR image.
+        # Rebuild it only with -BuildWorkers or an explicit -BuildService.
+        $buildTargets = $dailyBuildServices
+    }
+    $unknownTargets = @($buildTargets | Where-Object { $_ -notin $knownBuildServices })
+    if ($unknownTargets.Count -gt 0) {
+        throw "Unknown build service(s): $($unknownTargets -join ', '). Allowed: $($knownBuildServices -join ', ')"
+    }
+    Write-Host "Rebuilding: $($buildTargets -join ', ')"
+    & docker @composeArguments "build" @buildTargets
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 } else {
-    Write-Host "Starting services with existing images (use -Build after dependency or source changes)..."
+    Write-Host "Starting services with existing images (use -Build after application source changes)..."
 }
 
-& docker @composeArguments
+Write-Host "Starting all configured services without rebuilding unrelated worker images..."
+& docker @composeArguments "up" "-d"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

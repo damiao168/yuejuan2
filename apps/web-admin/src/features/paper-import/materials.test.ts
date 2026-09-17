@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PaperImportSource } from "../../api/papers";
-import { filesFromClipboard, hasBlockingImportIssues, hasNoExamContentDetected, isPaperImportCancelled, isSupportedPaperImportFile, markImportFieldConfirmed, orderedSourcesAfterMove, orderedSourcesAfterRemoval, paperImportProgress, paperImportSummary, sourcesAfterRoleChange } from "./materials";
+import { filesFromClipboard, hasBlockingImportIssues, hasNoExamContentDetected, isPaperImportCancelled, isSupportedPaperImportFile, markImportFieldConfirmed, orderedSourcesAfterMove, orderedSourcesAfterRemoval, paperImportProgress, paperImportReviewIssues, paperImportSummary, sourcesAfterRoleChange } from "./materials";
 
 describe("paper import materials", () => {
   it("accepts every supported document and image extension", () => {
@@ -48,6 +48,26 @@ describe("paper import materials", () => {
     const base = { id: "i", generation: 1, run_id: "r1", source_revision: "s1", exam_id: "e", exam_paper_id: "", paper_file_asset_id: "", answer_file_asset_id: "", status: "review_required" as const, subject: "math", sources: [], question_candidates: [], answer_candidates: [{ candidate_id: "a1", equivalent_answers: [], confidence: 1, source_refs: [], issues: [] }], solution_candidates: [], rubric_candidates: [], structured_issues: [], questions: [], issues: [], created_at: "2026-08-30T00:00:00Z" };
     expect(paperImportSummary(base).answers).toBe(1);
     expect(hasBlockingImportIssues(base)).toBe(true);
+  });
+
+  it("condenses repetitive review warnings into distinct actions", () => {
+    const issue = (code: string, message: string, question_no?: string) => ({ code, message, question_no, severity: "error" as const, certainty: "confirmed" as const, source_refs: [] });
+    const structured_issues = [
+      issue("HUMAN_REVIEW_REQUIRED", "第1题尚未完成人工核对", "1"),
+      issue("HUMAN_REVIEW_REQUIRED", "第2题尚未完成人工核对", "2"),
+      issue("MISSING_SCORE", "第1题缺少有效分值", "1"),
+      issue("MISSING_SCORE", "第2题缺少有效分值", "2"),
+      issue("SECTION_COUNT_MISMATCH", "单项选择预计8道，当前识别7道"),
+      issue("QUESTION_COUNT_MISMATCH", "考试配置共21道，当前识别7道"),
+      { ...issue("solution_truncated", "第7题解析可能不完整", "7"), severity: "warning" as const, certainty: "suspected" as const }
+    ];
+
+    const visible = paperImportReviewIssues({ structured_issues });
+    expect(visible.map((item) => item.message)).toEqual([
+      "第7题解析可能不完整",
+      "2 道题尚未填写分值",
+      "考试配置共21道，当前识别7道"
+    ]);
   });
 
   it("reports only factual worker counters and never invents a stage percentage", () => {
