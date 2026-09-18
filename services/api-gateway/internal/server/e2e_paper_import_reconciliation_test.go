@@ -1,9 +1,12 @@
 package server
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"edugrade-enterprise/services/api-gateway/internal/files"
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
@@ -84,6 +88,63 @@ JOIN question_row q ON q.exam_id=e.id
 	if err = store.QueuePaperImportParse(ctx, tenantID, job, userID, parseInput); err != nil {
 		t.Fatalf("queue versioned apply-gate parse: %v", err)
 	}
+	assertPersistedPages := func(t *testing.T, where string, expected []paper.PaperImportDecodedPage) string {
+		t.Helper()
+		var inputID, pagesType string
+		var pagesJSON []byte
+		if err := db.QueryRowContext(ctx, `SELECT id::text,pages,jsonb_typeof(pages) FROM paper_import_parse_input WHERE tenant_id=$1::uuid AND paper_import_id=$2::uuid AND `+where+` ORDER BY created_at DESC LIMIT 1`, tenantID, job.ID).Scan(&inputID, &pagesJSON, &pagesType); err != nil {
+			t.Fatalf("load persisted parse pages: %v", err)
+		}
+		if pagesType != "array" {
+			t.Fatalf("persisted parse pages type = %q, want array", pagesType)
+		}
+		var persisted []paper.PaperImportDecodedPage
+		if err := json.Unmarshal(pagesJSON, &persisted); err != nil {
+			t.Fatalf("decode persisted parse pages: %v", err)
+		}
+		if len(persisted) != len(expected) {
+			t.Fatalf("persisted parse pages = %#v, want %#v", persisted, expected)
+		}
+		for index := range expected {
+			if persisted[index] != expected[index] {
+				t.Fatalf("persisted parse page %d = %#v, want %#v", index, persisted[index], expected[index])
+			}
+		}
+		loaded, err := store.LoadPaperImportParseRunInput(ctx, tenantID, inputID)
+		if err != nil {
+			t.Fatalf("reload persisted parse pages: %v", err)
+		}
+		if len(loaded.Input.Pages) != len(expected) {
+			t.Fatalf("reloaded parse pages = %#v, want %#v", loaded.Input.Pages, expected)
+		}
+		for index := range expected {
+			if loaded.Input.Pages[index] != expected[index] {
+				t.Fatalf("reloaded parse page %d = %#v, want %#v", index, loaded.Input.Pages[index], expected[index])
+			}
+		}
+		return inputID
+	}
+	t.Run("nil pages persist as an empty JSON array", func(t *testing.T) {
+		assertPersistedPages(t, `pages = '[]'::jsonb`, []paper.PaperImportDecodedPage{})
+	})
+	t.Run("explicit empty pages persist as an empty JSON array", func(t *testing.T) {
+		explicitlyEmpty := paper.PaperImportParseRequest{Documents: parseDocuments, Pages: []paper.PaperImportDecodedPage{}}
+		if err := store.QueuePaperImportParse(ctx, tenantID, job, userID, explicitlyEmpty); err != nil {
+			t.Fatalf("queue parse with explicit empty pages: %v", err)
+		}
+		assertPersistedPages(t, `pages = '[]'::jsonb`, explicitlyEmpty.Pages)
+	})
+	populatedPages := []paper.PaperImportDecodedPage{
+		{Role: "question", SourceID: job.Sources[0].ID, DocumentIndex: job.Sources[0].DocumentIndex, PageNo: 2, FileAssetID: "decoded-page-2", SHA256: strings.Repeat("2", 64), Width: 1200, Height: 1600},
+		{Role: "question", SourceID: job.Sources[0].ID, DocumentIndex: job.Sources[0].DocumentIndex, PageNo: 1, FileAssetID: "decoded-page-1", SHA256: strings.Repeat("1", 64), Width: 1200, Height: 1600},
+	}
+	t.Run("populated pages preserve content and order", func(t *testing.T) {
+		withPages := paper.PaperImportParseRequest{Documents: parseDocuments, Pages: populatedPages}
+		if err := store.QueuePaperImportParse(ctx, tenantID, job, userID, withPages); err != nil {
+			t.Fatalf("queue parse with populated pages: %v", err)
+		}
+		assertPersistedPages(t, `jsonb_array_length(pages) > 0`, populatedPages)
+	})
 	claimedParse, err := runtimeStore.Claim(ctx, tenantID, workerruntime.ClaimInput{QueueName: "paper-parse", WorkerService: "apply-gate-test", WorkerInstanceID: "apply-gate-test", Limit: 1, LeaseSeconds: 300})
 	if err != nil || len(claimedParse) != 1 {
 		t.Fatalf("claim versioned apply-gate parse: %#v err=%v", claimedParse, err)
@@ -210,6 +271,21 @@ JOIN question_row q ON q.exam_id=e.id
 	}
 
 	t.Run("OCR completion atomically hands off to restart-safe parse", func(t *testing.T) {
+		pageContent := []byte("synthetic paper import page")
+		pageHash := fmt.Sprintf("%x", sha256.Sum256(pageContent))
+		fileStore := files.NewPostgresStore(db)
+		pageAsset, createErr := fileStore.Create(ctx, files.CreateAssetInput{
+			TenantID: tenantID, ExamID: examID, OwnerType: "exam", OwnerID: examID,
+			OriginalName: "paper-page.png", ContentType: "image/png", SizeBytes: int64(len(pageContent)), HashSHA256: pageHash,
+			StorageBucket: "paper-import-e2e", StorageKey: "paper-page.png", Visibility: "tenant", UploadedBy: userID,
+		})
+		if createErr != nil {
+			t.Fatalf("create parsed page asset: %v", createErr)
+		}
+		objectStore := files.NewMemoryObjectStorage()
+		if putErr := objectStore.Put(ctx, pageAsset.StorageBucket, pageAsset.StorageKey, bytes.NewReader(pageContent), int64(len(pageContent)), pageAsset.ContentType); putErr != nil {
+			t.Fatalf("store parsed page object: %v", putErr)
+		}
 		parseJob, createErr := store.CreatePaperImport(ctx, tenantID, examID, userID, paper.CreatePaperImportInput{
 			Subject: "mathematics", Sources: []paper.CreatePaperImportSourceInput{{FileAssetID: paperFileID, DocumentIndex: 0, RoleHint: "question"}},
 		})
@@ -219,6 +295,9 @@ JOIN question_row q ON q.exam_id=e.id
 		ocrTask, createErr := runtimeStore.CreateTask(ctx, tenantID, userID, workerruntime.CreateTaskInput{
 			TaskType: "ocr", QueueName: "ocr", SourceType: "paper_import_job", SourceID: parseJob.ID,
 			IdempotencyKey: "paper-parse-recovery-ocr:" + parseJob.ID, PayloadSchemaVersion: "test-v1",
+			Payload: map[string]any{"pages": []paper.PaperImportDecodedPage{{
+				SourceID: parseJob.Sources[0].ID, DocumentIndex: 0, PageNo: 1, FileAssetID: pageAsset.ID, SHA256: pageHash,
+			}}},
 		})
 		if createErr != nil {
 			t.Fatalf("create OCR runtime fixture: %v", createErr)
@@ -269,7 +348,7 @@ JOIN question_row q ON q.exam_id=e.id
 		}
 		// Constructing a new service/executor models the gateway process restarting
 		// after the OCR callback committed and before parsing began.
-		restartedService := paper.NewDocumentImportService(store, nil, nil, parser.URL, strings.Repeat("t", 32), time.Minute)
+		restartedService := paper.NewDocumentImportService(store, fileStore, objectStore, parser.URL, strings.Repeat("t", 32), time.Minute)
 		executor, executorErr := paper.NewParseTaskExecutor(restartedService, runtimeStore, time.Minute)
 		if executorErr != nil {
 			t.Fatalf("create restarted parse executor: %v", executorErr)

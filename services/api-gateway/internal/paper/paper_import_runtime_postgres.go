@@ -178,7 +178,11 @@ func queuePaperImportParseInTx(ctx context.Context, tx *sql.Tx, tenantID string,
 	if err != nil {
 		return ErrInvalidInput
 	}
-	pages, err := json.Marshal(input.Pages)
+	persistedPages := input.Pages
+	if persistedPages == nil {
+		persistedPages = []PaperImportDecodedPage{}
+	}
+	pages, err := json.Marshal(persistedPages)
 	if err != nil {
 		return ErrInvalidInput
 	}

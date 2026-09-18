@@ -121,7 +121,7 @@ def _openai_usage(response):
         if isinstance(completion_details, dict)
         else 0
     )
-    cached = cached if cached >= 0 else 0
+    cached = max(cached, 0)
     reasoning = reasoning if isinstance(reasoning, int) and not isinstance(reasoning, bool) and reasoning >= 0 else 0
     return {
         "input_tokens": prompt,
