@@ -1,0 +1,20 @@
+package auth
+
+var (
+	_ Store                        = (*MemoryStore)(nil)
+	_ Store                        = (*PostgresStore)(nil)
+	_ CredentialRepository         = (*MemoryStore)(nil)
+	_ CredentialRepository         = (*PostgresStore)(nil)
+	_ SessionRepository            = (*MemoryStore)(nil)
+	_ SessionRepository            = (*PostgresStore)(nil)
+	_ AccessScopeResolver          = (*MemoryStore)(nil)
+	_ AccessScopeResolver          = (*PostgresStore)(nil)
+	_ AuditRepository              = (*MemoryStore)(nil)
+	_ AuditRepository              = (*PostgresStore)(nil)
+	_ UserAdministrationRepository = (*MemoryStore)(nil)
+	_ UserAdministrationRepository = (*PostgresStore)(nil)
+	_ ActivationRepository         = (*MemoryStore)(nil)
+	_ ActivationRepository         = (*PostgresStore)(nil)
+	_ RecoveryRepository           = (*MemoryStore)(nil)
+	_ RecoveryRepository           = (*PostgresStore)(nil)
+)

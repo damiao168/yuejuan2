@@ -19,14 +19,14 @@ import (
 
 type Handler struct {
 	store       Store
-	papers      paper.Store
+	papers      paper.QuestionRepository
 	submissions submissionpkg.Store
 	audit       auth.Store
 	fileStore   files.Store
 	objects     files.ObjectStorage
 }
 
-func NewHandler(store Store, papers paper.Store, submissions submissionpkg.Store, audit auth.Store, fileStore files.Store, objects files.ObjectStorage) *Handler {
+func NewHandler(store Store, papers paper.QuestionRepository, submissions submissionpkg.Store, audit auth.Store, fileStore files.Store, objects files.ObjectStorage) *Handler {
 	return &Handler{store: store, papers: papers, submissions: submissions, audit: audit, fileStore: fileStore, objects: objects}
 }
 

@@ -139,24 +139,6 @@ func DefaultLoginRiskDecision(now time.Time) RiskDecision {
 	}
 }
 
-func (h *Handler) evaluateLoginRisk(ctx context.Context, request LoginRiskContextRequest, sessionType string) (RiskDecision, LoginRiskContext, RiskStore, error) {
-	decision := DefaultLoginRiskDecision(request.Now)
-	if h.riskMode == "off" || sessionType == SessionTypeService {
-		decision.ReasonCodes = []string{"risk_evaluation_disabled"}
-		decision.PolicyVersion = "off"
-		return decision, LoginRiskContext{}, nil, nil
-	}
-	riskStore, ok := h.store.(RiskStore)
-	if !ok {
-		return decision, LoginRiskContext{}, nil, nil
-	}
-	riskContext, err := riskStore.LoadLoginRiskContext(ctx, request)
-	if err != nil {
-		return decision, LoginRiskContext{}, riskStore, err
-	}
-	return EvaluateLoginRisk(riskContext, request.Now), riskContext, riskStore, nil
-}
-
 // EvaluateLoginRisk uses capped, independent signal families. Network and
 // browser novelty cannot by themselves block a teacher behind campus NAT, and
 // cold-start accounts are never promoted to high risk merely for being new.

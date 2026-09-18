@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 
@@ -120,22 +121,25 @@ type ExamPreparationModule struct {
 	QuestionBankHandler *questionbank.Handler
 	WorkspaceHandler    *workspace.Handler
 	DashboardHandler    *dashboard.Handler
-
-	authStore              auth.Store
-	dashboardOrganizations dashboard.OrganizationSummaryStore
-	dashboardActivities    dashboard.ActivityStore
 }
 
 type ExamPreparationDependencies struct {
-	AuthStore      auth.Store
-	ObjectStore    files.ObjectStorage
-	Reconciliation files.ReconciliationReader
+	AuthStore             auth.Store
+	ObjectStore           files.ObjectStorage
+	Reconciliation        files.ReconciliationReader
+	Reviews               review.Store
+	Processing            workspace.ProcessingReader
+	DocumentModelResolver func(context.Context, string) (*paper.DocumentModelConfig, error)
 }
 
 func NewExamPreparationModule(cfg config.Config, stores ExamPreparationStores, dependencies ExamPreparationDependencies) *ExamPreparationModule {
 	fileHandler := files.NewHandler(stores.Files, dependencies.ObjectStore, dependencies.AuthStore, cfg.Files).WithReconciliationReader(dependencies.Reconciliation)
 	segmentHandler := segment.NewHandler(stores.Segments, stores.Paper, stores.Submissions, dependencies.AuthStore, stores.Files, dependencies.ObjectStore)
 	paperImportService := paper.NewDocumentImportService(stores.Paper, stores.Files, dependencies.ObjectStore, cfg.AIService.URL, cfg.AIService.Token, cfg.AIService.Timeout)
+	paperHandler := paper.NewHandler(stores.Paper, dependencies.AuthStore).WithDocumentImport(paperImportService)
+	if dependencies.DocumentModelResolver != nil {
+		paperHandler.WithDocumentModelResolver(dependencies.DocumentModelResolver)
+	}
 	return &ExamPreparationModule{
 		ExamStore:           stores.Exam,
 		PaperStore:          stores.Paper,
@@ -146,7 +150,7 @@ func NewExamPreparationModule(cfg config.Config, stores ExamPreparationStores, d
 		AssessmentStore:     stores.Assessments,
 		PaperImportService:  paperImportService,
 		ExamHandler:         exam.NewHandler(stores.Exam, dependencies.AuthStore),
-		PaperHandler:        paper.NewHandler(stores.Paper, dependencies.AuthStore).WithDocumentImport(paperImportService),
+		PaperHandler:        paperHandler,
 		FileHandler:         fileHandler,
 		SubmissionHandler:   submission.NewHandler(stores.Submissions, stores.Files, dependencies.AuthStore),
 		SegmentHandler:      segmentHandler,
@@ -154,26 +158,13 @@ func NewExamPreparationModule(cfg config.Config, stores ExamPreparationStores, d
 		QuestionBankHandler: questionbank.NewHandler(stores.QuestionBank),
 		WorkspaceHandler: workspace.NewHandler(workspace.Dependencies{
 			Exams: stores.Exam, Papers: stores.Paper, PaperImports: stores.Paper, Submissions: stores.Submissions, Assessments: stores.Assessments,
+			Reviews: dependencies.Reviews, Processing: dependencies.Processing,
 		}),
 		DashboardHandler: dashboard.NewHandler(dashboard.Dependencies{
-			Exams: stores.Exam, Submissions: stores.Submissions, Audits: dependencies.AuthStore,
+			Exams: stores.Exam, Submissions: stores.Submissions, Reviews: dependencies.Reviews, Audits: dependencies.AuthStore,
 			Organizations: stores.DashboardOrganizations, Activities: stores.DashboardActivities,
 		}),
-		authStore:              dependencies.AuthStore,
-		dashboardOrganizations: stores.DashboardOrganizations,
-		dashboardActivities:    stores.DashboardActivities,
 	}
-}
-
-func (m *ExamPreparationModule) ConnectOperations(reviews review.Store, processingService *processing.Service) {
-	m.WorkspaceHandler = workspace.NewHandler(workspace.Dependencies{
-		Exams: m.ExamStore, Papers: m.PaperStore, PaperImports: m.PaperStore, Submissions: m.SubmissionStore,
-		Reviews: reviews, Assessments: m.AssessmentStore, Processing: processingService,
-	})
-	m.DashboardHandler = dashboard.NewHandler(dashboard.Dependencies{
-		Exams: m.ExamStore, Submissions: m.SubmissionStore, Reviews: reviews,
-		Audits: m.authStore, Organizations: m.dashboardOrganizations, Activities: m.dashboardActivities,
-	})
 }
 
 type CaptureProcessingStores struct {
@@ -201,21 +192,36 @@ type CaptureProcessingModule struct {
 	ProcessingHandler    *processing.Handler
 }
 
-func NewCaptureProcessingModule(cfg config.Config, stores CaptureProcessingStores, identity *IdentityModule, examModule *ExamPreparationModule) *CaptureProcessingModule {
-	module, _ := newCaptureProcessingModule(cfg, stores, identity, examModule, false)
+type CaptureProcessingDependencies struct {
+	Auth        auth.Store
+	Exams       exam.Store
+	Files       files.Store
+	Objects     files.ObjectStorage
+	Submissions submission.Store
+	Processing  *processing.Service
+}
+
+func NewCaptureProcessingModule(cfg config.Config, stores CaptureProcessingStores, dependencies CaptureProcessingDependencies) *CaptureProcessingModule {
+	module, _ := newCaptureProcessingModule(cfg, stores, dependencies, false)
 	return module
 }
 
 // NewTransactionalCaptureProcessingModule is the production composition root.
 // It fails startup unless the image-quality command can run through the atomic
 // coordinator, without depending on a concrete store implementation name.
-func NewTransactionalCaptureProcessingModule(cfg config.Config, stores CaptureProcessingStores, identity *IdentityModule, examModule *ExamPreparationModule) (*CaptureProcessingModule, error) {
-	return newCaptureProcessingModule(cfg, stores, identity, examModule, true)
+func NewTransactionalCaptureProcessingModule(cfg config.Config, stores CaptureProcessingStores, dependencies CaptureProcessingDependencies) (*CaptureProcessingModule, error) {
+	if err := validateCaptureProcessingDependencies(dependencies); err != nil {
+		return nil, err
+	}
+	return newCaptureProcessingModule(cfg, stores, dependencies, true)
 }
 
-func newCaptureProcessingModule(cfg config.Config, stores CaptureProcessingStores, identity *IdentityModule, examModule *ExamPreparationModule, transactional bool) (*CaptureProcessingModule, error) {
-	processingService := processing.NewService(stores.Processing, stores.WorkerRuntime)
-	imageQualityHandler := imagequality.NewHandler(stores.ImageQuality, examModule.SubmissionStore, examModule.FileStore, identity.AuthStore, stores.WorkerRuntime).WithCaptureStore(stores.Capture)
+func newCaptureProcessingModule(cfg config.Config, stores CaptureProcessingStores, dependencies CaptureProcessingDependencies, transactional bool) (*CaptureProcessingModule, error) {
+	processingService := dependencies.Processing
+	if processingService == nil {
+		processingService = processing.NewService(stores.Processing, stores.WorkerRuntime)
+	}
+	imageQualityHandler := imagequality.NewHandler(stores.ImageQuality, dependencies.Submissions, dependencies.Files, dependencies.Auth, stores.WorkerRuntime).WithCaptureStore(stores.Capture)
 	if transactional {
 		coordinator, ok := stores.ImageQuality.(imagequality.TransactionalStore)
 		if !ok {
@@ -223,8 +229,8 @@ func newCaptureProcessingModule(cfg config.Config, stores CaptureProcessingStore
 		}
 		var err error
 		imageQualityHandler, err = imagequality.NewTransactionalHandler(imagequality.TransactionalHandlerDependencies{
-			Coordinator: coordinator, Submissions: examModule.SubmissionStore, Files: examModule.FileStore,
-			Audit: identity.AuthStore, Runtime: stores.WorkerRuntime, Captures: stores.Capture,
+			Coordinator: coordinator, Submissions: dependencies.Submissions, Files: dependencies.Files,
+			Audit: dependencies.Auth, Runtime: stores.WorkerRuntime, Captures: stores.Capture,
 		})
 		if err != nil {
 			return nil, err
@@ -234,20 +240,53 @@ func newCaptureProcessingModule(cfg config.Config, stores CaptureProcessingStore
 		WorkerRuntimeStore:   stores.WorkerRuntime,
 		CaptureStore:         stores.Capture,
 		ProcessingService:    processingService,
-		OrchestratorHandler:  orchestrator.NewHandler(stores.Orchestrator, identity.AuthStore),
-		OCRHandler:           ocrpkg.NewHandler(stores.OCR, stores.OCRQueue, examModule.SubmissionStore, identity.AuthStore, stores.WorkerRuntime),
+		OrchestratorHandler:  orchestrator.NewHandler(stores.Orchestrator, dependencies.Auth),
+		OCRHandler:           ocrpkg.NewHandler(stores.OCR, stores.OCRQueue, dependencies.Submissions, dependencies.Auth, stores.WorkerRuntime),
 		ImageQualityHandler:  imageQualityHandler,
-		WorkerRuntimeHandler: workerruntime.NewHandler(stores.WorkerRuntime, identity.AuthStore, workerSourceLeaseRenewer{imageQuality: stores.ImageQuality}),
-		CaptureHandler:       capture.NewHandler(stores.Capture, examModule.FileStore, examModule.ExamStore, stores.WorkerRuntime, identity.AuthStore),
-		ProcessingHandler:    processing.NewHandler(processingService, identity.AuthStore),
+		WorkerRuntimeHandler: workerruntime.NewHandler(stores.WorkerRuntime, dependencies.Auth, workerSourceLeaseRenewer{imageQuality: stores.ImageQuality}),
+		CaptureHandler:       capture.NewHandler(stores.Capture, dependencies.Files, dependencies.Exams, stores.WorkerRuntime, dependencies.Auth),
+		ProcessingHandler:    processing.NewHandler(processingService, dependencies.Auth),
 	}
-	if lifecycleFiles, ok := examModule.FileStore.(files.LifecycleStore); ok {
+	if lifecycleFiles, ok := dependencies.Files.(files.LifecycleStore); ok {
 		module.CaptureUploadHandler = captureupload.NewHandler(
-			captureupload.NewService(stores.CaptureUpload, stores.Capture, lifecycleFiles, examModule.ObjectStore, cfg.Files),
-			identity.AuthStore,
+			captureupload.NewService(stores.CaptureUpload, stores.Capture, lifecycleFiles, dependencies.Objects, cfg.Files),
+			dependencies.Auth,
 		)
 	}
 	return module, nil
+}
+
+func validateCaptureProcessingDependencies(dependencies CaptureProcessingDependencies) error {
+	values := []struct {
+		name  string
+		value any
+	}{
+		{"Auth", dependencies.Auth},
+		{"Exams", dependencies.Exams},
+		{"Files", dependencies.Files},
+		{"Objects", dependencies.Objects},
+		{"Submissions", dependencies.Submissions},
+		{"Processing", dependencies.Processing},
+	}
+	for _, dependency := range values {
+		if isNilCapability(dependency.value) {
+			return fmt.Errorf("capture dependency %s is not configured", dependency.name)
+		}
+	}
+	return nil
+}
+
+func isNilCapability(value any) bool {
+	if value == nil {
+		return true
+	}
+	reflected := reflect.ValueOf(value)
+	switch reflected.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return reflected.IsNil()
+	default:
+		return false
+	}
 }
 
 type AIFoundationStores struct {
@@ -325,36 +364,45 @@ type GradingQualityModule struct {
 }
 
 type GradingQualityDependencies struct {
-	DB                *sql.DB
-	Identity          *IdentityModule
-	Exam              *ExamPreparationModule
-	Capture           *CaptureProcessingModule
-	AI                *AIFoundation
-	MathUnderstanding mathunderstanding.Store
-	MathCorrections   mathunderstanding.CorrectionStore
+	DB                   *sql.DB
+	Auth                 auth.Store
+	Files                files.Store
+	Objects              files.ObjectStorage
+	Segments             segment.Store
+	Assessments          assessment.Store
+	WorkerRuntime        workerruntime.Store
+	Processing           *processing.Service
+	Eligibility          *aieligibility.Service
+	EvaluationEvidence   subjective.EvaluationEvidenceProvider
+	CalibrationEvidence  subjective.CalibrationEvidenceProvider
+	DisagreementObserver review.AIHumanDisagreementObserver
+	SegmentImage         http.HandlerFunc
+	FileDownload         http.HandlerFunc
+	MathUnderstanding    mathunderstanding.Store
+	MathCorrections      mathunderstanding.CorrectionStore
 }
 
 func NewGradingQualityModule(cfg config.Config, stores GradingQualityStores, dependencies GradingQualityDependencies) *GradingQualityModule {
-	gradingHandler := grading.NewHandler(stores.Grading, grading.NewEngine(), dependencies.Identity.AuthStore)
-	gradingHandler.SetProductionDependencies(dependencies.Capture.WorkerRuntimeStore, dependencies.Exam.FileStore)
+	gradingHandler := grading.NewHandler(stores.Grading, grading.NewEngine(), dependencies.Auth)
+	gradingHandler.SetProductionDependencies(dependencies.WorkerRuntime, dependencies.Files)
 
-	subjectiveHandler := subjective.NewHandler(stores.Subjective, newSubjectiveAdapter(cfg), dependencies.Identity.AuthStore).
-		WithWorkerRuntimeStore(dependencies.Capture.WorkerRuntimeStore).
-		WithEvaluationEvidence(dependencies.AI.GradingEvaluationService).
-		WithCalibrationEvidence(dependencies.AI.ModelCalibrationService).
-		WithParserQuality(dependencies.Capture.ProcessingService)
-	if dependencies.AI.EligibilityService != nil {
-		subjectiveHandler.WithEligibilityGate(dependencies.AI.EligibilityService)
+	subjectiveHandler := subjective.NewHandler(stores.Subjective, newSubjectiveAdapter(cfg), dependencies.Auth).
+		WithWorkerRuntimeStore(dependencies.WorkerRuntime).
+		WithEvaluationEvidence(dependencies.EvaluationEvidence).
+		WithCalibrationEvidence(dependencies.CalibrationEvidence).
+		WithParserQuality(dependencies.Processing)
+	if dependencies.Eligibility != nil {
+		subjectiveHandler.WithEligibilityGate(dependencies.Eligibility)
 	}
 	if cfg.AIService.MathGradingV2 {
-		cropEvidence, _ := dependencies.Exam.SegmentStore.(subjective.ActiveCropEvidenceStore)
+		cropEvidence, _ := dependencies.Segments.(subjective.ActiveCropEvidenceStore)
 		subjectiveHandler.WithMathGradingV2(true, newSubjectiveAdapterV2(cfg), subjective.MathEvidenceSource{
 			Artifacts: dependencies.MathUnderstanding, Corrections: dependencies.MathCorrections,
-		}, subjective.NewActiveCropResolver(cropEvidence, dependencies.Exam.FileStore, dependencies.Exam.ObjectStore))
+		}, subjective.NewActiveCropResolver(cropEvidence, dependencies.Files, dependencies.Objects))
 	}
 
 	calibrationService := calibration.NewService(stores.Calibration, stores.GoldPaper)
-	seedQualityService := seedquality.NewService(stores.SeedQuality, stores.GoldPaper, calibrationService, dependencies.Exam.AssessmentStore)
+	seedQualityService := seedquality.NewService(stores.SeedQuality, stores.GoldPaper, calibrationService, dependencies.Assessments)
 	graderDriftService := graderdrift.NewService(stores.GraderDrift, seedQualityService, calibrationService)
 	backmarkService := backmark.NewService(stores.Backmark)
 	if contextStore, ok := stores.Review.(review.TaskContextStore); ok {
@@ -365,9 +413,9 @@ func NewGradingQualityModule(cfg config.Config, stores GradingQualityStores, dep
 	if contextStore, ok := stores.Regrade.(regrade.ContextSource); ok {
 		regradeService.WithContextSource(contextStore)
 	}
-	regradeHandler := regrade.NewHandler(regradeService, dependencies.Identity.AuthStore).WithSegmentImage(dependencies.Exam.SegmentHandler.GetImage)
-	backmarkHandler := backmark.NewHandler(backmarkService, dependencies.Identity.AuthStore).
-		WithSegmentImage(dependencies.Exam.SegmentHandler.GetImage).
+	regradeHandler := regrade.NewHandler(regradeService, dependencies.Auth).WithSegmentImage(dependencies.SegmentImage)
+	backmarkHandler := backmark.NewHandler(backmarkService, dependencies.Auth).
+		WithSegmentImage(dependencies.SegmentImage).
 		WithRegradeService(regradeService)
 
 	qualityDashboardService := stores.QualityDashboard
@@ -381,21 +429,21 @@ func NewGradingQualityModule(cfg config.Config, stores GradingQualityStores, dep
 		QualityDashboardService: qualityDashboardService,
 		GradingHandler:          gradingHandler,
 		SubjectiveHandler:       subjectiveHandler,
-		EvidenceHandler:         evidence.NewHandler(stores.Evidence, evidence.NewEngine(), dependencies.Identity.AuthStore),
+		EvidenceHandler:         evidence.NewHandler(stores.Evidence, evidence.NewEngine(), dependencies.Auth),
 		ReviewHandler: review.NewHandler(
-			stores.Review, dependencies.Identity.AuthStore, dependencies.Exam.SegmentHandler.GetImage, dependencies.Exam.FileHandler.Download,
+			stores.Review, dependencies.Auth, dependencies.SegmentImage, dependencies.FileDownload,
 		).WithQualificationGate(calibrationService).
 			WithSeedHook(seedQualityService).
 			WithSeedObservationRefresher(graderDriftService).
-			WithAIHumanDisagreementObserver(dependencies.AI.DisagreementService),
-		ReviewAnnotationHandler: reviewannotation.NewHandler(stores.ReviewAnnotation, dependencies.Identity.AuthStore),
-		GoldPaperHandler:        goldpaper.NewHandler(stores.GoldPaper, dependencies.Identity.AuthStore),
-		CalibrationHandler:      calibration.NewHandler(calibrationService, dependencies.Identity.AuthStore),
-		AnswerGroupHandler:      answergroup.NewHandlerWithReferences(stores.AnswerGroup, dependencies.Identity.AuthStore, stores.GoldPaper),
+			WithAIHumanDisagreementObserver(dependencies.DisagreementObserver),
+		ReviewAnnotationHandler: reviewannotation.NewHandler(stores.ReviewAnnotation, dependencies.Auth),
+		GoldPaperHandler:        goldpaper.NewHandler(stores.GoldPaper, dependencies.Auth),
+		CalibrationHandler:      calibration.NewHandler(calibrationService, dependencies.Auth),
+		AnswerGroupHandler:      answergroup.NewHandlerWithReferences(stores.AnswerGroup, dependencies.Auth, stores.GoldPaper),
 		BackmarkHandler:         backmarkHandler,
 		RegradeHandler:          regradeHandler,
-		GraderDriftHandler:      graderdrift.NewHandler(graderDriftService, dependencies.Identity.AuthStore),
-		SeedQualityHandler:      seedquality.NewHandler(seedQualityService, dependencies.Identity.AuthStore),
+		GraderDriftHandler:      graderdrift.NewHandler(graderDriftService, dependencies.Auth),
+		SeedQualityHandler:      seedquality.NewHandler(seedQualityService, dependencies.Auth),
 	}
 	if qualityDashboardService != nil {
 		module.QualityDashboardHandler = qualitydashboard.NewHandler(qualityDashboardService)
@@ -472,28 +520,35 @@ type ReleaseModule struct {
 	ReportHandler                  *report.Handler
 }
 
-func NewReleaseModule(stores ReleaseStores, identity *IdentityModule, examModule *ExamPreparationModule, gradingQuality *GradingQualityModule) *ReleaseModule {
+type ReleaseDependencies struct {
+	Auth                  auth.Store
+	Regrade               *regrade.Service
+	StudentQuestionImage  http.HandlerFunc
+	StudentPaperPageImage http.HandlerFunc
+}
+
+func NewReleaseModule(stores ReleaseStores, dependencies ReleaseDependencies) *ReleaseModule {
 	scoreReleaseService := scorerelease.NewService(stores.ScoreRelease)
 	releaseGateService := releasegate.NewService(stores.ReleaseGate, scoreReleaseService).
-		WithRegradeBlockerReader(regradeBlocker{service: gradingQuality.RegradeService})
+		WithRegradeBlockerReader(regradeBlocker{service: dependencies.Regrade})
 	return &ReleaseModule{
-		ScoreHandler: score.NewHandler(stores.Score, identity.AuthStore),
-		ScoreReleaseHandler: scorerelease.NewHandler(scoreReleaseService, identity.AuthStore).
+		ScoreHandler: score.NewHandler(stores.Score, dependencies.Auth),
+		ScoreReleaseHandler: scorerelease.NewHandler(scoreReleaseService, dependencies.Auth).
 			WithPublicationPublisher(releaseGatePublisher{
 				coordinator: releasegate.NewPublicationCoordinator(releaseGateService, scoreReleaseService),
 			}).
-			WithStudentQuestionImage(examModule.SegmentHandler.GetImage).
-			WithStudentPaperPageImage(examModule.SegmentHandler.GetPageImage),
-		ReleaseGateHandler:   releasegate.NewHandler(releaseGateService, identity.AuthStore),
+			WithStudentQuestionImage(dependencies.StudentQuestionImage).
+			WithStudentPaperPageImage(dependencies.StudentPaperPageImage),
+		ReleaseGateHandler:   releasegate.NewHandler(releaseGateService, dependencies.Auth),
 		StudentPortalHandler: studentportal.NewHandler(studentportal.NewService(stores.StudentPortal)),
 		RegradeReleaseHandler: regraderelease.NewHandler(
-			regraderelease.NewService(gradingQuality.RegradeService, scoreReleaseService),
+			regraderelease.NewService(dependencies.Regrade, scoreReleaseService),
 		),
-		AppealHandler: appeal.NewHandler(stores.Appeal, identity.AuthStore),
+		AppealHandler: appeal.NewHandler(stores.Appeal, dependencies.Auth),
 		PublishedQuestionAppealHandler: appeal.NewPublishedQuestionAppealHandler(
-			appeal.NewPublishedQuestionAppealService(stores.PublishedQuestionAppeal), identity.AuthStore,
-		).WithSegmentImage(examModule.SegmentHandler.GetImage),
-		ReportHandler: report.NewHandler(stores.Report, identity.AuthStore),
+			appeal.NewPublishedQuestionAppealService(stores.PublishedQuestionAppeal), dependencies.Auth,
+		).WithSegmentImage(dependencies.StudentQuestionImage),
+		ReportHandler: report.NewHandler(stores.Report, dependencies.Auth),
 	}
 }
 
@@ -506,18 +561,34 @@ type AIGovernanceStores struct {
 
 type AIGovernanceModule struct {
 	modelStore               modelgovernance.Store
-	Foundation               *AIFoundation
 	ModelGovernanceHandler   *modelgovernance.Handler
 	MathUnderstandingHandler *mathunderstanding.Handler
+	EligibilityHandler       *aieligibility.Handler
+	GradingEvaluationHandler *gradingevaluation.Handler
+	ModelCalibrationHandler  *modelcalibration.Handler
+	DisagreementHandler      *aidisagreement.Handler
 }
 
-func NewAIGovernanceModule(cfg config.Config, stores AIGovernanceStores, identity *IdentityModule, captureModule *CaptureProcessingModule, gradingQuality *GradingQualityModule, foundation *AIFoundation) *AIGovernanceModule {
+type AIGovernanceDependencies struct {
+	Auth                     auth.Store
+	WorkerRuntime            workerruntime.Store
+	Reviews                  review.Store
+	EligibilityHandler       *aieligibility.Handler
+	GradingEvaluationHandler *gradingevaluation.Handler
+	ModelCalibrationHandler  *modelcalibration.Handler
+	DisagreementHandler      *aidisagreement.Handler
+}
+
+func NewAIGovernanceModule(cfg config.Config, stores AIGovernanceStores, dependencies AIGovernanceDependencies) *AIGovernanceModule {
 	return &AIGovernanceModule{
-		modelStore: stores.ModelGovernance,
-		Foundation: foundation,
+		modelStore:               stores.ModelGovernance,
+		EligibilityHandler:       dependencies.EligibilityHandler,
+		GradingEvaluationHandler: dependencies.GradingEvaluationHandler,
+		ModelCalibrationHandler:  dependencies.ModelCalibrationHandler,
+		DisagreementHandler:      dependencies.DisagreementHandler,
 		ModelGovernanceHandler: modelgovernance.NewHandler(
 			stores.ModelGovernance,
-			identity.AuthStore,
+			dependencies.Auth,
 			modelgovernance.NewEnvironmentSecretResolver(""),
 			localModelBaseline(cfg),
 		).WithRuntimePromptSource(modelgovernance.NewHTTPRuntimePromptSource(
@@ -526,8 +597,8 @@ func NewAIGovernanceModule(cfg config.Config, stores AIGovernanceStores, identit
 			cfg.AIService.Timeout,
 		)),
 		MathUnderstandingHandler: mathunderstanding.NewHandler(
-			stores.MathUnderstanding, stores.MathCorrections, stores.MathPilotGates, gradingQuality.ReviewStore, identity.AuthStore,
-		).WithRuntime(captureModule.WorkerRuntimeStore),
+			stores.MathUnderstanding, stores.MathCorrections, stores.MathPilotGates, dependencies.Reviews, dependencies.Auth,
+		).WithRuntime(dependencies.WorkerRuntime),
 	}
 }
 
@@ -734,28 +805,45 @@ func NewTransactionalApplicationModules(dependencies ApplicationDependencies, st
 
 func newApplicationModules(dependencies ApplicationDependencies, stores ApplicationStores, transactional bool) (ApplicationModules, error) {
 	identity := NewIdentityModule(dependencies.Config, stores.Identity, dependencies.LoginGuard)
+	processingService := processing.NewService(stores.Capture.Processing, stores.Capture.WorkerRuntime)
 	examModule := NewExamPreparationModule(dependencies.Config, stores.Exam, ExamPreparationDependencies{
 		AuthStore: identity.AuthStore, ObjectStore: dependencies.ObjectStore, Reconciliation: dependencies.Reconciliation,
+		Reviews: stores.Grading.Review, Processing: processingService,
+		DocumentModelResolver: newDocumentModelResolver(stores.AIGovernance.ModelGovernance),
 	})
+	captureDependencies := CaptureProcessingDependencies{
+		Auth: identity.AuthStore, Exams: stores.Exam.Exam, Files: stores.Exam.Files,
+		Objects: dependencies.ObjectStore, Submissions: stores.Exam.Submissions, Processing: processingService,
+	}
 	var captureModule *CaptureProcessingModule
 	var err error
 	if transactional {
-		captureModule, err = NewTransactionalCaptureProcessingModule(dependencies.Config, stores.Capture, identity, examModule)
+		captureModule, err = NewTransactionalCaptureProcessingModule(dependencies.Config, stores.Capture, captureDependencies)
 	} else {
-		captureModule = NewCaptureProcessingModule(dependencies.Config, stores.Capture, identity, examModule)
+		captureModule = NewCaptureProcessingModule(dependencies.Config, stores.Capture, captureDependencies)
 	}
 	if err != nil {
 		return ApplicationModules{}, err
 	}
 	aiFoundation := NewAIFoundation(stores.AIFoundation)
 	gradingQuality := NewGradingQualityModule(dependencies.Config, stores.Grading, GradingQualityDependencies{
-		DB: dependencies.DB, Identity: identity, Exam: examModule, Capture: captureModule, AI: aiFoundation,
+		DB: dependencies.DB, Auth: identity.AuthStore, Files: stores.Exam.Files, Objects: dependencies.ObjectStore,
+		Segments: stores.Exam.Segments, Assessments: stores.Exam.Assessments,
+		WorkerRuntime: captureModule.WorkerRuntimeStore, Processing: captureModule.ProcessingService,
+		Eligibility: aiFoundation.EligibilityService, EvaluationEvidence: aiFoundation.GradingEvaluationService,
+		CalibrationEvidence: aiFoundation.ModelCalibrationService, DisagreementObserver: aiFoundation.DisagreementService,
+		SegmentImage: examModule.SegmentHandler.GetImage, FileDownload: examModule.FileHandler.Download,
 		MathUnderstanding: stores.AIGovernance.MathUnderstanding, MathCorrections: stores.AIGovernance.MathCorrections,
 	})
-	examModule.ConnectOperations(gradingQuality.ReviewStore, captureModule.ProcessingService)
-	releaseModule := NewReleaseModule(stores.Release, identity, examModule, gradingQuality)
-	aiGovernance := NewAIGovernanceModule(dependencies.Config, stores.AIGovernance, identity, captureModule, gradingQuality, aiFoundation)
-	connectSchoolDocumentModels(examModule, stores.AIGovernance.ModelGovernance)
+	releaseModule := NewReleaseModule(stores.Release, ReleaseDependencies{
+		Auth: identity.AuthStore, Regrade: gradingQuality.RegradeService,
+		StudentQuestionImage: examModule.SegmentHandler.GetImage, StudentPaperPageImage: examModule.SegmentHandler.GetPageImage,
+	})
+	aiGovernance := NewAIGovernanceModule(dependencies.Config, stores.AIGovernance, AIGovernanceDependencies{
+		Auth: identity.AuthStore, WorkerRuntime: captureModule.WorkerRuntimeStore, Reviews: gradingQuality.ReviewStore,
+		EligibilityHandler: aiFoundation.EligibilityHandler, GradingEvaluationHandler: aiFoundation.GradingEvaluationHandler,
+		ModelCalibrationHandler: aiFoundation.ModelCalibrationHandler, DisagreementHandler: aiFoundation.DisagreementHandler,
+	})
 	return ApplicationModules{
 		Identity: identity, Exam: examModule, Capture: captureModule, Grading: gradingQuality,
 		Release: releaseModule, AIGovernance: aiGovernance, Idempotency: stores.Idempotency,
@@ -773,12 +861,12 @@ func NewPostgresApplicationModules(infra *Infrastructure) (ApplicationModules, e
 	}, stores)
 }
 
-func connectSchoolDocumentModels(examModule *ExamPreparationModule, store modelgovernance.Store) {
+func newDocumentModelResolver(store modelgovernance.Store) func(context.Context, string) (*paper.DocumentModelConfig, error) {
 	managed, ok := store.(modelgovernance.ManagedAPIConfigStore)
 	if !ok {
-		return
+		return nil
 	}
-	examModule.PaperHandler.WithDocumentModelResolver(func(ctx context.Context, tenantID string) (*paper.DocumentModelConfig, error) {
+	return func(ctx context.Context, tenantID string) (*paper.DocumentModelConfig, error) {
 		connection, err := modelgovernance.ResolveDefaultManagedAPI(ctx, managed, tenantID)
 		if err != nil || connection == nil {
 			return nil, err
@@ -787,5 +875,5 @@ func connectSchoolDocumentModels(examModule *ExamPreparationModule, store modelg
 			AdapterType: connection.Config.AdapterType, BaseURL: connection.Config.BaseURL,
 			APIKey: connection.APIKey, ModelName: connection.Config.ModelName, ModelVersion: connection.Config.ModelVersion,
 		}, nil
-	})
+	}
 }

@@ -1,14 +1,17 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (...parts) => readFileSync(join(root, ...parts), "utf8");
+const readGoDirectory = (...parts) => readdirSync(join(root, ...parts), { withFileTypes: true })
+  .filter((entry) => entry.isFile() && entry.name.endsWith(".go"))
+  .map((entry) => read(...parts, entry.name))
+  .join("\n");
 
-const server = read("services", "api-gateway", "internal", "server", "server.go");
-const handlers = read("services", "api-gateway", "internal", "subjective", "handlers.go");
-const types = read("services", "api-gateway", "internal", "subjective", "types.go");
+const server = readGoDirectory("services", "api-gateway", "internal", "server");
+const subjective = readGoDirectory("services", "api-gateway", "internal", "subjective");
 const runMigration = read("services", "api-gateway", "migrations", "000063_story063_subjective_grading_runs.sql");
 const batchMigration = read("services", "api-gateway", "migrations", "000064_story063_subjective_grading_batches.sql");
 const workerRoleMigration = read("services", "api-gateway", "migrations", "000075_subjective_grading_worker_role.sql");
@@ -41,7 +44,7 @@ for (const invariant of [
   "RunQueued",
   "subjective_grading_run"
 ]) {
-  assert.ok(handlers.includes(invariant) || types.includes(invariant), `subjective domain invariant missing ${invariant}`);
+  assert.ok(subjective.includes(invariant), `subjective domain invariant missing ${invariant}`);
 }
 
 assert.ok(runMigration.includes("uq_subjective_grading_run_request"), "run request identity must be unique");

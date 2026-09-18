@@ -32,8 +32,8 @@ func TestParseTaskExecutorLeaseAlwaysExceedsConfiguredTimeout(t *testing.T) {
 		if err != nil {
 			t.Fatalf("timeout %s rejected: %v", timeout, err)
 		}
-		if executor.executionTimeout < service.client.Timeout || executor.executionTimeout < timeout {
-			t.Fatalf("executor timeout %s does not cover client timeout %s and requested timeout %s", executor.executionTimeout, service.client.Timeout, timeout)
+		if executor.executionTimeout < service.parserTimeout || executor.executionTimeout < timeout {
+			t.Fatalf("executor timeout %s does not cover parser timeout %s and requested timeout %s", executor.executionTimeout, service.parserTimeout, timeout)
 		}
 		if time.Duration(executor.leaseSeconds)*time.Second < executor.executionTimeout+time.Minute {
 			t.Fatalf("timeout %s has unsafe lease %s", timeout, time.Duration(executor.leaseSeconds)*time.Second)

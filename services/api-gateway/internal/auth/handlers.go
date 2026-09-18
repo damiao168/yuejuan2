@@ -21,6 +21,7 @@ import (
 
 type Handler struct {
 	store                  Store
+	loginService           *LoginService
 	sessionTTL             time.Duration
 	rememberedTTL          time.Duration
 	publicTTL              time.Duration
@@ -29,8 +30,6 @@ type Handler struct {
 	cookieName             string
 	deviceCookieName       string
 	cookieSecure           bool
-	riskMode               string
-	deviceBindingTTL       time.Duration
 	trustedProxies         []*net.IPNet
 	mfaEnabled             bool
 	mfaCipher              *mfaCipher
@@ -121,7 +120,7 @@ func NewHandler(store Store, sessionTTL time.Duration, options ...HandlerOptions
 	if cfg.MFAEnabled {
 		credentialCipher, _ = newMFACipher(cfg.MFAMasterKey) // Invalid configuration fails closed.
 	}
-	return &Handler{
+	handler := &Handler{
 		store:                  store,
 		sessionTTL:             sessionTTL,
 		rememberedTTL:          cfg.RememberedSessionTTL,
@@ -131,12 +130,28 @@ func NewHandler(store Store, sessionTTL time.Duration, options ...HandlerOptions
 		cookieName:             cfg.CookieName,
 		deviceCookieName:       cfg.DeviceCookieName,
 		cookieSecure:           cfg.CookieSecure,
-		riskMode:               normalizeRiskMode(cfg.RiskMode),
-		deviceBindingTTL:       cfg.DeviceBindingTTL,
 		trustedProxies:         parseTrustedProxyCIDRs(cfg.TrustedProxyCIDRs),
 		mfaEnabled:             cfg.MFAEnabled,
 		mfaCipher:              credentialCipher,
 	}
+	riskStore, _ := store.(RiskStore)
+	handler.loginService = NewLoginService(
+		store,
+		store,
+		store,
+		store,
+		cfg.LoginGuard,
+		NewStoreRiskEvaluator(riskStore, cfg.RiskMode),
+		LoginServiceOptions{
+			SessionTTL:             sessionTTL,
+			RememberedSessionTTL:   cfg.RememberedSessionTTL,
+			PublicSessionTTL:       cfg.PublicSessionTTL,
+			DeviceBindingTTL:       cfg.DeviceBindingTTL,
+			RiskMode:               cfg.RiskMode,
+			LoginLimiterFailClosed: cfg.LoginLimiterFailClosed,
+		},
+	)
+	return handler
 }
 
 type loginRequest struct {
@@ -179,324 +194,82 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request, tokenResponse bo
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_request", "invalid json body")
 		return
 	}
-	req.TenantCode = strings.TrimSpace(req.TenantCode)
-	req.TenantHint = strings.TrimSpace(req.TenantHint)
-	req.Username = strings.TrimSpace(req.Username)
-	req.Identifier = strings.TrimSpace(req.Identifier)
-	req.DeviceName = strings.TrimSpace(req.DeviceName)
-	req.ClientType = strings.ToLower(strings.TrimSpace(req.ClientType))
-	tenantCode := req.TenantCode
-	if tenantCode == "" {
-		tenantCode = req.TenantHint
-	}
-	identifier := req.Identifier
-	if identifier == "" {
-		identifier = req.Username
-	}
-	if tenantCode == "" || identifier == "" || req.Password == "" {
-		httpx.Error(w, r, http.StatusBadRequest, "invalid_request", "tenant and login identifier are required")
-		return
-	}
-	if req.RememberDevice && req.PublicDevice {
-		httpx.Error(w, r, http.StatusBadRequest, "invalid_device_mode", "public computers cannot be remembered devices")
-		return
-	}
-	if tokenResponse && req.PublicDevice {
-		httpx.Error(w, r, http.StatusBadRequest, "invalid_device_mode", "public computer mode is only available to browser sessions")
-		return
-	}
-	if !loginFieldsWithinLimits(tenantCode, identifier, req.Password) {
-		httpx.Error(w, r, http.StatusBadRequest, "invalid_request", "login fields exceed supported size limits")
-		return
-	}
-	clientIP := h.remoteIP(r)
-	attempt := LoginAttempt{TenantCode: tenantCode, Identifier: identifier, IPAddress: clientIP}
-	limit, blocked := h.loginGuard.Check(r.Context(), attempt, time.Now().UTC())
-	if !h.loginLimiterAvailable(w, r) {
-		return
-	}
-	if blocked {
-		w.Header().Set("Retry-After", strconv.Itoa(max(1, int(limit.RetryAfter.Seconds()))))
-		RecordAudit(r.Context(), h.store, AuditEvent{
-			TenantID:   PlatformTenantID,
-			Action:     "auth.login_rate_limited",
-			TargetType: "user",
-			AfterValue: map[string]any{"bucket": limit.Bucket},
-			Reason:     "too many failed login attempts",
-			IPAddress:  clientIP,
-			UserAgent:  r.UserAgent(),
-			RequestID:  logger.RequestID(r.Context()),
-		})
-		httpx.Error(w, r, http.StatusTooManyRequests, "login_rate_limited", "too many failed login attempts; retry later")
-		return
-	}
 
-	user, err := h.store.FindUserByLogin(r.Context(), tenantCode, identifier)
-	// Only an explicit credential miss is an authentication failure.  A
-	// database/network error must not poison the login limiter or be reported
-	// as a bad password, otherwise a dependency outage turns into a 429 lockout.
-	if err != nil && !errors.Is(err, ErrInvalidCredentials) {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", "authentication service temporarily unavailable")
-		return
-	}
-	if err == nil {
-		attempt.AccountID = user.ID
-		// The cheap pre-lookup guard protects the source and submitted pair.
-		// Recheck the server-resolved account before password work so changing
-		// aliases or source addresses cannot bypass the account threshold.
-		limit, blocked := h.loginGuard.Check(r.Context(), attempt, time.Now().UTC())
-		if !h.loginLimiterAvailable(w, r) {
-			return
-		}
-		if blocked {
-			w.Header().Set("Retry-After", strconv.Itoa(max(1, int(limit.RetryAfter.Seconds()))))
-			RecordAudit(r.Context(), h.store, AuditEvent{
-				TenantID: user.TenantID, ActorID: user.ID, Action: "auth.login_rate_limited",
-				TargetType: "user", TargetID: user.ID, AfterValue: map[string]any{"bucket": limit.Bucket},
-				Reason: "too many failed login attempts", IPAddress: clientIP, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
-			})
-			httpx.Error(w, r, http.StatusTooManyRequests, "login_rate_limited", "too many failed login attempts; retry later")
-			return
-		}
-	}
-	passwordHash := user.PasswordHash
-	if errors.Is(err, ErrInvalidCredentials) {
-		passwordHash = dummyPasswordHash
-	}
-	passwordValid, passwordNeedsRehash := VerifyPassword(passwordHash, req.Password)
-	if err != nil || !passwordValid {
-		limit, blocked := h.loginGuard.RegisterFailure(r.Context(), attempt, time.Now().UTC())
-		tenantID := user.TenantID
-		if tenantID == "" {
-			tenantID = PlatformTenantID
-		}
-		RecordAudit(r.Context(), h.store, AuditEvent{
-			TenantID:   tenantID,
-			ActorID:    user.ID,
-			Action:     "auth.login_failed",
-			TargetType: "user",
-			TargetID:   user.ID,
-			Reason:     "invalid credentials",
-			IPAddress:  clientIP,
-			UserAgent:  r.UserAgent(),
-			RequestID:  logger.RequestID(r.Context()),
-		})
-		if !h.loginLimiterAvailable(w, r) {
-			return
-		}
-		if blocked {
-			w.Header().Set("Retry-After", strconv.Itoa(max(1, int(limit.RetryAfter.Seconds()))))
-			RecordAudit(r.Context(), h.store, AuditEvent{
-				TenantID:   tenantID,
-				ActorID:    user.ID,
-				Action:     "auth.login_rate_limited",
-				TargetType: "user",
-				TargetID:   user.ID,
-				AfterValue: map[string]any{"bucket": limit.Bucket},
-				Reason:     "too many failed login attempts",
-				IPAddress:  clientIP,
-				UserAgent:  r.UserAgent(),
-				RequestID:  logger.RequestID(r.Context()),
-			})
-			httpx.Error(w, r, http.StatusTooManyRequests, "login_rate_limited", "too many failed login attempts; retry later")
-			return
-		}
-		httpx.Error(w, r, http.StatusUnauthorized, "invalid_credentials", "login information is incorrect")
-		return
-	}
-	resolvedScope, err := h.store.ResolveAccessScope(r.Context(), user.User)
-	if err == nil {
-		organizationScope := resolvedScope.OrganizationScope()
-		user.OrganizationScope = &organizationScope
-	}
-
-	sessionType := SessionTypeStandard
-	sessionTTL := h.sessionTTL
-	persistentCookie := req.RememberDevice
-	if tokenResponse {
-		if req.ClientType == "" {
-			// Compatibility for non-browser API clients migrating from the
-			// former shared login endpoint. Browser code never calls /auth/token.
-			req.ClientType = "desktop"
-		}
-		switch req.ClientType {
-		case "desktop":
-			if IsServiceUser(user.User) {
-				httpx.Error(w, r, http.StatusForbidden, "client_type_forbidden", "client type is not allowed for this account")
-				return
-			}
-			sessionType = SessionTypeDesktopDevice
-		case "service":
-			if !IsServiceUser(user.User) {
-				httpx.Error(w, r, http.StatusForbidden, "client_type_forbidden", "client type is not allowed for this account")
-				return
-			}
-			sessionType = SessionTypeService
-		default:
-			httpx.Error(w, r, http.StatusBadRequest, "client_type_required", "client_type must be desktop or service")
-			return
-		}
-	} else {
-		if IsServiceUser(user.User) {
-			httpx.Error(w, r, http.StatusForbidden, "client_type_forbidden", "service accounts cannot create browser sessions")
-			return
-		}
-		if req.PublicDevice {
-			sessionType = SessionTypePublicDevice
-			sessionTTL = h.publicTTL
-		} else if req.RememberDevice {
-			sessionType = SessionTypeRememberedDevice
-			sessionTTL = h.rememberedTTL
-		}
-	}
-	riskNow := time.Now().UTC()
-	userAgentHash := hashUserAgent(r.UserAgent())
-	ipPrefix := networkPrefix(clientIP)
-	deviceToken := ""
-	deviceTokenHash := ""
-	if !tokenResponse && !req.PublicDevice {
-		deviceToken = h.deviceToken(r)
-		if deviceToken != "" {
-			deviceTokenHash = HashToken(deviceToken)
-		}
-	}
-	// Credentials have been verified, so risk persistence can now carry the
-	// server-resolved tenant context required by database RLS. Pre-auth lookups
-	// intentionally remain generic to avoid tenant and account enumeration.
-	riskRequestContext := WithUser(r.Context(), user.User)
-	riskDecision, riskContext, riskStore, riskErr := h.evaluateLoginRisk(riskRequestContext, LoginRiskContextRequest{
-		TenantID: user.TenantID, UserID: user.ID, DeviceTokenHash: deviceTokenHash,
-		UserAgentHash: userAgentHash, IPPrefix: ipPrefix, Now: riskNow,
-	}, sessionType)
-	if riskErr != nil {
-		RecordAudit(r.Context(), h.store, AuditEvent{
-			TenantID: user.TenantID, ActorID: user.ID, Action: "auth.risk_evaluation_degraded",
-			TargetType: "user", TargetID: user.ID, Reason: "risk context unavailable; neutral decision used",
-			AfterValue: map[string]any{"risk_level": riskDecision.Level, "risk_action": riskDecision.Action, "risk_policy_version": riskDecision.PolicyVersion},
-			IPAddress:  clientIP, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
-		})
-	}
-
-	replacementHash := ""
-	if passwordNeedsRehash {
-		replacementHash, err = HashPassword(req.Password)
-		if err != nil {
-			httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", "authentication service temporarily unavailable")
-			return
-		}
-	}
-	if err := h.store.RecordSuccessfulLogin(r.Context(), user.TenantID, user.ID, user.PasswordHash, replacementHash); err != nil {
-		if errors.Is(err, ErrInvalidCredentials) {
-			httpx.Error(w, r, http.StatusUnauthorized, "invalid_credentials", "login information is incorrect")
-			return
-		}
-		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", "authentication service temporarily unavailable")
-		return
-	}
-	token, tokenHash, err := NewToken()
-	if err != nil {
-		httpx.Error(w, r, http.StatusInternalServerError, "token_generation_failed", "failed to create session")
-		return
-	}
-	_, deviceID, err := NewToken()
-	if err != nil {
-		httpx.Error(w, r, http.StatusInternalServerError, "token_generation_failed", "failed to create session")
-		return
-	}
-	expiresAt := time.Now().UTC().Add(sessionTTL)
-	createdSession, err := h.store.CreateSession(r.Context(), CreateSessionInput{
-		TenantID: user.TenantID, UserID: user.ID, TokenHash: tokenHash,
-		SessionType: sessionType, DeviceID: deviceID,
-		DeviceName:    normalizedDeviceName(req.DeviceName, sessionType),
-		UserAgentHash: userAgentHash, IPPrefix: ipPrefix,
-		ExpiresAt: expiresAt, SecurityEpoch: user.SecurityEpoch,
-		RiskLevel: riskDecision.Level, RiskAction: riskDecision.Action, RiskScore: riskDecision.Score,
-		RiskEvaluatedAt: riskNow, RiskPolicyVersion: riskDecision.PolicyVersion,
-		RiskEvidenceQuality: riskDecision.EvidenceQuality,
+	result, err := h.loginService.Login(r.Context(), LoginCommand{
+		TenantCode: req.TenantCode, TenantHint: req.TenantHint,
+		Username: req.Username, Identifier: req.Identifier, Password: req.Password,
+		RememberDevice: req.RememberDevice, PublicDevice: req.PublicDevice,
+		DeviceName: req.DeviceName, ClientType: req.ClientType, TokenResponse: tokenResponse,
+		IPAddress: h.remoteIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
+		DeviceToken: h.deviceToken(r),
 	})
 	if err != nil {
-		if errors.Is(err, ErrInvalidCredentials) {
-			httpx.Error(w, r, http.StatusUnauthorized, "invalid_credentials", "login information is incorrect")
-			return
-		}
+		h.writeLoginError(w, r, err)
+		return
+	}
+	if result.DeviceToken != "" {
+		http.SetCookie(w, h.deviceCookie(result.DeviceToken, result.DeviceTokenExpiresAt))
+	}
+	if result.ClearDeviceCookie {
+		http.SetCookie(w, h.clearDeviceCookie())
+	}
+	if tokenResponse {
+		httpx.JSON(w, http.StatusOK, map[string]any{
+			"token_type": "Bearer", "access_token": result.Token,
+			"expires_at": result.ExpiresAt.Format(time.RFC3339), "user": result.User,
+		})
+		return
+	}
+	http.SetCookie(w, h.sessionCookie(result.Token, result.ExpiresAt, result.PersistentCookie))
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"expires_at": result.ExpiresAt.Format(time.RFC3339),
+		"user":       result.User,
+	})
+}
+
+func (h *Handler) writeLoginError(w http.ResponseWriter, r *http.Request, err error) {
+	var loginErr *LoginServiceError
+	if !errors.As(err, &loginErr) {
 		httpx.Error(w, r, http.StatusInternalServerError, "session_create_failed", "failed to create session")
 		return
 	}
-	if riskStore != nil {
-		if err := riskStore.RecordRiskEvent(riskRequestContext, RiskEvent{
-			TenantID: user.TenantID, UserID: user.ID, SessionID: createdSession.ID,
-			Purpose: riskDecision.Purpose, Level: riskDecision.Level, Action: riskDecision.Action,
-			Score: riskDecision.Score, ReasonCodes: riskDecision.ReasonCodes, FamilyScores: riskDecision.FamilyScores,
-			EvidenceQuality: riskDecision.EvidenceQuality, PolicyVersion: riskDecision.PolicyVersion,
-			UserAgentHash: userAgentHash, IPPrefix: ipPrefix,
-			DeviceRecognized: riskContext.KnownDevice, DeviceTrusted: riskContext.TrustedDevice, OccurredAt: riskNow,
-		}); err != nil {
-			RecordAudit(r.Context(), h.store, AuditEvent{
-				TenantID: user.TenantID, ActorID: user.ID, Action: "auth.risk_event_persist_failed",
-				TargetType: "user", TargetID: user.ID, Reason: "risk event persistence failed",
-				IPAddress: clientIP, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
-			})
+	switch loginErr.Kind {
+	case LoginFailureInvalidRequest:
+		message := "tenant and login identifier are required"
+		if loginErr.Detail == "fields_too_large" {
+			message = "login fields exceed supported size limits"
 		}
-		if !tokenResponse && !req.PublicDevice {
-			newDeviceToken := false
-			if !riskContext.KnownDevice {
-				deviceToken, deviceTokenHash, err = NewToken()
-				newDeviceToken = err == nil
-			}
-			if deviceTokenHash != "" {
-				if err := riskStore.StoreObservedDevice(riskRequestContext, ObservedDeviceInput{
-					TenantID: user.TenantID, UserID: user.ID, TokenHash: deviceTokenHash,
-					UserAgentHash: userAgentHash, IPPrefix: ipPrefix, AssuranceLevel: 1,
-					TrustBasis: "password_observed", Now: riskNow, ExpiresAt: riskNow.Add(h.deviceBindingTTL),
-				}); err != nil {
-					RecordAudit(r.Context(), h.store, AuditEvent{
-						TenantID: user.TenantID, ActorID: user.ID, Action: "auth.device_binding_persist_failed",
-						TargetType: "user", TargetID: user.ID, Reason: "device binding persistence failed",
-						IPAddress: clientIP, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
-					})
-				} else if newDeviceToken {
-					http.SetCookie(w, h.deviceCookie(deviceToken, riskNow.Add(h.deviceBindingTTL)))
-				}
-			}
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_request", message)
+	case LoginFailureInvalidDeviceMode:
+		message := "public computers cannot be remembered devices"
+		if loginErr.Detail == "public_token" {
+			message = "public computer mode is only available to browser sessions"
 		}
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_device_mode", message)
+	case LoginFailureRateLimited:
+		w.Header().Set("Retry-After", strconv.Itoa(max(1, int(loginErr.RetryAfter.Seconds()))))
+		httpx.Error(w, r, http.StatusTooManyRequests, "login_rate_limited", "too many failed login attempts; retry later")
+	case LoginFailureLimiterUnavailable:
+		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_rate_limiter_unavailable", "authentication rate limiter is temporarily unavailable")
+	case LoginFailureServiceUnavailable:
+		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", "authentication service temporarily unavailable")
+	case LoginFailureInvalidCredentials:
+		httpx.Error(w, r, http.StatusUnauthorized, "invalid_credentials", "login information is incorrect")
+	case LoginFailureClientTypeForbidden:
+		message := "client type is not allowed for this account"
+		if loginErr.Detail == "browser_service_account" {
+			message = "service accounts cannot create browser sessions"
+		}
+		httpx.Error(w, r, http.StatusForbidden, "client_type_forbidden", message)
+	case LoginFailureClientTypeRequired:
+		httpx.Error(w, r, http.StatusBadRequest, "client_type_required", "client_type must be desktop or service")
+	case LoginFailureTokenGeneration:
+		httpx.Error(w, r, http.StatusInternalServerError, "token_generation_failed", "failed to create session")
+	case LoginFailureSessionCreate:
+		httpx.Error(w, r, http.StatusInternalServerError, "session_create_failed", "failed to create session")
+	default:
+		httpx.Error(w, r, http.StatusInternalServerError, "session_create_failed", "failed to create session")
 	}
-	if !tokenResponse && req.PublicDevice {
-		http.SetCookie(w, h.clearDeviceCookie())
-	}
-	h.loginGuard.RegisterSuccess(r.Context(), attempt)
-	user.CurrentSessionType = sessionType
-	user.CurrentRiskLevel = riskDecision.Level
-	user.CurrentRiskAction = riskDecision.Action
-	user.RiskPolicyVersion = riskDecision.PolicyVersion
-	RecordAudit(r.Context(), h.store, AuditEvent{
-		TenantID:   user.TenantID,
-		ActorID:    user.ID,
-		Action:     "auth.login_succeeded",
-		TargetType: "user",
-		TargetID:   user.ID,
-		AfterValue: map[string]any{
-			"auth_method": "password", "risk_level": riskDecision.Level, "risk_action": riskDecision.Action,
-			"risk_score": riskDecision.Score, "risk_policy_version": riskDecision.PolicyVersion,
-			"risk_evidence_quality": riskDecision.EvidenceQuality, "risk_reason_codes": riskDecision.ReasonCodes,
-			"risk_mode": h.riskMode, "session_type": sessionType, "credential_rehashed": replacementHash != "",
-		},
-		IPAddress: clientIP,
-		UserAgent: r.UserAgent(),
-		RequestID: logger.RequestID(r.Context()),
-	})
-
-	if tokenResponse {
-		httpx.JSON(w, http.StatusOK, map[string]any{
-			"token_type": "Bearer", "access_token": token,
-			"expires_at": expiresAt.Format(time.RFC3339), "user": user.User,
-		})
-		return
-	}
-	http.SetCookie(w, h.sessionCookie(token, expiresAt, persistentCookie))
-	httpx.JSON(w, http.StatusOK, map[string]any{
-		"expires_at": expiresAt.Format(time.RFC3339),
-		"user":       user.User,
-	})
 }
 
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {

@@ -5,28 +5,17 @@ import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from "pdfjs-d
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { ApiClientError, getUserErrorMessage } from "../api/client";
 import {
-	approveOMRCalibration,
 	bindExamTemplate,
   cloneAnswerSheetTemplate,
-	createOMRCalibration,
   createAnswerSheetTemplate,
-	discardOMRCalibration,
-	downloadOMRCalibrationCaseImage,
 	getExamTemplateBinding,
-	getOMRCalibration,
-	labelOMRCalibrationCase,
   listAnswerSheetTemplates,
-	listOMRCalibrations,
   lockAnswerSheetTemplate,
-	revokeOMRCalibration,
 	unbindExamTemplate,
-  updateAnswerSheetTemplate,
   type AnswerSheetTemplate,
 	type ExamTemplateBinding,
   type LayoutRegion,
 	type OMRCalibrationCase,
-	type OMRCalibrationDetail,
-	type OMRCalibrationSession,
 	type OMRCalibrationStatus,
   type OptionRegion,
   type TemplateLayout
@@ -41,6 +30,8 @@ import {
 } from "../api/printing";
 import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
 import { StatusTag } from "../components/StatusTag";
+import { useOMRCalibration } from "../features/answer-sheet-template/calibration/useOMRCalibration";
+import { saveTemplateDraft } from "../features/answer-sheet-template/editor/saveTemplateDraft";
 
 GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -151,9 +142,7 @@ export function AnswerSheetTemplatePage({ examId, canManage, canCalibrate = fals
   const pdfRef = useRef<PDFDocumentProxy | undefined>(undefined);
   const imageObjectUrlRef = useRef<string | undefined>(undefined);
   const renderedObjectUrlRef = useRef<string | undefined>(undefined);
-	const calibrationImageObjectUrlRef = useRef<string | undefined>(undefined);
   const dataRequestRef = useRef(0);
-  const calibrationListRequestRef = useRef(0);
   const printContextRequestRef = useRef(0);
   const printIssueRequestRef = useRef<{ signature: string; key: string } | undefined>(undefined);
   const [papers, setPapers] = useState<PaperVersion[]>([]);
@@ -177,18 +166,6 @@ export function AnswerSheetTemplatePage({ examId, canManage, canCalibrate = fals
   const [suggestingRegions, setSuggestingRegions] = useState(false);
   const [preview, setPreview] = useState<PreviewState>({ loading: false, pageCount: 1, width: 2480, height: 3508 });
   const [pdfSourceId, setPdfSourceId] = useState("");
-	const [calibrations, setCalibrations] = useState<OMRCalibrationSession[]>([]);
-	const [calibrationLoading, setCalibrationLoading] = useState(false);
-	const [calibrationError, setCalibrationError] = useState<string>();
-	const [calibrationDetail, setCalibrationDetail] = useState<OMRCalibrationDetail>();
-	const [calibrationDrawerOpen, setCalibrationDrawerOpen] = useState(false);
-	const [calibrationCaseId, setCalibrationCaseId] = useState("");
-	const [calibrationExpectedOptions, setCalibrationExpectedOptions] = useState<string[]>([]);
-	const [calibrationImageUrl, setCalibrationImageUrl] = useState<string>();
-	const [calibrationImageLoading, setCalibrationImageLoading] = useState(false);
-	const [calibrationBusy, setCalibrationBusy] = useState(false);
-	const [calibrationAction, setCalibrationAction] = useState<"approve" | "revoke" | "discard">();
-	const [calibrationActionReason, setCalibrationActionReason] = useState("");
 	const [printContext, setPrintContext] = useState<StudentPrintContext>();
 	const [printContextLoading, setPrintContextLoading] = useState(false);
 	const [printContextError, setPrintContextError] = useState<string>();
@@ -204,7 +181,23 @@ export function AnswerSheetTemplatePage({ examId, canManage, canCalibrate = fals
   const readonly = !canManage || selectedTemplate?.status === "locked";
   const coveredQuestions = useMemo(() => new Set(layout.pages.flatMap((page) => page.question_regions.map((region) => region.question_id))), [layout]);
 	const isTemplateDifference = selectedTemplate?.status === "locked" && selectedTemplate.layout.omr_profile?.mode === "template_difference";
-	const selectedCalibrationCase = useMemo<OMRCalibrationCase | undefined>(() => calibrationDetail?.cases.find((item) => item.id === calibrationCaseId) ?? calibrationDetail?.cases[0], [calibrationCaseId, calibrationDetail]);
+	const calibration = useOMRCalibration({
+		template: selectedTemplate,
+		enabled: Boolean(selectedTemplate?.status === "locked" && selectedTemplate.layout.omr_profile?.mode === "template_difference" && canCalibrate),
+		message,
+		formatError
+	});
+	const {
+		calibrations, loading: calibrationLoading, error: calibrationError,
+		detail: calibrationDetail, drawerOpen: calibrationDrawerOpen, setDrawerOpen: setCalibrationDrawerOpen,
+		selectedCase: selectedCalibrationCase, setCaseId: setCalibrationCaseId,
+		expectedOptions: calibrationExpectedOptions, setExpectedOptions: setCalibrationExpectedOptions,
+		imageUrl: calibrationImageUrl, imageLoading: calibrationImageLoading, busy: calibrationBusy,
+		action: calibrationAction, setAction: setCalibrationAction,
+		actionReason: calibrationActionReason, setActionReason: setCalibrationActionReason,
+		reload: loadOMRCalibrationList, open: openCalibration, start: startCalibration,
+		labelCase: labelCalibrationCase, submitAction: submitCalibrationAction
+	} = calibration;
 	const printableCandidates = useMemo(
 		() => printContext?.candidates.filter((item) => item.attendance_status === "expected" && !item.has_active_sheet) ?? [],
 		[printContext]
@@ -218,23 +211,6 @@ export function AnswerSheetTemplatePage({ examId, canManage, canCalibrate = fals
 		}
 		return Array.from(grouped.values());
 	}, [printableCandidates]);
-
-	const loadOMRCalibrationList = useCallback(async (templateId: string) => {
-		const requestId = ++calibrationListRequestRef.current;
-		setCalibrationLoading(true);
-		setCalibrationError(undefined);
-		try {
-			const response = await listOMRCalibrations(templateId);
-			if (requestId !== calibrationListRequestRef.current) return;
-			setCalibrations(response.calibrations);
-		} catch (loadError) {
-			if (requestId !== calibrationListRequestRef.current) return;
-			setCalibrations([]);
-			setCalibrationError(formatError(loadError));
-		} finally {
-			if (requestId === calibrationListRequestRef.current) setCalibrationLoading(false);
-		}
-	}, []);
 
 	const loadPrintContext = useCallback(async (templateId: string) => {
 		const requestId = ++printContextRequestRef.current;
@@ -252,16 +228,6 @@ export function AnswerSheetTemplatePage({ examId, canManage, canCalibrate = fals
 			if (requestId === printContextRequestRef.current) setPrintContextLoading(false);
 		}
 	}, []);
-
-	function showCalibrationDetail(detail: OMRCalibrationDetail) {
-		setCalibrationDetail(detail);
-		setCalibrationExpectedOptions([]);
-		setCalibrationDrawerOpen(true);
-		setCalibrationCaseId((current) => {
-			if (detail.cases.some((item) => item.id === current)) return current;
-			return detail.cases.find((item) => item.matches === undefined)?.id ?? detail.cases[0]?.id ?? "";
-		});
-	}
 
   const loadData = useCallback(async () => {
     const requestId = ++dataRequestRef.current;
@@ -320,55 +286,6 @@ export function AnswerSheetTemplatePage({ examId, canManage, canCalibrate = fals
 			void loadPrintContext(selectedTemplate.id);
 		}
 	}, [canManage, loadPrintContext, selectedTemplate?.id, selectedTemplate?.status]);
-
-	useEffect(() => {
-		calibrationListRequestRef.current += 1;
-		setCalibrationDetail(undefined);
-		setCalibrationDrawerOpen(false);
-		setCalibrationCaseId("");
-		if (!selectedTemplate?.id || !isTemplateDifference || !canCalibrate) {
-			setCalibrations([]);
-			setCalibrationError(undefined);
-			setCalibrationLoading(false);
-			return;
-		}
-		void loadOMRCalibrationList(selectedTemplate.id);
-	}, [canCalibrate, isTemplateDifference, loadOMRCalibrationList, selectedTemplate?.id]);
-
-	useEffect(() => {
-		let active = true;
-		if (calibrationImageObjectUrlRef.current) {
-			URL.revokeObjectURL(calibrationImageObjectUrlRef.current);
-			calibrationImageObjectUrlRef.current = undefined;
-		}
-		setCalibrationImageUrl(undefined);
-		if (!selectedCalibrationCase) {
-			setCalibrationImageLoading(false);
-			return () => { active = false; };
-		}
-		setCalibrationImageLoading(true);
-		void downloadOMRCalibrationCaseImage(selectedCalibrationCase.answer_segment_id).then((download) => {
-			if (!active) return;
-			const url = URL.createObjectURL(download.blob);
-			calibrationImageObjectUrlRef.current = url;
-			setCalibrationImageUrl(url);
-		}).catch((imageError) => {
-			if (active) message.error(`无法加载样本图片：${formatError(imageError)}`);
-		}).finally(() => {
-			if (active) setCalibrationImageLoading(false);
-		});
-		return () => {
-			active = false;
-			if (calibrationImageObjectUrlRef.current) {
-				URL.revokeObjectURL(calibrationImageObjectUrlRef.current);
-				calibrationImageObjectUrlRef.current = undefined;
-			}
-		};
-	}, [message, selectedCalibrationCase?.answer_segment_id]);
-
-	useEffect(() => {
-		setCalibrationExpectedOptions([]);
-	}, [selectedCalibrationCase?.id]);
 
   useEffect(() => {
     let active = true;
@@ -449,7 +366,6 @@ export function AnswerSheetTemplatePage({ examId, canManage, canCalibrate = fals
     void pdfRef.current?.destroy();
     if (imageObjectUrlRef.current) URL.revokeObjectURL(imageObjectUrlRef.current);
     if (renderedObjectUrlRef.current) URL.revokeObjectURL(renderedObjectUrlRef.current);
-    if (calibrationImageObjectUrlRef.current) URL.revokeObjectURL(calibrationImageObjectUrlRef.current);
   }, []);
 
   function point(event: ReactPointerEvent) {
@@ -632,84 +548,6 @@ export function AnswerSheetTemplatePage({ examId, canManage, canCalibrate = fals
 		}));
 	}
 
-	async function openCalibration(calibrationId: string) {
-		setCalibrationBusy(true);
-		try {
-			const response = await getOMRCalibration(calibrationId);
-			showCalibrationDetail(response.calibration);
-		} catch (openError) {
-			message.error(formatError(openError));
-		} finally {
-			setCalibrationBusy(false);
-		}
-	}
-
-	async function startCalibration() {
-		if (!selectedTemplate) {
-			message.error("请先选择已锁定的答题卡模板");
-			return;
-		}
-		setCalibrationBusy(true);
-		try {
-			const response = await createOMRCalibration(selectedTemplate.id);
-			showCalibrationDetail(response.calibration);
-			await loadOMRCalibrationList(selectedTemplate.id);
-			message.success("整套模板的分层校准样本已生成，请逐份盲标实际填涂结果");
-		} catch (createError) {
-			message.error(formatError(createError));
-		} finally {
-			setCalibrationBusy(false);
-		}
-	}
-
-	async function labelCalibrationCase(expectedOptions: string[]) {
-		if (!calibrationDetail || !selectedCalibrationCase || calibrationDetail.session.status !== "draft") return;
-		setCalibrationBusy(true);
-		try {
-			const response = await labelOMRCalibrationCase(calibrationDetail.session.id, selectedCalibrationCase.id, expectedOptions);
-			showCalibrationDetail(response.calibration);
-			setCalibrationCaseId(response.calibration.cases.find((item) => item.matches === undefined)?.id ?? selectedCalibrationCase.id);
-			await loadOMRCalibrationList(calibrationDetail.session.template_id);
-			if (response.calibration.session.summary.eligible_mismatch_count > 0) {
-				message.warning("高置信候选出现人工核对错误，本次校准不能批准自动确认");
-			} else {
-				message.success("已完成盲标（提交后不可修改）");
-			}
-		} catch (labelError) {
-			message.error(formatError(labelError));
-		} finally {
-			setCalibrationBusy(false);
-		}
-	}
-
-	async function submitCalibrationAction() {
-		if (!calibrationDetail || !calibrationAction) return;
-		const reason = calibrationActionReason.trim();
-		if (reason.length < 10) {
-			message.error("请填写操作原因（至少 10 个字），将记入操作记录");
-			return;
-		}
-		setCalibrationBusy(true);
-		try {
-			let response: { calibration: OMRCalibrationDetail };
-			if (calibrationAction === "approve") {
-				response = await approveOMRCalibration(calibrationDetail.session.id, reason);
-			} else if (calibrationAction === "revoke") {
-				response = await revokeOMRCalibration(calibrationDetail.session.id, reason);
-			} else {
-				response = await discardOMRCalibration(calibrationDetail.session.id, reason);
-			}
-			showCalibrationDetail(response.calibration);
-			await loadOMRCalibrationList(calibrationDetail.session.template_id);
-			setCalibrationAction(undefined);
-			message.success(calibrationAction === "approve" ? "校准已批准，此后整套模板的高把握识别结果可自动确认" : calibrationAction === "revoke" ? "校准已撤销，未完成的识别任务将转入人工复核" : "草稿已弃用，标注记录会保留备查");
-		} catch (actionError) {
-			message.error(formatError(actionError));
-		} finally {
-			setCalibrationBusy(false);
-		}
-	}
-
   async function createDraft() {
     if (!selectedPaper) { message.error("请先上传并选择试卷版本"); return; }
     const pageCount = preview.pageCount || 1;
@@ -727,14 +565,20 @@ export function AnswerSheetTemplatePage({ examId, canManage, canCalibrate = fals
     if (!selectedTemplate || readonly) return;
     setSaving(true);
     try {
-      const response = await updateAnswerSheetTemplate(selectedTemplate.id, { exam_paper_id: selectedTemplate.exam_paper_id, name, page_count: layout.pages.length, layout }, revision);
-      setTemplates((current) => current.map((item) => item.id === response.template.id ? response.template : item));
-      setRevision(response.template.revision);
-      onExamChanged?.();
-      message.success("模板已保存");
-    } catch (saveError) {
-      message.error(formatError(saveError));
-      if (saveError instanceof ApiClientError && saveError.status === 409) void loadData();
+      const result = await saveTemplateDraft({
+        templateId: selectedTemplate.id,
+        payload: { exam_paper_id: selectedTemplate.exam_paper_id, name, page_count: layout.pages.length, layout },
+        expectedRevision: revision
+      });
+      if (result.status === "saved") {
+        setTemplates((current) => current.map((item) => item.id === result.template.id ? result.template : item));
+        setRevision(result.template.revision);
+        onExamChanged?.();
+        message.success("模板已保存");
+      } else {
+        message.error(formatError(result.error));
+        if (result.status === "revision_conflict") void loadData();
+      }
     } finally { setSaving(false); }
   }
 

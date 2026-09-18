@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { applyReadingSize, readReadingSize } from "@edugrade/design-tokens";
 import {
   Alert,
@@ -36,8 +36,6 @@ import {
   Wifi
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { getCurrentUser, login } from "./api/auth";
-import { DesktopApiClient, normalizeBaseUrl } from "./api/client";
 import { getSafeUserText, getUserErrorMessage } from "./api/userError";
 import { listCaptureBatches, listExams, type CaptureBatch } from "./api/exams";
 import { listReviewTasks } from "./api/review";
@@ -46,17 +44,7 @@ import { resumeCaptureUpload, type CaptureUploadSource } from "./api/captureUplo
 import { OfflineWorkbench } from "./components/OfflineWorkbench";
 import { CapabilityTag, QueueList, ScanQueueTable, SectionHead, StatusLine } from "./components/DesktopStatusViews";
 import {
-  appendLocalLog,
-  clearLocalLogs,
-  deleteStoredCredentials,
-  getCapabilityStatuses,
-  getRuntimeDiagnostics,
   isTauriRuntime,
-  loadStoredCredentials,
-  scanLocalCacheSecurity,
-  readLocalLogs,
-  saveStoredCredentials,
-  type StoredDesktopCredentials
 } from "./lib/localRuntime";
 import { listOfflineDraftEnvelopes, readOfflineDraftEnvelopes } from "./lib/offlineStore";
 import {
@@ -68,6 +56,7 @@ import {
   spoolScanAsset
 } from "./lib/durableStore";
 import { transitionScanQueueItem, updateScanQueueItem } from "./lib/scanQueueWorkflow";
+import { applyUploadState, uploadStateFromQueueItem } from "./features/upload/uploadState";
 import {
   dependencyLabel,
   dependencyTone,
@@ -93,19 +82,16 @@ import {
   type ScannerProfile
 } from "./lib/scannerProfile";
 import type {
-  AuthUser,
-  CapabilityProbe,
   Exam,
-  LocalLogEntry,
-  LocalCacheSecurityStatus,
   ReviewTask,
-  RuntimeDiagnostics,
   SubmissionQualityResult,
   SyncQueueItem,
-  SystemStatus,
   WorkspaceKey
 } from "./types";
 import { genericStatusLabel, subjectLabels } from "./statusLabels";
+import { useDesktopSession } from "./features/session/useDesktopSession";
+import { useLocalLogs } from "./features/runtime/useLocalLogs";
+import { useRuntimeDiagnostics } from "./features/runtime/useRuntimeDiagnostics";
 
 const defaultServer = "http://127.0.0.1:8080";
 
@@ -133,30 +119,23 @@ function App() {
   const [readingSize, setReadingSize] = useState(readReadingSize);
   useEffect(() => { applyReadingSize(readingSize); }, [readingSize]);
   const [workspace, setWorkspace] = useState<WorkspaceKey>("connect");
-  const [serverUrl, setServerUrl] = useState(() => window.sessionStorage.getItem("edugrade.desktop.server_url") ?? defaultServer);
-  const [tenantCode, setTenantCode] = useState("demo");
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("");
-  const [rememberLogin, setRememberLogin] = useState(false);
-  const [credentialStoreMessage, setCredentialStoreMessage] = useState<string | null>(null);
-  const [credentialStoreReady, setCredentialStoreReady] = useState(false);
-  const [token, setToken] = useState<string | null>(null);
-  const [expiresAt, setExpiresAt] = useState<string | null>(null);
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const { logs, logEvent, clearLogs } = useLocalLogs();
+  const {
+    client, serverUrl, setServerUrl, tenantCode, setTenantCode, username, setUsername,
+    password, setPassword, rememberLogin, setRememberLogin, credentialStoreMessage,
+    credentialStoreReady, token, expiresAt, user, authError, isLoggingIn,
+    handleLogin, handleForgetStoredLogin, handleCheckSession
+  } = useDesktopSession(defaultServer, logEvent);
   const [tasks, setTasks] = useState<ReviewTask[]>([]);
   const [taskError, setTaskError] = useState<string | null>(null);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
-  const [capabilities, setCapabilities] = useState<CapabilityProbe[]>([]);
-  const [diagnostics, setDiagnostics] = useState<RuntimeDiagnostics | null>(null);
-  const [localCacheSecurity, setLocalCacheSecurity] = useState<LocalCacheSecurityStatus>(() => scanLocalCacheSecurity());
-  const [serviceStatus, setServiceStatus] = useState<SystemStatus | null>(null);
-  const [isCheckingServiceStatus, setIsCheckingServiceStatus] = useState(false);
-  const [diagnosticError, setDiagnosticError] = useState<string | null>(null);
+  const {
+    capabilities, diagnostics, localCacheSecurity, serviceStatus, isCheckingServiceStatus,
+    diagnosticError, setDiagnosticError, refreshCapabilities, saveServerForSession,
+    handleHealthCheck, handleSystemStatusCheck
+  } = useRuntimeDiagnostics(client, serverUrl, setServerUrl, logEvent);
   const [queue, setQueue] = useState<SyncQueueItem[]>(() => (hasDurableDesktopStore() ? [] : readPersistedScanQueue()));
   const [offlineDraftCount, setOfflineDraftCount] = useState(() => readOfflineDraftEnvelopes().length);
-  const [logs, setLogs] = useState<LocalLogEntry[]>(() => readLocalLogs());
   const [exams, setExams] = useState<Exam[]>([]);
   const [selectedExamId, setSelectedExamId] = useState("");
   const [examError, setExamError] = useState<string | null>(null);
@@ -192,16 +171,6 @@ function App() {
   const queueRef = useRef(queue);
   const durablePersistenceRef = useRef<Promise<void>>(Promise.resolve());
   const captureBatchLoadRef = useRef(0);
-  const autoLoginStartedRef = useRef(false);
-
-  const client = useMemo(
-    () =>
-      new DesktopApiClient({
-        baseUrl: serverUrl,
-        getToken: () => token
-      }),
-    [serverUrl, token]
-  );
 
   const updateQueue = useCallback((updater: (current: SyncQueueItem[]) => SyncQueueItem[]) => {
     const next = updater(queueRef.current);
@@ -217,33 +186,6 @@ function App() {
       persistScanQueue(next);
     }
   }, []);
-
-  const refreshLogs = useCallback(() => setLogs(readLocalLogs()), []);
-
-  const logEvent = useCallback(
-    async (level: LocalLogEntry["level"], message: string, context?: string) => {
-      try {
-        await appendLocalLog({ level, message, context });
-      } catch (error) {
-        console.warn("local log write failed", error);
-      } finally {
-        refreshLogs();
-      }
-    },
-    [refreshLogs]
-  );
-
-  const refreshCapabilities = useCallback(async () => {
-    const [nextCapabilities, nextDiagnostics] = await Promise.all([getCapabilityStatuses(), getRuntimeDiagnostics()]);
-    setCapabilities(nextCapabilities);
-    setDiagnostics(nextDiagnostics);
-    setLocalCacheSecurity(scanLocalCacheSecurity());
-  }, []);
-
-  useEffect(() => {
-    refreshCapabilities();
-    void logEvent("info", "desktop client shell loaded", "STORY-034");
-  }, [logEvent, refreshCapabilities]);
 
   useEffect(() => {
     if (hasDurableDesktopStore()) {
@@ -284,130 +226,6 @@ function App() {
     uploadInFlightRef.current.clear();
   }, []);
 
-  const saveServerForSession = async () => {
-    setDiagnosticError(null);
-    try {
-      const normalizedServerUrl = normalizeBaseUrl(serverUrl);
-      setServerUrl(normalizedServerUrl);
-      window.sessionStorage.setItem("edugrade.desktop.server_url", normalizedServerUrl);
-      await logEvent("info", "server url saved for current session", normalizedServerUrl);
-    } catch (error) {
-      setDiagnosticError(getUserErrorMessage(error, "服务器地址无效"));
-    }
-  };
-
-  const performLogin = useCallback(async (
-    credentials: StoredDesktopCredentials,
-    persistence: "save" | "delete" | "none"
-  ) => {
-    setAuthError(null);
-    setIsLoggingIn(true);
-    try {
-      const result = await login(new DesktopApiClient({ baseUrl: credentials.server_url }), {
-        tenant_code: credentials.tenant_code.trim(),
-        username: credentials.username.trim(),
-        password: credentials.password
-      });
-      setServerUrl(credentials.server_url);
-      setTenantCode(credentials.tenant_code.trim());
-      setUsername(credentials.username.trim());
-      setToken(result.access_token);
-      setExpiresAt(result.expires_at);
-      setUser(result.user);
-      if (persistence === "save") {
-        try {
-          await saveStoredCredentials(credentials);
-          setCredentialStoreReady(true);
-          setCredentialStoreMessage("登录信息已保存到当前 Windows 用户的系统凭据库。");
-        } catch (error) {
-          setCredentialStoreReady(false);
-          setCredentialStoreMessage(getUserErrorMessage(error, "系统凭据库保存失败；未写入其他本地存储。"));
-        }
-      } else if (persistence === "delete") {
-        try {
-          await deleteStoredCredentials();
-          setCredentialStoreMessage("未保存登录信息，已有系统凭据已清除。");
-        } catch (error) {
-          setCredentialStoreMessage(getUserErrorMessage(error, "系统凭据清除失败。"));
-        }
-      }
-      await logEvent("info", "login succeeded", `${result.user.username}@${result.user.tenant_code}`);
-      return true;
-    } catch (error) {
-      const message = getUserErrorMessage(error, "登录请求失败");
-      setAuthError(message);
-      await logEvent("error", "login failed", message);
-      return false;
-    } finally {
-      setPassword("");
-      setIsLoggingIn(false);
-    }
-  }, [logEvent]);
-
-  const handleLogin = () => performLogin(
-    {
-      server_url: serverUrl,
-      tenant_code: tenantCode,
-      username,
-      password
-    },
-    rememberLogin ? "save" : credentialStoreReady ? "delete" : "none"
-  );
-
-  useEffect(() => {
-    if (autoLoginStartedRef.current) return;
-    autoLoginStartedRef.current = true;
-    if (!isTauriRuntime()) {
-      setCredentialStoreReady(false);
-      setCredentialStoreMessage("浏览器开发模式不保存密码；请使用 Windows 桌面客户端测试自动登录。");
-      return;
-    }
-    void loadStoredCredentials()
-      .then(async (stored) => {
-        setCredentialStoreReady(true);
-        if (!stored) {
-          setCredentialStoreMessage("Windows 系统凭据库可用，当前没有保存的登录信息。");
-          return;
-        }
-        setServerUrl(stored.server_url);
-        setTenantCode(stored.tenant_code);
-        setUsername(stored.username);
-        setRememberLogin(true);
-        setCredentialStoreMessage("已从 Windows 系统凭据库读取登录信息，正在自动登录。");
-        const succeeded = await performLogin(stored, "none");
-        if (succeeded) {
-          setCredentialStoreMessage("已使用 Windows 系统凭据库自动登录。");
-        }
-      })
-      .catch((error) => {
-        setCredentialStoreReady(false);
-        setCredentialStoreMessage(getUserErrorMessage(error, "Windows 系统凭据库不可用；已停止自动登录。"));
-      });
-  }, [performLogin]);
-
-  const handleForgetStoredLogin = async () => {
-    try {
-      await deleteStoredCredentials();
-      setRememberLogin(false);
-      setCredentialStoreMessage("已从 Windows 系统凭据库清除保存的登录信息。");
-    } catch (error) {
-      setCredentialStoreMessage(getUserErrorMessage(error, "系统凭据清除失败。"));
-    }
-  };
-
-  const handleCheckSession = async () => {
-    setAuthError(null);
-    try {
-      const result = await getCurrentUser(client);
-      setUser(result.user);
-      await logEvent("info", "session verified", result.user.username);
-    } catch (error) {
-      const message = getUserErrorMessage(error, "登录状态校验失败");
-      setAuthError(message);
-      await logEvent("warning", "session verification failed", message);
-    }
-  };
-
   const handleLoadTasks = async () => {
     setTaskError(null);
     setIsLoadingTasks(true);
@@ -422,34 +240,6 @@ function App() {
       await logEvent("warning", "review task load failed", message);
     } finally {
       setIsLoadingTasks(false);
-    }
-  };
-
-  const handleHealthCheck = async () => {
-    setDiagnosticError(null);
-    try {
-      const result = await client.health();
-      await logEvent("info", "server health checked", JSON.stringify(result));
-    } catch (error) {
-      const message = getUserErrorMessage(error, "服务端健康检查失败");
-      setDiagnosticError(message);
-      await logEvent("warning", "server health check failed", message);
-    }
-  };
-
-  const handleSystemStatusCheck = async () => {
-    setDiagnosticError(null);
-    setIsCheckingServiceStatus(true);
-    try {
-      const result = await client.systemStatus();
-      setServiceStatus(result);
-      await logEvent("info", "server system status checked", result.status);
-    } catch (error) {
-      const message = getUserErrorMessage(error, "系统状态检查失败");
-      setDiagnosticError(message);
-      await logEvent("warning", "server system status check failed", message);
-    } finally {
-      setIsCheckingServiceStatus(false);
     }
   };
 
@@ -702,17 +492,20 @@ function App() {
   const uploadQueueItem = useCallback(
     async (id: string) => {
       const item = queueRef.current.find((candidate) => candidate.id === id);
+      const uploadState = item ? uploadStateFromQueueItem(item) : undefined;
       if (
         !item ||
         item.kind !== "scan_upload" ||
-        item.status === "succeeded" ||
-        item.status === "uploading" ||
+        uploadState?.status === "succeeded" ||
+        uploadState?.status === "uploading" ||
         uploadInFlightRef.current.has(id)
       ) {
         return;
       }
       if (!token) {
-        updateQueue((current) => updateScanQueueItem(current, id, { status: "failed", detail: "未登录，无法通过后端鉴权上传" }));
+        updateQueue((current) => current.map((candidate) => candidate.id === id
+          ? applyUploadState(candidate, { status: "failed", error: "未登录，无法通过后端鉴权上传" })
+          : candidate));
         return;
       }
       if (!isOnline) {
@@ -720,11 +513,15 @@ function App() {
         return;
       }
       if (!item.examId || !item.captureBatchId || !item.idempotencyKey) {
-        updateQueue((current) => updateScanQueueItem(current, id, { status: "failed", detail: "缺少考试、采集批次或幂等键，不能启动可恢复上传" }));
+        updateQueue((current) => current.map((candidate) => candidate.id === id
+          ? applyUploadState(candidate, { status: "failed", error: "缺少考试、采集批次或幂等键，不能启动可恢复上传" })
+          : candidate));
         return;
       }
       if (item.qualityChecks?.some((check) => check.status === "failed")) {
-        updateQueue((current) => updateScanQueueItem(current, id, { status: "failed", detail: "本地质量检查未通过，未上传" }));
+        updateQueue((current) => current.map((candidate) => candidate.id === id
+          ? applyUploadState(candidate, { status: "failed", error: "本地质量检查未通过，未上传" })
+          : candidate));
         return;
       }
       let file = fileBufferRef.current.get(id);
@@ -1496,8 +1293,7 @@ function App() {
           action={
             <Button
               danger
-              onClick={() => void clearLocalLogs()
-                .then(refreshLogs)
+              onClick={() => void clearLogs()
                 .catch((error) => setDiagnosticError(getUserErrorMessage(error, "本地日志清除失败")))}
             >
               清空本地日志

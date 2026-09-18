@@ -10,7 +10,6 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/aieligibility"
 	"edugrade-enterprise/services/api-gateway/internal/grading"
 	"edugrade-enterprise/services/api-gateway/internal/mathunderstanding"
-	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
 func (h *Handler) WithMathGradingV2(enabled bool, adapter LLMGradingAdapter, source MathEvidenceSource, crops *ActiveCropResolver) *Handler {
@@ -176,15 +175,4 @@ func ensureRunMathBinding(run GradingRun, value Context) error {
 
 func isMathRevisionConflict(err error) bool {
 	return errors.Is(err, mathunderstanding.ErrRevisionConflict)
-}
-
-func (h *Handler) failMathWorkerEvidence(ctx context.Context, tenantID, runID, taskID, leaseToken string, attempt int, durationMS int, err error) {
-	status, code := RunFailed, "math_evidence_unavailable"
-	if isMathRevisionConflict(err) {
-		status, code = RunConflict, "math_evidence_version_conflict"
-	} else if !errors.Is(err, ErrActiveCropUnavailable) {
-		return
-	}
-	_, _ = h.runtime.Fail(ctx, tenantID, taskID, workerruntime.FailInput{LeaseToken: leaseToken, Retryable: false, ErrorCode: code, DurationMS: durationMS})
-	_, _ = h.store.UpdateRun(ctx, tenantID, runID, UpdateRunInput{Status: status, ErrorCode: code, AttemptCount: attempt})
 }

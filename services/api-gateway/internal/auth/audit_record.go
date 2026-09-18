@@ -19,7 +19,7 @@ var auditFailureLogger = logger.New(os.Stderr, "error")
 //   - 但失败必须可被运维告警发现：所有写入失败都会以 error 级别输出
 //     message=audit_write_failed 的结构化日志（含 action / target / tenant），
 //     运维侧应对该日志配置监控告警，避免审计链路长期悄然中断。
-func RecordAudit(ctx context.Context, sink Store, event AuditEvent) {
+func RecordAudit(ctx context.Context, sink AuditRecorder, event AuditEvent) {
 	if sink == nil {
 		return
 	}

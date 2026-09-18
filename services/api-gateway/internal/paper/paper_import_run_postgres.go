@@ -11,11 +11,6 @@ import (
 
 const paperImportDispatchMaxAttempts = 3
 
-func paperImportCommandHash(input any) string {
-	raw, _ := json.Marshal(input)
-	return contentHash(raw)
-}
-
 func savePaperImportSourceSnapshot(ctx context.Context, tx *sql.Tx, tenantID, runID string, sources []PaperImportSource) error {
 	raw, err := json.Marshal(append([]PaperImportSource{}, sources...))
 	if err != nil {

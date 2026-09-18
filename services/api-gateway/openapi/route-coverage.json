@@ -12,7 +12,7 @@
     {
       "method": "GET",
       "path": "/api/v1/academic-years",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_org.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -25,7 +25,7 @@
     {
       "method": "POST",
       "path": "/api/v1/agent-tasks/{id}/complete",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -38,7 +38,7 @@
     {
       "method": "POST",
       "path": "/api/v1/agent-tasks/{id}/fail",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -51,7 +51,7 @@
     {
       "method": "POST",
       "path": "/api/v1/agent-tasks/{id}/retry",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -64,7 +64,7 @@
     {
       "method": "POST",
       "path": "/api/v1/agent-tasks/{id}/start",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -98,7 +98,7 @@
     {
       "method": "POST",
       "path": "/api/v1/ai-grades/{id}/verify-evidence",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -111,7 +111,7 @@
     {
       "method": "GET",
       "path": "/api/v1/ai-grading/status",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -194,7 +194,7 @@
     {
       "method": "PATCH",
       "path": "/api/v1/answer-segments/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -207,7 +207,7 @@
     {
       "method": "GET",
       "path": "/api/v1/answer-segments/{id}/ai-grades",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -220,7 +220,7 @@
     {
       "method": "PUT",
       "path": "/api/v1/answer-segments/{id}/answer",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -233,7 +233,7 @@
     {
       "method": "GET",
       "path": "/api/v1/answer-segments/{id}/evidence",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -246,7 +246,7 @@
     {
       "method": "GET",
       "path": "/api/v1/answer-segments/{id}/image",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -259,7 +259,7 @@
     {
       "method": "HEAD",
       "path": "/api/v1/answer-segments/{id}/image",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -272,7 +272,7 @@
     {
       "method": "POST",
       "path": "/api/v1/answer-segments/{id}/reprocess-score",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -285,7 +285,7 @@
     {
       "method": "POST",
       "path": "/api/v1/answer-segments/{id}/rule-grade",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -298,14 +298,14 @@
     {
       "method": "POST",
       "path": "/api/v1/answer-segments/{id}/subjective-ai-grade",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "openapi",
       "operation_id": "createSubjectiveAIGrade"
     },
     {
       "method": "GET",
       "path": "/api/v1/answer-sheet-print-batches/{id}/package.pdf",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -318,7 +318,7 @@
     {
       "method": "POST",
       "path": "/api/v1/answer-sheet-print-sheets/{id}/reprint",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -331,7 +331,7 @@
     {
       "method": "POST",
       "path": "/api/v1/answer-sheet-print-sheets/{id}/revoke",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -344,7 +344,7 @@
     {
       "method": "PATCH",
       "path": "/api/v1/answer-sheet-templates/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -357,7 +357,7 @@
     {
       "method": "POST",
       "path": "/api/v1/answer-sheet-templates/{id}/clone",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -370,7 +370,7 @@
     {
       "method": "POST",
       "path": "/api/v1/answer-sheet-templates/{id}/lock",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -383,7 +383,7 @@
     {
       "method": "GET",
       "path": "/api/v1/answer-sheet-templates/{id}/omr-calibrations",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -396,7 +396,7 @@
     {
       "method": "POST",
       "path": "/api/v1/answer-sheet-templates/{id}/omr-calibrations",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -409,7 +409,7 @@
     {
       "method": "POST",
       "path": "/api/v1/answer-sheet-templates/{id}/page-barcodes",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -422,7 +422,7 @@
     {
       "method": "GET",
       "path": "/api/v1/answer-sheet-templates/{id}/print-context",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -435,7 +435,7 @@
     {
       "method": "POST",
       "path": "/api/v1/answer-sheet-templates/{id}/student-barcodes",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -448,14 +448,14 @@
     {
       "method": "GET",
       "path": "/api/v1/appeals",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "openapi",
       "operation_id": "listAppeals"
     },
     {
       "method": "POST",
       "path": "/api/v1/appeals",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -468,7 +468,7 @@
     {
       "method": "GET",
       "path": "/api/v1/appeals/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -481,7 +481,7 @@
     {
       "method": "POST",
       "path": "/api/v1/appeals/{id}/assign",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -494,7 +494,7 @@
     {
       "method": "POST",
       "path": "/api/v1/appeals/{id}/close",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -507,7 +507,7 @@
     {
       "method": "POST",
       "path": "/api/v1/appeals/{id}/recommendation",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -520,7 +520,7 @@
     {
       "method": "POST",
       "path": "/api/v1/appeals/{id}/review",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -533,7 +533,7 @@
     {
       "method": "GET",
       "path": "/api/v1/appeals/statistics",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -546,7 +546,7 @@
     {
       "method": "GET",
       "path": "/api/v1/arbitration-tasks",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -559,7 +559,7 @@
     {
       "method": "POST",
       "path": "/api/v1/arbitration-tasks",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -572,7 +572,7 @@
     {
       "method": "GET",
       "path": "/api/v1/arbitration-tasks/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -585,7 +585,7 @@
     {
       "method": "POST",
       "path": "/api/v1/arbitration-tasks/{id}/assign",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -598,28 +598,28 @@
     {
       "method": "POST",
       "path": "/api/v1/arbitration-tasks/{id}/submit",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "openapi",
       "operation_id": "submitArbitration"
     },
     {
       "method": "GET",
       "path": "/api/v1/assessment/question-archetypes",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
       "coverage": "openapi",
       "operation_id": "listAssessmentQuestionArchetypes"
     },
     {
       "method": "GET",
       "path": "/api/v1/assessment/subject-profiles",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
       "coverage": "openapi",
       "operation_id": "listAssessmentSubjectProfiles"
     },
     {
       "method": "GET",
       "path": "/api/v1/audit-logs",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -632,7 +632,7 @@
     {
       "method": "POST",
       "path": "/api/v1/audit-logs/export",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -645,35 +645,35 @@
     {
       "method": "POST",
       "path": "/api/v1/auth/activation/complete",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "completeAccountActivation"
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/activation/verify",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "verifyAccountActivation"
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/lock",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "lockPublicComputerSession"
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/login",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "login"
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/logout",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -686,7 +686,7 @@
     {
       "method": "POST",
       "path": "/api/v1/auth/logout-all",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -699,7 +699,7 @@
     {
       "method": "GET",
       "path": "/api/v1/auth/me",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -712,42 +712,42 @@
     {
       "method": "GET",
       "path": "/api/v1/auth/mfa",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "getMFAStatus"
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/mfa/recovery-codes/rotate",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "rotateMFARecoveryCodes"
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/mfa/totp/confirm",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "confirmTOTP"
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/mfa/totp/disable",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "disableTOTP"
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/mfa/totp/enroll",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "enrollTOTP"
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/password",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -760,35 +760,35 @@
     {
       "method": "POST",
       "path": "/api/v1/auth/reauthenticate",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "reauthenticateSession"
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/recovery/complete",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "completeCredentialRecovery"
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/recovery/verify",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "verifyCredentialRecovery"
     },
     {
       "method": "GET",
       "path": "/api/v1/auth/security-events",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "listPersonalSecurityEvents"
     },
     {
       "method": "GET",
       "path": "/api/v1/auth/sessions",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -801,7 +801,7 @@
     {
       "method": "DELETE",
       "path": "/api/v1/auth/sessions/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -814,21 +814,21 @@
     {
       "method": "POST",
       "path": "/api/v1/auth/step-up/start",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "startMFAChallenge"
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/step-up/verify",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "verifyMFAChallenge"
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/token",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "createAccessToken"
     },
@@ -924,7 +924,7 @@
     {
       "method": "GET",
       "path": "/api/v1/capture-batches/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -937,7 +937,7 @@
     {
       "method": "POST",
       "path": "/api/v1/capture-batches/{id}/cancel",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -950,7 +950,7 @@
     {
       "method": "POST",
       "path": "/api/v1/capture-batches/{id}/complete",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -963,7 +963,7 @@
     {
       "method": "POST",
       "path": "/api/v1/capture-batches/{id}/files",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -976,7 +976,7 @@
     {
       "method": "GET",
       "path": "/api/v1/capture-batches/{id}/matching-queue",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -989,7 +989,7 @@
     {
       "method": "GET",
       "path": "/api/v1/capture-batches/{id}/pages",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1002,7 +1002,7 @@
     {
       "method": "POST",
       "path": "/api/v1/capture-batches/{id}/process",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1015,7 +1015,7 @@
     {
       "method": "POST",
       "path": "/api/v1/capture-batches/{id}/reopen",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1028,7 +1028,7 @@
     {
       "method": "POST",
       "path": "/api/v1/capture-batches/{id}/submissions/merge",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1041,7 +1041,7 @@
     {
       "method": "POST",
       "path": "/api/v1/capture-batches/{id}/submissions/split",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1054,7 +1054,7 @@
     {
       "method": "PATCH",
       "path": "/api/v1/capture-pages/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1067,7 +1067,7 @@
     {
       "method": "POST",
       "path": "/api/v1/capture-pages/{id}/delete",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1080,7 +1080,7 @@
     {
       "method": "POST",
       "path": "/api/v1/capture-pages/{id}/page-match/confirm",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1093,7 +1093,7 @@
     {
       "method": "POST",
       "path": "/api/v1/capture-pages/{id}/restore",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1134,7 +1134,7 @@
     {
       "method": "GET",
       "path": "/api/v1/classes",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_org.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1147,7 +1147,7 @@
     {
       "method": "POST",
       "path": "/api/v1/classes",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_org.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1160,7 +1160,7 @@
     {
       "method": "POST",
       "path": "/api/v1/classes/{id}/teachers",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_org.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1186,7 +1186,7 @@
     {
       "method": "GET",
       "path": "/api/v1/double-mark-policies",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1199,7 +1199,7 @@
     {
       "method": "GET",
       "path": "/api/v1/double-mark-sessions",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1212,7 +1212,7 @@
     {
       "method": "POST",
       "path": "/api/v1/double-mark-sessions",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1225,7 +1225,7 @@
     {
       "method": "GET",
       "path": "/api/v1/double-mark-sessions/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1238,21 +1238,21 @@
     {
       "method": "POST",
       "path": "/api/v1/exam-sessions",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
       "coverage": "openapi",
       "operation_id": "createExamSession"
     },
     {
       "method": "GET",
       "path": "/api/v1/exam-sessions/commands/{commandId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
       "coverage": "openapi",
       "operation_id": "recoverExamSessionCommand"
     },
     {
       "method": "GET",
       "path": "/api/v1/exam-templates",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1265,14 +1265,14 @@
     {
       "method": "GET",
       "path": "/api/v1/exams",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
       "coverage": "openapi",
       "operation_id": "listExams"
     },
     {
       "method": "POST",
       "path": "/api/v1/exams",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1285,7 +1285,7 @@
     {
       "method": "DELETE",
       "path": "/api/v1/exams/{examId}/answer-sheet-template-binding",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "public-feature",
       "contract_carrier": "Go handler tests and TypeScript API consumer types",
@@ -1298,7 +1298,7 @@
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/answer-sheet-template-binding",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "public-feature",
       "contract_carrier": "Go handler tests and TypeScript API consumer types",
@@ -1311,7 +1311,7 @@
     {
       "method": "PUT",
       "path": "/api/v1/exams/{examId}/answer-sheet-template-binding",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "public-feature",
       "contract_carrier": "Go handler tests and TypeScript API consumer types",
@@ -1324,7 +1324,7 @@
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/answer-sheet-templates",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1337,7 +1337,7 @@
     {
       "method": "POST",
       "path": "/api/v1/exams/{examId}/answer-sheet-templates",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1350,7 +1350,7 @@
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/automation-results",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1363,7 +1363,7 @@
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/capture-batches",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1376,28 +1376,28 @@
     {
       "method": "POST",
       "path": "/api/v1/exams/{examId}/capture-batches",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "openapi",
       "operation_id": "createCaptureBatch"
     },
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/capture-batches/commands/{commandId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "openapi",
       "operation_id": "recoverCaptureBatchCommand"
     },
     {
       "method": "POST",
       "path": "/api/v1/exams/{examId}/confirm-grades",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "openapi",
       "operation_id": "confirmExamGrades"
     },
     {
       "method": "PUT",
       "path": "/api/v1/exams/{examId}/double-mark-policy",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1410,7 +1410,7 @@
     {
       "method": "POST",
       "path": "/api/v1/exams/{examId}/finalize",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1423,7 +1423,7 @@
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/grades",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1436,7 +1436,7 @@
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/grades/export",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1449,7 +1449,7 @@
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/grades/quality",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1462,21 +1462,21 @@
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/paper-imports",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "openapi",
       "operation_id": "listPaperImports"
     },
     {
       "method": "POST",
       "path": "/api/v1/exams/{examId}/paper-imports",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "openapi",
       "operation_id": "createPaperImport"
     },
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/papers",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1489,7 +1489,7 @@
     {
       "method": "POST",
       "path": "/api/v1/exams/{examId}/papers",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1509,7 +1509,7 @@
     {
       "method": "POST",
       "path": "/api/v1/exams/{examId}/publish",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "openapi",
       "operation_id": "publishExamGrades"
     },
@@ -1523,7 +1523,7 @@
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/questions",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1536,7 +1536,7 @@
     {
       "method": "POST",
       "path": "/api/v1/exams/{examId}/questions",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1570,21 +1570,21 @@
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/questions/{questionId}/assessment-profile",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
       "coverage": "openapi",
       "operation_id": "getExamQuestionAssessmentProfile"
     },
     {
       "method": "PUT",
       "path": "/api/v1/exams/{examId}/questions/{questionId}/assessment-profile",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
       "coverage": "openapi",
       "operation_id": "putExamQuestionAssessmentProfile"
     },
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/questions/{questionId}/assessment-snapshot",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
       "coverage": "openapi",
       "operation_id": "getExamQuestionAssessmentSnapshot"
     },
@@ -1701,14 +1701,14 @@
     {
       "method": "POST",
       "path": "/api/v1/exams/{examId}/questions/materialize-from-bank",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "openapi",
       "operation_id": "materializeQuestionBankVersions"
     },
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/readiness",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1721,7 +1721,7 @@
     {
       "method": "POST",
       "path": "/api/v1/exams/{examId}/readiness/confirm",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1762,7 +1762,7 @@
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/reports/classes",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1775,14 +1775,14 @@
     {
       "method": "POST",
       "path": "/api/v1/exams/{examId}/reports/export",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "openapi",
       "operation_id": "exportLearningReport"
     },
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/reports/grading-quality",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1795,7 +1795,7 @@
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/reports/overview",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1808,7 +1808,7 @@
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/reports/questions",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1821,7 +1821,7 @@
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/roster",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1834,7 +1834,7 @@
     {
       "method": "PUT",
       "path": "/api/v1/exams/{examId}/roster/{studentId}/attendance",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1875,7 +1875,7 @@
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/scoring-readiness",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1888,21 +1888,21 @@
     {
       "method": "POST",
       "path": "/api/v1/exams/{examId}/scoring-runs",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "openapi",
       "operation_id": "startScoringRun"
     },
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/scoring-runs/commands/{commandId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "openapi",
       "operation_id": "recoverScoringCommand"
     },
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/scoring-summary",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1915,7 +1915,7 @@
     {
       "method": "POST",
       "path": "/api/v1/exams/{examId}/start-collection",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1928,14 +1928,14 @@
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/submissions",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "openapi",
       "operation_id": "listExamSubmissions"
     },
     {
       "method": "POST",
       "path": "/api/v1/exams/{examId}/submissions",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1948,7 +1948,7 @@
     {
       "method": "POST",
       "path": "/api/v1/exams/{examId}/validate-paper-config",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1968,7 +1968,7 @@
     {
       "method": "GET",
       "path": "/api/v1/exams/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -1981,7 +1981,7 @@
     {
       "method": "PATCH",
       "path": "/api/v1/exams/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -1994,7 +1994,7 @@
     {
       "method": "POST",
       "path": "/api/v1/exams/{id}/archive",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -2007,7 +2007,7 @@
     {
       "method": "POST",
       "path": "/api/v1/exams/{id}/candidates/refresh",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -2020,7 +2020,7 @@
     {
       "method": "POST",
       "path": "/api/v1/exams/{id}/status",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_exam.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -2033,7 +2033,7 @@
     {
       "method": "POST",
       "path": "/api/v1/files",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_files.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -2046,7 +2046,7 @@
     {
       "method": "DELETE",
       "path": "/api/v1/files/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_files.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -2059,7 +2059,7 @@
     {
       "method": "GET",
       "path": "/api/v1/files/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_files.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -2072,7 +2072,7 @@
     {
       "method": "GET",
       "path": "/api/v1/files/{id}/download",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_files.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -2144,7 +2144,7 @@
     {
       "method": "GET",
       "path": "/api/v1/grade-cohorts",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_org.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -2157,7 +2157,7 @@
     {
       "method": "GET",
       "path": "/api/v1/grades",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_org.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -2170,7 +2170,7 @@
     {
       "method": "POST",
       "path": "/api/v1/grades",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_org.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -2260,7 +2260,7 @@
     {
       "method": "GET",
       "path": "/api/v1/internal/answer-segments/{id}/image",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2273,7 +2273,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/capture/files/{fileId}/fail",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2286,7 +2286,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/capture/files/{fileId}/result",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2299,7 +2299,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/image-quality/jobs/claim",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2312,7 +2312,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/image-quality/runs/{runId}/normalized-assets",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2325,7 +2325,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/image-quality/runs/{runId}/result",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2373,7 +2373,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/omr-runs/{runId}/failure",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2386,7 +2386,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/omr-runs/{runId}/result",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2399,7 +2399,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/page-registration-corrections/{id}/failure",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2412,7 +2412,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/page-registration-corrections/{id}/result",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2425,7 +2425,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/page-registration-runs/{runId}/fail",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2438,7 +2438,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/page-registration-runs/{runId}/result",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2451,7 +2451,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/page-template-match-runs/{runId}/fail",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2464,7 +2464,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/page-template-match-runs/{runId}/result",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2477,7 +2477,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/paper-imports/{id}/decode-result",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2490,7 +2490,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/paper-imports/{id}/failure",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2503,7 +2503,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/paper-imports/{id}/formula-result",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2516,7 +2516,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/paper-imports/{id}/ocr-result",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2529,7 +2529,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/subjective-grading/runs/{runId}/execute",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2542,7 +2542,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/subjective-grading/runs/{runId}/failure",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2555,7 +2555,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/subjective-grading/runs/{runId}/result",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2568,7 +2568,7 @@
     {
       "method": "GET",
       "path": "/api/v1/internal/worker/metrics",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2581,7 +2581,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/worker/tasks",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2594,7 +2594,7 @@
     {
       "method": "GET",
       "path": "/api/v1/internal/worker/tasks/{taskId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2607,7 +2607,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/worker/tasks/{taskId}/cancel",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2620,7 +2620,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/worker/tasks/{taskId}/complete",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2633,7 +2633,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/worker/tasks/{taskId}/fail",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2646,7 +2646,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/worker/tasks/{taskId}/heartbeat",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2659,7 +2659,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/worker/tasks/{taskId}/requeue",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2672,7 +2672,7 @@
     {
       "method": "POST",
       "path": "/api/v1/internal/worker/tasks/claim",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_worker.go",
       "coverage": "registered-gap",
       "interface_category": "internal-worker",
       "contract_carrier": "versioned worker runtime payloads and Go integration tests",
@@ -2734,7 +2734,7 @@
     {
       "method": "GET",
       "path": "/api/v1/model-approvals",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -2747,7 +2747,7 @@
     {
       "method": "POST",
       "path": "/api/v1/model-approvals",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -2760,7 +2760,7 @@
     {
       "method": "POST",
       "path": "/api/v1/model-approvals/{id}/revoke",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -2829,7 +2829,7 @@
     {
       "method": "GET",
       "path": "/api/v1/model-deployments",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -2842,7 +2842,7 @@
     {
       "method": "POST",
       "path": "/api/v1/model-deployments",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -2855,7 +2855,7 @@
     {
       "method": "PATCH",
       "path": "/api/v1/model-deployments/{id}/state",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -2868,7 +2868,7 @@
     {
       "method": "GET",
       "path": "/api/v1/model-evaluation-runs",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -2881,7 +2881,7 @@
     {
       "method": "POST",
       "path": "/api/v1/model-evaluation-runs",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -2894,7 +2894,7 @@
     {
       "method": "POST",
       "path": "/api/v1/model-evaluation-runs/{id}/candidates",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -2907,7 +2907,7 @@
     {
       "method": "POST",
       "path": "/api/v1/model-evaluation-runs/{id}/complete",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -2920,7 +2920,7 @@
     {
       "method": "POST",
       "path": "/api/v1/model-evaluation-runs/{id}/invalidate",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -2933,7 +2933,7 @@
     {
       "method": "GET",
       "path": "/api/v1/model-policy",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -2946,7 +2946,7 @@
     {
       "method": "PUT",
       "path": "/api/v1/model-policy",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -2959,7 +2959,7 @@
     {
       "method": "GET",
       "path": "/api/v1/model-prompts/current",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -2972,7 +2972,7 @@
     {
       "method": "GET",
       "path": "/api/v1/model-providers",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -2985,7 +2985,7 @@
     {
       "method": "POST",
       "path": "/api/v1/model-providers",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -2998,7 +2998,7 @@
     {
       "method": "PATCH",
       "path": "/api/v1/model-providers/{id}/status",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3011,7 +3011,7 @@
     {
       "method": "GET",
       "path": "/api/v1/model-sandbox-approvals",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -3024,7 +3024,7 @@
     {
       "method": "POST",
       "path": "/api/v1/model-sandbox-approvals",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3037,7 +3037,7 @@
     {
       "method": "POST",
       "path": "/api/v1/model-sandbox-approvals/{id}/revoke",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3057,7 +3057,7 @@
     {
       "method": "POST",
       "path": "/api/v1/model-secrets/probe",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3070,7 +3070,7 @@
     {
       "method": "GET",
       "path": "/api/v1/ocr-tasks/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -3083,7 +3083,7 @@
     {
       "method": "POST",
       "path": "/api/v1/ocr-tasks/{id}/fail",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3096,7 +3096,7 @@
     {
       "method": "GET",
       "path": "/api/v1/ocr-tasks/{id}/input",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -3109,7 +3109,7 @@
     {
       "method": "POST",
       "path": "/api/v1/ocr-tasks/{id}/results",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3122,7 +3122,7 @@
     {
       "method": "POST",
       "path": "/api/v1/ocr-tasks/{id}/start",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3135,7 +3135,7 @@
     {
       "method": "GET",
       "path": "/api/v1/ocr-tasks/pending",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -3148,7 +3148,7 @@
     {
       "method": "GET",
       "path": "/api/v1/ocr/availability",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_system.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -3161,7 +3161,7 @@
     {
       "method": "GET",
       "path": "/api/v1/omr-calibrations/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -3174,7 +3174,7 @@
     {
       "method": "POST",
       "path": "/api/v1/omr-calibrations/{id}/approve",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3187,7 +3187,7 @@
     {
       "method": "POST",
       "path": "/api/v1/omr-calibrations/{id}/cases/{caseId}/label",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3200,7 +3200,7 @@
     {
       "method": "POST",
       "path": "/api/v1/omr-calibrations/{id}/discard",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3213,7 +3213,7 @@
     {
       "method": "POST",
       "path": "/api/v1/omr-calibrations/{id}/revoke",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3226,7 +3226,7 @@
     {
       "method": "POST",
       "path": "/api/v1/orchestrations",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3239,7 +3239,7 @@
     {
       "method": "GET",
       "path": "/api/v1/orchestrations/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -3252,7 +3252,7 @@
     {
       "method": "GET",
       "path": "/api/v1/orchestrations/{id}/tasks",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -3265,7 +3265,7 @@
     {
       "method": "POST",
       "path": "/api/v1/orchestrations/{id}/tasks",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3278,7 +3278,7 @@
     {
       "method": "GET",
       "path": "/api/v1/page-registration-corrections/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -3291,7 +3291,7 @@
     {
       "method": "POST",
       "path": "/api/v1/page-registration-corrections/{id}/apply",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3304,7 +3304,7 @@
     {
       "method": "POST",
       "path": "/api/v1/page-registration-corrections/{id}/preview",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3317,7 +3317,7 @@
     {
       "method": "POST",
       "path": "/api/v1/page-registration-corrections/{id}/undo",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3330,7 +3330,7 @@
     {
       "method": "POST",
       "path": "/api/v1/page-registration-runs/{id}/confirm",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3343,7 +3343,7 @@
     {
       "method": "GET",
       "path": "/api/v1/page-registration-runs/{id}/correction-context",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -3356,7 +3356,7 @@
     {
       "method": "POST",
       "path": "/api/v1/page-registration-runs/{id}/corrections",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3369,7 +3369,7 @@
     {
       "method": "POST",
       "path": "/api/v1/page-registration-runs/{id}/retry",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3382,56 +3382,56 @@
     {
       "method": "GET",
       "path": "/api/v1/paper-imports/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "openapi",
       "operation_id": "getPaperImport"
     },
     {
       "method": "POST",
       "path": "/api/v1/paper-imports/{id}/apply",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "openapi",
       "operation_id": "applyPaperImport"
     },
     {
       "method": "POST",
       "path": "/api/v1/paper-imports/{id}/cancel",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "openapi",
       "operation_id": "cancelPaperImport"
     },
     {
       "method": "POST",
       "path": "/api/v1/paper-imports/{id}/retry-parse",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "openapi",
       "operation_id": "retryPaperImportParse"
     },
     {
       "method": "PUT",
       "path": "/api/v1/paper-imports/{id}/review",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "openapi",
       "operation_id": "savePaperImportReview"
     },
     {
       "method": "POST",
       "path": "/api/v1/paper-imports/{id}/sources",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "openapi",
       "operation_id": "addPaperImportSources"
     },
     {
       "method": "PUT",
       "path": "/api/v1/paper-imports/{id}/sources",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "openapi",
       "operation_id": "replacePaperImportSources"
     },
     {
       "method": "GET",
       "path": "/api/v1/platform/model-api-configs",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -3444,7 +3444,7 @@
     {
       "method": "POST",
       "path": "/api/v1/platform/model-api-configs",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3457,7 +3457,7 @@
     {
       "method": "DELETE",
       "path": "/api/v1/platform/model-api-configs/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "public-feature",
       "contract_carrier": "Go handler and registry tests plus the typed web-admin API client",
@@ -3470,7 +3470,7 @@
     {
       "method": "PATCH",
       "path": "/api/v1/platform/model-api-configs/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3483,7 +3483,7 @@
     {
       "method": "POST",
       "path": "/api/v1/platform/model-api-configs/{id}/probe",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3496,7 +3496,7 @@
     {
       "method": "POST",
       "path": "/api/v1/platform/model-api-configs/auto",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "public-feature",
       "contract_carrier": "Go handler and registry tests plus the typed web-admin API client",
@@ -3509,7 +3509,7 @@
     {
       "method": "POST",
       "path": "/api/v1/platform/model-api-configs/models",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "public-feature",
       "contract_carrier": "Go handler and registry tests plus the typed web-admin API client",
@@ -3522,7 +3522,7 @@
     {
       "method": "POST",
       "path": "/api/v1/platform/model-api-configs/resolve",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "public-feature",
       "contract_carrier": "Go handler and registry tests plus the typed web-admin API client",
@@ -3535,7 +3535,7 @@
     {
       "method": "POST",
       "path": "/api/v1/platform/model-api-configs/validate",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "registered-gap",
       "interface_category": "public-feature",
       "contract_carrier": "Go handler and registry tests plus the typed web-admin API client",
@@ -3576,273 +3576,273 @@
     {
       "method": "GET",
       "path": "/api/v1/question-appeals",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "openapi",
       "operation_id": "listQuestionAppeals"
     },
     {
       "method": "GET",
       "path": "/api/v1/question-appeals/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "openapi",
       "operation_id": "getQuestionAppeal"
     },
     {
       "method": "GET",
       "path": "/api/v1/question-appeals/{id}/answer-image",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "openapi",
       "operation_id": "getQuestionAppealAnswerImage"
     },
     {
       "method": "GET",
       "path": "/api/v1/question-appeals/{id}/context",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "openapi",
       "operation_id": "getQuestionAppealContext"
     },
     {
       "method": "POST",
       "path": "/api/v1/question-appeals/{id}/decide",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "openapi",
       "operation_id": "decideQuestionAppeal"
     },
     {
       "method": "GET",
       "path": "/api/v1/question-appeals/{id}/events",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "openapi",
       "operation_id": "listQuestionAppealEvents"
     },
     {
       "method": "POST",
       "path": "/api/v1/question-appeals/{id}/resolve",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "openapi",
       "operation_id": "resolveQuestionAppeal"
     },
     {
       "method": "POST",
       "path": "/api/v1/question-appeals/{id}/start-review",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "openapi",
       "operation_id": "startQuestionAppealReview"
     },
     {
       "method": "POST",
       "path": "/api/v1/question-bank/imports/confirm",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "confirmQuestionBankImportBatch"
     },
     {
       "method": "POST",
       "path": "/api/v1/question-bank/imports/preview",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "previewQuestionBankImports"
     },
     {
       "method": "GET",
       "path": "/api/v1/question-bank/items",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "searchQuestionBankItems"
     },
     {
       "method": "GET",
       "path": "/api/v1/question-bank/items/{itemId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "getQuestionBankItem"
     },
     {
       "method": "POST",
       "path": "/api/v1/question-bank/items/{itemId}/retire",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "retireQuestionBankItem"
     },
     {
       "method": "GET",
       "path": "/api/v1/question-bank/items/{itemId}/versions",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "listQuestionBankVersions"
     },
     {
       "method": "POST",
       "path": "/api/v1/question-bank/items/{itemId}/versions",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "createQuestionBankVersion"
     },
     {
       "method": "POST",
       "path": "/api/v1/question-bank/items/import-from-question/{questionId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "importQuestionBankItemFromExamQuestion"
     },
     {
       "method": "GET",
       "path": "/api/v1/question-bank/rubric-templates",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "listQuestionBankRubricTemplates"
     },
     {
       "method": "POST",
       "path": "/api/v1/question-bank/rubric-templates",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "createQuestionBankRubricTemplate"
     },
     {
       "method": "GET",
       "path": "/api/v1/question-bank/versions/{versionId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "getQuestionBankVersion"
     },
     {
       "method": "PATCH",
       "path": "/api/v1/question-bank/versions/{versionId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "updateQuestionBankVersion"
     },
     {
       "method": "POST",
       "path": "/api/v1/question-bank/versions/{versionId}/approve",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "approveQuestionBankVersion"
     },
     {
       "method": "POST",
       "path": "/api/v1/question-bank/versions/{versionId}/publish",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "publishQuestionBankVersion"
     },
     {
       "method": "POST",
       "path": "/api/v1/question-bank/versions/{versionId}/return-to-draft",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "returnQuestionBankVersionToDraft"
     },
     {
       "method": "GET",
       "path": "/api/v1/question-bank/versions/{versionId}/reviews",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "listQuestionBankReviews"
     },
     {
       "method": "PUT",
       "path": "/api/v1/question-bank/versions/{versionId}/scoring",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "updateQuestionBankScoring"
     },
     {
       "method": "POST",
       "path": "/api/v1/question-bank/versions/{versionId}/submit-review",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "submitQuestionBankReview"
     },
     {
       "method": "GET",
       "path": "/api/v1/question-banks",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "listQuestionBanks"
     },
     {
       "method": "POST",
       "path": "/api/v1/question-banks",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "createQuestionBank"
     },
     {
       "method": "GET",
       "path": "/api/v1/question-banks/{bankId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "getQuestionBank"
     },
     {
       "method": "PATCH",
       "path": "/api/v1/question-banks/{bankId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "updateQuestionBank"
     },
     {
       "method": "GET",
       "path": "/api/v1/question-banks/{bankId}/acl",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "getQuestionBankACL"
     },
     {
       "method": "PUT",
       "path": "/api/v1/question-banks/{bankId}/acl",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "updateQuestionBankACL"
     },
     {
       "method": "GET",
       "path": "/api/v1/question-banks/{bankId}/items",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "listQuestionBankItems"
     },
     {
       "method": "POST",
       "path": "/api/v1/question-banks/{bankId}/items",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "createQuestionBankItem"
     },
     {
       "method": "GET",
       "path": "/api/v1/question-banks/{bankId}/metadata-schema",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "getQuestionBankMetadataSchema"
     },
     {
       "method": "PUT",
       "path": "/api/v1/question-banks/{bankId}/metadata-schema",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "updateQuestionBankMetadataSchema"
     },
     {
       "method": "POST",
       "path": "/api/v1/question-banks/{bankId}/metadata-schema/validate",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "validateQuestionBankMetadata"
     },
     {
       "method": "POST",
       "path": "/api/v1/question-banks/{bankId}/reviewers",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "bindQuestionBankReviewers"
     },
     {
       "method": "DELETE",
       "path": "/api/v1/questions/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3855,7 +3855,7 @@
     {
       "method": "PATCH",
       "path": "/api/v1/questions/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3868,7 +3868,7 @@
     {
       "method": "PUT",
       "path": "/api/v1/questions/{id}/double-mark-policy",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3881,7 +3881,7 @@
     {
       "method": "POST",
       "path": "/api/v1/questions/{id}/rubric",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -3894,7 +3894,7 @@
     {
       "method": "GET",
       "path": "/api/v1/questions/{id}/scoring-rules",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -3907,7 +3907,7 @@
     {
       "method": "POST",
       "path": "/api/v1/questions/{id}/scoring-rules",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4032,28 +4032,28 @@
     {
       "method": "GET",
       "path": "/api/v1/report-commands/{commandId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "openapi",
       "operation_id": "recoverReportCommand"
     },
     {
       "method": "GET",
       "path": "/api/v1/review-commands/{commandId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "openapi",
       "operation_id": "recoverReviewCommand"
     },
     {
       "method": "GET",
       "path": "/api/v1/review-tasks",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "openapi",
       "operation_id": "listReviewTasks"
     },
     {
       "method": "POST",
       "path": "/api/v1/review-tasks",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4066,7 +4066,7 @@
     {
       "method": "GET",
       "path": "/api/v1/review-tasks/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4079,7 +4079,7 @@
     {
       "method": "GET",
       "path": "/api/v1/review-tasks/{id}/annotations",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4092,7 +4092,7 @@
     {
       "method": "POST",
       "path": "/api/v1/review-tasks/{id}/annotations",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4105,7 +4105,7 @@
     {
       "method": "POST",
       "path": "/api/v1/review-tasks/{id}/assign",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4118,7 +4118,7 @@
     {
       "method": "GET",
       "path": "/api/v1/review-tasks/{id}/context",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4131,7 +4131,7 @@
     {
       "method": "GET",
       "path": "/api/v1/review-tasks/{id}/draft",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4144,7 +4144,7 @@
     {
       "method": "PUT",
       "path": "/api/v1/review-tasks/{id}/draft",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4157,7 +4157,7 @@
     {
       "method": "GET",
       "path": "/api/v1/review-tasks/{id}/original-image",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4170,7 +4170,7 @@
     {
       "method": "POST",
       "path": "/api/v1/review-tasks/{id}/release",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4183,7 +4183,7 @@
     {
       "method": "POST",
       "path": "/api/v1/review-tasks/{id}/renew",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4196,7 +4196,7 @@
     {
       "method": "POST",
       "path": "/api/v1/review-tasks/{id}/return",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4209,7 +4209,7 @@
     {
       "method": "GET",
       "path": "/api/v1/review-tasks/{id}/segment-image",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4222,14 +4222,14 @@
     {
       "method": "POST",
       "path": "/api/v1/review-tasks/{id}/submit",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "openapi",
       "operation_id": "submitHumanGrade"
     },
     {
       "method": "GET",
       "path": "/api/v1/review-tasks/{id}/workspace",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4242,7 +4242,7 @@
     {
       "method": "POST",
       "path": "/api/v1/review-tasks/batch-assign",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4255,7 +4255,7 @@
     {
       "method": "POST",
       "path": "/api/v1/review-tasks/next",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4268,70 +4268,70 @@
     {
       "method": "DELETE",
       "path": "/api/v1/review/annotations/{annotationId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "openapi",
       "operation_id": "deleteReviewAnnotation"
     },
     {
       "method": "GET",
       "path": "/api/v1/review/annotations/{annotationId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "openapi",
       "operation_id": "getReviewAnnotation"
     },
     {
       "method": "PUT",
       "path": "/api/v1/review/annotations/{annotationId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "openapi",
       "operation_id": "updateReviewAnnotation"
     },
     {
       "method": "GET",
       "path": "/api/v1/review/comment-templates",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "openapi",
       "operation_id": "listReviewCommentTemplates"
     },
     {
       "method": "POST",
       "path": "/api/v1/review/comment-templates",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "openapi",
       "operation_id": "createReviewCommentTemplate"
     },
     {
       "method": "POST",
       "path": "/api/v1/review/comment-templates/{shortcut}/use",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "openapi",
       "operation_id": "useReviewCommentTemplate"
     },
     {
       "method": "DELETE",
       "path": "/api/v1/review/comment-templates/{templateId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "openapi",
       "operation_id": "deleteReviewCommentTemplate"
     },
     {
       "method": "GET",
       "path": "/api/v1/review/comment-templates/{templateId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "openapi",
       "operation_id": "getReviewCommentTemplate"
     },
     {
       "method": "PUT",
       "path": "/api/v1/review/comment-templates/{templateId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "openapi",
       "operation_id": "updateReviewCommentTemplate"
     },
     {
       "method": "GET",
       "path": "/api/v1/roles",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4344,7 +4344,7 @@
     {
       "method": "GET",
       "path": "/api/v1/schools",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_org.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4357,7 +4357,7 @@
     {
       "method": "POST",
       "path": "/api/v1/schools",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_org.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4370,7 +4370,7 @@
     {
       "method": "GET",
       "path": "/api/v1/score-commands/{commandId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "openapi",
       "operation_id": "recoverScoreCommand"
     },
@@ -4398,7 +4398,7 @@
     {
       "method": "PATCH",
       "path": "/api/v1/scoring-rules/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4411,7 +4411,7 @@
     {
       "method": "POST",
       "path": "/api/v1/scoring-rules/{id}/publish",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4424,7 +4424,7 @@
     {
       "method": "GET",
       "path": "/api/v1/scoring-runs/{runId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4437,7 +4437,7 @@
     {
       "method": "POST",
       "path": "/api/v1/scoring-runs/{runId}/cancel",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4450,7 +4450,7 @@
     {
       "method": "POST",
       "path": "/api/v1/scoring-runs/{runId}/retry-failed",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4483,7 +4483,7 @@
     {
       "method": "POST",
       "path": "/api/v1/student/exams/{examId}/question-appeals",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "openapi",
       "operation_id": "createStudentQuestionAppeal"
     },
@@ -4497,7 +4497,7 @@
     {
       "method": "GET",
       "path": "/api/v1/student/exams/{examId}/questions/{questionId}/annotations",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "openapi",
       "operation_id": "listStudentQuestionReviewAnnotations"
     },
@@ -4531,14 +4531,14 @@
     {
       "method": "GET",
       "path": "/api/v1/student/question-appeals",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "openapi",
       "operation_id": "listStudentQuestionAppeals"
     },
     {
       "method": "GET",
       "path": "/api/v1/students",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_org.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4551,7 +4551,7 @@
     {
       "method": "POST",
       "path": "/api/v1/students",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_org.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4564,7 +4564,7 @@
     {
       "method": "PATCH",
       "path": "/api/v1/students/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_org.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4577,7 +4577,7 @@
     {
       "method": "PUT",
       "path": "/api/v1/students/{id}/enrollment",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_org.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4590,7 +4590,7 @@
     {
       "method": "GET",
       "path": "/api/v1/students/{id}/enrollments",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_org.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4603,7 +4603,7 @@
     {
       "method": "GET",
       "path": "/api/v1/students/{studentId}/exams/{examId}/grade",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4616,7 +4616,7 @@
     {
       "method": "GET",
       "path": "/api/v1/students/{studentId}/reports/{examId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4629,7 +4629,7 @@
     {
       "method": "POST",
       "path": "/api/v1/students/import-csv",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_org.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4642,42 +4642,42 @@
     {
       "method": "GET",
       "path": "/api/v1/subjective-grading-batch-commands/{commandId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "openapi",
       "operation_id": "recoverSubjectiveBatchCommand"
     },
     {
       "method": "POST",
       "path": "/api/v1/subjective-grading-batches",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "openapi",
       "operation_id": "createSubjectiveGradingBatch"
     },
     {
       "method": "GET",
       "path": "/api/v1/subjective-grading-batches/{batchId}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "openapi",
       "operation_id": "getSubjectiveGradingBatch"
     },
     {
       "method": "POST",
       "path": "/api/v1/subjective-grading-batches/{batchId}/enqueue",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "openapi",
       "operation_id": "enqueueSubjectiveGradingBatch"
     },
     {
       "method": "GET",
       "path": "/api/v1/subjective-grading-batches/{batchId}/enqueue-command",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "openapi",
       "operation_id": "recoverSubjectiveEnqueueCommand"
     },
     {
       "method": "POST",
       "path": "/api/v1/submission-pages/{id}/quality-override",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4690,14 +4690,14 @@
     {
       "method": "GET",
       "path": "/api/v1/submission-pages/{id}/quality-runs",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "openapi",
       "operation_id": "listSubmissionPageQualityRuns"
     },
     {
       "method": "GET",
       "path": "/api/v1/submission-pages/{id}/registration-runs",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4710,7 +4710,7 @@
     {
       "method": "GET",
       "path": "/api/v1/submissions/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4723,7 +4723,7 @@
     {
       "method": "GET",
       "path": "/api/v1/submissions/{id}/answer-segments",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4736,7 +4736,7 @@
     {
       "method": "GET",
       "path": "/api/v1/submissions/{id}/ocr-tasks",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4749,7 +4749,7 @@
     {
       "method": "POST",
       "path": "/api/v1/submissions/{id}/ocr-tasks",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4762,7 +4762,7 @@
     {
       "method": "GET",
       "path": "/api/v1/submissions/{id}/pages",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4775,7 +4775,7 @@
     {
       "method": "POST",
       "path": "/api/v1/submissions/{id}/pages",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4788,7 +4788,7 @@
     {
       "method": "PUT",
       "path": "/api/v1/submissions/{id}/pages/{pageNo}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4801,7 +4801,7 @@
     {
       "method": "POST",
       "path": "/api/v1/submissions/{id}/process-pages",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4814,7 +4814,7 @@
     {
       "method": "GET",
       "path": "/api/v1/submissions/{id}/processing-summary",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4827,7 +4827,7 @@
     {
       "method": "POST",
       "path": "/api/v1/submissions/{id}/quality-check",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4840,7 +4840,7 @@
     {
       "method": "POST",
       "path": "/api/v1/submissions/{id}/run-quality-check",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4853,7 +4853,7 @@
     {
       "method": "POST",
       "path": "/api/v1/submissions/{id}/segment-answers",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_processing.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4866,7 +4866,7 @@
     {
       "method": "POST",
       "path": "/api/v1/submissions/{id}/status",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4879,7 +4879,7 @@
     {
       "method": "POST",
       "path": "/api/v1/submissions/{id}/student-match/confirm",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4892,7 +4892,7 @@
     {
       "method": "POST",
       "path": "/api/v1/submissions/{id}/student-match/unknown",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4905,7 +4905,7 @@
     {
       "method": "GET",
       "path": "/api/v1/system/file-reconciliation",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_files.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4918,7 +4918,7 @@
     {
       "method": "GET",
       "path": "/api/v1/system/info",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_system.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4931,7 +4931,7 @@
     {
       "method": "GET",
       "path": "/api/v1/system/status",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_system.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4944,7 +4944,7 @@
     {
       "method": "GET",
       "path": "/api/v1/tenants",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_org.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4957,7 +4957,7 @@
     {
       "method": "POST",
       "path": "/api/v1/tenants",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_org.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4970,7 +4970,7 @@
     {
       "method": "PATCH",
       "path": "/api/v1/tenants/{id}",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_org.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -4983,7 +4983,7 @@
     {
       "method": "GET",
       "path": "/api/v1/users",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-read",
       "contract_carrier": "Go handler tests and existing consumer behavior tests",
@@ -4996,7 +4996,7 @@
     {
       "method": "POST",
       "path": "/api/v1/users",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -5009,21 +5009,21 @@
     {
       "method": "POST",
       "path": "/api/v1/users/{id}/activation",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "reissueManagedUserActivation"
     },
     {
       "method": "POST",
       "path": "/api/v1/users/{id}/credential-reset",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "createManagedUserCredentialRecovery"
     },
     {
       "method": "DELETE",
       "path": "/api/v1/users/{id}/sessions",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "registered-gap",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -5036,14 +5036,14 @@
     {
       "method": "PATCH",
       "path": "/api/v1/users/{id}/status",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "updateManagedUserStatus"
     },
     {
       "method": "GET",
       "path": "/metrics",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_system.go",
       "coverage": "registered-gap",
       "interface_category": "operational",
       "contract_carrier": "operations runbook and endpoint health tests",
@@ -5056,7 +5056,7 @@
     {
       "method": "GET",
       "path": "/ready",
-      "source": "services/api-gateway/internal/server/server.go",
+      "source": "services/api-gateway/internal/server/routes_system.go",
       "coverage": "registered-gap",
       "interface_category": "operational",
       "contract_carrier": "operations runbook and endpoint health tests",

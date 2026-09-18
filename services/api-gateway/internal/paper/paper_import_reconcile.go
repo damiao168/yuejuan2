@@ -84,43 +84,6 @@ func normalizeChineseQuestionNumber(value string) (string, bool) {
 	return "", false
 }
 
-func normalizePaperImportSourceInputs(input CreatePaperImportInput) []CreatePaperImportSourceInput {
-	out := append([]CreatePaperImportSourceInput{}, input.Sources...)
-	if len(out) == 0 {
-		if input.PaperFileAssetID != "" {
-			out = append(out, CreatePaperImportSourceInput{FileAssetID: input.PaperFileAssetID, DocumentIndex: 0, RoleHint: "question"})
-		}
-		if input.AnswerFileAssetID != "" && input.AnswerFileAssetID != input.PaperFileAssetID {
-			out = append(out, CreatePaperImportSourceInput{FileAssetID: input.AnswerFileAssetID, DocumentIndex: len(out), RoleHint: "answer"})
-		}
-	}
-	for i := range out {
-		if out[i].DocumentIndex < 0 {
-			out[i].DocumentIndex = i
-		}
-		out[i].RoleHint = defaultRoleHint(out[i].RoleHint)
-	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].DocumentIndex < out[j].DocumentIndex })
-	return out
-}
-
-func defaultRoleHint(value string) string {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return "auto"
-	}
-	return value
-}
-func validPaperImportRole(value string, allowAuto bool) bool {
-	switch defaultRoleHint(value) {
-	case "question", "answer", "solution", "rubric", "mixed", "unknown":
-		return true
-	case "auto":
-		return allowAuto
-	}
-	return false
-}
-
 func issueMessages(issues []PaperImportIssue) []string {
 	out := make([]string, 0, len(issues))
 	for _, issue := range issues {

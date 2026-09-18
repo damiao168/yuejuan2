@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { Alert, App, Button, Checkbox, Divider, Empty, Input, InputNumber, List, Modal, Select, Space, type TableColumnsType } from "antd";
-import { Calculator, CheckCircle2, ClipboardCheck, Download, FileWarning, GitCompareArrows, LockKeyhole, RefreshCw, Search, Send, ShieldCheck, UserCheck, UserX } from "lucide-react";
+import { Calculator, CheckCircle2, ClipboardCheck, Download, FileWarning, GitCompareArrows, LockKeyhole, RefreshCw, Search, Send, UserCheck, UserX } from "lucide-react";
 import { ApiClientError, getSafeUserText, getUserErrorMessage } from "../api/client";
 import { listAuditLogs, type AuditLog } from "../api/audit";
 import { examStatusLabels, examSubjectLabel } from "../constants/examStatus";
@@ -16,7 +16,6 @@ import {
   publishExamGrades,
   setExamAttendance,
   type QualityCheckResult,
-  type QualityIssue,
   type RosterEntry,
   type RosterReport,
   type SubmissionGrade
@@ -45,12 +44,16 @@ import {
 } from "../api/scoreReleases";
 import { listSubmissions, type Submission } from "../api/submissions";
 import { listManagedUsers, type ManagedUser } from "../api/users";
-import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
+import { ErrorState, LoadingState } from "../components/PageState";
 import { ResponsiveTable } from "../components/ResponsiveTable";
 import { StatusTag } from "../components/StatusTag";
 import type { StatusTone } from "../types";
 import { hashQueryParam } from "../router/query";
 import type { ProductExperience } from "../router/experience";
+import { AuditPanel } from "../features/score-management/components/AuditPanel";
+import { QualityPanel } from "../features/score-management/components/QualityPanel";
+import { LatestRequestController } from "../features/shared/latestRequest";
+import { closedWorkflowModal, workflowModalReducer } from "../features/score-management/hooks/workflowModal";
 
 interface IdentityMaps {
   students: Record<string, Student>;
@@ -101,25 +104,6 @@ const sourceLabels: Record<string, string> = {
   lower: "低分优先"
 };
 
-const qualityLabels: Record<string, string> = {
-  unfinished_review_tasks: "还有阅卷任务未完成",
-  unfinished_arbitration_tasks: "还有仲裁任务未完成",
-  ocr_failed_unhandled: "识别失败（未处理）",
-  missing_final_grades: "部分题目还没有最终得分",
-  grades_not_confirmed: "成绩未确认",
-  no_submission_grades: "无成绩可发布",
-  missing_submission_unresolved: "应考学生尚未匹配答卷",
-  unidentified_submission: "答卷身份未确认或存在重复",
-  missing_pages_unresolved: "答卷缺页或页面质量异常"
-};
-
-const auditActionLabels: Record<string, string> = {
-  "score.finalized": "成绩汇总",
-  "score.confirmed": "成绩确认",
-  "score.published": "成绩发布",
-  "score.exported": "成绩导出",
-  "score.roster_attendance_updated": "名册出勤状态调整"
-};
 
 const rosterStatusLabels: Record<string, string> = {
   graded: "已评分",
@@ -196,13 +180,6 @@ function formatScore(value?: number | null) {
   return Number(value.toFixed(1)).toString();
 }
 
-function formatTime(value?: string) {
-  if (!value) {
-    return "-";
-  }
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString("zh-CN", { hour12: false });
-}
 
 function statusTone(status: string): StatusTone {
   if (status === "published" || status === "locked") {
@@ -321,8 +298,10 @@ export function ScoreManagementPage({
   const [releaseReason, setReleaseReason] = useState("");
   const [releaseHighScorePaper, setReleaseHighScorePaper] = useState(false);
   const [releaseVisibility, setReleaseVisibility] = useState(defaultReleaseVisibility);
-  const [releaseModalOpen, setReleaseModalOpen] = useState(false);
-  const [regradeModalOpen, setRegradeModalOpen] = useState(false);
+  const [releaseModal, dispatchReleaseModal] = useReducer(workflowModalReducer, closedWorkflowModal);
+  const [regradeModal, dispatchRegradeModal] = useReducer(workflowModalReducer, closedWorkflowModal);
+  const releaseModalOpen = releaseModal.status === "open";
+  const regradeModalOpen = regradeModal.status === "open";
   const [regradeQuestionId, setRegradeQuestionId] = useState("");
   const [regradeReasonCode, setRegradeReasonCode] = useState("quality_incident");
   const [regradeReasonText, setRegradeReasonText] = useState("");
@@ -336,7 +315,7 @@ export function ScoreManagementPage({
   const [regradeReviewOpen, setRegradeReviewOpen] = useState(false);
   const [regradeReviewScores, setRegradeReviewScores] = useState<Record<string, number | null>>({});
   const [previewingRegrade, setPreviewingRegrade] = useState(false);
-  const scoreRequestRef = useRef(0);
+  const scoreRequestsRef = useRef(new LatestRequestController());
 
   const selectedExam = useMemo(() => exams.find((exam) => exam.id === selectedExamId), [exams, selectedExamId]);
   const summary = useMemo(() => createSummary(submissions, gradeTotal, quality, roster), [gradeTotal, quality, roster, submissions]);
@@ -404,7 +383,7 @@ export function ScoreManagementPage({
 
   const loadScores = useCallback(
     async (examId: string) => {
-      const requestId = ++scoreRequestRef.current;
+      const request = scoreRequestsRef.current.begin(examId);
       if (!examId) {
         setSubmissions([]);
         setGrades([]);
@@ -439,7 +418,7 @@ export function ScoreManagementPage({
           canManage ? listScoreReleases(examId) : Promise.resolve({ score_releases: [] }),
           canManage ? listRegradeJobs(examId) : Promise.resolve({ regrade_jobs: [] })
         ]);
-        if (requestId !== scoreRequestRef.current) return;
+        if (!request.isCurrent()) return;
         if (submissionResult.status === "fulfilled") {
           setSubmissions(submissionResult.value.submissions);
         } else {
@@ -456,7 +435,7 @@ export function ScoreManagementPage({
             canReadStudentNames,
             gradeResult.value.grades.flatMap((grade) => (grade.student_id ? [grade.student_id] : []))
           );
-          if (requestId !== scoreRequestRef.current) return;
+          if (!request.isCurrent()) return;
           setIdentities(identityResult);
         } else {
           throw gradeResult.reason;
@@ -490,10 +469,10 @@ export function ScoreManagementPage({
           throw regradesResult.reason;
         }
       } catch (currentError) {
-        if (requestId !== scoreRequestRef.current) return;
+        if (!request.isCurrent()) return;
         setError(formatError(currentError));
       } finally {
-        if (requestId === scoreRequestRef.current) setLoadingScores(false);
+        if (request.isCurrent()) setLoadingScores(false);
       }
     },
     [appliedKeyword, canManage, canReadAudit, canReadStudentNames, statusFilter]
@@ -520,7 +499,7 @@ export function ScoreManagementPage({
 
   const loadMoreGrades = async () => {
     if (!selectedExamId || !gradesHaveMore || !gradeNextCursor || loadingMoreGrades) return;
-    const requestId = scoreRequestRef.current;
+    const request = scoreRequestsRef.current.begin(selectedExamId);
     setLoadingMoreGrades(true);
     try {
       const result = await listExamGrades(selectedExamId, {
@@ -533,7 +512,7 @@ export function ScoreManagementPage({
         canReadStudentNames,
         result.grades.flatMap((grade) => (grade.student_id ? [grade.student_id] : []))
       );
-      if (requestId !== scoreRequestRef.current) return;
+      if (!request.isCurrent()) return;
       setGrades((current) => {
         const byId = new Map(current.map((grade) => [grade.id, grade]));
         for (const grade of result.grades) byId.set(grade.id, grade);
@@ -672,7 +651,7 @@ export function ScoreManagementPage({
           },
           appeal_window: { enabled: selectedExam?.appeal_enabled ?? false }
         });
-        setReleaseModalOpen(false);
+        dispatchReleaseModal({ type: "close" });
         setReleaseReason("");
         setReleaseHighScorePaper(false);
       },
@@ -734,7 +713,7 @@ export function ScoreManagementPage({
           assignee_id: regradeAssigneeID,
           idempotency_key: crypto.randomUUID()
         });
-        setRegradeModalOpen(false);
+        dispatchRegradeModal({ type: "close" });
         setRegradePreview(null);
         setRegradeReasonText("");
       },
@@ -943,63 +922,6 @@ export function ScoreManagementPage({
     return [{ label: "全部状态", value: "all" }, ...statuses.map((status) => ({ label: statusLabels[status] ?? "未知状态", value: status }))];
   }, [grades]);
 
-  const renderQuality = () => {
-    if (!quality) {
-      return <EmptyState title="暂无质量检查" description="选择考试后，这里会列出发布前需要处理的问题。" />;
-    }
-    if (quality.quality.passed) {
-      return (
-        <div className="score-quality-pass">
-          <ShieldCheck size={22} />
-          <div>
-            <strong>{publishedOrLocked ? "成绩已发布，质量校验通过" : "发布前质量检查通过"}</strong>
-            <span>{publishedOrLocked ? "成绩已发布并锁定，所有检查项均已处理。" : "所有检查项均已通过，可以发布成绩。"}</span>
-          </div>
-        </div>
-      );
-    }
-    return (
-      <List
-        size="small"
-        dataSource={quality.quality.issues}
-        locale={{ emptyText: <Empty description="暂无质量问题" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
-        renderItem={(issue: QualityIssue) => (
-          <List.Item>
-            <div className="score-quality-issue" title={getSafeUserText(issue.message, "成绩质量检查未通过")}>
-              <StatusTag tone={issue.blocking ? "danger" : "warning"}>{issue.blocking ? "须处理后才能发布" : "提醒"}</StatusTag>
-              <strong>{qualityLabels[issue.code] ?? issue.code}</strong>
-              <span>{issue.count} 项</span>
-            </div>
-          </List.Item>
-        )}
-      />
-    );
-  };
-
-  const renderAudit = () => {
-    if (!canReadAudit) {
-      return <EmptyState title="无权查看操作记录" description="您的账号没有查看操作记录的权限。导出、确认、发布等操作仍会被系统记录。" />;
-    }
-    if (scoreAuditLogs.length === 0) {
-      return <EmptyState title="暂无操作记录" description="该考试还没有成绩相关的操作记录。" />;
-    }
-    return (
-      <List
-        size="small"
-        dataSource={scoreAuditLogs.slice(0, 8)}
-        renderItem={(item) => (
-          <List.Item>
-            <div className="score-audit-row">
-              <strong title={item.action}>{auditActionLabels[item.action] ?? "成绩操作"}</strong>
-              <span>{item.reason || "未填写原因"}</span>
-              <small>{formatTime(item.created_at)}</small>
-            </div>
-          </List.Item>
-        )}
-      />
-    );
-  };
-
   return (
     <div className={mode === "teacher" ? "score-shell read-only" : "score-shell"}>
       <section className="score-topbar">
@@ -1098,7 +1020,7 @@ export function ScoreManagementPage({
                 )
               ) : null}
             </div>
-            {loadingScores ? <LoadingState label="正在读取质量检查" /> : renderQuality()}
+            {loadingScores ? <LoadingState label="正在读取质量检查" /> : <QualityPanel quality={quality} publishedOrLocked={publishedOrLocked} />}
           </section>
 
           <section className="score-table-panel">
@@ -1204,7 +1126,7 @@ export function ScoreManagementPage({
             description={lastWatermark ? `最近一次导出的水印编号：${lastWatermark}` : "每次导出都会记录操作人和时间，导出文件自带可追溯水印。"}
           />
 
-          {renderAudit()}
+          <AuditPanel canRead={canReadAudit} logs={scoreAuditLogs} />
           </details>
         </aside> : null}
       </section>
@@ -1217,7 +1139,7 @@ export function ScoreManagementPage({
           </div>
           <Space wrap>
             <StatusTag tone={releaseGate?.passed ? "success" : "danger"}>{releaseGate?.passed ? "发布门禁通过" : "发布门禁待处理"}</StatusTag>
-            <Button type="primary" disabled={!canWrite || !selectedExamId || gradeTotal === 0} onClick={() => setReleaseModalOpen(true)}>创建发布草稿</Button>
+            <Button type="primary" disabled={!canWrite || !selectedExamId || gradeTotal === 0} onClick={() => dispatchReleaseModal({ type: "open" })}>创建发布草稿</Button>
           </Space>
         </div>
 
@@ -1230,7 +1152,7 @@ export function ScoreManagementPage({
               <StatusTag tone={issue.blocking ? "danger" : "warning"}>{issue.blocking ? "阻断" : "提醒"}</StatusTag>
               <div><strong>{getSafeUserText(issue.message, "成绩质量检查未通过")}</strong><span>{issue.count} 项 · {issue.code}</span></div>
               {issue.action_route === "quality" ? <Button size="small" href={selectedExamId ? `#/admin/exams/${encodeURIComponent(selectedExamId)}/quality` : undefined}>查看质量</Button> : null}
-              {issue.action_route === "regrade" ? <Button size="small" onClick={() => setRegradeModalOpen(true)}>查看复评</Button> : null}
+              {issue.action_route === "regrade" ? <Button size="small" onClick={() => dispatchRegradeModal({ type: "open" })}>查看复评</Button> : null}
             </div>
           </List.Item>}
         /> : <Alert type="success" showIcon message="当前发布门禁通过" description="创建草稿后，仍会在实际发布时再次核验，避免状态变化后误发布。" />}
@@ -1251,7 +1173,7 @@ export function ScoreManagementPage({
           </section>
 
           <section>
-            <div className="score-release-subhead"><h3>题目级复评</h3><Button size="small" icon={<GitCompareArrows size={15} />} disabled={!canWrite || !publishedRelease || regradeQuestionOptions.length === 0} onClick={() => setRegradeModalOpen(true)}>新建复评</Button></div>
+            <div className="score-release-subhead"><h3>题目级复评</h3><Button size="small" icon={<GitCompareArrows size={15} />} disabled={!canWrite || !publishedRelease || regradeQuestionOptions.length === 0} onClick={() => dispatchRegradeModal({ type: "open" })}>新建复评</Button></div>
             <p className="score-release-note">复评只处理指定题目，完成后必须生成并发布新的成绩版本，不会直接改分。</p>
             {regradeJobs.length ? <List
               size="small"
@@ -1340,7 +1262,7 @@ export function ScoreManagementPage({
         cancelText="取消"
         confirmLoading={actioning === "release-create"}
         onOk={createRelease}
-        onCancel={() => { setReleaseModalOpen(false); setReleaseReason(""); setReleaseHighScorePaper(false); }}
+        onCancel={() => { dispatchReleaseModal({ type: "close" }); setReleaseReason(""); setReleaseHighScorePaper(false); }}
       >
         <Alert type="info" showIcon message="草稿不会立即对学生生效" description="提交后会冻结当前已确认的成绩事实。请在发布门禁通过后，单独确认发布。" />
         <p><strong>{selectedExam?.name}</strong> · {gradeTotal} 份成绩</p>
@@ -1358,7 +1280,7 @@ export function ScoreManagementPage({
         okButtonProps={{ disabled: !regradePreview || !regradeReasonText.trim() || !regradeAssigneeID }}
         confirmLoading={actioning === "regrade-create"}
         onOk={createSelectedRegrade}
-        onCancel={() => { setRegradeModalOpen(false); setRegradePreview(null); }}
+        onCancel={() => { dispatchRegradeModal({ type: "close" }); setRegradePreview(null); }}
       >
         <Alert type="warning" showIcon message="复评不会直接修改已发布成绩" description="先预览影响范围并创建任务；任务完成后生成新的成绩版本，再通过发布门禁正式发布。" />
         <div className="score-regrade-form">

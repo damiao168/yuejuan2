@@ -237,6 +237,13 @@ export type WorkspaceKey = "connect" | "tasks" | "scan" | "offline" | "sync" | "
 
 export type QueueStatus = "pending" | "uploading" | "succeeded" | "failed" | "conflict" | "not_configured";
 
+export type UploadState =
+  | { status: "pending" }
+  | { status: "uploading"; progress: number }
+  | { status: "failed"; error: string }
+  | { status: "conflict"; reason: string }
+  | { status: "succeeded"; fileAssetId: string };
+
 export type ScanQualityStatus = "passed" | "warning" | "failed" | "not_configured";
 
 export interface ScanQualityCheck {

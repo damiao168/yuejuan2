@@ -1,0 +1,2 @@
+class ImageQualityError(RuntimeError):
+    pass

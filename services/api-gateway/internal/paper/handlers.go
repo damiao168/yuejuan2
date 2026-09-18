@@ -15,9 +15,16 @@ import (
 )
 
 type Handler struct {
-	store          Store
-	audit          auth.Store
-	documentImport *DocumentImportService
+	papers          PaperRepository
+	imports         PaperImportRepository
+	questions       QuestionRepository
+	rubrics         RubricRepository
+	validation      ConfigurationValidationRepository
+	templates       TemplateRepository
+	templateBinding TemplateBindingRepository
+	readiness       ReadinessRepository
+	audit           auth.Store
+	documentImport  *DocumentImportService
 }
 
 func (h *Handler) WithDocumentImport(service *DocumentImportService) *Handler {
@@ -118,7 +125,7 @@ func (h *Handler) SavePaperImportReview(w http.ResponseWriter, r *http.Request) 
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_paper_import_review", "至少需要一道人工核对题目")
 		return
 	}
-	out, err := h.store.SavePaperImportReview(r.Context(), user.TenantID, r.PathValue("id"), user.ID, input)
+	out, err := h.imports.SavePaperImportReview(r.Context(), user.TenantID, r.PathValue("id"), user.ID, input)
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
@@ -129,7 +136,7 @@ func (h *Handler) SavePaperImportReview(w http.ResponseWriter, r *http.Request) 
 
 func (h *Handler) ListPaperImports(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
-	out, err := h.store.ListPaperImports(r.Context(), user.TenantID, r.PathValue("examId"))
+	out, err := h.imports.ListPaperImports(r.Context(), user.TenantID, r.PathValue("examId"))
 	if err != nil {
 		httpx.Error(w, r, 500, "paper_import_list_failed", "试卷解析记录加载失败")
 		return
@@ -139,7 +146,7 @@ func (h *Handler) ListPaperImports(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetPaperImport(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
-	out, err := h.store.GetPaperImport(r.Context(), user.TenantID, r.PathValue("id"))
+	out, err := h.imports.GetPaperImport(r.Context(), user.TenantID, r.PathValue("id"))
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
@@ -149,7 +156,7 @@ func (h *Handler) GetPaperImport(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ApplyPaperImport(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
-	out, err := h.store.ApplyPaperImport(r.Context(), user.TenantID, r.PathValue("id"), user.ID)
+	out, err := h.imports.ApplyPaperImport(r.Context(), user.TenantID, r.PathValue("id"), user.ID)
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
@@ -164,7 +171,7 @@ func (h *Handler) CancelPaperImport(w http.ResponseWriter, r *http.Request) {
 	var err error
 	expected, parseErr := strconv.ParseInt(r.URL.Query().Get("expected_generation"), 10, 64)
 	if parseErr == nil && expected > 0 {
-		if versioned, ok := h.store.(interface {
+		if versioned, ok := h.imports.(interface {
 			CancelPaperImportGeneration(context.Context, string, string, int64) (PaperImportJob, error)
 		}); ok {
 			out, err = versioned.CancelPaperImportGeneration(r.Context(), user.TenantID, r.PathValue("id"), expected)
@@ -186,7 +193,7 @@ func (h *Handler) CancelPaperImport(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) RetryPaperImportParse(w http.ResponseWriter, r *http.Request) {
-	retryStore, ok := h.store.(interface {
+	retryStore, ok := h.imports.(interface {
 		RetryPaperImportParseGeneration(context.Context, string, string, int64) (PaperImportJob, error)
 	})
 	if !ok {
@@ -209,7 +216,7 @@ func (h *Handler) RetryPaperImportParse(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *Handler) CompletePaperImportDecode(w http.ResponseWriter, r *http.Request) {
-	runtime, ok := h.store.(PaperImportRuntime)
+	runtime, ok := h.imports.(PaperImportRuntime)
 	if !ok {
 		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_ocr_unavailable", "paper OCR runtime is unavailable")
 		return
@@ -227,7 +234,7 @@ func (h *Handler) CompletePaperImportDecode(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *Handler) CompletePaperImportOCR(w http.ResponseWriter, r *http.Request) {
-	runtime, ok := h.store.(PaperImportRuntime)
+	runtime, ok := h.imports.(PaperImportRuntime)
 	if !ok || h.documentImport == nil {
 		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_ocr_unavailable", "paper OCR runtime is unavailable")
 		return
@@ -252,7 +259,7 @@ func (h *Handler) CompletePaperImportOCR(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *Handler) CompletePaperImportFormula(w http.ResponseWriter, r *http.Request) {
-	runtime, ok := h.store.(PaperImportRuntime)
+	runtime, ok := h.imports.(PaperImportRuntime)
 	if !ok {
 		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_formula_unavailable", "paper formula runtime is unavailable")
 		return
@@ -271,7 +278,7 @@ func (h *Handler) CompletePaperImportFormula(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *Handler) FailPaperImportRuntime(w http.ResponseWriter, r *http.Request) {
-	runtime, ok := h.store.(PaperImportRuntime)
+	runtime, ok := h.imports.(PaperImportRuntime)
 	if !ok {
 		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_ocr_unavailable", "paper OCR runtime is unavailable")
 		return
@@ -289,7 +296,11 @@ func (h *Handler) FailPaperImportRuntime(w http.ResponseWriter, r *http.Request)
 }
 
 func NewHandler(store Store, audit auth.Store) *Handler {
-	return &Handler{store: store, audit: audit}
+	return &Handler{
+		papers: store, imports: store, questions: store, rubrics: store,
+		validation: store, templates: store, templateBinding: store, readiness: store,
+		audit: audit,
+	}
 }
 
 func (h *Handler) CreatePaper(w http.ResponseWriter, r *http.Request) {
@@ -303,7 +314,7 @@ func (h *Handler) CreatePaper(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_paper_file", "file metadata is incomplete")
 		return
 	}
-	out, err := h.store.CreatePaper(r.Context(), user.TenantID, examID, user.ID, input)
+	out, err := h.papers.CreatePaper(r.Context(), user.TenantID, examID, user.ID, input)
 	if err != nil {
 		if errors.Is(err, ErrInvalidInput) {
 			httpx.Error(w, r, http.StatusBadRequest, "paper_file_scope_mismatch", "file asset does not belong to this exam")
@@ -322,7 +333,7 @@ func (h *Handler) CreatePaper(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListPapers(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
-	out, err := h.store.ListPapers(r.Context(), user.TenantID, r.PathValue("examId"))
+	out, err := h.papers.ListPapers(r.Context(), user.TenantID, r.PathValue("examId"))
 	if err != nil {
 		httpx.Error(w, r, http.StatusInternalServerError, "paper_list_failed", "failed to list papers")
 		return
@@ -340,7 +351,7 @@ func (h *Handler) CreateQuestion(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_question", err.Error())
 		return
 	}
-	out, err := h.store.CreateQuestion(r.Context(), user.TenantID, r.PathValue("examId"), user.ID, input)
+	out, err := h.questions.CreateQuestion(r.Context(), user.TenantID, r.PathValue("examId"), user.ID, input)
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
@@ -351,7 +362,7 @@ func (h *Handler) CreateQuestion(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListQuestions(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
-	out, err := h.store.ListQuestions(r.Context(), user.TenantID, r.PathValue("examId"))
+	out, err := h.questions.ListQuestions(r.Context(), user.TenantID, r.PathValue("examId"))
 	if err != nil {
 		httpx.Error(w, r, http.StatusInternalServerError, "question_list_failed", "failed to list questions")
 		return
@@ -373,7 +384,7 @@ func (h *Handler) UpdateQuestion(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_score", "score must be greater than 0")
 		return
 	}
-	out, err := h.store.UpdateQuestion(r.Context(), user.TenantID, r.PathValue("id"), user.ID, input)
+	out, err := h.questions.UpdateQuestion(r.Context(), user.TenantID, r.PathValue("id"), user.ID, input)
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
@@ -385,7 +396,7 @@ func (h *Handler) UpdateQuestion(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DeleteQuestion(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	id := r.PathValue("id")
-	if err := h.store.DeleteQuestion(r.Context(), user.TenantID, id); err != nil {
+	if err := h.questions.DeleteQuestion(r.Context(), user.TenantID, id); err != nil {
 		writeStoreError(w, r, err)
 		return
 	}
@@ -403,7 +414,7 @@ func (h *Handler) CreateRubric(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_rubric_status", "unsupported rubric status")
 		return
 	}
-	out, err := h.store.CreateRubric(r.Context(), user.TenantID, r.PathValue("id"), user.ID, input)
+	out, err := h.rubrics.CreateRubric(r.Context(), user.TenantID, r.PathValue("id"), user.ID, input)
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
@@ -414,7 +425,7 @@ func (h *Handler) CreateRubric(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ValidatePaperConfig(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
-	result, err := h.store.ValidateConfig(r.Context(), user.TenantID, r.PathValue("examId"))
+	result, err := h.validation.ValidateConfig(r.Context(), user.TenantID, r.PathValue("examId"))
 	if err != nil {
 		httpx.Error(w, r, http.StatusInternalServerError, "paper_validation_failed", "failed to validate paper config")
 		return

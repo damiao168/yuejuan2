@@ -192,8 +192,8 @@ func NewParseTaskExecutor(service *DocumentImportService, runtime workerruntime.
 	if service == nil || runtime == nil {
 		return nil, errors.New("paper parse executor dependencies are required")
 	}
-	if service.client != nil && timeout < service.client.Timeout {
-		timeout = service.client.Timeout
+	if timeout < service.parserTimeout {
+		timeout = service.parserTimeout
 	}
 	if timeout <= 0 {
 		timeout = 5 * time.Minute

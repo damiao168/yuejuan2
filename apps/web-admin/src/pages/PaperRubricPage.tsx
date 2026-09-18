@@ -21,7 +21,6 @@ import { listExams, type Exam } from "../api/exams";
 import {
   createQuestion,
 	createPaperImport,
-	getPaperImport,
 	addPaperImportSources,
 	cancelPaperImport,
 	retryPaperImportParse,
@@ -61,6 +60,7 @@ import type { StatusTone } from "../types";
 import { questionTypeOptions } from "../constants/examCatalog";
 import { filesFromClipboard, hasBlockingImportIssues, hasNoExamContentDetected, isPaperImportCancelled, isSupportedPaperImportFile, isTextPasteTarget, markImportFieldConfirmed, orderedSourcesAfterMove, orderedSourcesAfterRemoval, paperImportProgress, paperImportReviewIssues, paperImportSummary, sourcesAfterRoleChange } from "../features/paper-import/materials";
 import { PaperImportReviewPanel } from "../features/paper-import/PaperImportReviewPanel";
+import { usePaperImportPolling } from "../features/paper-import/usePaperImportPolling";
 import { BankQuestionPicker } from "../features/question-bank/BankQuestionPicker";
 import { HistoryQuestionImporter } from "../features/question-bank/HistoryQuestionImporter";
 
@@ -319,29 +319,18 @@ export function PaperRubricPage({
   }, [loadConfig, selectedExamId]);
 
   const processingImportId = paperImports.find((item) => item.status === "processing")?.id;
-  useEffect(() => {
-    if (!selectedExamId || !processingImportId) return;
-    let pending = false;
-    let disposed = false;
-    const refreshProgress = async () => {
-      if (pending) return;
-      pending = true;
-      try {
-        const result = await getPaperImport(processingImportId);
-        if (disposed) return;
-        setPaperImports((current) => current.map((item) => item.id === result.import.id ? result.import : item));
-        if (result.import.status !== "processing") await loadConfig(selectedExamId, { silent: true });
-      } catch {
-        // A transient progress request must not discard the current import state.
-        // The next interval retries the authoritative import endpoint.
-      } finally {
-        pending = false;
-      }
-    };
-    void refreshProgress();
-    const timer = window.setInterval(() => void refreshProgress(), 1000);
-    return () => { disposed = true; window.clearInterval(timer); };
-  }, [loadConfig, processingImportId, selectedExamId]);
+  const applyImportProgress = useCallback((job: PaperImportJob) => {
+    setPaperImports((current) => current.map((item) => item.id === job.id ? job : item));
+  }, []);
+  const reloadSettledImport = useCallback(async (examId: string) => {
+    await loadConfig(examId, { silent: true });
+  }, [loadConfig]);
+  usePaperImportPolling({
+    examId: selectedExamId,
+    importId: processingImportId,
+    onProgress: applyImportProgress,
+    onSettled: reloadSettledImport
+  });
 
 	useEffect(() => { setReviewDrafts(paperImports[0]?.questions ?? []); }, [paperImports]);
 

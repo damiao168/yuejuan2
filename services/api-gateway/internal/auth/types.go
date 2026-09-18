@@ -234,31 +234,65 @@ type AuditFilter struct {
 	ScopeMode string
 }
 
-type Store interface {
+type CredentialRepository interface {
 	FindUserByLogin(ctx context.Context, tenantCode string, username string) (UserWithPassword, error)
 	FindPasswordHash(ctx context.Context, tenantID string, userID string) (string, error)
 	RecordSuccessfulLogin(ctx context.Context, tenantID string, userID string, expectedPasswordHash string, replacementPasswordHash string) error
+	UpdatePasswordAndRevokeSessions(ctx context.Context, tenantID string, userID string, expectedPasswordHash string, newPasswordHash string) (bool, int, error)
+}
+
+type SessionRepository interface {
 	CreateSession(ctx context.Context, input CreateSessionInput) (DeviceSession, error)
 	FindUserBySession(ctx context.Context, tokenHash string, now time.Time) (User, error)
 	FindUserBySessionForReauthentication(ctx context.Context, tokenHash string, now time.Time) (User, error)
 	LockSession(ctx context.Context, tenantID string, userID string, tokenHash string, now time.Time) (bool, error)
 	MarkSessionReauthenticated(ctx context.Context, tenantID string, userID string, tokenHash string, startedAt time.Time, now time.Time) (bool, error)
-	ResolveAccessScope(ctx context.Context, user User) (AccessScope, error)
 	DeleteSession(ctx context.Context, tokenHash string, reason string) error
 	ListSessions(ctx context.Context, tenantID string, userID string, currentTokenHash string, now time.Time) ([]DeviceSession, error)
 	RevokeSession(ctx context.Context, tenantID string, userID string, sessionID string, reason string) (bool, error)
 	RevokeAllSessions(ctx context.Context, tenantID string, userID string, reason string) (int, error)
-	UpdatePasswordAndRevokeSessions(ctx context.Context, tenantID string, userID string, expectedPasswordHash string, newPasswordHash string) (bool, int, error)
+}
+
+type AccessScopeResolver interface {
+	ResolveAccessScope(ctx context.Context, user User) (AccessScope, error)
+}
+
+type AuditRecorder interface {
 	Audit(ctx context.Context, event AuditEvent) error
+}
+
+type AuditRepository interface {
+	AuditRecorder
 	ListAudits(ctx context.Context, tenantID string, filter AuditFilter) ([]AuditRecord, error)
+}
+
+type UserAdministrationRepository interface {
 	ListManagedUsers(ctx context.Context, tenantID string, filter ManagedUserFilter) ([]ManagedUser, error)
 	ListAssignableRoles(ctx context.Context, actor User) ([]AssignableRole, error)
 	CreateManagedUser(ctx context.Context, actor User, actorScope AccessScope, input CreateManagedUserInput, passwordHash string) (ManagedUser, error)
+	UpdateManagedUserStatus(ctx context.Context, actor User, actorScope AccessScope, userID string, status string) (ManagedUser, string, error)
+}
+
+type ActivationRepository interface {
 	CreateActivation(ctx context.Context, actor User, actorScope AccessScope, userID string, tokenHash string, expiresAt time.Time) (ActivationPreview, error)
 	FindActivation(ctx context.Context, tokenHash string, now time.Time) (ActivationPreview, error)
 	ActivateUser(ctx context.Context, tokenHash string, passwordHash string, now time.Time) (ActivationResult, error)
+}
+
+type RecoveryRepository interface {
 	CreateRecovery(ctx context.Context, actor User, actorScope AccessScope, userID string, tokenHash string, expiresAt time.Time) (RecoveryPreview, error)
 	FindRecovery(ctx context.Context, tokenHash string, now time.Time) (RecoveryPreview, error)
 	CompleteRecovery(ctx context.Context, tokenHash string, passwordHash string, now time.Time) (RecoveryResult, error)
-	UpdateManagedUserStatus(ctx context.Context, actor User, actorScope AccessScope, userID string, status string) (ManagedUser, string, error)
+}
+
+// Store remains the compatibility aggregate for existing composition roots.
+// New application services should depend only on the capabilities they use.
+type Store interface {
+	CredentialRepository
+	SessionRepository
+	AccessScopeResolver
+	AuditRepository
+	UserAdministrationRepository
+	ActivationRepository
+	RecoveryRepository
 }

@@ -1,19 +1,9 @@
 package paper
 
 import (
-	"archive/zip"
-	"bufio"
-	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"html"
-	"io"
-	"net/http"
-	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -23,22 +13,14 @@ import (
 	"github.com/google/uuid"
 )
 
-const maxDocumentTextBytes = 700_000
-const maxDocumentParseResponseBytes = 4 << 20
-const maxDocumentVisualPageBytes = 8 << 20
-const maxDocumentVisualPayloadBytes = 32 << 20
-
 const directVisualDocumentPlaceholder = "原始页面图片由多模态模型直接识别"
 
-var errDocumentOCRRequired = errors.New("document OCR required")
-
 type DocumentImportService struct {
-	store         Store
-	files         files.Store
-	objects       files.ObjectStorage
-	client        *http.Client
-	baseURL       string
-	token         string
+	store         PaperImportRepository
+	sourceLoader  DocumentSourceLoader
+	visualLoader  DocumentVisualPageLoader
+	parser        DocumentParser
+	parserTimeout time.Duration
 	parseMu       sync.Mutex
 	activeParses  map[string]*paperImportParse
 	modelResolver func(context.Context, string) (*DocumentModelConfig, error)
@@ -63,49 +45,20 @@ type paperImportParse struct {
 	cancel context.CancelFunc
 }
 
-type documentParseRequest struct {
-	RequestID    string                     `json:"request_id"`
-	Subject      string                     `json:"subject"`
-	Documents    []normalizedImportDocument `json:"documents"`
-	VisualPages  []documentVisualPage       `json:"visual_pages,omitempty"`
-	ManagedModel *DocumentModelConfig       `json:"managed_model,omitempty"`
-}
-
-type documentVisualPage struct {
-	SourceID      string `json:"source_id"`
-	DocumentIndex int    `json:"document_index"`
-	PageNo        int    `json:"page_no"`
-	MediaType     string `json:"media_type"`
-	DataBase64    string `json:"data_base64"`
-	SHA256        string `json:"sha256"`
-	Width         int    `json:"width,omitempty"`
-	Height        int    `json:"height,omitempty"`
-}
-
-type documentParseResponse struct {
-	Documents          []PaperImportDetectedDocument `json:"documents"`
-	QuestionCandidates []QuestionCandidate           `json:"question_candidates"`
-	AnswerCandidates   []AnswerCandidate             `json:"answer_candidates"`
-	SolutionCandidates []SolutionCandidate           `json:"solution_candidates"`
-	RubricCandidates   []RubricCandidate             `json:"rubric_candidates"`
-	Issues             []PaperImportIssue            `json:"issues"`
-	ModelUsage         PaperImportModelUsage         `json:"model_usage,omitempty"`
-}
-
-// PaperImportParseResult is the immutable parser output accepted by the
-// transactional publisher. Keeping this type exported lets integration tests
-// and alternate parser adapters exercise the exact command boundary.
-type PaperImportParseResult = documentParseResponse
-
 // The parser input is persisted before execution so it must have one stable
 // wire representation shared by the request builder and the task executor.
 type normalizedImportDocument = PaperImportParseDocument
 
-func NewDocumentImportService(store Store, fileStore files.Store, objects files.ObjectStorage, baseURL, token string, timeout time.Duration) *DocumentImportService {
+func NewDocumentImportService(store PaperImportRepository, fileStore files.Store, objects files.ObjectStorage, baseURL, token string, timeout time.Duration) *DocumentImportService {
 	if timeout <= 0 {
 		timeout = 5 * time.Minute
 	}
-	return &DocumentImportService{store: store, files: fileStore, objects: objects, client: &http.Client{Timeout: timeout}, baseURL: strings.TrimRight(strings.TrimSpace(baseURL), "/"), token: token, activeParses: map[string]*paperImportParse{}}
+	return &DocumentImportService{
+		store: store, sourceLoader: storedDocumentSourceLoader{files: fileStore, objects: objects},
+		visualLoader: storedDocumentVisualPageLoader{files: fileStore, objects: objects},
+		parser:       NewHTTPDocumentParser(baseURL, token, timeout), parserTimeout: timeout,
+		activeParses: map[string]*paperImportParse{},
+	}
 }
 
 func (s *DocumentImportService) Start(ctx context.Context, tenantID, examID, userID string, input CreatePaperImportInput) (PaperImportJob, error) {
@@ -171,7 +124,7 @@ func (s *DocumentImportService) processSources(ctx context.Context, tenantID, us
 			}
 			return failed, nil
 		}
-		asset, getErr := s.files.Get(ctx, tenantID, source.FileAssetID)
+		asset, getErr := s.sourceLoader.Metadata(ctx, tenantID, source.FileAssetID)
 		if getErr != nil {
 			return PaperImportJob{}, getErr
 		}
@@ -447,44 +400,7 @@ func possiblePageMissingIssues(sources []PaperImportSource, blocks []PaperImport
 }
 
 func (s *DocumentImportService) assetText(ctx context.Context, tenantID, id string) (string, error) {
-	asset, err := s.files.Get(ctx, tenantID, id)
-	if err != nil {
-		return "", ErrInvalidInput
-	}
-	body, err := s.objects.Get(ctx, asset.StorageBucket, asset.StorageKey)
-	if err != nil {
-		return "", err
-	}
-	defer body.Close()
-	data, err := io.ReadAll(io.LimitReader(body, 32<<20))
-	if err != nil {
-		return "", err
-	}
-	var text string
-	switch {
-	case strings.Contains(asset.ContentType, "wordprocessingml") || strings.HasSuffix(strings.ToLower(asset.OriginalName), ".docx"):
-		text, err = extractDOCXText(data)
-	case asset.ContentType == "application/pdf" || strings.HasSuffix(strings.ToLower(asset.OriginalName), ".pdf"):
-		text, err = extractPDFText(data)
-	case strings.HasPrefix(asset.ContentType, "image/"):
-		return "", errDocumentOCRRequired
-	default:
-		err = errors.New("仅支持 PDF 或 DOCX 文件")
-	}
-	if err != nil {
-		return "", err
-	}
-	text = strings.TrimSpace(text)
-	if len([]rune(text)) < 20 {
-		if asset.ContentType == "application/pdf" || strings.HasSuffix(strings.ToLower(asset.OriginalName), ".pdf") {
-			return "", errDocumentOCRRequired
-		}
-		return "", errors.New("文件没有可提取文字")
-	}
-	if len(text) > maxDocumentTextBytes {
-		text = text[:maxDocumentTextBytes]
-	}
-	return text, nil
+	return s.sourceLoader.Load(ctx, tenantID, id)
 }
 
 func (s *DocumentImportService) parseForTenant(ctx context.Context, tenantID, requestID, subject string, documents []normalizedImportDocument) (documentParseResponse, error) {
@@ -496,9 +412,6 @@ func (s *DocumentImportService) parseForTenantWithProgress(ctx context.Context, 
 }
 
 func (s *DocumentImportService) parseInputForTenantWithProgress(ctx context.Context, tenantID, requestID, subject string, documents []normalizedImportDocument, pages []PaperImportDecodedPage, onProgress func(map[string]any) error) (documentParseResponse, error) {
-	if s.baseURL == "" || len(s.token) < 32 {
-		return documentParseResponse{}, errors.New("AI service not configured")
-	}
 	visualPages, err := s.loadDocumentVisualPages(ctx, tenantID, documents, pages)
 	if err != nil {
 		return documentParseResponse{}, err
@@ -511,205 +424,11 @@ func (s *DocumentImportService) parseInputForTenantWithProgress(ctx context.Cont
 			return documentParseResponse{}, errors.New("school model configuration unavailable")
 		}
 	}
-	body, _ := json.Marshal(documentParseRequest{RequestID: requestID, Subject: subject, Documents: documents, VisualPages: visualPages, ManagedModel: model})
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.baseURL+"/paper/parse", bytes.NewReader(body))
-	if err != nil {
-		return documentParseResponse{}, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+s.token)
-	req.Header.Set("Accept", "application/x-ndjson, application/json")
-	resp, err := s.client.Do(req)
-	if err != nil {
-		return documentParseResponse{}, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return documentParseResponse{}, fmt.Errorf("paper parser returned %d", resp.StatusCode)
-	}
-	if !strings.Contains(strings.ToLower(resp.Header.Get("Content-Type")), "application/x-ndjson") {
-		var out documentParseResponse
-		dec := json.NewDecoder(io.LimitReader(resp.Body, maxDocumentParseResponseBytes))
-		if err := dec.Decode(&out); err != nil {
-			return documentParseResponse{}, err
-		}
-		return out, nil
-	}
-
-	type streamFrame struct {
-		Type     string                 `json:"type"`
-		Progress map[string]any         `json:"progress"`
-		Result   *documentParseResponse `json:"result"`
-		Error    json.RawMessage        `json:"error"`
-	}
-	type streamError struct {
-		Status int `json:"status"`
-		Error  struct {
-			Code    string `json:"code"`
-			Message string `json:"message"`
-		} `json:"error"`
-	}
-	scanner := bufio.NewScanner(io.LimitReader(resp.Body, maxDocumentParseResponseBytes+1))
-	scanner.Buffer(make([]byte, 64<<10), maxDocumentParseResponseBytes+1)
-	readBytes := 0
-	var result *documentParseResponse
-	for scanner.Scan() {
-		readBytes += len(scanner.Bytes()) + 1
-		if readBytes > maxDocumentParseResponseBytes {
-			return documentParseResponse{}, errors.New("paper parser response exceeded size limit")
-		}
-		var frame streamFrame
-		if err := json.Unmarshal(scanner.Bytes(), &frame); err != nil {
-			return documentParseResponse{}, errors.New("paper parser stream contained invalid JSON")
-		}
-		switch frame.Type {
-		case "progress":
-			if onProgress != nil {
-				if err := onProgress(frame.Progress); err != nil {
-					return documentParseResponse{}, err
-				}
-			}
-		case "result":
-			if frame.Result == nil || result != nil {
-				return documentParseResponse{}, errors.New("paper parser stream contained an invalid result")
-			}
-			result = frame.Result
-		case "error":
-			var detail streamError
-			if json.Unmarshal(frame.Error, &detail) != nil {
-				return documentParseResponse{}, errors.New("paper parser stream reported an invalid error")
-			}
-			code := strings.TrimSpace(detail.Error.Code)
-			if code == "" {
-				code = "unknown_error"
-			}
-			return documentParseResponse{}, fmt.Errorf("paper parser stream failed: %s", code)
-		default:
-			return documentParseResponse{}, errors.New("paper parser stream contained an unknown event")
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return documentParseResponse{}, fmt.Errorf("read paper parser stream: %w", err)
-	}
-	if result == nil {
-		return documentParseResponse{}, errors.New("paper parser stream ended without a result")
-	}
-	return *result, nil
+	return s.parser.Parse(ctx, DocumentParseRequest{
+		RequestID: requestID, Subject: subject, Documents: documents, VisualPages: visualPages, ManagedModel: model,
+	}, onProgress)
 }
 
 func (s *DocumentImportService) loadDocumentVisualPages(ctx context.Context, tenantID string, documents []normalizedImportDocument, pages []PaperImportDecodedPage) ([]documentVisualPage, error) {
-	if len(pages) == 0 {
-		return nil, nil
-	}
-	if s.files == nil || s.objects == nil {
-		return nil, errors.New("paper page image storage is unavailable")
-	}
-	documentIndexes := make(map[string]int, len(documents))
-	for _, document := range documents {
-		documentIndexes[document.SourceID] = document.DocumentIndex
-	}
-	ordered := append([]PaperImportDecodedPage(nil), pages...)
-	sort.SliceStable(ordered, func(i, j int) bool {
-		if ordered[i].DocumentIndex == ordered[j].DocumentIndex {
-			return ordered[i].PageNo < ordered[j].PageNo
-		}
-		return ordered[i].DocumentIndex < ordered[j].DocumentIndex
-	})
-	seen := map[string]bool{}
-	totalBytes := 0
-	visualPages := make([]documentVisualPage, 0, len(ordered))
-	for _, page := range ordered {
-		documentIndex, ok := documentIndexes[page.SourceID]
-		key := fmt.Sprintf("%s:%d", page.SourceID, page.PageNo)
-		if !ok || documentIndex != page.DocumentIndex || page.PageNo <= 0 || strings.TrimSpace(page.FileAssetID) == "" || seen[key] {
-			return nil, errors.New("paper page image reference is invalid")
-		}
-		seen[key] = true
-		asset, err := s.files.Get(ctx, tenantID, page.FileAssetID)
-		if err != nil {
-			return nil, fmt.Errorf("load paper page image metadata: %w", err)
-		}
-		mediaType := strings.ToLower(strings.TrimSpace(strings.Split(asset.ContentType, ";")[0]))
-		if mediaType != "image/png" && mediaType != "image/jpeg" && mediaType != "image/webp" {
-			return nil, errors.New("paper page image has an unsupported media type")
-		}
-		if asset.SizeBytes <= 0 || asset.SizeBytes > maxDocumentVisualPageBytes || totalBytes+int(asset.SizeBytes) > maxDocumentVisualPayloadBytes {
-			return nil, errors.New("paper page images exceed the multimodal request limit")
-		}
-		reader, err := s.objects.Get(ctx, asset.StorageBucket, asset.StorageKey)
-		if err != nil {
-			return nil, fmt.Errorf("load paper page image: %w", err)
-		}
-		data, readErr := io.ReadAll(io.LimitReader(reader, maxDocumentVisualPageBytes+1))
-		closeErr := reader.Close()
-		if readErr != nil {
-			return nil, fmt.Errorf("read paper page image: %w", readErr)
-		}
-		if closeErr != nil {
-			return nil, fmt.Errorf("close paper page image: %w", closeErr)
-		}
-		if len(data) == 0 || len(data) > maxDocumentVisualPageBytes || totalBytes+len(data) > maxDocumentVisualPayloadBytes {
-			return nil, errors.New("paper page images exceed the multimodal request limit")
-		}
-		digest := fmt.Sprintf("%x", sha256.Sum256(data))
-		if expected := strings.TrimSpace(page.SHA256); expected != "" && !strings.EqualFold(expected, digest) {
-			return nil, errors.New("paper page image checksum mismatch")
-		}
-		if expected := strings.TrimSpace(asset.HashSHA256); expected != "" && !strings.EqualFold(expected, digest) {
-			return nil, errors.New("paper page image asset checksum mismatch")
-		}
-		totalBytes += len(data)
-		visualPages = append(visualPages, documentVisualPage{
-			SourceID: page.SourceID, DocumentIndex: page.DocumentIndex, PageNo: page.PageNo,
-			MediaType: mediaType, DataBase64: base64.StdEncoding.EncodeToString(data), SHA256: digest,
-			Width: page.Width, Height: page.Height,
-		})
-	}
-	return visualPages, nil
-}
-
-func extractDOCXText(data []byte) (string, error) {
-	r, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
-	if err != nil {
-		return "", errors.New("DOCX 文件损坏")
-	}
-	for _, file := range r.File {
-		if file.Name != "word/document.xml" {
-			continue
-		}
-		rc, err := file.Open()
-		if err != nil {
-			return "", err
-		}
-		raw, err := io.ReadAll(io.LimitReader(rc, maxDocumentTextBytes*2))
-		rc.Close()
-		if err != nil {
-			return "", err
-		}
-		s := string(raw)
-		s = regexp.MustCompile(`</w:p>`).ReplaceAllString(s, "\n")
-		s = regexp.MustCompile(`<w:(tab|br)[^>]*/>`).ReplaceAllString(s, "\t")
-		s = regexp.MustCompile(`<[^>]+>`).ReplaceAllString(s, "")
-		return html.UnescapeString(s), nil
-	}
-	return "", errors.New("DOCX 正文缺失")
-}
-
-func extractPDFText(data []byte) (string, error) {
-	if !bytes.HasPrefix(data, []byte("%PDF-")) {
-		return "", errors.New("PDF 文件损坏")
-	}
-	// Conservative fallback for text PDFs. Encoded/scanned PDFs deliberately fail
-	// closed so that OCR is used instead of inventing question content.
-	re := regexp.MustCompile(`\(([^()]*)\)\s*Tj`)
-	matches := re.FindAllSubmatch(data, -1)
-	var b strings.Builder
-	for _, match := range matches {
-		value := strings.ReplaceAll(string(match[1]), `\(`, "(")
-		value = strings.ReplaceAll(value, `\)`, ")")
-		value = strings.ReplaceAll(value, `\\`, `\`)
-		b.WriteString(value)
-		b.WriteByte('\n')
-	}
-	return b.String(), nil
+	return s.visualLoader.Load(ctx, tenantID, documents, pages)
 }

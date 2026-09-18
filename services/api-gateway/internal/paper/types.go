@@ -687,9 +687,12 @@ type ReadinessResult struct {
 	ConfirmedBy             string           `json:"confirmed_by,omitempty"`
 }
 
-type Store interface {
+type PaperRepository interface {
 	CreatePaper(ctx context.Context, tenantID string, examID string, userID string, input CreatePaperInput) (Paper, error)
 	ListPapers(ctx context.Context, tenantID string, examID string) ([]Paper, error)
+}
+
+type PaperImportRepository interface {
 	CreatePaperImport(ctx context.Context, tenantID string, examID string, userID string, input CreatePaperImportInput) (PaperImportJob, error)
 	AddPaperImportSources(ctx context.Context, tenantID string, id string, userID string, input AddPaperImportSourcesInput) (PaperImportJob, error)
 	ReplacePaperImportSources(ctx context.Context, tenantID string, id string, userID string, input ReplacePaperImportSourcesInput) (PaperImportJob, error)
@@ -701,21 +704,53 @@ type Store interface {
 	GetPaperImport(ctx context.Context, tenantID string, id string) (PaperImportJob, error)
 	ListPaperImports(ctx context.Context, tenantID string, examID string) ([]PaperImportJob, error)
 	ApplyPaperImport(ctx context.Context, tenantID string, id string, userID string) (PaperImportJob, error)
+}
+
+type QuestionRepository interface {
 	CreateQuestion(ctx context.Context, tenantID string, examID string, userID string, input CreateQuestionInput) (Question, error)
 	ListQuestions(ctx context.Context, tenantID string, examID string) ([]Question, error)
 	UpdateQuestion(ctx context.Context, tenantID string, id string, userID string, input UpdateQuestionInput) (Question, error)
 	DeleteQuestion(ctx context.Context, tenantID string, id string) error
+}
+
+type RubricRepository interface {
 	CreateRubric(ctx context.Context, tenantID string, questionID string, userID string, input RubricInput) (Rubric, error)
+}
+
+type ConfigurationValidationRepository interface {
 	ValidateConfig(ctx context.Context, tenantID string, examID string) (ValidationResult, error)
+}
+
+type TemplateRepository interface {
 	ListTemplates(ctx context.Context, tenantID string, examID string) ([]AnswerSheetTemplate, error)
 	CreateTemplate(ctx context.Context, tenantID string, examID string, userID string, input CreateTemplateInput) (AnswerSheetTemplate, error)
 	UpdateTemplate(ctx context.Context, tenantID string, id string, input UpdateTemplateInput) (AnswerSheetTemplate, error)
 	LockTemplate(ctx context.Context, tenantID string, id string, userID string) (AnswerSheetTemplate, error)
 	CloneTemplate(ctx context.Context, tenantID string, id string, userID string) (AnswerSheetTemplate, error)
+}
+
+type TemplateBindingRepository interface {
 	GetExamTemplateBinding(ctx context.Context, tenantID string, examID string) (ExamTemplateBinding, error)
 	BindExamTemplate(ctx context.Context, tenantID string, examID string, userID string, input BindExamTemplateInput) (ExamTemplateBinding, error)
 	UnbindExamTemplate(ctx context.Context, tenantID string, examID string, input UnbindExamTemplateInput) (ExamTemplateBinding, error)
+}
+
+type ReadinessRepository interface {
 	Readiness(ctx context.Context, tenantID string, examID string) (ReadinessResult, error)
 	ConfirmReadiness(ctx context.Context, tenantID string, examID string, userID string) (ReadinessResult, error)
 	StartCollection(ctx context.Context, tenantID string, examID string, userID string) (ReadinessResult, error)
+}
+
+// Store remains the compatibility aggregate for callers that still span the
+// complete paper lifecycle. New consumers should depend on the smallest
+// repository capability that covers their work.
+type Store interface {
+	PaperRepository
+	PaperImportRepository
+	QuestionRepository
+	RubricRepository
+	ConfigurationValidationRepository
+	TemplateRepository
+	TemplateBindingRepository
+	ReadinessRepository
 }

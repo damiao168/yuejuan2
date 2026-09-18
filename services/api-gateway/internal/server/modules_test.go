@@ -6,15 +6,26 @@ import (
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/config"
+	"edugrade-enterprise/services/api-gateway/internal/files"
+	"edugrade-enterprise/services/api-gateway/internal/processing"
 )
 
 func TestTransactionalApplicationCompositionRejectsMissingCoordinatorCapability(t *testing.T) {
 	stores := NewMemoryApplicationStores()
-	_, err := NewTransactionalCaptureProcessingModule(config.Config{}, stores.Capture,
-		&IdentityModule{AuthStore: stores.Identity.Auth},
-		&ExamPreparationModule{SubmissionStore: stores.Exam.Submissions, FileStore: stores.Exam.Files})
+	_, err := NewTransactionalCaptureProcessingModule(config.Config{}, stores.Capture, captureProcessingTestDependencies(stores))
 	if err == nil || !strings.Contains(err.Error(), "transactional command coordination") {
 		t.Fatalf("production composition accepted a store without required capability: %v", err)
+	}
+}
+
+func TestTransactionalCaptureCompositionRejectsTypedNilCapability(t *testing.T) {
+	stores := NewMemoryApplicationStores()
+	dependencies := captureProcessingTestDependencies(stores)
+	var missing *auth.MemoryStore
+	dependencies.Auth = missing
+	_, err := NewTransactionalCaptureProcessingModule(config.Config{}, stores.Capture, dependencies)
+	if err == nil || !strings.Contains(err.Error(), "capture dependency Auth is not configured") {
+		t.Fatalf("production composition accepted a typed nil dependency: %v", err)
 	}
 }
 
@@ -34,5 +45,13 @@ func TestProductionStoreGraphRejectsMissingStores(t *testing.T) {
 	err := validatePostgresStoreGraph(stores)
 	if err == nil || !strings.Contains(err.Error(), "stores.Identity.Auth is not configured") {
 		t.Fatalf("production graph accepted a missing store: %v", err)
+	}
+}
+
+func captureProcessingTestDependencies(stores ApplicationStores) CaptureProcessingDependencies {
+	return CaptureProcessingDependencies{
+		Auth: stores.Identity.Auth, Exams: stores.Exam.Exam, Files: stores.Exam.Files,
+		Objects: files.NewMemoryObjectStorage(), Submissions: stores.Exam.Submissions,
+		Processing: processing.NewService(stores.Capture.Processing, stores.Capture.WorkerRuntime),
 	}
 }
