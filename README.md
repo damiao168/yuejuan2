@@ -66,7 +66,41 @@ flowchart LR
 >
 > 如果你只是浏览本仓库进行学习和技术研究，无需执行以下部署步骤。所有行为均受 [`LICENSE`](./LICENSE) 约束。
 
-以下流程面向一台新的 Windows 电脑，覆盖从下载代码到首次登录、健康检查和日常启停。命令均在 PowerShell 中执行；除非特别说明，路径都以仓库根目录为起点。生产或跨机器部署还必须继续阅读[私有化部署说明](infra/docker-compose/README.md)和[预生产 Runbook](docs/deployment/preproduction-runbook.md)。
+### 推荐：一键安装与启动
+
+电脑只需预先安装 Git 和 Docker Desktop。下载仓库后，在仓库根目录执行同一条命令：
+
+```powershell
+.\start-edugrade.cmd
+```
+
+首次运行时，脚本会自动完成以下工作：
+
+1. 启动并等待 Docker Desktop，确认使用 Linux containers。
+2. 从 Compose 样例创建 `infra/docker-compose/.env`，自动生成数据库、Redis、MinIO、Qdrant、内部服务和 Worker 随机密钥。
+3. 下载并校验固定版本的 llama.cpp 与 Qwen3-4B 模型，启动本地模型并同步 API Key。
+4. 执行部署预检、数据库迁移、MinIO 初始化、核心镜像构建和健康检查。
+5. 只提示一次 `platform_admin` 管理员密码，创建管理员并完成带登录的 smoke test。
+6. 自动打开 `http://127.0.0.1:8088`。
+
+以后每天启动仍然执行同一条 `.\start-edugrade.cmd`；脚本会识别已经安装的环境，复用配置、数据、模型和镜像，不会重新生成密钥。首次安装需要下载约 2.4 GiB 的本地模型以及 Docker 镜像，实际耗时取决于网络。
+
+常用参数：
+
+```powershell
+# 源码或依赖更新后重建核心镜像
+.\start-edugrade.cmd -Build
+
+# 启动完成后不自动打开浏览器
+.\start-edugrade.cmd -NoBrowser
+
+# 只显示本次会执行的模式，不改文件、不启动服务
+.\start-edugrade.cmd -DryRun
+```
+
+默认一键流程先启动可登录、可管理的核心系统。OCR、图像质量、页面处理等 Worker 需要与平台服务账号匹配，不能用随机占位账号冒充；完成账号配置后按第 4.2 节启用。脚本参数和实现见 [`scripts/launch-local.ps1`](scripts/launch-local.ps1)。
+
+下面保留完整手工流程，供排错、定制配置和运维审计使用。它面向一台新的 Windows 电脑，覆盖从下载代码到首次登录、健康检查和日常启停。命令均在 PowerShell 中执行；除非特别说明，路径都以仓库根目录为起点。生产或跨机器部署还必须继续阅读[私有化部署说明](infra/docker-compose/README.md)和[预生产 Runbook](docs/deployment/preproduction-runbook.md)。
 
 ### 1. 部署前准备
 
@@ -380,20 +414,20 @@ try {
 
 ### 7. 日常启动、停止和查看日志
 
-先启动宿主机模型：
+推荐直接使用与首次安装相同的一键命令；它会启动模型、应用和健康检查：
 
 ```powershell
 Set-Location $HOME\yuejuan
+.\start-edugrade.cmd
+```
+
+以下命令保留给需要绕过一键入口的手工运维。先启动宿主机模型：
+
+```powershell
 powershell -ExecutionPolicy Bypass -File lab\scripts\start-local-server.ps1 -Candidate qwen3_4b
 ```
 
-完整配置过所有 Worker profile 的电脑可直接启动全部服务：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1
-```
-
-该脚本会启用全部 Compose profile。若只完成了核心配置，请使用下面的核心启动命令，避免未配置的 Worker 反复登录失败：
+若只完成了核心配置，使用下面的核心启动命令：
 
 ```powershell
 Set-Location $HOME\yuejuan\infra\docker-compose
