@@ -25,7 +25,7 @@ const checks = [
   },
   {
     name: "user routes",
-    file: "services/api-gateway/internal/server/server.go",
+    file: "services/api-gateway/internal/server/routes_auth.go",
     includes: ["GET /api/v1/users", "POST /api/v1/users", "GET /api/v1/roles", "requireOrgManage"]
   },
   {

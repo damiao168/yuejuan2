@@ -16,7 +16,7 @@ const workspace = read(
   "ModelEvaluationWorkspace.tsx"
 );
 const appShell = read("apps", "web-admin", "src", "AppShell.tsx");
-const server = read("services", "api-gateway", "internal", "server", "server.go");
+const governanceRoutes = read("services", "api-gateway", "internal", "server", "routes_governance.go");
 const story = read("docs", "stories", "STORY-061-multi-provider-native-model-governance.md");
 
 for (const endpoint of [
@@ -26,7 +26,7 @@ for (const endpoint of [
   "/invalidate"
 ]) {
   assert.ok(api.includes(endpoint), `web evaluation API missing ${endpoint}`);
-  assert.ok(server.includes(endpoint), `server evaluation route missing ${endpoint}`);
+  assert.ok(governanceRoutes.includes(endpoint), `server evaluation route missing ${endpoint}`);
 }
 
 for (const invariant of [
