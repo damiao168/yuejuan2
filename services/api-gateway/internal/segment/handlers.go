@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"mime"
 	"net/http"
 	"strings"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
+	"edugrade-enterprise/services/api-gateway/internal/binaryresourcehttp"
 	"edugrade-enterprise/services/api-gateway/internal/files"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
@@ -22,12 +21,12 @@ type Handler struct {
 	papers      paper.QuestionRepository
 	submissions submissionpkg.Store
 	audit       auth.Store
-	fileStore   files.Store
-	objects     files.ObjectStorage
+	images      *ImageService
 }
 
 func NewHandler(store Store, papers paper.QuestionRepository, submissions submissionpkg.Store, audit auth.Store, fileStore files.Store, objects files.ObjectStorage) *Handler {
-	return &Handler{store: store, papers: papers, submissions: submissions, audit: audit, fileStore: fileStore, objects: objects}
+	return &Handler{store: store, papers: papers, submissions: submissions, audit: audit,
+		images: NewImageService(store, submissions, fileStore, objects)}
 }
 
 func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {
@@ -153,52 +152,12 @@ func (h *Handler) GetEvidence(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetImage(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
-	evidence, err := h.store.GetEvidence(r.Context(), user.TenantID, r.PathValue("id"))
+	resource, err := h.images.ReadCropImage(r.Context(), user.TenantID, r.PathValue("id"))
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
 	}
-	if evidence.ProcessingStatus != "completed" || evidence.RegistrationStatus != "completed" || evidence.CropFileAssetID == "" || evidence.CropSHA256 == "" {
-		writeStoreError(w, r, ErrEvidenceUnavailable)
-		return
-	}
-	asset, err := h.fileStore.Get(r.Context(), user.TenantID, evidence.CropFileAssetID)
-	if err != nil || asset.ExamID != evidence.ExamID || asset.HashSHA256 != evidence.CropSHA256 || asset.DeletedAt != nil || !strings.HasPrefix(asset.ContentType, "image/") || asset.SizeBytes <= 0 {
-		writeStoreError(w, r, ErrEvidenceUnavailable)
-		return
-	}
-	validOwner := (asset.OwnerType == "answer_segment_crop" && asset.OwnerID == evidence.RegistrationRunID) || (asset.OwnerType == "page_registration_correction_preview" && evidence.CorrectionID != "" && asset.OwnerID == evidence.CorrectionID)
-	if !validOwner {
-		writeStoreError(w, r, ErrEvidenceUnavailable)
-		return
-	}
-	etag := `"sha256:` + evidence.CropSHA256 + `"`
-	w.Header().Set("ETag", etag)
-	// The segment URL is stable while its crop evidence may be replaced after a
-	// registration correction. Revalidate the private cache so graders never
-	// keep seeing an obsolete crop under the same URL.
-	w.Header().Set("Cache-Control", "private, no-cache")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	if r.Header.Get("If-None-Match") == etag {
-		w.WriteHeader(http.StatusNotModified)
-		return
-	}
-	w.Header().Set("Content-Type", asset.ContentType)
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", asset.SizeBytes))
-	w.Header().Set("Content-Disposition", mime.FormatMediaType("inline", map[string]string{"filename": "segment-" + evidence.SegmentID + ".png"}))
-	if r.Method == http.MethodHead {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-	body, err := h.objects.Get(r.Context(), asset.StorageBucket, asset.StorageKey)
-	if err != nil {
-		httpx.Error(w, r, http.StatusBadGateway, "object_storage_failed", "failed to read segment image")
-		return
-	}
-	defer body.Close()
-	h.auditAction(r, "segment.image_viewed", "answer_segment", evidence.SegmentID, "view active answer segment image")
-	w.WriteHeader(http.StatusOK)
-	_, _ = io.Copy(w, body)
+	binaryresourcehttp.Serve(w, r, resource, h.audit)
 }
 
 // GetPageImage serves the full answer-sheet page that owns an already
@@ -206,61 +165,13 @@ func (h *Handler) GetImage(w http.ResponseWriter, r *http.Request) {
 // file id, so the score-release boundary remains the source of authorization.
 func (h *Handler) GetPageImage(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
-	evidence, err := h.store.GetEvidence(r.Context(), user.TenantID, r.PathValue("id"))
+	resource, err := h.images.ReadPageImage(r.Context(), user.TenantID, r.PathValue("id"))
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
 	}
-	pages, err := h.submissions.ListPages(r.Context(), user.TenantID, evidence.SubmissionID)
-	if err != nil {
-		writeStoreError(w, r, ErrEvidenceUnavailable)
-		return
-	}
-	assetID := ""
-	for _, page := range pages {
-		if page.ID == evidence.SubmissionPageID {
-			assetID = page.NormalizedFileAssetID
-			if assetID == "" {
-				assetID = page.FileAssetID
-			}
-			break
-		}
-	}
-	if assetID == "" {
-		writeStoreError(w, r, ErrEvidenceUnavailable)
-		return
-	}
-	asset, err := h.fileStore.Get(r.Context(), user.TenantID, assetID)
-	if err != nil || asset.DeletedAt != nil || asset.ExamID != evidence.ExamID || !strings.HasPrefix(asset.ContentType, "image/") || asset.SizeBytes <= 0 {
-		writeStoreError(w, r, ErrEvidenceUnavailable)
-		return
-	}
-	etag := `"sha256:` + asset.HashSHA256 + `"`
-	w.Header().Set("ETag", etag)
-	w.Header().Set("Cache-Control", "private, no-cache")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	if r.Header.Get("If-None-Match") == etag {
-		w.WriteHeader(http.StatusNotModified)
-		return
-	}
-	w.Header().Set("Content-Type", asset.ContentType)
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", asset.SizeBytes))
-	w.Header().Set("Content-Disposition", mime.FormatMediaType("inline", map[string]string{"filename": fmt.Sprintf("paper-page-%s", evidence.SubmissionPageID)}))
-	if r.Method == http.MethodHead {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-	body, err := h.objects.Get(r.Context(), asset.StorageBucket, asset.StorageKey)
-	if err != nil {
-		httpx.Error(w, r, http.StatusBadGateway, "object_storage_failed", "failed to read paper page image")
-		return
-	}
-	defer body.Close()
-	h.auditAction(r, "student.paper_page_viewed", "submission_page", evidence.SubmissionPageID, "view published paper page")
-	w.WriteHeader(http.StatusOK)
-	_, _ = io.Copy(w, body)
+	binaryresourcehttp.Serve(w, r, resource, h.audit)
 }
-
 func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
 	if err := json.NewDecoder(r.Body).Decode(target); err != nil {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_request", "invalid json body")

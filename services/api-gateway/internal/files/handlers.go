@@ -6,11 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"mime"
 	"net/http"
 	"strings"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
+	"edugrade-enterprise/services/api-gateway/internal/binaryresourcehttp"
 	"edugrade-enterprise/services/api-gateway/internal/config"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
@@ -22,6 +22,7 @@ type Handler struct {
 	audit          auth.Store
 	cfg            config.FileConfig
 	reconciliation ReconciliationReader
+	downloads      *DownloadService
 }
 
 func (h *Handler) WithReconciliationReader(reader ReconciliationReader) *Handler {
@@ -44,7 +45,7 @@ func (h *Handler) ReconciliationStatus(w http.ResponseWriter, r *http.Request) {
 
 func NewHandler(store Store, objects ObjectStorage, audit auth.Store, cfg config.FileConfig) *Handler {
 	cfg = normalizeFileConfig(cfg)
-	return &Handler{store: store, objects: objects, audit: audit, cfg: cfg}
+	return &Handler{store: store, objects: objects, audit: audit, cfg: cfg, downloads: NewDownloadService(store, objects)}
 }
 
 func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
@@ -230,29 +231,12 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Download(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
-	asset, err := h.getScoped(r, user, r.PathValue("id"))
+	resource, err := h.downloads.ReadDownload(r.Context(), user, r.PathValue("id"))
 	if err != nil {
-		writeStoreError(w, r, err)
+		WriteDownloadError(w, r, err)
 		return
 	}
-	if asset.Lifecycle != "" && asset.Lifecycle != LifecycleActive {
-		httpx.Error(w, r, http.StatusConflict, "file_not_active", "file is not available for download")
-		return
-	}
-	body, err := h.objects.Get(r.Context(), asset.StorageBucket, asset.StorageKey)
-	if err != nil {
-		httpx.Error(w, r, http.StatusBadGateway, "object_storage_failed", "failed to read object storage")
-		return
-	}
-	defer body.Close()
-
-	h.auditAction(r, "file.downloaded", "file_asset", asset.ID, "download private file")
-	w.Header().Set("Content-Type", asset.ContentType)
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", asset.SizeBytes))
-	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": asset.OriginalName}))
-	w.WriteHeader(http.StatusOK)
-	_, _ = io.Copy(w, body)
+	binaryresourcehttp.Serve(w, r, resource, h.audit)
 }
 
 func normalizeFileConfig(cfg config.FileConfig) config.FileConfig {

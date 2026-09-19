@@ -11,10 +11,13 @@ import (
 
 	"edugrade-enterprise/services/api-gateway/internal/aidisagreement"
 	"edugrade-enterprise/services/api-gateway/internal/auth"
+	"edugrade-enterprise/services/api-gateway/internal/binaryresourcehttp"
+	"edugrade-enterprise/services/api-gateway/internal/files"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 	"edugrade-enterprise/services/api-gateway/internal/pagination"
 	"edugrade-enterprise/services/api-gateway/internal/seedquality"
+	"edugrade-enterprise/services/api-gateway/internal/segment"
 )
 
 type GraderQualificationGate interface {
@@ -38,15 +41,15 @@ type AIHumanDisagreementObserver interface {
 type Handler struct {
 	store             Store
 	audit             auth.Store
-	segmentImage      http.HandlerFunc
-	fileDownload      http.HandlerFunc
+	segmentImage      segment.CropImageReader
+	fileDownload      files.DownloadReader
 	qualificationGate GraderQualificationGate
 	seedHook          seedquality.ReviewHook
 	seedRefresher     SeedObservationRefresher
 	disagreement      AIHumanDisagreementObserver
 }
 
-func NewHandler(store Store, audit auth.Store, segmentImage http.HandlerFunc, fileDownload http.HandlerFunc) *Handler {
+func NewHandler(store Store, audit auth.Store, segmentImage segment.CropImageReader, fileDownload files.DownloadReader) *Handler {
 	return &Handler{store: store, audit: audit, segmentImage: segmentImage, fileDownload: fileDownload}
 }
 
@@ -539,9 +542,12 @@ func (h *Handler) GetWorkspaceSegmentImage(w http.ResponseWriter, r *http.Reques
 				httpx.Error(w, r, http.StatusInternalServerError, "review_image_unavailable", "review image handler is unavailable")
 				return
 			}
-			proxyRequest := r.Clone(r.Context())
-			proxyRequest.SetPathValue("id", seedImage.AnswerSegmentID)
-			h.segmentImage(w, proxyRequest)
+			resource, err := h.segmentImage.ReadCropImage(r.Context(), user.TenantID, seedImage.AnswerSegmentID)
+			if err != nil {
+				segment.WriteImageError(w, r, err)
+				return
+			}
+			binaryresourcehttp.Serve(w, r, resource, h.audit)
 			return
 		}
 	}
@@ -557,9 +563,12 @@ func (h *Handler) GetWorkspaceSegmentImage(w http.ResponseWriter, r *http.Reques
 		httpx.Error(w, r, http.StatusInternalServerError, "review_image_unavailable", "review image handler is unavailable")
 		return
 	}
-	proxyRequest := r.Clone(r.Context())
-	proxyRequest.SetPathValue("id", workspace.Task.AnswerSegmentID)
-	h.segmentImage(w, proxyRequest)
+	resource, err := h.segmentImage.ReadCropImage(r.Context(), user.TenantID, workspace.Task.AnswerSegmentID)
+	if err != nil {
+		segment.WriteImageError(w, r, err)
+		return
+	}
+	binaryresourcehttp.Serve(w, r, resource, h.audit)
 }
 
 func (h *Handler) GetWorkspaceOriginalImage(w http.ResponseWriter, r *http.Request) {
@@ -581,9 +590,12 @@ func (h *Handler) GetWorkspaceOriginalImage(w http.ResponseWriter, r *http.Reque
 		httpx.Error(w, r, http.StatusInternalServerError, "review_image_unavailable", "review image handler is unavailable")
 		return
 	}
-	proxyRequest := r.Clone(r.Context())
-	proxyRequest.SetPathValue("id", workspace.OriginalFileID)
-	h.fileDownload(w, proxyRequest)
+	resource, err := h.fileDownload.ReadDownload(r.Context(), user, workspace.OriginalFileID)
+	if err != nil {
+		files.WriteDownloadError(w, r, err)
+		return
+	}
+	binaryresourcehttp.Serve(w, r, resource, h.audit)
 }
 
 func (h *Handler) RenewTaskClaim(w http.ResponseWriter, r *http.Request) {

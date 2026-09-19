@@ -6,8 +6,10 @@ import (
 	"net/http"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
+	"edugrade-enterprise/services/api-gateway/internal/binaryresourcehttp"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
+	"edugrade-enterprise/services/api-gateway/internal/segment"
 )
 
 // PublishedQuestionAppealHandler exposes separate student and staff shapes.
@@ -16,11 +18,11 @@ import (
 type PublishedQuestionAppealHandler struct {
 	service      *PublishedQuestionAppealService
 	audit        auth.Store
-	segmentImage http.HandlerFunc
+	segmentImage segment.CropImageReader
 }
 
-func (h *PublishedQuestionAppealHandler) WithSegmentImage(handler http.HandlerFunc) *PublishedQuestionAppealHandler {
-	h.segmentImage = handler
+func (h *PublishedQuestionAppealHandler) WithSegmentImage(reader segment.CropImageReader) *PublishedQuestionAppealHandler {
+	h.segmentImage = reader
 	return h
 }
 
@@ -62,8 +64,12 @@ func (h *PublishedQuestionAppealHandler) AnswerImage(w http.ResponseWriter, r *h
 		httpx.Error(w, r, http.StatusNotFound, "appeal_answer_image_unavailable", "appeal answer image is unavailable")
 		return
 	}
-	r.SetPathValue("id", context.AnswerSegmentID)
-	h.segmentImage(w, r)
+	resource, err := h.segmentImage.ReadCropImage(r.Context(), user.TenantID, context.AnswerSegmentID)
+	if err != nil {
+		segment.WriteImageError(w, r, err)
+		return
+	}
+	binaryresourcehttp.Serve(w, r, resource, h.audit)
 }
 
 func NewPublishedQuestionAppealHandler(service *PublishedQuestionAppealService, auditStore auth.Store) *PublishedQuestionAppealHandler {

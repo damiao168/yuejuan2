@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"net/http"
 	"reflect"
 	"strings"
 
@@ -117,6 +116,8 @@ type ExamPreparationModule struct {
 	FileHandler         *files.Handler
 	SubmissionHandler   *submission.Handler
 	SegmentHandler      *segment.Handler
+	SegmentImages       *segment.ImageService
+	FileDownloads       *files.DownloadService
 	AssessmentHandler   *assessment.Handler
 	QuestionBankHandler *questionbank.Handler
 	WorkspaceHandler    *workspace.Handler
@@ -154,6 +155,8 @@ func NewExamPreparationModule(cfg config.Config, stores ExamPreparationStores, d
 		FileHandler:         fileHandler,
 		SubmissionHandler:   submission.NewHandler(stores.Submissions, stores.Files, dependencies.AuthStore),
 		SegmentHandler:      segmentHandler,
+		SegmentImages:       segment.NewImageService(stores.Segments, stores.Submissions, stores.Files, dependencies.ObjectStore),
+		FileDownloads:       files.NewDownloadService(stores.Files, dependencies.ObjectStore),
 		AssessmentHandler:   assessment.NewHandler(stores.Assessments, dependencies.AuthStore),
 		QuestionBankHandler: questionbank.NewHandler(stores.QuestionBank),
 		WorkspaceHandler: workspace.NewHandler(workspace.Dependencies{
@@ -376,8 +379,8 @@ type GradingQualityDependencies struct {
 	EvaluationEvidence   subjective.EvaluationEvidenceProvider
 	CalibrationEvidence  subjective.CalibrationEvidenceProvider
 	DisagreementObserver review.AIHumanDisagreementObserver
-	SegmentImage         http.HandlerFunc
-	FileDownload         http.HandlerFunc
+	SegmentImage         segment.CropImageReader
+	FileDownload         files.DownloadReader
 	MathUnderstanding    mathunderstanding.Store
 	MathCorrections      mathunderstanding.CorrectionStore
 }
@@ -523,8 +526,8 @@ type ReleaseModule struct {
 type ReleaseDependencies struct {
 	Auth                  auth.Store
 	Regrade               *regrade.Service
-	StudentQuestionImage  http.HandlerFunc
-	StudentPaperPageImage http.HandlerFunc
+	StudentQuestionImage  segment.CropImageReader
+	StudentPaperPageImage segment.PageImageReader
 }
 
 func NewReleaseModule(stores ReleaseStores, dependencies ReleaseDependencies) *ReleaseModule {
@@ -832,12 +835,12 @@ func newApplicationModules(dependencies ApplicationDependencies, stores Applicat
 		WorkerRuntime: captureModule.WorkerRuntimeStore, Processing: captureModule.ProcessingService,
 		Eligibility: aiFoundation.EligibilityService, EvaluationEvidence: aiFoundation.GradingEvaluationService,
 		CalibrationEvidence: aiFoundation.ModelCalibrationService, DisagreementObserver: aiFoundation.DisagreementService,
-		SegmentImage: examModule.SegmentHandler.GetImage, FileDownload: examModule.FileHandler.Download,
+		SegmentImage: examModule.SegmentImages, FileDownload: examModule.FileDownloads,
 		MathUnderstanding: stores.AIGovernance.MathUnderstanding, MathCorrections: stores.AIGovernance.MathCorrections,
 	})
 	releaseModule := NewReleaseModule(stores.Release, ReleaseDependencies{
 		Auth: identity.AuthStore, Regrade: gradingQuality.RegradeService,
-		StudentQuestionImage: examModule.SegmentHandler.GetImage, StudentPaperPageImage: examModule.SegmentHandler.GetPageImage,
+		StudentQuestionImage: examModule.SegmentImages, StudentPaperPageImage: examModule.SegmentImages,
 	})
 	aiGovernance := NewAIGovernanceModule(dependencies.Config, stores.AIGovernance, AIGovernanceDependencies{
 		Auth: identity.AuthStore, WorkerRuntime: captureModule.WorkerRuntimeStore, Reviews: gradingQuality.ReviewStore,

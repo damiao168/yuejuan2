@@ -9,16 +9,18 @@ import (
 	"strings"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
+	"edugrade-enterprise/services/api-gateway/internal/binaryresourcehttp"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
+	"edugrade-enterprise/services/api-gateway/internal/segment"
 )
 
 type Handler struct {
-	service                      *Service
-	audit                        auth.Store
-	publisher                    PublicationPublisher
-	studentQuestionImageHandler  http.HandlerFunc
-	studentPaperPageImageHandler http.HandlerFunc
+	service                     *Service
+	audit                       auth.Store
+	publisher                   PublicationPublisher
+	studentQuestionImageReader  segment.CropImageReader
+	studentPaperPageImageReader segment.PageImageReader
 }
 
 // PublicationPublisher lets the composition root require an independently
@@ -37,13 +39,13 @@ func (h *Handler) WithPublicationPublisher(publisher PublicationPublisher) *Hand
 	return h
 }
 
-func (h *Handler) WithStudentQuestionImage(handler http.HandlerFunc) *Handler {
-	h.studentQuestionImageHandler = handler
+func (h *Handler) WithStudentQuestionImage(reader segment.CropImageReader) *Handler {
+	h.studentQuestionImageReader = reader
 	return h
 }
 
-func (h *Handler) WithStudentPaperPageImage(handler http.HandlerFunc) *Handler {
-	h.studentPaperPageImageHandler = handler
+func (h *Handler) WithStudentPaperPageImage(reader segment.PageImageReader) *Handler {
+	h.studentPaperPageImageReader = reader
 	return h
 }
 
@@ -241,7 +243,7 @@ func (h *Handler) StudentQuestionImage(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	if h.studentQuestionImageHandler == nil {
+	if h.studentQuestionImageReader == nil {
 		httpx.Error(w, r, http.StatusNotFound, "student_answer_image_unavailable", "answer image is not available")
 		return
 	}
@@ -249,8 +251,12 @@ func (h *Handler) StudentQuestionImage(w http.ResponseWriter, r *http.Request) {
 	// only after the immutable release, student and question association has
 	// been checked above, then the existing evidence handler performs its
 	// file-integrity checks before serving the crop.
-	r.SetPathValue("id", source.AnswerSegmentID)
-	h.studentQuestionImageHandler(w, r)
+	resource, err := h.studentQuestionImageReader.ReadCropImage(r.Context(), user.TenantID, source.AnswerSegmentID)
+	if err != nil {
+		segment.WriteImageError(w, r, err)
+		return
+	}
+	binaryresourcehttp.Serve(w, r, resource, h.audit)
 }
 
 func (h *Handler) StudentPaperPageImage(w http.ResponseWriter, r *http.Request) {
@@ -264,12 +270,16 @@ func (h *Handler) StudentPaperPageImage(w http.ResponseWriter, r *http.Request) 
 		writeError(w, r, err)
 		return
 	}
-	if h.studentPaperPageImageHandler == nil {
+	if h.studentPaperPageImageReader == nil {
 		httpx.Error(w, r, http.StatusNotFound, "student_paper_page_unavailable", "paper page is not available")
 		return
 	}
-	r.SetPathValue("id", source.AnswerSegmentID)
-	h.studentPaperPageImageHandler(w, r)
+	resource, err := h.studentPaperPageImageReader.ReadPageImage(r.Context(), user.TenantID, source.AnswerSegmentID)
+	if err != nil {
+		segment.WriteImageError(w, r, err)
+		return
+	}
+	binaryresourcehttp.Serve(w, r, resource, h.audit)
 }
 
 func releaseUser(w http.ResponseWriter, r *http.Request) (auth.User, bool) {

@@ -9,22 +9,24 @@ import (
 	"strings"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
+	"edugrade-enterprise/services/api-gateway/internal/binaryresourcehttp"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
+	"edugrade-enterprise/services/api-gateway/internal/segment"
 )
 
 type Handler struct {
 	service      *Service
 	audit        auth.Store
-	segmentImage http.HandlerFunc
+	segmentImage segment.CropImageReader
 }
 
 func NewHandler(service *Service, audit auth.Store) *Handler {
 	return &Handler{service: service, audit: audit}
 }
 
-func (h *Handler) WithSegmentImage(handler http.HandlerFunc) *Handler {
-	h.segmentImage = handler
+func (h *Handler) WithSegmentImage(reader segment.CropImageReader) *Handler {
+	h.segmentImage = reader
 	return h
 }
 
@@ -189,9 +191,12 @@ func (h *Handler) GetSegmentImage(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	proxyRequest := r.Clone(r.Context())
-	proxyRequest.SetPathValue("id", segmentID)
-	h.segmentImage(w, proxyRequest)
+	resource, err := h.segmentImage.ReadCropImage(r.Context(), user.TenantID, segmentID)
+	if err != nil {
+		segment.WriteImageError(w, r, err)
+		return
+	}
+	binaryresourcehttp.Serve(w, r, resource, h.audit)
 }
 func (h *Handler) RecordCandidate(w http.ResponseWriter, r *http.Request) {
 	user, ok := currentUser(w, r)
