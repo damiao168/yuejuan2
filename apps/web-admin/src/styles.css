@@ -701,6 +701,77 @@ body {
   max-width: 460px;
 }
 
+/* First-use readiness is an operational checklist: hierarchy comes from
+   spacing and dividers, while surfaces appear only where the user acts. */
+.platform-onboarding-page { max-width: 1080px; margin: 0 auto; }
+.platform-onboarding-heading { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 16px; align-items: start; padding: 10px 0 26px; border-bottom: 1px solid #dfe5ec; animation: onboarding-enter 180ms ease-out; }
+.platform-onboarding-heading > div:nth-child(2) > span { color: #0f766e; font-size: var(--eg-font-caption); font-weight: 700; letter-spacing: .05em; }
+.platform-onboarding-heading h1 { margin: 5px 0 5px; color: #0f172a; font-size: clamp(1.6rem, 2.4vw, 2.15rem); line-height: 1.2; }
+.platform-onboarding-heading p { max-width: 720px; margin: 0; color: #64748b; }
+.platform-onboarding-mark { display: grid; width: 42px; height: 42px; place-items: center; color: #0f766e; border: 1px solid #a7d9cf; border-radius: 50%; background: #f0fdfa; }
+.onboarding-progress { display: grid; grid-template-columns: minmax(140px, auto) minmax(220px, 1fr) auto; gap: 8px 22px; align-items: center; padding: 20px 0 12px; }
+.onboarding-progress > div { display: flex; align-items: baseline; gap: 10px; }
+.onboarding-progress span, .onboarding-progress small { color: #64748b; }
+.onboarding-progress strong { color: #0f172a; font-size: 1.18rem; font-variant-numeric: tabular-nums; }
+.onboarding-progress .ant-progress { margin: 0; }
+.onboarding-checklist { border-top: 1px solid #dfe5ec; }
+.onboarding-check { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 14px; align-items: start; padding: 22px 2px; border-bottom: 1px solid #e5eaf0; animation: onboarding-row-enter 220ms ease-out both; }
+.onboarding-check:nth-child(2) { animation-delay: 25ms; }
+.onboarding-check:nth-child(3) { animation-delay: 50ms; }
+.onboarding-check:nth-child(4) { animation-delay: 75ms; }
+.onboarding-check:nth-child(5) { animation-delay: 100ms; }
+.onboarding-check-icon { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; color: #64748b; background: #f1f5f9; }
+.onboarding-check.ready .onboarding-check-icon { color: #047857; background: #ecfdf5; }
+.onboarding-check.warning .onboarding-check-icon { color: #b45309; background: #fffbeb; }
+.onboarding-check.unavailable .onboarding-check-icon { color: #9f1239; background: #fff1f2; }
+.onboarding-check-copy { min-width: 0; }
+.onboarding-check-title { display: flex; align-items: center; gap: 10px; }
+.onboarding-check-title h2 { margin: 1px 0 0; color: #172033; font-size: 1rem; font-weight: 680; }
+.onboarding-check-title span { padding: 2px 7px; border-radius: 999px; color: #64748b; background: #f1f5f9; font-size: 11px; }
+.onboarding-check.ready .onboarding-check-title span { color: #047857; background: #ecfdf5; }
+.onboarding-check.warning .onboarding-check-title span { color: #92400e; background: #fef3c7; }
+.onboarding-check-copy > p { margin: 5px 0 0; color: #64748b; }
+.onboarding-check-action .ant-btn { display: inline-flex; align-items: center; gap: 6px; }
+.onboarding-inline-form { margin-top: 20px; padding: 18px; border: 1px solid #dfe5ec; border-radius: 9px; background: #f8fafc; animation: onboarding-form-open 180ms ease-out; }
+.onboarding-inline-form-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; color: #334155; }
+.onboarding-inline-form-heading span { margin-left: auto; color: #64748b; font-size: var(--eg-font-caption); }
+.create-school-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
+.create-school-grid .ant-form-item:last-child { grid-column: 1 / -1; }
+.onboarding-mode-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.onboarding-mode-list > div { display: grid; grid-template-columns: 20px auto; gap: 8px; min-width: 190px; padding: 9px 11px; color: #64748b; border-left: 2px solid #dbe2ea; background: #f8fafc; }
+.onboarding-mode-list > div.selected { color: #0f766e; border-left-color: #14b8a6; background: #f0fdfa; }
+.onboarding-mode-list span { display: grid; }
+.onboarding-mode-list strong { color: #334155; font-size: var(--eg-font-body); }
+.onboarding-mode-list small { font-size: 11px; }
+.onboarding-policy-summary { display: flex; flex-wrap: wrap; gap: 10px 26px; margin: 14px 0 0; }
+.onboarding-policy-summary > div { display: grid; grid-template-columns: auto auto; gap: 7px; }
+.onboarding-policy-summary dt { color: #64748b; }
+.onboarding-policy-summary dd { margin: 0; color: #334155; font-weight: 650; }
+.onboarding-next-action { display: flex; align-items: center; justify-content: space-between; gap: 28px; margin-top: 20px; padding: 22px 24px; border-left: 3px solid #2563eb; background: #f5f8ff; }
+.onboarding-next-action > div { display: grid; gap: 3px; }
+.onboarding-next-action span { color: #1d4ed8; font-size: var(--eg-font-caption); font-weight: 700; }
+.onboarding-next-action strong { color: #172033; font-size: 1.05rem; }
+.onboarding-next-action p { margin: 0; color: #64748b; }
+.onboarding-next-action .ant-btn { display: inline-flex; align-items: center; gap: 7px; }
+@keyframes onboarding-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes onboarding-row-enter { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes onboarding-form-open { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .platform-onboarding-heading, .onboarding-check, .onboarding-inline-form { animation: none; }
+}
+
+@media (max-width: 760px) {
+  .platform-onboarding-heading { grid-template-columns: 40px minmax(0, 1fr); }
+  .platform-onboarding-heading > .ant-btn { grid-column: 1 / -1; width: fit-content; }
+  .onboarding-progress { grid-template-columns: 1fr; }
+  .onboarding-check { grid-template-columns: 30px minmax(0, 1fr); }
+  .onboarding-check-action { grid-column: 2; }
+  .create-school-grid { grid-template-columns: 1fr; }
+  .create-school-grid .ant-form-item:last-child { grid-column: auto; }
+  .onboarding-next-action { align-items: flex-start; flex-direction: column; }
+}
+
 .account-security-methods {
   display: grid;
   gap: 1px;

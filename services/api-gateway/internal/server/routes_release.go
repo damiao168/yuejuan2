@@ -8,23 +8,35 @@ import (
 )
 
 func registerReleaseRoutes(mux *http.ServeMux, ctx routerContext) {
-	mux.Handle("POST /api/v1/exams/{examId}/finalize", ctx.guards.requireRecentPermission("score:manage", ctx.guards.withScopedExam(ctx.modules.Release.ScoreHandler.FinalizeExam)))
+	mux.Handle("POST /api/v1/exams/{examId}/finalize", ctx.guards.requireScoreManage(ctx.guards.withScopedExam(ctx.modules.Release.ScoreHandler.FinalizeExam)))
 	mux.Handle("GET /api/v1/exams/{examId}/grades", ctx.guards.requireScoreManage(ctx.guards.withScopedExam(ctx.modules.Release.ScoreHandler.ListExamGrades)))
 	mux.Handle("GET /api/v1/exams/{examId}/grades/quality", ctx.guards.requireScoreManage(ctx.guards.withScopedExam(ctx.modules.Release.ScoreHandler.CheckQuality)))
 	mux.Handle("GET /api/v1/exams/{examId}/roster", ctx.guards.requireRosterManage(ctx.guards.withScopedExam(ctx.modules.Release.ScoreHandler.ListRoster)))
 	mux.Handle("PUT /api/v1/exams/{examId}/roster/{studentId}/attendance", ctx.guards.requireRosterManage(ctx.guards.withScopedExam(ctx.modules.Release.ScoreHandler.SetAttendance)))
-	mux.Handle("POST /api/v1/exams/{examId}/confirm-grades", ctx.guards.requireRecentPermission("score:manage", ctx.guards.withScopedExam(ctx.modules.Release.ScoreHandler.ConfirmGrades)))
+	mux.Handle("POST /api/v1/exams/{examId}/confirm-grades", ctx.guards.requireScoreManage(ctx.guards.withScopedExam(ctx.modules.Release.ScoreHandler.ConfirmGrades)))
 	mux.Handle("POST /api/v1/exams/{examId}/publish", ctx.guards.requireRecentPermission("score:manage", ctx.guards.withScopedExam(ctx.modules.Release.ScoreHandler.PublishGrades)))
 	scoreReleaseExamManage := func(handler http.HandlerFunc) http.Handler {
-		return ctx.guards.requireSensitiveMutation("score:manage", ctx.guards.withScopedExam(handler))
+		return ctx.guards.requireScoreManage(ctx.guards.withScopedExam(handler))
 	}
 	scoreReleaseManage := func(handler http.HandlerFunc) http.Handler {
-		return ctx.guards.requireSensitiveMutation("score:manage", handler)
+		return ctx.guards.requireScoreManage(handler)
 	}
-	scorerelease.RegisterRoutes(mux, ctx.modules.Release.ScoreReleaseHandler, scoreReleaseExamManage, scoreReleaseManage, ctx.guards.requireStudentGradeAccess)
-	releasegate.RegisterRoutes(mux, ctx.modules.Release.ReleaseGateHandler, scoreReleaseExamManage)
+	criticalScoreReleaseExam := func(handler http.HandlerFunc) http.Handler {
+		return ctx.guards.requireRecentPermission("score:manage", ctx.guards.withScopedExam(handler))
+	}
+	criticalScoreRelease := func(handler http.HandlerFunc) http.Handler {
+		return ctx.guards.requireRecentPermission("score:manage", handler)
+	}
+	scorerelease.RegisterRoutes(mux, ctx.modules.Release.ScoreReleaseHandler, scorerelease.RouteGuards{
+		ExamManage:      scoreReleaseExamManage,
+		ReleaseManage:   scoreReleaseManage,
+		CriticalRelease: criticalScoreRelease,
+		CriticalExam:    criticalScoreReleaseExam,
+		StudentRead:     ctx.guards.requireStudentGradeAccess,
+	})
+	releasegate.RegisterRoutes(mux, ctx.modules.Release.ReleaseGateHandler, scoreReleaseManage)
 	studentportal.RegisterRoutes(mux, ctx.modules.Release.StudentPortalHandler, ctx.guards.requireStudentGradeAccess)
-	mux.Handle("GET /api/v1/exams/{examId}/grades/export", ctx.guards.requireRecentPermission("score:manage", ctx.guards.withScopedExam(ctx.modules.Release.ScoreHandler.ExportGrades)))
+	mux.Handle("GET /api/v1/exams/{examId}/grades/export", ctx.guards.requireScoreManage(ctx.guards.withScopedExam(ctx.modules.Release.ScoreHandler.ExportGrades)))
 	mux.Handle("GET /api/v1/students/{studentId}/exams/{examId}/grade", ctx.guards.requireStudentGradeAccess(ctx.guards.withScopedExam(ctx.modules.Release.ScoreHandler.GetStudentGrade)))
 	mux.Handle("POST /api/v1/appeals", ctx.guards.requireAppealCreate(ctx.modules.Release.AppealHandler.CreateAppeal))
 	mux.Handle("GET /api/v1/appeals", ctx.guards.requireAppealRead(ctx.modules.Release.AppealHandler.ListAppeals))
@@ -49,5 +61,5 @@ func registerReleaseRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("GET /api/v1/exams/{examId}/reports/questions", ctx.guards.requireReportRead(ctx.guards.withScopedExam(ctx.modules.Release.ReportHandler.Questions)))
 	mux.Handle("GET /api/v1/exams/{examId}/reports/grading-quality", ctx.guards.requireReportRead(ctx.guards.withScopedExam(ctx.modules.Release.ReportHandler.GradingQuality)))
 	mux.Handle("GET /api/v1/students/{studentId}/reports/{examId}", ctx.guards.requireAuth(http.HandlerFunc(ctx.modules.Release.ReportHandler.StudentReport)))
-	mux.Handle("POST /api/v1/exams/{examId}/reports/export", ctx.guards.requireRecentPermission("report:export", ctx.guards.withScopedExam(ctx.modules.Release.ReportHandler.Export)))
+	mux.Handle("POST /api/v1/exams/{examId}/reports/export", ctx.guards.requirePermission("report:export", ctx.guards.withScopedExam(ctx.modules.Release.ReportHandler.Export)))
 }

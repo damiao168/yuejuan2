@@ -49,23 +49,32 @@ func (h *Handler) WithStudentPaperPageImage(reader segment.PageImageReader) *Han
 	return h
 }
 
-// RegisterRoutes keeps exam-scoped routes distinct from release-id routes.
-// The composition root can therefore apply withScopedExam only where an
-// examId is present, without accidentally rejecting a valid release-id URL.
-func RegisterRoutes(mux *http.ServeMux, h *Handler, requireExamManage, requireReleaseManage, requireStudentRead func(http.HandlerFunc) http.Handler) {
-	mux.Handle("POST /api/v1/exams/{examId}/score-releases", requireExamManage(h.Create))
-	mux.Handle("GET /api/v1/exams/{examId}/score-releases", requireExamManage(h.List))
-	mux.Handle("GET /api/v1/exams/{examId}/release-gate", requireExamManage(h.Gate))
-	mux.Handle("GET /api/v1/exams/{examId}/score-releases/current-published", requireExamManage(h.Current))
-	mux.Handle("GET /api/v1/score-releases/{id}", requireReleaseManage(h.Get))
-	mux.Handle("GET /api/v1/score-releases/{id}/diff", requireReleaseManage(h.Diff))
-	mux.Handle("POST /api/v1/score-releases/{id}/publish", requireReleaseManage(h.Publish))
-	mux.Handle("POST /api/v1/exams/{examId}/score-releases/rollback", requireExamManage(h.Rollback))
+// RouteGuards separates ordinary release preparation from the two operations
+// that can change the formally published result.
+type RouteGuards struct {
+	ExamManage      func(http.HandlerFunc) http.Handler
+	ReleaseManage   func(http.HandlerFunc) http.Handler
+	CriticalRelease func(http.HandlerFunc) http.Handler
+	CriticalExam    func(http.HandlerFunc) http.Handler
+	StudentRead     func(http.HandlerFunc) http.Handler
+}
 
-	mux.Handle("GET /api/v1/student/exams/{examId}/result", requireStudentRead(h.StudentResult))
-	mux.Handle("GET /api/v1/student/exams/{examId}/questions/{questionId}", requireStudentRead(h.StudentQuestion))
-	mux.Handle("GET /api/v1/student/exams/{examId}/questions/{questionId}/answer-image", requireStudentRead(h.StudentQuestionImage))
-	mux.Handle("GET /api/v1/student/exams/{examId}/questions/{questionId}/page-image", requireStudentRead(h.StudentPaperPageImage))
+// RegisterRoutes keeps exam-scoped routes distinct from release-id routes so
+// the composition root can apply both resource scope and risk-specific auth.
+func RegisterRoutes(mux *http.ServeMux, h *Handler, guards RouteGuards) {
+	mux.Handle("POST /api/v1/exams/{examId}/score-releases", guards.ExamManage(h.Create))
+	mux.Handle("GET /api/v1/exams/{examId}/score-releases", guards.ExamManage(h.List))
+	mux.Handle("GET /api/v1/exams/{examId}/release-gate", guards.ExamManage(h.Gate))
+	mux.Handle("GET /api/v1/exams/{examId}/score-releases/current-published", guards.ExamManage(h.Current))
+	mux.Handle("GET /api/v1/score-releases/{id}", guards.ReleaseManage(h.Get))
+	mux.Handle("GET /api/v1/score-releases/{id}/diff", guards.ReleaseManage(h.Diff))
+	mux.Handle("POST /api/v1/score-releases/{id}/publish", guards.CriticalRelease(h.Publish))
+	mux.Handle("POST /api/v1/exams/{examId}/score-releases/rollback", guards.CriticalExam(h.Rollback))
+
+	mux.Handle("GET /api/v1/student/exams/{examId}/result", guards.StudentRead(h.StudentResult))
+	mux.Handle("GET /api/v1/student/exams/{examId}/questions/{questionId}", guards.StudentRead(h.StudentQuestion))
+	mux.Handle("GET /api/v1/student/exams/{examId}/questions/{questionId}/answer-image", guards.StudentRead(h.StudentQuestionImage))
+	mux.Handle("GET /api/v1/student/exams/{examId}/questions/{questionId}/page-image", guards.StudentRead(h.StudentPaperPageImage))
 }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {

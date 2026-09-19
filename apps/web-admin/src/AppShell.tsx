@@ -12,6 +12,7 @@ import { hasAnyPermission, hasEveryPermission, sessionFromAuthUser, type Session
 import { canWorkTeacherAppeals } from "./auth/capabilities";
 import { clearAllReviewDraftFallbacks, clearReviewDraftFallbacks } from "./auth/reviewDraftFallback";
 import { clearLegacyRememberedLogin, clearPublicComputerData } from "./auth/loginSecurity";
+import { StepUpProvider } from "./auth/stepUpContext";
 import { AppLayout } from "./components/AppLayout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ForbiddenState, LoadingState, NotFoundState } from "./components/PageState";
@@ -31,6 +32,7 @@ import {
 import type { LoginFormValues } from "./pages/LoginPage";
 import { invalidateExamWorkspace } from "./query/examWorkspace";
 import { legacyRedirectForPath, normalizeEntryPath } from "./router/navigation";
+import { OnboardingGate } from "./features/onboarding/OnboardingGate";
 
 const AppealCenterPage = lazy(() => import("./pages/AppealCenterPage").then((module) => ({ default: module.AppealCenterPage })));
 const ArbitrationPage = lazy(() => import("./pages/ArbitrationPage").then((module) => ({ default: module.ArbitrationPage })));
@@ -49,6 +51,7 @@ const StudentManagementPage = lazy(() => import("./pages/StudentManagementPage")
 const ClassManagementPage = lazy(() => import("./features/members/classes/ClassManagementPage").then((module) => ({ default: module.ClassManagementPage })));
 const TeacherManagementPage = lazy(() => import("./features/members/teachers/TeacherManagementPage").then((module) => ({ default: module.TeacherManagementPage })));
 const PlatformSchoolsPage = lazy(() => import("./pages/PlatformSchoolsPage").then((module) => ({ default: module.PlatformSchoolsPage })));
+const PlatformGettingStartedPage = lazy(() => import("./pages/PlatformGettingStartedPage").then((module) => ({ default: module.PlatformGettingStartedPage })));
 const PlatformModelConfigPage = lazy(() => import("./pages/PlatformModelConfigPage").then((module) => ({ default: module.PlatformModelConfigPage })));
 const ExamWorkspacePage = lazy(() => import("./pages/ExamWorkspacePage").then((module) => ({ default: module.ExamWorkspacePage })));
 const AnswerSheetTemplatePage = lazy(() => import("./pages/AnswerSheetTemplatePage").then((module) => ({ default: module.AnswerSheetTemplatePage })));
@@ -294,6 +297,8 @@ export function AppShell() {
       <TeacherManagementPage currentUser={user} />
     ) : route.path === "/platform/schools" ? (
       <PlatformSchoolsPage />
+    ) : route.path === "/platform/getting-started" ? (
+      <PlatformGettingStartedPage onNavigate={navigate} />
     ) : route.path === "/platform/model-config" ? (
       <PlatformModelConfigPage />
     ) : route.path === "/papers" ? (
@@ -370,23 +375,26 @@ export function AppShell() {
 
   return (
     <AntApp>
-      <AppLayout
-        user={user}
-        currentRoute={route}
-        experience={navigationExperience}
-        availableExperiences={availableExperiences(user)}
-        onNavigate={navigate}
-        onExperienceChange={changeExperience}
-        onLogout={logout}
-        onLockSession={lockSession}
-        onReauthenticate={reauthenticate}
-        immersive={experience === "teacher" && (route.path === "/grading" || examWorkspace?.section === "grading")}
-      >
-        <PendingBusinessCommands key={`${user.tenant}:${user.id}`} tenant={user.tenant} actor={user.id} />
-        <ErrorBoundary resetKey={`${navigationExperience}:${canonicalPath}`}>
-          <Suspense fallback={<LoadingState label="正在加载页面" />}>{content}</Suspense>
-        </ErrorBoundary>
-      </AppLayout>
+      <StepUpProvider onReauthenticate={reauthenticate}>
+        <AppLayout
+          user={user}
+          currentRoute={route}
+          experience={navigationExperience}
+          availableExperiences={availableExperiences(user)}
+          onNavigate={navigate}
+          onExperienceChange={changeExperience}
+          onLogout={logout}
+          onLockSession={lockSession}
+          onReauthenticate={reauthenticate}
+          immersive={experience === "teacher" && (route.path === "/grading" || examWorkspace?.section === "grading")}
+        >
+          <OnboardingGate user={user} currentPath={canonicalPath} navigate={navigate} />
+          <PendingBusinessCommands key={`${user.tenant}:${user.id}`} tenant={user.tenant} actor={user.id} />
+          <ErrorBoundary resetKey={`${navigationExperience}:${canonicalPath}`}>
+            <Suspense fallback={<LoadingState label="正在加载页面" />}>{content}</Suspense>
+          </ErrorBoundary>
+        </AppLayout>
+      </StepUpProvider>
     </AntApp>
   );
 }

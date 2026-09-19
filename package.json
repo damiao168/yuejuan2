@@ -20,6 +20,7 @@
     "check:story057": "node scripts/check-story057-grading-contract.mjs",
     "check:story061": "node scripts/check-story061-model-evaluation-ui.mjs",
     "check:story063": "node scripts/check-story063-subjective-grading.mjs",
+    "check:onboarding": "node scripts/check-onboarding.mjs",
     "lab:test": "npm --prefix lab test",
     "lab:eval": "npm --prefix lab run eval",
     "lab:gate:dev": "npm --prefix lab run gate:dev",

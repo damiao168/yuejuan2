@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { executeBusinessCommand, setBusinessCommandScope } from "./businessCommand";
-import { apiClient } from "./client";
+import { apiClient, ApiClientError } from "./client";
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 function setup() {
@@ -87,4 +87,15 @@ it("clears a definitively rejected command so corrected input can use a new iden
   await expect(executeBusinessCommand("score.publish", "exam", { reason: "corrected" }, send, value => value)).rejects.toMatchObject({ code: "publish_input_rejected" });
   expect(send).not.toHaveBeenCalled();
   expect(values.has(key)).toBe(false);
+});
+
+it("clears a command rejected before execution by recent-auth so step-up can retry it", async () => {
+  const values = setup();
+  const send = vi.fn()
+    .mockRejectedValueOnce(new ApiClientError(428, "recent_auth_required", "recent authentication required"))
+    .mockResolvedValueOnce({ status: "published" });
+  await expect(executeBusinessCommand("score.publish", "exam", { reason: "approved" }, send, value => value)).rejects.toMatchObject({ code: "recent_auth_required" });
+  expect(values.size).toBe(0);
+  await expect(executeBusinessCommand("score.publish", "exam", { reason: "approved" }, send, value => value)).resolves.toEqual({ status: "published" });
+  expect(send).toHaveBeenCalledTimes(2);
 });

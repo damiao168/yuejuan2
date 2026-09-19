@@ -16,8 +16,8 @@ type routerGuards struct {
 	requireAccount               func(http.HandlerFunc) http.Handler
 	requireMFAAccount            func(http.HandlerFunc) http.Handler
 	requireLockedAccount         func(http.HandlerFunc) http.Handler
+	requirePermission            func(string, http.HandlerFunc) http.Handler
 	requireRecentPermission      func(string, http.HandlerFunc) http.Handler
-	requireSensitiveMutation     func(string, http.HandlerFunc) http.Handler
 	requireOrgManage             func(http.HandlerFunc) http.Handler
 	requireStudentImport         func(http.HandlerFunc) http.Handler
 	requireExamManage            func(http.HandlerFunc) http.Handler
@@ -52,8 +52,10 @@ type routerGuards struct {
 	requireAuditRead             func(http.HandlerFunc) http.Handler
 	requireReportRead            func(http.HandlerFunc) http.Handler
 	requireSystemRead            func(http.HandlerFunc) http.Handler
+	requireOnboardingRead        func(http.HandlerFunc) http.Handler
 	requireModelRead             func(http.HandlerFunc) http.Handler
 	requirePlatformModelManage   func(http.HandlerFunc) http.Handler
+	requireModelProviderManage   func(http.HandlerFunc) http.Handler
 	requireModelPolicyManage     func(http.HandlerFunc) http.Handler
 	requireModelEvaluationManage func(http.HandlerFunc) http.Handler
 	requireOCRAvailabilityRead   func(http.HandlerFunc) http.Handler
@@ -90,15 +92,15 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 	requireLockedAccount := func(handler http.HandlerFunc) http.Handler {
 		return authenticateLockedAccount(idempotent(handler))
 	}
+	requirePermission := func(permission string, handler http.HandlerFunc) http.Handler {
+		return authenticate(auth.RequireRequestResourceBoundary(resourceResolver)(
+			auth.RequirePermission(permission)(idempotent(handler))))
+	}
 	requireRecentPermission := func(permission string, handler http.HandlerFunc) http.Handler {
 		// Check current authorization and authentication freshness before serving
 		// a cached command receipt, not only before executing a new command.
 		return authenticate(auth.RequireRequestResourceBoundary(resourceResolver)(
 			auth.RequirePermission(permission)(auth.RequireRecentAuth(cfg.Auth.RecentAuthTTL)(idempotent(handler)))))
-	}
-	requireSensitiveMutation := func(permission string, handler http.HandlerFunc) http.Handler {
-		return authenticate(auth.RequireRequestResourceBoundary(resourceResolver)(
-			auth.RequirePermission(permission)(auth.RequireRecentAuthForMutations(cfg.Auth.RecentAuthTTL)(idempotent(handler)))))
 	}
 	requireOrgManage := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequirePermission("org:manage")(handler))
@@ -224,6 +226,9 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 	requireSystemRead := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequirePermission("system:read")(handler))
 	}
+	requireOnboardingRead := func(handler http.HandlerFunc) http.Handler {
+		return requireAuth(auth.RequireAnyRole("platform_admin", "tenant_admin", "school_admin")(handler))
+	}
 	requireModelRead := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequirePermission("model:read")(handler))
 	}
@@ -236,8 +241,11 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 			auth.RequirePermission("model:provider:manage")(idempotent(handler)),
 		)))
 	}
+	requireModelProviderManage := func(handler http.HandlerFunc) http.Handler {
+		return requirePermission("model:provider:manage", handler)
+	}
 	requireModelPolicyManage := func(handler http.HandlerFunc) http.Handler {
-		return requireRecentPermission("model:policy:manage", handler)
+		return requirePermission("model:policy:manage", handler)
 	}
 	requireModelEvaluationManage := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequirePermission("model:evaluation:manage")(handler))
@@ -279,8 +287,8 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 		requireAccount:               requireAccount,
 		requireMFAAccount:            requireMFAAccount,
 		requireLockedAccount:         requireLockedAccount,
+		requirePermission:            requirePermission,
 		requireRecentPermission:      requireRecentPermission,
-		requireSensitiveMutation:     requireSensitiveMutation,
 		requireOrgManage:             requireOrgManage,
 		requireStudentImport:         requireStudentImport,
 		requireExamManage:            requireExamManage,
@@ -315,8 +323,10 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 		requireAuditRead:             requireAuditRead,
 		requireReportRead:            requireReportRead,
 		requireSystemRead:            requireSystemRead,
+		requireOnboardingRead:        requireOnboardingRead,
 		requireModelRead:             requireModelRead,
 		requirePlatformModelManage:   requirePlatformModelManage,
+		requireModelProviderManage:   requireModelProviderManage,
 		requireModelPolicyManage:     requireModelPolicyManage,
 		requireModelEvaluationManage: requireModelEvaluationManage,
 		requireOCRAvailabilityRead:   requireOCRAvailabilityRead,

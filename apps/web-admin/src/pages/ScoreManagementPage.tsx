@@ -23,6 +23,7 @@ import { useScoreWorkspaceData } from "../features/score-management/hooks/useSco
 import { useScoreReleaseWorkflow } from "../features/score-management/hooks/useScoreReleaseWorkflow";
 import { useRegradeWorkflow } from "../features/score-management/hooks/useRegradeWorkflow";
 import { useRosterAttendance } from "../features/score-management/hooks/useRosterAttendance";
+import { isStepUpCancelledError, useStepUp } from "../auth/stepUpContext";
 import {
   createSummary,
   formatScore,
@@ -66,6 +67,7 @@ export function ScoreManagementPage({
   initialExamId?: string;
 }) {
   const { message, modal } = App.useApp();
+  const { runWithStepUp } = useStepUp();
   const canWrite = canManage;
   const workspace = useScoreWorkspaceData({ canManage, canReadAudit, canReadStudentNames, initialExamId });
   const {
@@ -97,7 +99,7 @@ export function ScoreManagementPage({
         await loadScores(selectedExamId);
       }
     } catch (currentError) {
-      message.error(formatError(currentError));
+      if (!isStepUpCancelledError(currentError)) message.error(formatError(currentError));
     } finally {
       setActioning(null);
     }
@@ -161,7 +163,10 @@ export function ScoreManagementPage({
         runAction(
           "publish",
           async () => {
-            await publishExamGrades(selectedExamId, publishReason.trim());
+            await runWithStepUp({
+              reason: "正式发布成绩",
+              action: () => publishExamGrades(selectedExamId, publishReason.trim())
+            });
             await loadExamList();
           },
           "成绩已发布"

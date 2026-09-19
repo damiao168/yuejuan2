@@ -40,7 +40,7 @@ func TestLoadUsesDefaults(t *testing.T) {
 	if len(cfg.ModelSecrets.MasterKey) < 32 {
 		t.Fatal("development must have an encryption key for managed model credentials")
 	}
-	if cfg.Auth.RecentAuthTTL != 10*time.Minute {
+	if cfg.Auth.RecentAuthTTL != time.Hour {
 		t.Fatalf("unexpected default recent authentication lifetime: %s", cfg.Auth.RecentAuthTTL)
 	}
 	if cfg.Auth.RiskMode != "shadow" || cfg.Auth.DeviceBindingTTL != 180*24*time.Hour || cfg.Auth.DeviceCookieName != "edugrade_device" {

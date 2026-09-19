@@ -8,6 +8,7 @@ import {
   type ScoreReleaseGate
 } from "../../../api/scoreReleases";
 import { closedWorkflowModal, workflowModalReducer } from "./workflowModal";
+import { useStepUp } from "../../../auth/stepUpContext";
 
 export const defaultReleaseVisibility = {
   show_question_scores: true,
@@ -47,6 +48,7 @@ export function useScoreReleaseWorkflow({
   runAction: RunAction;
 }) {
   const { message, modal } = App.useApp();
+  const { runWithStepUp } = useStepUp();
   const [releaseReason, setReleaseReason] = useState("");
   const [releaseHighScorePaper, setReleaseHighScorePaper] = useState(false);
   const [releaseVisibility, setReleaseVisibility] = useState(defaultReleaseVisibility);
@@ -98,7 +100,9 @@ export function useScoreReleaseWorkflow({
       ),
       okText: "确认发布",
       cancelText: "取消",
-      onOk: () => runAction("release-publish", async () => { await publishScoreRelease(release.id); }, "成绩版本已发布")
+      onOk: () => runAction("release-publish", async () => {
+        await runWithStepUp({ reason: `正式发布成绩版本 V${release.version}`, action: () => publishScoreRelease(release.id) });
+      }, "成绩版本已发布")
     });
   };
 

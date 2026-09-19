@@ -9,7 +9,8 @@ import { workspaceLabel } from "../workspaces/registry";
 import { MockBadge } from "./MockBadge";
 import { applyReadingSize, readReadingSize } from "@edugrade/design-tokens";
 import { isPublicComputerIdle, PUBLIC_COMPUTER_IDLE_LOCK_MS } from "../auth/loginSecurity";
-import { getUserErrorMessage, RECENT_AUTH_REQUIRED_EVENT } from "../api/client";
+import { getUserErrorMessage } from "../api/client";
+import { StepUpDialog, useStepUp } from "../auth/stepUpContext";
 
 const { Header, Sider, Content } = Layout;
 const DESKTOP_NAVIGATION_WIDTH = 192;
@@ -58,10 +59,7 @@ export function AppLayout({
   const [unlocking, setUnlocking] = useState(false);
   const [lockingSession, setLockingSession] = useState(false);
   const [unlockError, setUnlockError] = useState<string>();
-  const [stepUpOpen, setStepUpOpen] = useState(false);
-  const [stepUpPassword, setStepUpPassword] = useState("");
-  const [stepUpLoading, setStepUpLoading] = useState(false);
-  const [stepUpError, setStepUpError] = useState<string>();
+  const { cancel: cancelStepUp } = useStepUp();
   const [navigationCollapsed, setNavigationCollapsed] = useState(() => {
     try {
       return window.localStorage.getItem(NAVIGATION_COLLAPSED_STORAGE_KEY) === "true";
@@ -81,17 +79,6 @@ export function AppLayout({
     }
   }, []);
   useEffect(() => {
-    const requireRecentAuthentication = () => {
-      if (!stepUpOpen) {
-        setStepUpPassword("");
-        setStepUpError(undefined);
-      }
-      setStepUpOpen(true);
-    };
-    window.addEventListener(RECENT_AUTH_REQUIRED_EVENT, requireRecentAuthentication);
-    return () => window.removeEventListener(RECENT_AUTH_REQUIRED_EVENT, requireRecentAuthentication);
-  }, [stepUpOpen]);
-  useEffect(() => {
     if (!user.publicComputer) {
       setWorkspaceLocked(false);
       return;
@@ -103,9 +90,7 @@ export function AppLayout({
     const lockWorkspace = () => {
       if (lockTriggered) return;
       lockTriggered = true;
-      setStepUpOpen(false);
-      setStepUpPassword("");
-      setStepUpError(undefined);
+      cancelStepUp();
       setWorkspaceLocked(true);
       setUnlockError(undefined);
       setLockingSession(true);
@@ -142,7 +127,7 @@ export function AppLayout({
       window.removeEventListener("pagehide", lockWorkspace);
       document.removeEventListener("visibilitychange", checkOnReturn);
     };
-  }, [onLockSession, user.publicComputer, workspaceLocked]);
+  }, [cancelStepUp, onLockSession, user.publicComputer, workspaceLocked]);
   const unlockWorkspace = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!unlockPassword || unlocking || lockingSession) return;
@@ -157,26 +142,6 @@ export function AppLayout({
     } finally {
       setUnlocking(false);
     }
-  };
-  const completeStepUp = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!stepUpPassword || stepUpLoading) return;
-    setStepUpLoading(true);
-    setStepUpError(undefined);
-    try {
-      await onReauthenticate(stepUpPassword);
-      setStepUpPassword("");
-      setStepUpOpen(false);
-    } catch (error) {
-      setStepUpError(getUserErrorMessage(error, "验证失败，请检查当前账号密码后重试。"));
-    } finally {
-      setStepUpLoading(false);
-    }
-  };
-  const cancelStepUp = () => {
-    setStepUpOpen(false);
-    setStepUpPassword("");
-    setStepUpError(undefined);
   };
   const showNavigationScrollbar = () => {
     if (navigationScrollbarHideTimer.current !== null) {
@@ -460,32 +425,7 @@ export function AppLayout({
             </div>
           </form>
         </Modal>
-        <Modal
-          open={stepUpOpen && !workspaceLocked}
-          title="验证后继续敏感操作"
-          closable={!stepUpLoading}
-          keyboard={!stepUpLoading}
-          maskClosable={false}
-          footer={null}
-          width={420}
-          onCancel={cancelStepUp}
-        >
-          <form className="public-computer-unlock" onSubmit={completeStepUp}>
-            <p>本次操作会影响账号、成绩、审计数据或系统配置。请使用 <strong>{user.displayName || user.username}</strong> 的当前密码验证身份；验证成功后，再重新执行刚才的操作。</p>
-            {stepUpError ? <Alert type="error" showIcon message={stepUpError} /> : null}
-            <Input.Password
-              value={stepUpPassword}
-              onChange={(event) => setStepUpPassword(event.target.value)}
-              placeholder="当前账号密码"
-              autoComplete="current-password"
-              autoFocus
-            />
-            <div className="public-computer-unlock-actions">
-              <Button onClick={cancelStepUp} disabled={stepUpLoading}>取消</Button>
-              <Button type="primary" htmlType="submit" loading={stepUpLoading} disabled={!stepUpPassword}>验证</Button>
-            </div>
-          </form>
-        </Modal>
+        <StepUpDialog accountLabel={user.displayName || user.username} hidden={workspaceLocked} />
       </Layout>
     </ConfigProvider>
   );

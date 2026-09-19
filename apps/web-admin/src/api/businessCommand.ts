@@ -94,7 +94,11 @@ export function executeBusinessCommand<T>(operation: string, target: string, pay
     } catch (error) {
       // Explicit rejected input/revision can be edited into a new command. A
       // transport failure, throttling, or conflict with another command cannot.
-      if (error instanceof ApiClientError && (error.status === 400 || ["review_revision_conflict", "review_task_revision_conflict", "arbitration_revision_conflict"].includes(error.code))) localStorage.removeItem(key);
+      if (error instanceof ApiClientError && (
+        error.status === 400
+        || error.code === "recent_auth_required"
+        || ["review_revision_conflict", "review_task_revision_conflict", "arbitration_revision_conflict"].includes(error.code)
+      )) localStorage.removeItem(key);
       if (typeof window !== "undefined") window.dispatchEvent(new Event("business-command-changed"));
       throw error;
     }

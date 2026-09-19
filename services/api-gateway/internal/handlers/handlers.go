@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -48,6 +49,39 @@ type WorkerServiceStatus struct {
 	ImpactCode          string `json:"impact_code"`
 	Impact              string `json:"impact"`
 	Action              string `json:"action"`
+}
+
+type ReadinessSummary struct {
+	CoreReady    bool
+	AIMode       string
+	AIConfigured bool
+	AIAvailable  bool
+	AIModel      string
+}
+
+func (h *Handlers) ReadinessSummary(ctx context.Context) (ReadinessSummary, error) {
+	results, coreReady := deps.CheckAll(ctx, h.cfg.Service.ReadinessTimeout, h.checkers)
+	aiConfigured := false
+	aiAvailable := false
+	for _, result := range results {
+		if result.Name != "ai_service" {
+			continue
+		}
+		aiConfigured = result.Status != "not_configured" && result.Status != "disabled"
+		aiAvailable = result.Status == "ok" || result.Status == "mock"
+		break
+	}
+	provider := strings.ToLower(strings.TrimSpace(h.cfg.AIService.ProviderKey))
+	mode := "manual"
+	if provider == "local" {
+		mode = "local"
+	} else if aiConfigured || strings.TrimSpace(h.cfg.AIService.URL) != "" {
+		mode = "external"
+	}
+	return ReadinessSummary{
+		CoreReady: coreReady, AIMode: mode, AIConfigured: aiConfigured,
+		AIAvailable: aiAvailable, AIModel: strings.TrimSpace(h.cfg.AIService.ModelVersion),
+	}, nil
 }
 
 func (h *Handlers) Health(w http.ResponseWriter, _ *http.Request) {

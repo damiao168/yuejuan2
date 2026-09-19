@@ -33,7 +33,7 @@ const apiErrorMessages: Record<string, string> = {
   capability_unavailable: "自动处理暂时不可用，任务已保留，可稍后继续或转人工处理。",
   invalid_credentials: "学校或登录信息不正确。",
 	login_rate_limited: "尝试次数过多，请稍后重试。",
-  recent_auth_required: "为保护敏感操作，请先验证当前账号密码。",
+  recent_auth_required: "为继续执行关键操作，请先验证当前账号密码。",
   reauthentication_failed: "验证失败，请检查当前账号密码后重试。",
   auth_level_required: "此操作需要更高级别的身份验证。",
   mfa_unavailable: "身份验证器管理暂未开放或暂时不可用。",

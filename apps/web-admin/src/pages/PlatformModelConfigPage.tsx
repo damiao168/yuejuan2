@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
   App as AntApp,
@@ -31,6 +32,7 @@ import { getUserErrorMessage } from "../api/client";
 import { listTenants, type Tenant } from "../api/org";
 import { ResponsiveTable } from "../components/ResponsiveTable";
 import { StatusTag } from "../components/StatusTag";
+import { onboardingQueryKey } from "../features/onboarding/queries";
 
 type SupplierPreset = "aliyun" | "deepseek" | "openai" | "zhipu" | "moonshot" | "anthropic" | "gemini" | "custom";
 
@@ -118,6 +120,7 @@ async function loadAllSchoolTenants() {
 }
 
 export function PlatformModelConfigPage() {
+  const queryClient = useQueryClient();
   const { message, modal } = AntApp.useApp();
   const [form] = Form.useForm<ConfigFormValues>();
   const [schools, setSchools] = useState<Tenant[]>([]);
@@ -314,6 +317,7 @@ export function PlatformModelConfigPage() {
       setDrawerOpen(false);
       setModelOptionsOpen(false);
       form.resetFields();
+      void queryClient.invalidateQueries({ queryKey: onboardingQueryKey });
     } catch (error) {
       message.error(getUserErrorMessage(error, editing ? "配置更新失败" : "配置保存失败"));
     } finally {
@@ -356,6 +360,7 @@ export function PlatformModelConfigPage() {
           ? ` · ${response.result.usage?.total_tokens ?? 0} Tokens`
           : " · 0 生成 Token";
         message.success(`${config.display_name}：${response.result.message}${tokenSummary}`);
+        void queryClient.invalidateQueries({ queryKey: onboardingQueryKey });
       }
       else {
         message.error(`${config.display_name}：${response.result.message}`);
@@ -367,7 +372,7 @@ export function PlatformModelConfigPage() {
     } finally {
       setProbingID("");
     }
-  }, [loadConfigs, message, selectedTenantID, showCapabilityDetails]);
+  }, [loadConfigs, message, queryClient, selectedTenantID, showCapabilityDetails]);
 
   const updateUsage = useCallback(async (config: ManagedModelAPIConfig, status: "active" | "disabled", isDefault: boolean) => {
     try {
@@ -389,10 +394,11 @@ export function PlatformModelConfigPage() {
         ? `${config.display_name} 已设为当前使用`
         : config.is_default ? "已切回本地模型"
         : status === "disabled" ? `${config.display_name} 已停用` : `${config.display_name} 已启用`);
+      void queryClient.invalidateQueries({ queryKey: onboardingQueryKey });
     } catch (error) {
       message.error(getUserErrorMessage(error));
     }
-  }, [message, selectedTenantID]);
+  }, [message, queryClient, selectedTenantID]);
 
   const removeConfig = useCallback((config: ManagedModelAPIConfig) => {
     modal.confirm({
@@ -406,12 +412,13 @@ export function PlatformModelConfigPage() {
           await deleteManagedModelAPIConfig(config.id, selectedTenantID);
           setConfigs((current) => current.filter((item) => item.id !== config.id));
           message.success(`${config.display_name} 已删除`);
+          void queryClient.invalidateQueries({ queryKey: onboardingQueryKey });
         } catch (error) {
           message.error(getUserErrorMessage(error));
         }
       }
     });
-  }, [message, modal, selectedTenantID]);
+  }, [message, modal, queryClient, selectedTenantID]);
 
   const columns = useMemo<TableColumnsType<ManagedModelAPIConfig>>(() => [
     {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
   App,
@@ -37,6 +38,7 @@ import {
 import { createManagedUser, listAssignableRoles, listManagedUsers, type AssignableRole, type ManagedUser } from "../api/users";
 import { ErrorState, LoadingState } from "../components/PageState";
 import { ResponsiveTable } from "../components/ResponsiveTable";
+import { onboardingQueryKey, useOnboardingReadiness } from "../features/onboarding/queries";
 
 interface SetupData {
   schools: School[];
@@ -60,6 +62,7 @@ interface ImportRow {
 }
 
 const setupSteps = ["机构信息", "学年与年级", "班级", "学生", "人员账号", "第一场考试", "完成"];
+const BUSINESS_ROLES = new Set(["school_admin", "teacher", "grader", "arbitrator"]);
 
 function messageOf(error: unknown) {
   return getUserErrorMessage(error, "请求失败");
@@ -77,6 +80,8 @@ function downloadCSV(filename: string, rows: Array<Record<string, string | numbe
 
 export function OrganizationSetupPage({ onNavigate }: { onNavigate: (path: string) => void }) {
   const { message } = App.useApp();
+  const queryClient = useQueryClient();
+  const readiness = useOnboardingReadiness();
   const [data, setData] = useState<SetupData>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -121,23 +126,19 @@ export function OrganizationSetupPage({ onNavigate }: { onNavigate: (path: strin
     void load();
   }, []);
 
-  const completed = useMemo(
-    () => [
-      Boolean(data?.schools.length),
-      Boolean(data?.grades.length),
-      Boolean(data?.classes.length),
-      Boolean(data?.students.length),
-      Boolean(data && data.users.length > 1),
-      Boolean(data?.examCount),
-      Boolean(data?.schools.length && data.grades.length && data.classes.length && data.students.length && data.users.length > 1 && data.examCount)
-    ],
-    [data]
-  );
+  const completed = useMemo(() => {
+    const hasBusinessUser = Boolean(data?.users.some((user) => user.status === "active" && user.roles.some((role) => BUSINESS_ROLES.has(role))));
+    const baseReady = Boolean(data?.schools.length && data.grades.length && data.classes.length && data.students.length && hasBusinessUser);
+    return [
+      Boolean(data?.schools.length), Boolean(data?.grades.length), Boolean(data?.classes.length),
+      Boolean(data?.students.length), hasBusinessUser, Boolean(data?.examCount), baseReady
+    ];
+  }, [data]);
 
   useEffect(() => {
     if (data && !stepInitialized) {
-      const firstIncomplete = completed.slice(0, 6).findIndex((value) => !value);
-      setStep(firstIncomplete === -1 ? 6 : firstIncomplete);
+      const firstIncomplete = completed.slice(0, 5).findIndex((value) => !value);
+      setStep(firstIncomplete >= 0 ? firstIncomplete : completed[5] ? 6 : 5);
       setStepInitialized(true);
     }
   }, [completed, data, stepInitialized]);
@@ -148,6 +149,7 @@ export function OrganizationSetupPage({ onNavigate }: { onNavigate: (path: strin
       await action();
       message.success(success);
       await load();
+      await queryClient.invalidateQueries({ queryKey: onboardingQueryKey });
       setStep((value) => Math.min(6, value + 1));
     } catch (saveError) {
       message.error(messageOf(saveError));
@@ -219,6 +221,7 @@ export function OrganizationSetupPage({ onNavigate }: { onNavigate: (path: strin
       if (result.result.created > 0) {
         message.success(`已导入 ${result.result.created} 名学生`);
         await load();
+        await queryClient.invalidateQueries({ queryKey: onboardingQueryKey });
         if (!result.result.errors.length) setStep(4);
       }
     } catch (importError) {
@@ -320,7 +323,7 @@ export function OrganizationSetupPage({ onNavigate }: { onNavigate: (path: strin
           <Form key="user" layout="vertical" preserve={false} onFinish={(values) => void runSave(() => createManagedUser(values), "人员账号已创建")}>
             <h2>人员账号</h2>
             <p className="section-copy">创建第一位教务或阅卷教师账号。请当面告知或通过安全渠道发送初始密码，并提醒对方首次登录后立即修改。</p>
-            {data.users.length > 1 ? <Alert type="success" showIcon message={`当前机构已有 ${data.users.length} 个用户`} /> : null}
+            {completed[4] ? <Alert type="success" showIcon message="已存在可参与学校业务的管理员或教师账号" /> : null}
             <div className="form-grid compact-form-grid">
               <Form.Item name="username" label="登录账号" rules={[{ required: true }]}><Input autoComplete="off" /></Form.Item>
               <Form.Item name="display_name" label="姓名" rules={[{ required: true }]}><Input /></Form.Item>
@@ -344,24 +347,29 @@ export function OrganizationSetupPage({ onNavigate }: { onNavigate: (path: strin
               <Form.Item name="class_ids" label="学生范围" rules={[{ required: true }]}><Select mode="multiple" options={data.classes.map((item) => ({ value: item.id, label: item.name }))} /></Form.Item>
             </div>
             <Form.Item name="exam_type" hidden><Input /></Form.Item><Form.Item name="grading_mode" hidden><Input /></Form.Item><Form.Item name="publish_policy" hidden><Input /></Form.Item><Form.Item name="appeal_enabled" hidden><Input /></Form.Item>
-            <Button type="primary" htmlType="submit" loading={saving}>创建考试</Button>
+            <Space wrap>
+              <Button type="primary" htmlType="submit" loading={saving}>创建考试</Button>
+              <Button onClick={() => onNavigate("/dashboard")}>暂不创建，进入工作台</Button>
+            </Space>
           </Form>
         );
       default:
-        return <Result status="success" title="机构启用已完成" subTitle="基础组织、人员和第一场考试已经建立。接下来进入考试工作区完成试卷与阅卷配置。" extra={<Button type="primary" icon={<ArrowRight size={16} />} onClick={() => onNavigate("/exams")}>进入考试</Button>} />;
+        return data.examCount
+          ? <Result status="success" title="学校已经可以使用" subTitle="基础数据和第一场考试均已准备完成。" extra={<Button type="primary" icon={<ArrowRight size={16} />} onClick={() => onNavigate("/exams")}>进入考试工作区</Button>} />
+          : <Result status="success" title="学校初始化已完成" subTitle="学校、教学组织、学生和人员已经准备完成，现在可以开始创建考试。" extra={<Space wrap><Button type="primary" onClick={() => setStep(5)}>创建第一场考试</Button><Button onClick={() => onNavigate("/dashboard")}>进入工作台</Button></Space>} />;
     }
   })();
 
   return (
     <div className="page-stack setup-page">
       <section className="page-heading">
-        <div><h1>机构启用</h1><p>建立机构基础数据，并从上次完成的位置继续。</p></div>
+        <div><h1>学校初始化</h1><p>准备学校、教学组织、学生和人员；考试可以稍后创建。</p></div>
         <Button icon={<RefreshCw size={16} />} loading={loading} onClick={() => void load()}>刷新进度</Button>
       </section>
       {error ? <Alert type="warning" showIcon message="部分数据刷新失败" description={error} /> : null}
       <div className="setup-progress-line">
-        <span>{completed.slice(0, 6).filter(Boolean).length}/6 已完成</span>
-        {completed[6] ? <strong><CheckCircle2 size={16} /> 可进入考试配置</strong> : <span>每步提交后进度自动记录，下次可从此处继续</span>}
+        <span>基础启用 {readiness.data?.completed_count ?? completed.slice(0, 5).filter(Boolean).length}/{readiness.data?.total_required ?? 5}</span>
+        {completed[6] ? <strong><CheckCircle2 size={16} /> 学校已经可以使用</strong> : <span>进度来自当前真实数据，刷新或换设备不会丢失</span>}
       </div>
       <div className="onboarding-shell">
         <aside className="onboarding-rail">

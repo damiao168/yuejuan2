@@ -23,6 +23,7 @@ export type ViewKey =
   | "membersClasses"
   | "membersTeachers"
   | "platformSchools"
+  | "platformGettingStarted"
   | "platformModelConfig"
   | "sessions"
   | "examWorkspace";

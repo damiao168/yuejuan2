@@ -4,8 +4,8 @@
   "exception_ledger": "contracts/openapi/registered-route-exceptions.json",
   "policy": "Every registered route is covered by OpenAPI or an exact, reviewed exception-ledger entry; generation never invents approvals.",
   "counts": {
-    "registered": 491,
-    "openapi": 221,
+    "registered": 492,
+    "openapi": 222,
     "registered_gaps": 270
   },
   "routes": [
@@ -3222,6 +3222,13 @@
       "owner": "api-platform",
       "review_after": "2026-12-31",
       "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/onboarding/readiness",
+      "source": "services/api-gateway/internal/server/routes_onboarding.go",
+      "coverage": "openapi",
+      "operation_id": "getOnboardingReadiness"
     },
     {
       "method": "POST",

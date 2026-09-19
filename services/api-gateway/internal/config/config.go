@@ -212,7 +212,7 @@ func Load(envFile string) (Config, error) {
 			SessionTTL:             parser.Duration("EDUGRADE_SESSION_TTL", 8*time.Hour),
 			RememberedSessionTTL:   parser.Duration("EDUGRADE_REMEMBERED_SESSION_TTL", 30*24*time.Hour),
 			PublicSessionTTL:       parser.Duration("EDUGRADE_PUBLIC_SESSION_TTL", 4*time.Hour),
-			RecentAuthTTL:          parser.Duration("EDUGRADE_RECENT_AUTH_TTL", 10*time.Minute),
+			RecentAuthTTL:          parser.Duration("EDUGRADE_RECENT_AUTH_TTL", time.Hour),
 			LoginFailureLimit:      parser.Int("EDUGRADE_LOGIN_FAILURE_LIMIT", 5),
 			LoginFailureWindow:     parser.Duration("EDUGRADE_LOGIN_FAILURE_WINDOW", 15*time.Minute),
 			LoginLimiterFailClosed: parser.Bool("EDUGRADE_AUTH_LIMITER_FAIL_CLOSED", isProductionLike(environment)),

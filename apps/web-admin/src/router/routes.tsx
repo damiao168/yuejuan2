@@ -19,6 +19,7 @@ import {
   ScrollText,
   ServerCog,
   Settings,
+  Rocket,
   Sparkles,
   UserCog,
   Users
@@ -69,6 +70,10 @@ const productionRouteDefinitions: AppRoute[] = [
     navigation: false, mock: false, productionReady: true,
     workspaces: ["platform", "tenant_admin", "school_admin", "exam_owner", "teacher", "grader", "arbitrator", "auditor", "student"],
     experiences: { admin: { title: "账户安全", group: "账号" }, teacher: { title: "账户安全", group: "账号" }, auditor: { title: "账户安全", group: "账号" }, student: { title: "账户安全", group: "账号" } }
+  },
+  {
+    key: "platformGettingStarted", path: "/platform/getting-started", title: "首次启用", group: "平台管理", icon: <Rocket size={18} />, permissions: ["tenant:manage"], allowedRoles: ["platform_admin"], navigation: false, mock: false, productionReady: true,
+    workspaces: ["platform"], experiences: { admin: { title: "首次启用", group: "平台管理" } }
   },
   {
     key: "platformSchools", path: "/platform/schools", title: "学校管理", group: "平台管理", icon: <Building2 size={18} />, permissions: ["tenant:manage"], allowedRoles: ["platform_admin"], mock: false, productionReady: true,

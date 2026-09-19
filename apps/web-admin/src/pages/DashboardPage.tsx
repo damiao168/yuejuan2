@@ -9,6 +9,8 @@ import { hasEveryPermission, type SessionUser } from "../auth/session";
 import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
 import { StatusTag } from "../components/StatusTag";
 import { SchoolDashboard, type DashboardWorkItem } from "../features/dashboard/SchoolDashboard";
+import { ReadinessBanner } from "../features/onboarding/ReadinessBanner";
+import { useOnboardingReadiness } from "../features/onboarding/queries";
 import type { StatusTone } from "../types";
 
 const dependencyNames: Record<string, string> = {
@@ -37,10 +39,12 @@ function dependencyText(status: string) {
 
 function PlatformDashboard({
   user,
-  onNavigate
+  onNavigate,
+  readiness
 }: {
   user: SessionUser;
   onNavigate: (path: string) => void;
+  readiness: ReturnType<typeof useOnboardingReadiness>;
 }) {
   const [status, setStatus] = useState<SystemStatus>();
   const [loading, setLoading] = useState(true);
@@ -77,6 +81,7 @@ function PlatformDashboard({
         <Button icon={<RefreshCw size={16} />} loading={loading} onClick={() => void load()}>刷新</Button>
       </section>
       {error ? <Alert type="error" showIcon message="刷新失败" description={error} /> : null}
+      <ReadinessBanner readiness={readiness.data} loading={readiness.isLoading} unavailable={readiness.isError} onNavigate={onNavigate} onRetry={() => void readiness.refetch()} />
       {status ? (
         <section className="operations-strip">
           <strong>服务状态</strong>
@@ -97,6 +102,8 @@ function PlatformDashboard({
 
 export function DashboardPage({ user, onNavigate }: { user: SessionUser; onNavigate: (path: string) => void }) {
   const isPlatform = user.roles.includes("platform_admin");
+  const canReadOnboarding = user.roles.some((role) => ["platform_admin", "tenant_admin", "school_admin"].includes(role));
+  const readiness = useOnboardingReadiness(canReadOnboarding);
   const canCreateExam = hasEveryPermission(user, ["exam:manage"]);
   const [data, setData] = useState<DashboardSummary>();
   const [loading, setLoading] = useState(!isPlatform);
@@ -134,7 +141,7 @@ export function DashboardPage({ user, onNavigate }: { user: SessionUser; onNavig
     ];
   }, [data, stats]);
 
-  if (isPlatform) return <PlatformDashboard user={user} onNavigate={onNavigate} />;
+  if (isPlatform) return <PlatformDashboard user={user} onNavigate={onNavigate} readiness={readiness} />;
   if (!data && loading) return <LoadingState label="正在加载工作台" />;
   if (!data && error) return <ErrorState message={error} onRetry={() => void load()} />;
   if (!data || !stats) return <EmptyState title="工作台暂时不可用" description="请刷新页面；考试数据不会受影响。" />;
@@ -151,6 +158,7 @@ export function DashboardPage({ user, onNavigate }: { user: SessionUser; onNavig
       </motion.section>
 
       {error ? <Alert type="error" showIcon message="刷新失败" description={`${error}；页面继续显示上次成功数据。`} /> : null}
+      <ReadinessBanner readiness={readiness.data} loading={readiness.isLoading} unavailable={readiness.isError} onNavigate={onNavigate} onRetry={() => void readiness.refetch()} />
       {data.warnings.map((warning) => <Alert key={warning} type="warning" showIcon message={getSafeUserText(warning, "部分统计暂时不可用")} description="其他统计仍可使用，请稍后刷新。" />)}
 
       <SchoolDashboard

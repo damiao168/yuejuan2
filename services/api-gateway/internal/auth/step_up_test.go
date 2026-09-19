@@ -15,7 +15,7 @@ func TestRequireRecentAuthAllowsFreshAndRejectsStaleSessions(t *testing.T) {
 		statusCode int
 	}{
 		{name: "fresh", user: userWithReauthentication(time.Now().UTC().Add(-time.Minute), 1), statusCode: http.StatusNoContent},
-		{name: "stale", user: userWithReauthentication(time.Now().UTC().Add(-11*time.Minute), 1), statusCode: http.StatusPreconditionRequired},
+		{name: "stale", user: userWithReauthentication(time.Now().UTC().Add(-61*time.Minute), 1), statusCode: http.StatusPreconditionRequired},
 		{name: "missing", user: User{ID: "user-1", CurrentAuthLevel: 1}, statusCode: http.StatusPreconditionRequired},
 		{name: "future", user: userWithReauthentication(time.Now().UTC().Add(3*time.Minute), 1), statusCode: http.StatusPreconditionRequired},
 	}
@@ -45,23 +45,6 @@ func TestRequireAuthLevelRejectsPasswordOnlySession(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), `"code":"auth_level_required"`) {
 		t.Fatalf("password-only session must not satisfy level 2: %d %s", rec.Code, rec.Body.String())
-	}
-}
-
-func TestRequireRecentAuthForMutationsKeepsReadsAvailable(t *testing.T) {
-	handler := RequireRecentAuthForMutations(10 * time.Minute)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }))
-	for _, method := range []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodDelete} {
-		req := httptest.NewRequest(method, "/administrative-module", nil)
-		req = req.WithContext(WithUser(req.Context(), userWithReauthentication(time.Now().UTC().Add(-11*time.Minute), 1)))
-		rec := httptest.NewRecorder()
-		handler.ServeHTTP(rec, req)
-		want := http.StatusPreconditionRequired
-		if method == http.MethodGet {
-			want = http.StatusNoContent
-		}
-		if rec.Code != want {
-			t.Fatalf("method=%s status=%d want=%d", method, rec.Code, want)
-		}
 	}
 }
 

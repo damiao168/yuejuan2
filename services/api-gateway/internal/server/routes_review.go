@@ -15,9 +15,6 @@ import (
 )
 
 func registerReviewRoutes(mux *http.ServeMux, ctx routerContext) {
-	scoreReleaseManage := func(handler http.HandlerFunc) http.Handler {
-		return ctx.guards.requireSensitiveMutation("score:manage", handler)
-	}
 	// Gold sets, answer-group reference cases, Seed observations and drift
 	// evidence are quality-management facts.  A grader receives only the
 	// current calibration/Seed task through the ordinary review flow; exposing
@@ -30,7 +27,7 @@ func registerReviewRoutes(mux *http.ServeMux, ctx routerContext) {
 	graderdrift.RegisterRoutes(mux, ctx.modules.Grading.GraderDriftHandler, ctx.guards.requireReviewManage, ctx.guards.requireReviewManage)
 	backmark.RegisterRoutes(mux, ctx.modules.Grading.BackmarkHandler, ctx.guards.requireReviewManage, ctx.guards.requireReviewWork)
 	regrade.RegisterRoutes(mux, ctx.modules.Grading.RegradeHandler, ctx.guards.requireReviewManage, ctx.guards.requireReviewWork)
-	regraderelease.RegisterRoutes(mux, ctx.modules.Release.RegradeReleaseHandler, scoreReleaseManage)
+	regraderelease.RegisterRoutes(mux, ctx.modules.Release.RegradeReleaseHandler, ctx.guards.requireScoreManage)
 	if ctx.modules.Grading.QualityDashboardHandler != nil {
 		qualitydashboard.RegisterRoutes(mux, ctx.modules.Grading.QualityDashboardHandler, ctx.guards.requireReviewManage)
 	}
@@ -48,7 +45,7 @@ func registerReviewRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("POST /api/v1/review-tasks/{id}/assign", ctx.guards.requireReviewManage(ctx.modules.Grading.ReviewHandler.AssignTask))
 	mux.Handle("GET /api/v1/review-commands/{commandId}", ctx.guards.requireAuth(auth.RequireAnyPermission("review:manage", "review:work", "arbitration:manage", "arbitration:work")(http.HandlerFunc(ctx.modules.Grading.ReviewHandler.RecoverCommand))))
 	mux.Handle("GET /api/v1/score-commands/{commandId}", ctx.guards.requireScoreManage(ctx.modules.Release.ScoreHandler.RecoverCommand))
-	mux.Handle("GET /api/v1/report-commands/{commandId}", ctx.guards.requireRecentPermission("report:export", ctx.modules.Release.ReportHandler.RecoverCommand))
+	mux.Handle("GET /api/v1/report-commands/{commandId}", ctx.guards.requirePermission("report:export", ctx.modules.Release.ReportHandler.RecoverCommand))
 	mux.Handle("POST /api/v1/review-tasks/{id}/submit", ctx.guards.requireReviewWork(ctx.modules.Grading.ReviewHandler.SubmitGrade))
 	mux.Handle("POST /api/v1/review-tasks/{id}/return", ctx.guards.requireReviewWork(ctx.modules.Grading.ReviewHandler.ReturnTask))
 	mux.Handle("GET /api/v1/review-tasks/{id}/draft", ctx.guards.requireReviewWork(ctx.modules.Grading.ReviewHandler.GetDraft))

@@ -13,6 +13,7 @@ type IdentityStores struct {
 
 type IdentityModule struct {
 	AuthStore   auth.Store
+	OrgStore    org.Store
 	AuthHandler *auth.Handler
 	OrgHandler  *org.Handler
 }
@@ -20,6 +21,7 @@ type IdentityModule struct {
 func NewIdentityModule(cfg config.Config, stores IdentityStores, loginGuard auth.LoginAttemptGuard) *IdentityModule {
 	return &IdentityModule{
 		AuthStore: stores.Auth,
+		OrgStore:  stores.Org,
 		AuthHandler: auth.NewHandler(stores.Auth, cfg.Auth.SessionTTL, auth.HandlerOptions{
 			LoginFailureLimit:      cfg.Auth.LoginFailureLimit,
 			LoginFailureWindow:     cfg.Auth.LoginFailureWindow,

@@ -7,22 +7,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 )
 
-const DefaultRecentAuthTTL = 10 * time.Minute
-
-// RequireRecentAuthForMutations lets a module keep ordinary read access while
-// raising the boundary for its administrative commands.
-func RequireRecentAuthForMutations(maxAge time.Duration) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		requireRecent := RequireRecentAuth(maxAge)(next)
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions {
-				next.ServeHTTP(w, r)
-				return
-			}
-			requireRecent.ServeHTTP(w, r)
-		})
-	}
-}
+const DefaultRecentAuthTTL = time.Hour
 
 // RequireRecentAuth protects a sensitive handler after the ordinary session,
 // tenant, resource and permission checks have succeeded. A password login and

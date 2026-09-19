@@ -18,6 +18,7 @@ import type { SessionUser } from "../../../auth/session";
 import { ErrorState, LoadingState } from "../../../components/PageState";
 import { ResponsiveTable } from "../../../components/ResponsiveTable";
 import { StatusTag } from "../../../components/StatusTag";
+import { isStepUpCancelledError, useStepUp } from "../../../auth/stepUpContext";
 
 const roleLabels: Record<string, string> = {
   tenant_admin: "机构管理员",
@@ -33,6 +34,7 @@ type CreateMode = "teacher" | "administrator";
 
 export function TeacherManagementPage({ currentUser }: { currentUser: SessionUser }) {
   const { message, modal } = App.useApp();
+  const { runWithStepUp } = useStepUp();
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [roles, setRoles] = useState<AssignableRole[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
@@ -140,7 +142,11 @@ export function TeacherManagementPage({ currentUser }: { currentUser: SessionUse
   async function createRecovery(user: ManagedUser) {
     setUpdatingUserID(user.id);
     try {
-      const result = await createCredentialRecovery(user.id);
+      const result = await runWithStepUp({
+        reason: `为“${user.display_name}”生成账号恢复链接`,
+        description: "此操作可能改变该账号的登录凭据，因此需要验证当前管理员身份。验证后将自动继续。",
+        action: () => createCredentialRecovery(user.id)
+      });
       const recoveryURL = `${window.location.origin}${result.recovery.path}`;
       modal.success({
         title: `已为${user.display_name}生成恢复链接`,
@@ -148,7 +154,7 @@ export function TeacherManagementPage({ currentUser }: { currentUser: SessionUse
         content: <div><p>旧恢复链接已失效。请核对本人身份后通过可信渠道发送，新链接将在 {new Date(result.recovery.expires_at).toLocaleString("zh-CN")} 失效。</p><Input readOnly value={recoveryURL} addonAfter={<Button type="link" onClick={() => void navigator.clipboard.writeText(recoveryURL).then(() => message.success("恢复链接已复制"))}>复制</Button>} /></div>
       });
     } catch (reason) {
-      message.error(getUserErrorMessage(reason, "暂时无法生成恢复链接"));
+      if (!isStepUpCancelledError(reason)) message.error(getUserErrorMessage(reason, "暂时无法生成恢复链接"));
     } finally {
       setUpdatingUserID("");
     }

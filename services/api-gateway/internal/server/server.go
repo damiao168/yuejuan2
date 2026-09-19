@@ -133,6 +133,7 @@ func NewRouterComplete(dependencies RouterDependencies) http.Handler {
 	registerQuestionBankRoutes(mux, ctx)
 	registerSystemRoutes(mux, ctx)
 	registerAuthRoutes(mux, ctx)
+	registerOnboardingRoutes(mux, ctx)
 	registerGovernanceRoutes(mux, ctx)
 	registerOrganizationRoutes(mux, ctx)
 	registerExamRoutes(mux, ctx)
