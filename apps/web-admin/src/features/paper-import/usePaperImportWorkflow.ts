@@ -14,14 +14,17 @@ import {
   uploadFile,
   type PaperImportDraftQuestion,
   type PaperImportJob,
+  type PaperImportRole,
   type PaperVersion
 } from "../../api/papers";
 import {
   filesFromClipboard,
   isSupportedPaperImportFile,
   isTextPasteTarget,
+  MAX_PASTED_MATERIAL_CHARS,
   markImportFieldConfirmed,
-  orderedSourcesAfterRemoval
+  orderedSourcesAfterRemoval,
+  pastedMarkdownFile
 } from "./materials";
 
 function formatError(error: unknown) {
@@ -87,12 +90,12 @@ export function usePaperImportWorkflow({
     return () => window.removeEventListener("paste", onPaste);
   }, [canManage, selectedExam]);
 
-  const handleMaterialFiles = async (files: File[]) => {
-    if (!selectedExam || !files.length) { message.error("请先选择考试，再添加考试资料"); return; }
-    if (paperImports.some((item) => item.status === "processing")) { message.warning("当前资料仍在识别，请完成后再继续添加"); return; }
+  const handleMaterialFiles = async (files: File[], roleHint: PaperImportRole = "auto") => {
+    if (!selectedExam || !files.length) { message.error("请先选择考试，再添加考试资料"); return false; }
+    if (paperImports.some((item) => item.status === "processing")) { message.warning("当前资料仍在识别，请完成后再继续添加"); return false; }
     const supportedFiles = files.filter(isSupportedPaperImportFile);
-    if (supportedFiles.length !== files.length) message.warning("已忽略不支持的文件，仅接受 PDF、Word、PNG、JPG、JPEG、TIFF");
-    if (!supportedFiles.length) return;
+    if (supportedFiles.length !== files.length) message.warning("已忽略不支持的文件，仅接受 PDF、Word、图片、Markdown 或 TXT");
+    if (!supportedFiles.length) return false;
     setParsing(true);
     try {
       const uploaded = [];
@@ -109,7 +112,7 @@ export function usePaperImportWorkflow({
       const sources = uploaded.map((file, index) => ({
         file_asset_id: file.id,
         document_index: startIndex + index,
-        role_hint: "auto" as const
+        role_hint: roleHint
       }));
       const commandId = crypto.randomUUID();
       const result = activeImport
@@ -125,19 +128,34 @@ export function usePaperImportWorkflow({
         message.success(`已添加 ${supportedFiles.length} 份资料，系统正在识别和匹配`);
       }
       await loadConfig(selectedExam.id, { silent: true });
+      return true;
     } catch (error) {
       await loadConfig(selectedExam.id, { silent: true }).catch(() => undefined);
       message.error(formatError(error));
+      return false;
     } finally {
       setParsing(false);
     }
   };
   materialUploadRef.current = (files) => { void handleMaterialFiles(files); };
 
+  const importPastedText = async (value: string, roleHint: PaperImportRole) => {
+    const content = value.trim();
+    if (content.length < 20) {
+      message.error("请至少粘贴 20 个字符的考试资料");
+      return false;
+    }
+    if (content.length > MAX_PASTED_MATERIAL_CHARS) {
+      message.error(`粘贴内容不能超过 ${MAX_PASTED_MATERIAL_CHARS.toLocaleString("zh-CN")} 个字符`);
+      return false;
+    }
+    return handleMaterialFiles([pastedMarkdownFile(content)], roleHint);
+  };
+
   const uploadProps: UploadProps = {
     showUploadList: false,
     multiple: true,
-    accept: ".pdf,.docx,.png,.jpg,.jpeg,.tif,.tiff,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg,image/tiff",
+    accept: ".pdf,.docx,.png,.jpg,.jpeg,.tif,.tiff,.txt,.md,.markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg,image/tiff,text/plain,text/markdown",
     beforeUpload: (file, fileList) => {
       if (file.uid === fileList[0]?.uid) void handleMaterialFiles(fileList as File[]);
       return false;
@@ -258,6 +276,6 @@ export function usePaperImportWorkflow({
     uploadProps, parsing, reviewDrafts, savingImportReview, updatingImportSources,
     stoppingImport, retryingParse, invalidReviewRubric: reviewDrafts.some(reviewRubricHasScoreMismatch),
     replaceImportSources, stopPaperImport, retryImportParse, removeImportSource,
-    openImportSource, confirmPaperImport, saveImportReview, updateReviewDraft
+    openImportSource, confirmPaperImport, saveImportReview, updateReviewDraft, importPastedText
   };
 }

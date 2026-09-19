@@ -97,7 +97,7 @@ type ModelSecretConfig struct {
 
 const localModelCredentialMasterKey = "edugrade-local-model-credential-key-change-before-production"
 
-const defaultAllowedFileExtensions = ".pdf,.png,.jpg,.jpeg,.tif,.tiff,.csv,.docx"
+const defaultAllowedFileExtensions = ".pdf,.png,.jpg,.jpeg,.tif,.tiff,.csv,.docx,.txt,.md,.markdown"
 
 type RedisConfig struct {
 	Addr          string

@@ -1,12 +1,15 @@
-import { Alert, Button, List, Progress, Select, Space, Upload } from "antd";
-import { ChevronDown, ChevronUp, ExternalLink, FileUp, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { Alert, Button, Input, List, Modal, Progress, Select, Space, Tabs, Upload } from "antd";
+import { ChevronDown, ChevronUp, ClipboardPaste, ExternalLink, FileUp, Trash2 } from "lucide-react";
 import { getPaperImportUserMessage } from "../../api/client";
 import type { PaperImportJob, PaperImportRole } from "../../api/papers";
+import { MathMarkdown } from "../../components/MathMarkdown";
 import { StatusTag } from "../../components/StatusTag";
 import {
   hasBlockingImportIssues,
   hasNoExamContentDetected,
   isPaperImportCancelled,
+  MAX_PASTED_MATERIAL_CHARS,
   orderedSourcesAfterMove,
   paperImportProgress,
   paperImportReviewIssues,
@@ -46,8 +49,20 @@ export function PaperImportWorkspace({
     uploadProps, parsing, reviewDrafts, savingImportReview, updatingImportSources,
     stoppingImport, retryingParse, invalidReviewRubric, replaceImportSources,
     stopPaperImport, retryImportParse, removeImportSource, openImportSource,
-    confirmPaperImport, saveImportReview, updateReviewDraft
+    confirmPaperImport, saveImportReview, updateReviewDraft, importPastedText
   } = workflow;
+  const [textImportOpen, setTextImportOpen] = useState(false);
+  const [pastedText, setPastedText] = useState("");
+  const [pastedRole, setPastedRole] = useState<PaperImportRole>("auto");
+  const [textImportTab, setTextImportTab] = useState("edit");
+  const submitPastedText = async () => {
+    const imported = await importPastedText(pastedText, pastedRole);
+    if (!imported) return;
+    setTextImportOpen(false);
+    setPastedText("");
+    setPastedRole("auto");
+    setTextImportTab("edit");
+  };
   const importCancelled = latestPaperImport ? isPaperImportCancelled(latestPaperImport) : false;
   const noExamContentDetected = latestPaperImport ? hasNoExamContentDetected(latestPaperImport) : false;
   const visibleImportIssues = importCancelled || latestPaperImport?.status === "processing" ? [] : noExamContentDetected
@@ -66,12 +81,12 @@ export function PaperImportWorkspace({
 
   return <>
     <section className="workspace-section paper-source-files">
-      <div className="section-head"><div><h2>上传考试资料</h2><p>把试题、答案、解析、评分标准直接放到这里，系统会自动识别内容并进行匹配。</p></div></div>
+      <div className="section-head"><div><h2>上传考试资料</h2><p>把试题、答案、解析、评分标准直接放到这里，系统会自动识别内容并进行匹配。</p></div><Button icon={<ClipboardPaste size={16} />} disabled={!canManage || parsing} onClick={() => setTextImportOpen(true)}>粘贴文本</Button></div>
       <Upload.Dragger {...uploadProps} disabled={!canManage || parsing} className="paper-import-dropzone">
         <div className="paper-import-upload-content">
           <FileUp size={22} />
-          <strong>{parsing ? "正在上传并识别…" : "点击选择、拖拽，或直接 Ctrl+V / Cmd+V 粘贴"}</strong>
-          <span>PDF、Word、PNG、JPG、JPEG、TIFF；可一次添加多份资料</span>
+          <strong>{parsing ? "正在上传并识别…" : "点击选择、拖拽，或 Ctrl+V / Cmd+V 粘贴截图"}</strong>
+          <span>PDF、Word、图片、Markdown、TXT；可一次添加多份资料</span>
         </div>
       </Upload.Dragger>
       {latestPaperImport?.sources.length ? <List
@@ -88,6 +103,51 @@ export function PaperImportWorkspace({
           <List.Item.Meta title={`${source.document_index + 1}. ${source.original_name || "考试资料"}`} description={`识别内容：${source.detected_role === "question" ? "题目" : source.detected_role === "answer" ? "答案" : source.detected_role === "solution" ? "解析" : source.detected_role === "rubric" ? "评分标准" : source.detected_role === "mixed" ? "混合内容" : "识别中"}${source.role_confidence ? ` · 资料类型判断 ${Math.round(source.role_confidence * 100)}%（不代表逐字准确率）` : ""}`} />
         </List.Item>}
       /> : null}
+      <Modal
+        title="粘贴 Markdown 资料"
+        open={textImportOpen}
+        width={760}
+        okText="添加并识别"
+        cancelText="取消"
+        confirmLoading={parsing}
+        okButtonProps={{ disabled: pastedText.trim().length < 20 || pastedText.length > MAX_PASTED_MATERIAL_CHARS }}
+        onOk={() => void submitPastedText()}
+        onCancel={() => setTextImportOpen(false)}
+      >
+        <div className="paper-text-import">
+          <div className="paper-text-import-toolbar">
+            <label htmlFor="paper-text-import-role">资料类型</label>
+            <Select<PaperImportRole> id="paper-text-import-role" value={pastedRole} options={importRoleOptions} onChange={setPastedRole} />
+            <span>行内公式使用 <code>$x^2$</code>，独立公式使用 <code>$$...$$</code>；也兼容 <code>\(...\)</code> 与 <code>\[...\]</code>。</span>
+          </div>
+          <Tabs
+            activeKey={textImportTab}
+            onChange={setTextImportTab}
+            items={[
+              {
+                key: "edit",
+                label: "编辑",
+                children: <Input.TextArea
+                  autoFocus
+                  value={pastedText}
+                  onChange={(event) => setPastedText(event.target.value)}
+                  placeholder={"在此粘贴题目、答案、解析或评分标准。\n\n示例：\n## 第 1 题\n已知 $f(x)=x^2+2x+1$，求 $f(x)$ 的最小值。"}
+                  autoSize={{ minRows: 12, maxRows: 20 }}
+                  maxLength={MAX_PASTED_MATERIAL_CHARS}
+                  showCount
+                />
+              },
+              {
+                key: "preview",
+                label: "公式预览",
+                children: pastedText.trim()
+                  ? <div className="paper-text-import-preview"><MathMarkdown>{pastedText}</MathMarkdown></div>
+                  : <div className="paper-text-import-empty">粘贴内容后可在这里核对 Markdown 与数学公式。</div>
+              }
+            ]}
+          />
+        </div>
+      </Modal>
     </section>
 
     {latestPaperImport ? <section className="workspace-section paper-import-review">

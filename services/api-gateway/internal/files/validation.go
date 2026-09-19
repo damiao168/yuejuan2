@@ -59,6 +59,22 @@ var allowedContentTypesByExt = map[string]map[string]bool{
 		"application/vnd.openxmlformats-officedocument.wordprocessingml.document": true,
 		"application/zip": true,
 	},
+	".txt": {
+		"text/plain":                true,
+		"text/plain; charset=utf-8": true,
+	},
+	".md": {
+		"text/plain":                   true,
+		"text/plain; charset=utf-8":    true,
+		"text/markdown":                true,
+		"text/markdown; charset=utf-8": true,
+	},
+	".markdown": {
+		"text/plain":                   true,
+		"text/plain; charset=utf-8":    true,
+		"text/markdown":                true,
+		"text/markdown; charset=utf-8": true,
+	},
 }
 
 func CleanFilename(name string) (string, error) {

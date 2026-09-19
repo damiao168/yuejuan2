@@ -46,7 +46,7 @@ func TestLoadUsesDefaults(t *testing.T) {
 	if cfg.Auth.RiskMode != "shadow" || cfg.Auth.DeviceBindingTTL != 180*24*time.Hour || cfg.Auth.DeviceCookieName != "edugrade_device" {
 		t.Fatalf("unexpected default adaptive authentication config: %#v", cfg.Auth)
 	}
-	for _, extension := range []string{".tif", ".tiff"} {
+	for _, extension := range []string{".tif", ".tiff", ".txt", ".md", ".markdown"} {
 		if !containsString(cfg.Files.AllowedExtensions, extension) {
 			t.Fatalf("default file extensions must include %s: %v", extension, cfg.Files.AllowedExtensions)
 		}

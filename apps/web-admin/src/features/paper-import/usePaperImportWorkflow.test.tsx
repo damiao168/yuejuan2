@@ -37,6 +37,15 @@ function job(status: PaperImportJob["status"]): PaperImportJob {
   } as unknown as PaperImportJob;
 }
 
+function readFileText(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
+}
+
 describe("paper import workflow controller", () => {
   let root: Root;
   let container: HTMLDivElement;
@@ -117,6 +126,36 @@ describe("paper import workflow controller", () => {
     expect(mocks.addPaperImportSources).not.toHaveBeenCalled();
     expect(mocks.loadConfig).toHaveBeenCalledWith("exam-1", { silent: true });
     expect(mocks.error).toHaveBeenCalled();
+  });
+
+  it("uploads pasted Markdown as a text source and preserves its role hint", async () => {
+    const review = job("review_required");
+    mocks.uploadFile.mockResolvedValueOnce({ file: { id: "markdown-asset" } });
+    mocks.addPaperImportSources.mockResolvedValueOnce({ import: { ...review, status: "processing" } });
+    await mount(review);
+    const markdown = "## 第 1 题\n\n已知 $x^2=4$，求 $x$ 的值，并写出完整步骤。";
+    let imported = false;
+    await act(async () => { imported = await current.importPastedText(markdown, "question"); });
+    expect(imported).toBe(true);
+    const uploaded = mocks.uploadFile.mock.calls[0][0] as File;
+    expect(uploaded.name).toMatch(/^pasted-material-\d{8}-\d{6}\.md$/);
+    expect(uploaded.type).toBe("text/plain");
+    expect(await readFileText(uploaded)).toBe(markdown);
+    expect(mocks.addPaperImportSources).toHaveBeenCalledWith(
+      "import-1",
+      7,
+      [{ file_asset_id: "markdown-asset", document_index: 1, role_hint: "question" }],
+      expect.any(String)
+    );
+  });
+
+  it("rejects pasted text that is too short before uploading", async () => {
+    await mount(job("review_required"));
+    let imported = true;
+    await act(async () => { imported = await current.importPastedText("第 1 题", "auto"); });
+    expect(imported).toBe(false);
+    expect(mocks.uploadFile).not.toHaveBeenCalled();
+    expect(mocks.error).toHaveBeenCalledWith("请至少粘贴 20 个字符的考试资料");
   });
 
   it("rejects a review whose rubric total disagrees with the question score", async () => {

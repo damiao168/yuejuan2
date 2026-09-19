@@ -1,13 +1,20 @@
 import { describe, expect, it } from "vitest";
 import type { PaperImportSource } from "../../api/papers";
-import { filesFromClipboard, hasBlockingImportIssues, hasNoExamContentDetected, isPaperImportCancelled, isSupportedPaperImportFile, markImportFieldConfirmed, orderedSourcesAfterMove, orderedSourcesAfterRemoval, paperImportProgress, paperImportReviewIssues, paperImportSummary, sourcesAfterRoleChange } from "./materials";
+import { filesFromClipboard, hasBlockingImportIssues, hasNoExamContentDetected, isPaperImportCancelled, isSupportedPaperImportFile, markImportFieldConfirmed, orderedSourcesAfterMove, orderedSourcesAfterRemoval, paperImportProgress, paperImportReviewIssues, paperImportSummary, pastedMarkdownFile, sourcesAfterRoleChange } from "./materials";
 
 describe("paper import materials", () => {
   it("accepts every supported document and image extension", () => {
-    for (const name of ["paper.pdf", "answer.docx", "a.png", "b.jpg", "c.jpeg", "d.tif", "e.tiff"]) {
+    for (const name of ["paper.pdf", "answer.docx", "a.png", "b.jpg", "c.jpeg", "d.tif", "e.tiff", "notes.txt", "questions.md", "rubric.markdown"]) {
       expect(isSupportedPaperImportFile(new File(["x"], name))).toBe(true);
     }
-    expect(isSupportedPaperImportFile(new File(["x"], "notes.txt"))).toBe(false);
+    expect(isSupportedPaperImportFile(new File(["x"], "archive.zip"))).toBe(false);
+  });
+
+  it("turns pasted Markdown into an auditable UTF-8 source without changing math", async () => {
+    const file = pastedMarkdownFile("\r\n# 试题\r\n\r\n已知 $x^2=4$。\r\n", new Date(2026, 8, 19, 9, 8, 7));
+    expect(file.name).toBe("pasted-material-20260919-090807.md");
+    expect(file.type).toBe("text/plain");
+    expect(await file.text()).toBe("# 试题\n\n已知 $x^2=4$。");
   });
 
   it("reorders sources with contiguous stable indexes", () => {

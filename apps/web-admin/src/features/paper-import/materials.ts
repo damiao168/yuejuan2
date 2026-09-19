@@ -1,13 +1,17 @@
 import type { PaperImportDraftQuestion, PaperImportIssue, PaperImportJob, PaperImportRole, PaperImportSource } from "../../api/papers";
 
-const supportedExtensions = [".pdf", ".docx", ".png", ".jpg", ".jpeg", ".tif", ".tiff"];
+const supportedExtensions = [".pdf", ".docx", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".txt", ".md", ".markdown"];
 const supportedMimeTypes = new Set([
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "image/png",
   "image/jpeg",
-  "image/tiff"
+  "image/tiff",
+  "text/plain",
+  "text/markdown"
 ]);
+
+export const MAX_PASTED_MATERIAL_CHARS = 500_000;
 
 export function isSupportedPaperImportFile(file: File) {
   const name = file.name.toLowerCase();
@@ -36,6 +40,14 @@ export function filesFromClipboard(data: Pick<DataTransfer, "files" | "items"> |
     }
   }
   return files;
+}
+
+export function pastedMarkdownFile(value: string, now = new Date()) {
+  const content = value.replace(/\r\n?/g, "\n").trim();
+  return new File([content], `pasted-material-${clipboardTimestamp(now)}.md`, {
+    type: "text/plain",
+    lastModified: now.getTime()
+  });
 }
 
 export function isTextPasteTarget(target: EventTarget | null) {

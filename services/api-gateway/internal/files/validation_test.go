@@ -29,6 +29,16 @@ func TestValidateFileTypeReturnsServerSniffedType(t *testing.T) {
 	}
 }
 
+func TestValidateFileTypeAllowsMarkdownReportedAsPlainText(t *testing.T) {
+	contentType, err := ValidateFileType("questions.md", "text/plain", "text/plain; charset=utf-8", []string{".md"})
+	if err != nil {
+		t.Fatalf("markdown text should be accepted: %v", err)
+	}
+	if contentType != "text/plain; charset=utf-8" {
+		t.Fatalf("unexpected content type: %s", contentType)
+	}
+}
+
 func TestSniffContentTypeRecognizesTIFFByteOrders(t *testing.T) {
 	for _, sample := range [][]byte{{'I', 'I', 42, 0, 8, 0, 0, 0}, {'M', 'M', 0, 42, 0, 0, 0, 8}} {
 		if got := SniffContentType(sample); got != "image/tiff" {

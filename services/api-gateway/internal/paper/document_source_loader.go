@@ -9,6 +9,7 @@ import (
 	"io"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"edugrade-enterprise/services/api-gateway/internal/files"
 )
@@ -47,10 +48,16 @@ func (l storedDocumentSourceLoader) Load(ctx context.Context, tenantID, id strin
 		text, err = extractDOCXText(data)
 	case asset.ContentType == "application/pdf" || strings.HasSuffix(strings.ToLower(asset.OriginalName), ".pdf"):
 		text, err = extractPDFText(data)
+	case isPlainTextDocument(asset):
+		if !utf8.Valid(data) {
+			err = errors.New("文本资料必须使用 UTF-8 编码")
+		} else {
+			text = strings.TrimPrefix(string(data), "\uFEFF")
+		}
 	case strings.HasPrefix(asset.ContentType, "image/"):
 		return "", errDocumentOCRRequired
 	default:
-		err = errors.New("仅支持 PDF 或 DOCX 文件")
+		err = errors.New("仅支持 PDF、DOCX、Markdown 或纯文本文件")
 	}
 	if err != nil {
 		return "", err
@@ -66,6 +73,13 @@ func (l storedDocumentSourceLoader) Load(ctx context.Context, tenantID, id strin
 		text = text[:maxDocumentTextBytes]
 	}
 	return text, nil
+}
+
+func isPlainTextDocument(asset files.FileAsset) bool {
+	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(asset.ContentType, ";")[0]))
+	name := strings.ToLower(asset.OriginalName)
+	return mediaType == "text/plain" || mediaType == "text/markdown" ||
+		strings.HasSuffix(name, ".txt") || strings.HasSuffix(name, ".md") || strings.HasSuffix(name, ".markdown")
 }
 
 func (l storedDocumentSourceLoader) Metadata(ctx context.Context, tenantID, id string) (files.FileAsset, error) {

@@ -5655,6 +5655,62 @@ select {
   border-top: 1px solid #e5e7eb;
 }
 
+.paper-text-import {
+  padding-top: 4px;
+}
+
+.paper-text-import-toolbar {
+  display: grid;
+  grid-template-columns: auto minmax(150px, 190px) 1fr;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.paper-text-import-toolbar label {
+  color: #334155;
+  font-weight: 600;
+}
+
+.paper-text-import-toolbar span {
+  color: #64748b;
+  font-size: var(--eg-font-body);
+  line-height: 1.6;
+}
+
+.paper-text-import-toolbar code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.paper-text-import-preview {
+  min-height: 286px;
+  max-height: 480px;
+  overflow: auto;
+  padding: 18px 20px;
+  border: 1px solid #dbe3ec;
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.paper-text-import-empty {
+  display: grid;
+  min-height: 286px;
+  place-items: center;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #64748b;
+  background: #fafafa;
+}
+
+@media (max-width: 720px) {
+  .paper-text-import-toolbar {
+    grid-template-columns: 1fr;
+  }
+}
+
 .paper-import-facts {
   display: flex;
   gap: 28px;
