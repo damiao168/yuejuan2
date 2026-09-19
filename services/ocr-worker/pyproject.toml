@@ -6,7 +6,7 @@ requires-python = ">=3.11,<3.13"
 dependencies = ["edugrade-worker-runtime==0.1.0"]
 
 [build-system]
-requires = ["setuptools==83.0.0"]
+requires = ["setuptools==84.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
