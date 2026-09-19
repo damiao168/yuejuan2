@@ -1,52 +1,22 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, App, Button, Checkbox, Collapse, Drawer, Input, InputNumber, List, Modal, Progress, Select, Space, Spin } from "antd";
 import { ChevronLeft, ChevronRight, Copy, Download, LockKeyhole, MousePointer2, Plus, Printer, RefreshCw, Save, Trash2, WandSparkles, ZoomIn, ZoomOut } from "lucide-react";
-import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from "pdfjs-dist";
-import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { ApiClientError, getUserErrorMessage } from "../api/client";
 import {
-	bindExamTemplate,
-  cloneAnswerSheetTemplate,
-  createAnswerSheetTemplate,
 	getExamTemplateBinding,
   listAnswerSheetTemplates,
-  lockAnswerSheetTemplate,
-	unbindExamTemplate,
   type AnswerSheetTemplate,
-	type ExamTemplateBinding,
-  type LayoutRegion,
 	type OMRCalibrationCase,
-	type OMRCalibrationStatus,
-  type OptionRegion,
-  type TemplateLayout
+	type OMRCalibrationStatus
 } from "../api/configuration";
-import { downloadFileBlob } from "../api/files";
 import { listPapers, listQuestions, type PaperVersion, type Question } from "../api/papers";
-import {
-	downloadStudentPrintPackage,
-	getStudentPrintContext,
-	issueStudentPrintBatch,
-	type StudentPrintContext
-} from "../api/printing";
 import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
 import { StatusTag } from "../components/StatusTag";
 import { useOMRCalibration } from "../features/answer-sheet-template/calibration/useOMRCalibration";
-import { saveTemplateDraft } from "../features/answer-sheet-template/editor/saveTemplateDraft";
-
-GlobalWorkerOptions.workerSrc = pdfWorker;
-
-type Interaction =
-  | { kind: "draw"; startX: number; startY: number; x: number; y: number }
-  | { kind: "move" | "resize"; regionId: string; startX: number; startY: number; original: LayoutRegion };
-
-interface PreviewState {
-  loading: boolean;
-  error?: string;
-  pageCount: number;
-  width: number;
-  height: number;
-  imageUrl?: string;
-}
+import { useTemplateBinding } from "../features/answer-sheet-template/binding/useTemplateBinding";
+import { useStudentPrinting } from "../features/answer-sheet-template/printing/useStudentPrinting";
+import { useTemplatePreview } from "../features/answer-sheet-template/editor/useTemplatePreview";
+import { useTemplateEditor } from "../features/answer-sheet-template/editor/useTemplateEditor";
 
 function formatError(error: unknown) {
   if (error instanceof ApiClientError) {
@@ -54,17 +24,6 @@ function formatError(error: unknown) {
     return getUserErrorMessage(error, "操作失败，请稍后重试");
   }
   return getUserErrorMessage(error, "操作失败，请稍后重试");
-}
-
-function saveDownload(blob: Blob, filename: string) {
-	const url = URL.createObjectURL(blob);
-	const link = document.createElement("a");
-	link.href = url;
-	link.download = filename;
-	document.body.appendChild(link);
-	link.click();
-	link.remove();
-	window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function printBatchTime(value: string) {
@@ -75,20 +34,6 @@ function printBatchTime(value: string) {
 		minute: "2-digit",
 		hour12: false
 	}).format(new Date(value));
-}
-
-function emptyLayout(pageCount: number, width: number, height: number): TemplateLayout {
-  return {
-		omr_profile: { mode: "manual_only", version: "opencv-fill-v1" },
-    pages: Array.from({ length: pageCount }, (_, index) => ({
-      page_no: index + 1,
-      width,
-      height,
-      registration_marks: [],
-      identity_regions: [],
-      question_regions: []
-    }))
-  };
 }
 
 function calibrationStatusLabel(status: OMRCalibrationStatus) {
@@ -132,102 +77,48 @@ function clamp(value: number, min = 0, max = 1) {
   return Math.min(max, Math.max(min, value));
 }
 
-function roundCoordinate(value: number) {
-  return Number(value.toFixed(6));
-}
-
 export function AnswerSheetTemplatePage({ examId, canManage, canCalibrate = false, onExamChanged }: { examId: string; canManage: boolean; canCalibrate?: boolean; onExamChanged?: () => void }) {
-  const { message, modal } = App.useApp();
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const pdfRef = useRef<PDFDocumentProxy | undefined>(undefined);
-  const imageObjectUrlRef = useRef<string | undefined>(undefined);
-  const renderedObjectUrlRef = useRef<string | undefined>(undefined);
+  const { message } = App.useApp();
   const dataRequestRef = useRef(0);
-  const printContextRequestRef = useRef(0);
-  const printIssueRequestRef = useRef<{ signature: string; key: string } | undefined>(undefined);
   const [papers, setPapers] = useState<PaperVersion[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [templates, setTemplates] = useState<AnswerSheetTemplate[]>([]);
-	const [examBinding, setExamBinding] = useState<ExamTemplateBinding | null>(null);
-	const [bindingBusy, setBindingBusy] = useState(false);
   const [selectedPaperId, setSelectedPaperId] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
-  const [selectedQuestionId, setSelectedQuestionId] = useState("");
-  const [name, setName] = useState("答题卡模板");
-  const [layout, setLayout] = useState<TemplateLayout>({ pages: [] });
-  const [revision, setRevision] = useState(0);
-  const [pageNo, setPageNo] = useState(1);
-  const [zoom, setZoom] = useState(1);
-  const [interaction, setInteraction] = useState<Interaction>();
-  const [selectedRegionId, setSelectedRegionId] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
-  const [saving, setSaving] = useState(false);
-  const [suggestingRegions, setSuggestingRegions] = useState(false);
-  const [preview, setPreview] = useState<PreviewState>({ loading: false, pageCount: 1, width: 2480, height: 3508 });
-  const [pdfSourceId, setPdfSourceId] = useState("");
-	const [printContext, setPrintContext] = useState<StudentPrintContext>();
-	const [printContextLoading, setPrintContextLoading] = useState(false);
-	const [printContextError, setPrintContextError] = useState<string>();
-	const [printModalOpen, setPrintModalOpen] = useState(false);
-	const [selectedPrintClassIds, setSelectedPrintClassIds] = useState<string[]>([]);
-	const [printBusy, setPrintBusy] = useState(false);
 
   const selectedPaper = useMemo(() => papers.find((item) => item.id === selectedPaperId), [papers, selectedPaperId]);
   const selectedTemplate = useMemo(() => templates.find((item) => item.id === selectedTemplateId), [templates, selectedTemplateId]);
-  const currentPage = layout.pages.find((item) => item.page_no === pageNo);
-  const selectedRegion = currentPage?.question_regions.find((item) => item.id === selectedRegionId);
-  const selectedQuestion = questions.find((item) => item.id === selectedRegion?.question_id);
-  const readonly = !canManage || selectedTemplate?.status === "locked";
-  const coveredQuestions = useMemo(() => new Set(layout.pages.flatMap((page) => page.question_regions.map((region) => region.question_id))), [layout]);
-	const isTemplateDifference = selectedTemplate?.status === "locked" && selectedTemplate.layout.omr_profile?.mode === "template_difference";
-	const calibration = useOMRCalibration({
-		template: selectedTemplate,
-		enabled: Boolean(selectedTemplate?.status === "locked" && selectedTemplate.layout.omr_profile?.mode === "template_difference" && canCalibrate),
-		message,
-		formatError
-	});
-	const {
-		calibrations, loading: calibrationLoading, error: calibrationError,
-		detail: calibrationDetail, drawerOpen: calibrationDrawerOpen, setDrawerOpen: setCalibrationDrawerOpen,
-		selectedCase: selectedCalibrationCase, setCaseId: setCalibrationCaseId,
-		expectedOptions: calibrationExpectedOptions, setExpectedOptions: setCalibrationExpectedOptions,
-		imageUrl: calibrationImageUrl, imageLoading: calibrationImageLoading, busy: calibrationBusy,
-		action: calibrationAction, setAction: setCalibrationAction,
-		actionReason: calibrationActionReason, setActionReason: setCalibrationActionReason,
-		reload: loadOMRCalibrationList, open: openCalibration, start: startCalibration,
-		labelCase: labelCalibrationCase, submitAction: submitCalibrationAction
-	} = calibration;
-	const printableCandidates = useMemo(
-		() => printContext?.candidates.filter((item) => item.attendance_status === "expected" && !item.has_active_sheet) ?? [],
-		[printContext]
-	);
-	const printClasses = useMemo(() => {
-		const grouped = new Map<string, { id: string; name: string; count: number }>();
-		for (const candidate of printableCandidates) {
-			const current = grouped.get(candidate.class_id);
-			if (current) current.count += 1;
-			else grouped.set(candidate.class_id, { id: candidate.class_id, name: candidate.class_name, count: 1 });
-		}
-		return Array.from(grouped.values());
-	}, [printableCandidates]);
-
-	const loadPrintContext = useCallback(async (templateId: string) => {
-		const requestId = ++printContextRequestRef.current;
-		setPrintContextLoading(true);
-		setPrintContextError(undefined);
-		try {
-			const response = await getStudentPrintContext(templateId);
-			if (requestId !== printContextRequestRef.current) return;
-			setPrintContext(response.print_context);
-		} catch (loadError) {
-			if (requestId !== printContextRequestRef.current) return;
-			setPrintContext(undefined);
-			setPrintContextError(formatError(loadError));
-		} finally {
-			if (requestId === printContextRequestRef.current) setPrintContextLoading(false);
-		}
-	}, []);
+  const binding = useTemplateBinding(examId);
+  const { examBinding, setExamBinding, bindingBusy, bindTemplateForExam, releaseExamBinding } = binding;
+  const printing = useStudentPrinting(selectedTemplate, canManage);
+  const {
+    printContext, printContextLoading, printContextError, printModalOpen,
+    setPrintModalOpen, selectedPrintClassIds, setSelectedPrintClassIds,
+    printBusy, printableCandidates, printClasses, loadPrintContext, openPrintModal,
+    downloadPrintBatch, issuePrintPackage
+  } = printing;
+  const previewController = useTemplatePreview(selectedPaper);
+  const { preview, pdfRef, pageNo, setPageNo } = previewController;
+  const isTemplateDifference = selectedTemplate?.status === "locked" && selectedTemplate.layout.omr_profile?.mode === "template_difference";
+  const calibration = useOMRCalibration({
+    template: selectedTemplate,
+    enabled: Boolean(selectedTemplate?.status === "locked" && selectedTemplate.layout.omr_profile?.mode === "template_difference" && canCalibrate),
+    message,
+    formatError
+  });
+  const {
+    calibrations, loading: calibrationLoading, error: calibrationError,
+    detail: calibrationDetail, drawerOpen: calibrationDrawerOpen, setDrawerOpen: setCalibrationDrawerOpen,
+    selectedCase: selectedCalibrationCase, setCaseId: setCalibrationCaseId,
+    expectedOptions: calibrationExpectedOptions, setExpectedOptions: setCalibrationExpectedOptions,
+    imageUrl: calibrationImageUrl, imageLoading: calibrationImageLoading, busy: calibrationBusy,
+    action: calibrationAction, setAction: setCalibrationAction,
+    actionReason: calibrationActionReason, setActionReason: setCalibrationActionReason,
+    reload: loadOMRCalibrationList, open: openCalibration, start: startCalibration,
+    labelCase: labelCalibrationCase, submitAction: submitCalibrationAction
+  } = calibration;
 
   const loadData = useCallback(async () => {
     const requestId = ++dataRequestRef.current;
@@ -251,11 +142,6 @@ export function AnswerSheetTemplatePage({ examId, canManage, canCalibrate = fals
           ? current
           : bindingResponse.binding?.template_id || latest?.id || ""
       );
-      setSelectedQuestionId((current) =>
-        questionResponse.questions.some((question) => question.id === current)
-          ? current
-          : questionResponse.questions[0]?.id || ""
-      );
     } catch (loadError) {
       if (requestId !== dataRequestRef.current) return;
       setError(formatError(loadError));
@@ -265,455 +151,31 @@ export function AnswerSheetTemplatePage({ examId, canManage, canCalibrate = fals
   }, [examId]);
 
   useEffect(() => { void loadData(); }, [loadData]);
-
   useEffect(() => {
-    if (!selectedTemplate) return;
-    setName(selectedTemplate.name);
-    setLayout(structuredClone(selectedTemplate.layout));
-    setRevision(selectedTemplate.revision);
-    setSelectedPaperId(selectedTemplate.exam_paper_id);
-    setPageNo(1);
-    setSelectedRegionId("");
+    if (selectedTemplate) setSelectedPaperId(selectedTemplate.exam_paper_id);
   }, [selectedTemplate]);
 
-	useEffect(() => {
-		printContextRequestRef.current += 1;
-		setPrintContext(undefined);
-		setPrintContextError(undefined);
-		setPrintModalOpen(false);
-		setSelectedPrintClassIds([]);
-		if (selectedTemplate?.status === "locked" && canManage) {
-			void loadPrintContext(selectedTemplate.id);
-		}
-	}, [canManage, loadPrintContext, selectedTemplate?.id, selectedTemplate?.status]);
+  const editor = useTemplateEditor({
+    examId, canManage, selectedPaper, selectedTemplate, questions, setTemplates,
+    setSelectedTemplateId, loadData, onChanged: onExamChanged, pdfRef, preview,
+    pageNo, setPageNo
+  });
+  const {
+    canvasRef, selectedQuestionId, setSelectedQuestionId, name, setName, layout, setLayout,
+    zoom, setZoom, selectedRegionId, saving,
+    suggestingRegions, currentPage, selectedRegion, selectedQuestion, readonly,
+    coveredQuestions, draftRect, onCanvasPointerDown, beginRegionInteraction,
+    onCanvasPointerMove, onCanvasPointerUp, updateRegion, createRegionWithoutDragging,
+    removeRegion, updateOption, addOptionRegion, removeOptionRegion,
+    suggestQuestionRegions, setOMRProfile, createDraft, saveDraft, confirmLock,
+    cloneTemplate
+  } = editor;
 
-  useEffect(() => {
-    let active = true;
-    async function loadSource() {
-      setPdfSourceId("");
-      await pdfRef.current?.destroy();
-      pdfRef.current = undefined;
-      if (imageObjectUrlRef.current) URL.revokeObjectURL(imageObjectUrlRef.current);
-      imageObjectUrlRef.current = undefined;
-      if (!selectedPaper) {
-        setPreview({ loading: false, pageCount: 1, width: 2480, height: 3508 });
-        return;
-      }
-      setPreview((current) => ({ ...current, loading: true, error: undefined, imageUrl: undefined }));
-      try {
-        const download = await downloadFileBlob(selectedPaper.file_asset_id);
-        if (!active) return;
-        if (download.contentType === "application/pdf" || selectedPaper.file.content_type === "application/pdf") {
-          const pdfDocument = await getDocument({ data: await download.blob.arrayBuffer() }).promise;
-          if (!active) { await pdfDocument.destroy(); return; }
-          pdfRef.current = pdfDocument;
-          setPdfSourceId(selectedPaper.id);
-          setPageNo((current) => Math.min(Math.max(1, current), pdfDocument.numPages));
-          setPreview((current) => ({ ...current, loading: false, pageCount: pdfDocument.numPages }));
-        } else {
-          const url = URL.createObjectURL(download.blob);
-          imageObjectUrlRef.current = url;
-          const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
-            const image = new Image();
-            image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
-            image.onerror = () => reject(new Error("无法读取答卷图片尺寸"));
-            image.src = url;
-          });
-          if (!active) return;
-          setPageNo(1);
-          setPreview((current) => ({ ...current, loading: false, pageCount: 1, imageUrl: url, ...dimensions }));
-        }
-      } catch (loadError) {
-        if (active) setPreview((current) => ({ ...current, loading: false, error: formatError(loadError) }));
-      }
-    }
-    void loadSource();
-    return () => { active = false; };
-  }, [selectedPaper]);
-
-  useEffect(() => {
-    let active = true;
-    async function renderPDFPage() {
-      const pdfDocument = pdfRef.current;
-      if (!pdfDocument || !pdfSourceId) return;
-      try {
-        setPreview((current) => ({ ...current, loading: true, error: undefined }));
-        const page = await pdfDocument.getPage(Math.min(pageNo, pdfDocument.numPages));
-        const base = page.getViewport({ scale: 1 });
-        const scale = Math.min(1.5, 1400 / base.width);
-        const viewport = page.getViewport({ scale });
-        const canvas = window.document.createElement("canvas");
-        canvas.width = Math.ceil(viewport.width);
-        canvas.height = Math.ceil(viewport.height);
-        const context = canvas.getContext("2d");
-        if (!context) throw new Error("浏览器无法创建 PDF 画布");
-        await page.render({ canvasContext: context, viewport, canvas }).promise;
-        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
-        if (!blob || !active) return;
-        if (renderedObjectUrlRef.current) URL.revokeObjectURL(renderedObjectUrlRef.current);
-        const url = URL.createObjectURL(blob);
-        renderedObjectUrlRef.current = url;
-        setPreview((current) => ({ ...current, loading: false, width: Math.round(base.width), height: Math.round(base.height), imageUrl: url }));
-      } catch (renderError) {
-        if (active) setPreview((current) => ({ ...current, loading: false, error: formatError(renderError) }));
-      }
-    }
-    void renderPDFPage();
-    return () => { active = false; };
-  }, [pageNo, pdfSourceId]);
-
-  useEffect(() => () => {
-    void pdfRef.current?.destroy();
-    if (imageObjectUrlRef.current) URL.revokeObjectURL(imageObjectUrlRef.current);
-    if (renderedObjectUrlRef.current) URL.revokeObjectURL(renderedObjectUrlRef.current);
-  }, []);
-
-  function point(event: ReactPointerEvent) {
-    const bounds = canvasRef.current?.getBoundingClientRect();
-    if (!bounds) return { x: 0, y: 0 };
-    return { x: clamp((event.clientX - bounds.left) / bounds.width), y: clamp((event.clientY - bounds.top) / bounds.height) };
-  }
-
-  function onCanvasPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    if (readonly || !selectedQuestionId || !currentPage) return;
-    const position = point(event);
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setInteraction({ kind: "draw", startX: position.x, startY: position.y, x: position.x, y: position.y });
-    setSelectedRegionId("");
-  }
-
-  function beginRegionInteraction(event: ReactPointerEvent, region: LayoutRegion, kind: "move" | "resize") {
-    if (readonly) return;
-    event.stopPropagation();
-    const position = point(event);
-    canvasRef.current?.setPointerCapture(event.pointerId);
-    setSelectedRegionId(region.id);
-    setInteraction({ kind, regionId: region.id, startX: position.x, startY: position.y, original: { ...region } });
-  }
-
-  function onCanvasPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
-    if (!interaction || !currentPage) return;
-    const position = point(event);
-    if (interaction.kind === "draw") {
-      setInteraction({ ...interaction, x: position.x, y: position.y });
-      return;
-    }
-    const dx = position.x - interaction.startX;
-    const dy = position.y - interaction.startY;
-    updateRegion(interaction.regionId, interaction.kind === "move"
-      ? { x: clamp(interaction.original.x + dx, 0, 1 - interaction.original.width), y: clamp(interaction.original.y + dy, 0, 1 - interaction.original.height) }
-      : { width: clamp(interaction.original.width + dx, 0.01, 1 - interaction.original.x), height: clamp(interaction.original.height + dy, 0.01, 1 - interaction.original.y) });
-  }
-
-  function onCanvasPointerUp() {
-    if (interaction?.kind === "draw" && currentPage && selectedQuestionId) {
-      const x = Math.min(interaction.startX, interaction.x);
-      const y = Math.min(interaction.startY, interaction.y);
-      const width = Math.abs(interaction.x - interaction.startX);
-      const height = Math.abs(interaction.y - interaction.startY);
-      if (width >= 0.01 && height >= 0.01) {
-        const question = questions.find((item) => item.id === selectedQuestionId);
-        const region: LayoutRegion = { id: crypto.randomUUID(), question_id: selectedQuestionId, label: question?.question_no || "题目", x: roundCoordinate(x), y: roundCoordinate(y), width: roundCoordinate(width), height: roundCoordinate(height), option_regions: [] };
-        setLayout((current) => ({ pages: current.pages.map((page) => ({ ...page, question_regions: page.question_regions.filter((item) => item.question_id !== selectedQuestionId).concat(page.page_no === pageNo ? [region] : []) })) }));
-        setSelectedRegionId(region.id);
-      }
-    }
-    setInteraction(undefined);
-  }
-
-  function updateRegion(regionId: string, patch: Partial<LayoutRegion>) {
-    setLayout((current) => ({ pages: current.pages.map((page) => ({ ...page, question_regions: page.question_regions.map((region) => region.id === regionId ? { ...region, ...patch } : region) })) }));
-  }
-
-  function createRegionWithoutDragging() {
-    if (readonly || !currentPage || !selectedQuestionId) return;
-    const existing = layout.pages.flatMap((page) => page.question_regions).find((region) => region.question_id === selectedQuestionId);
-    if (existing) {
-      const page = layout.pages.find((item) => item.question_regions.some((region) => region.id === existing.id));
-      if (page) setPageNo(page.page_no);
-      setSelectedRegionId(existing.id);
-      return;
-    }
-    const region: LayoutRegion = { id: crypto.randomUUID(), question_id: selectedQuestionId, label: questions.find((question) => question.id === selectedQuestionId)?.question_no ?? "题目", x: .1, y: .1, width: .8, height: .2, option_regions: [] };
-    setLayout((current) => ({ ...current, pages: current.pages.map((page) => page.page_no === pageNo ? { ...page, question_regions: [...page.question_regions, region] } : page) }));
-    setSelectedRegionId(region.id);
-  }
-
-  function removeRegion(regionId: string) {
-    setLayout((current) => ({ pages: current.pages.map((page) => ({ ...page, question_regions: page.question_regions.filter((region) => region.id !== regionId) })) }));
-    setSelectedRegionId("");
-  }
-
-  function updateOption(optionId: string, patch: Partial<OptionRegion>) {
-    if (!selectedRegionId) return;
-    setLayout((current) => ({ pages: current.pages.map((page) => ({
-      ...page,
-      question_regions: page.question_regions.map((region) => region.id === selectedRegionId
-        ? { ...region, option_regions: (region.option_regions ?? []).map((option) => option.id === optionId ? { ...option, ...patch } : option) }
-        : region)
-    })) }));
-  }
-
-  function addOptionRegion() {
-    if (!selectedRegionId || !selectedRegion) return;
-    const existing = selectedRegion.option_regions ?? [];
-    if (existing.length >= 12) {
-      message.warning("每题最多配置 12 个选项区域");
-      return;
-    }
-    const index = existing.length;
-    const label = String.fromCharCode(65 + index);
-    const width = 0.12;
-    const gap = 0.04;
-    const x = Math.min(0.84, 0.04 + index * (width + gap));
-    const option: OptionRegion = { id: crypto.randomUUID(), label, x, y: 0.25, width, height: 0.5 };
-    updateRegion(selectedRegionId, { option_regions: existing.concat(option) });
-  }
-
-  function removeOptionRegion(optionId: string) {
-    if (!selectedRegionId || !selectedRegion) return;
-    updateRegion(selectedRegionId, { option_regions: (selectedRegion.option_regions ?? []).filter((option) => option.id !== optionId) });
-  }
-
-  async function suggestQuestionRegions() {
-    const pdf = pdfRef.current;
-    if (!pdf || readonly || !questions.length) {
-      message.warning("当前文件没有可分析的 PDF 页面，或模板已锁定");
-      return;
-    }
-    setSuggestingRegions(true);
-    try {
-      const anchors = new Map<number, Array<{ question: Question; top: number }>>();
-      const unmatched = new Set(questions.map((question) => question.id));
-      const normalizedQuestions = questions
-        .map((question) => ({ question, key: question.question_no.replace(/\s+/g, "").toLowerCase() }))
-        .sort((a, b) => b.key.length - a.key.length);
-      for (let pageIndex = 1; pageIndex <= pdf.numPages; pageIndex += 1) {
-        const page = await pdf.getPage(pageIndex);
-        const viewport = page.getViewport({ scale: 1 });
-        const content = await page.getTextContent();
-        const pageAnchors: Array<{ question: Question; top: number }> = [];
-        for (const raw of content.items) {
-          if (!("str" in raw) || !("transform" in raw)) continue;
-          const text = String(raw.str).replace(/\s+/g, "").toLowerCase();
-          if (!text) continue;
-          const candidate = normalizedQuestions.find(({ question, key }) => unmatched.has(question.id) && (text === key || text.startsWith(`${key}.`) || text.startsWith(`${key}、`) || text.startsWith(`${key}．`)));
-          if (!candidate) continue;
-          const transform = raw.transform as number[];
-          const itemHeight = Math.abs(transform[3] || transform[0] || 12);
-          const top = clamp(1 - ((transform[5] || 0) + itemHeight) / viewport.height);
-          pageAnchors.push({ question: candidate.question, top });
-          unmatched.delete(candidate.question.id);
-        }
-        pageAnchors.sort((a, b) => a.top - b.top);
-        if (pageAnchors.length) anchors.set(pageIndex, pageAnchors);
-      }
-      if (!anchors.size) {
-        message.warning("没有从 PDF 文字层识别到题号；扫描版请先完成 OCR 后再生成候选区域");
-        return;
-      }
-      setLayout((current) => ({
-        ...current,
-        pages: current.pages.map((page) => {
-          const pageAnchors = anchors.get(page.page_no) ?? [];
-          if (!pageAnchors.length) return page;
-          const matchedIDs = new Set(pageAnchors.map(({ question }) => question.id));
-          const suggestions = pageAnchors.map(({ question, top }, index) => {
-            const nextTop = pageAnchors[index + 1]?.top ?? 0.96;
-            const y = clamp(top - 0.01, 0.02, 0.94);
-            const height = clamp(nextTop - y - 0.012, 0.04, 0.42);
-            return {
-              id: crypto.randomUUID(), question_id: question.id, label: question.question_no,
-              x: 0.04, y: roundCoordinate(y), width: 0.92, height: roundCoordinate(height), option_regions: [],
-              suggestion_confidence: 0.72, suggestion_source: "pdf_text_anchor" as const
-            };
-          });
-          return { ...page, question_regions: page.question_regions.filter((region) => !region.question_id || !matchedIDs.has(region.question_id)).concat(suggestions) };
-        })
-      }));
-      message.success(`已生成 ${questions.length - unmatched.size} 道题的候选区域；请逐题核对并调整${unmatched.size ? `，另有 ${unmatched.size} 道题未识别` : ""}`);
-    } catch (suggestError) {
-      message.error(formatError(suggestError));
-    } finally {
-      setSuggestingRegions(false);
-    }
-  }
-
-	function setOMRProfile(mode: "manual_only" | "template_difference") {
-		setLayout((current) => ({
-			...current,
-			omr_profile: mode === "template_difference"
-				? { mode: "template_difference", version: "opencv-template-difference-bubble-v1" }
-				: { mode: "manual_only", version: "opencv-fill-v1" }
-		}));
-	}
-
-  async function createDraft() {
-    if (!selectedPaper) { message.error("请先上传并选择试卷版本"); return; }
-    const pageCount = preview.pageCount || 1;
-    setSaving(true);
-    try {
-      const response = await createAnswerSheetTemplate(examId, { exam_paper_id: selectedPaper.id, name: `${selectedPaper.file.original_name || "试卷"}答题卡模板`, page_count: pageCount, layout: emptyLayout(pageCount, preview.width, preview.height) });
-      setTemplates((current) => [response.template, ...current]);
-      setSelectedTemplateId(response.template.id);
-      onExamChanged?.();
-      message.success("模板草稿已创建，可以开始框选题目区域");
-    } catch (createError) { message.error(formatError(createError)); } finally { setSaving(false); }
-  }
-
-  async function saveDraft() {
-    if (!selectedTemplate || readonly) return;
-    setSaving(true);
-    try {
-      const result = await saveTemplateDraft({
-        templateId: selectedTemplate.id,
-        payload: { exam_paper_id: selectedTemplate.exam_paper_id, name, page_count: layout.pages.length, layout },
-        expectedRevision: revision
-      });
-      if (result.status === "saved") {
-        setTemplates((current) => current.map((item) => item.id === result.template.id ? result.template : item));
-        setRevision(result.template.revision);
-        onExamChanged?.();
-        message.success("模板已保存");
-      } else {
-        message.error(formatError(result.error));
-        if (result.status === "revision_conflict") void loadData();
-      }
-    } finally { setSaving(false); }
-  }
-
-  function confirmLock() {
-    if (!selectedTemplate || readonly) return;
-    const missing = questions.filter((question) => !coveredQuestions.has(question.id));
-    if (missing.length) { message.error(`还有 ${missing.length} 道题未配置区域`); return; }
-    modal.confirm({ title: "锁定答题卡模板", content: "锁定后不能原地修改；如需调整必须克隆新版本。", okText: "确认锁定", cancelText: "取消", onOk: async () => {
-      const response = await lockAnswerSheetTemplate(selectedTemplate.id);
-      setTemplates((current) => current.map((item) => item.id === response.template.id ? response.template : item));
-      onExamChanged?.();
-      message.success("模板已锁定");
-    }});
-  }
-
-  async function cloneTemplate() {
-    if (!selectedTemplate) return;
-    setSaving(true);
-    try {
-      const response = await cloneAnswerSheetTemplate(selectedTemplate.id);
-      setTemplates((current) => [response.template, ...current]);
-      setSelectedTemplateId(response.template.id);
-      onExamChanged?.();
-      message.success("已创建可编辑的新版本");
-    } catch (cloneError) { message.error(formatError(cloneError)); } finally { setSaving(false); }
-  }
-
-	function bindTemplateForExam() {
-		if (!selectedTemplate || selectedTemplate.status !== "locked") return;
-		modal.confirm({
-			title: "将模板用于本场考试",
-			content: `后续无条码答卷将优先使用 v${selectedTemplate.version_no}，并在每页处理前进行版式一致性检查。`,
-			okText: "确认使用",
-			cancelText: "取消",
-			onOk: async () => {
-				setBindingBusy(true);
-				try {
-					const response = await bindExamTemplate(examId, selectedTemplate.id, examBinding?.revision ?? 0);
-					setExamBinding(response.binding);
-					message.success("已将该模板锁定为本场考试模板");
-				} catch (error) {
-					message.error(getUserErrorMessage(error, "考试模板绑定失败，请刷新后重试"));
-				} finally {
-					setBindingBusy(false);
-				}
-			}
-		});
-	}
-
-	function releaseExamBinding() {
-		if (!examBinding) return;
-		modal.confirm({
-			title: "解除本场考试模板",
-			content: "解除后，无条码答卷需要重新进行模板判断。已经完成的页面仍保留实际使用的模板版本和校验码。",
-			okText: "确认解除",
-			okButtonProps: { danger: true },
-			cancelText: "取消",
-			onOk: async () => {
-				setBindingBusy(true);
-				try {
-					await unbindExamTemplate(examId, examBinding.revision, "管理员解除本场考试模板绑定");
-					setExamBinding(null);
-					message.success("已解除本场考试模板");
-				} catch (error) {
-					message.error(getUserErrorMessage(error, "解除失败，请刷新后重试"));
-				} finally {
-					setBindingBusy(false);
-				}
-			}
-		});
-	}
-
-	function openPrintModal() {
-		setSelectedPrintClassIds(printClasses.map((item) => item.id));
-		setPrintModalOpen(true);
-	}
-
-	async function downloadPrintBatch(printBatchId: string) {
-		setPrintBusy(true);
-		try {
-			const download = await downloadStudentPrintPackage(printBatchId);
-			saveDownload(download.blob, download.filename ?? `edugrade-answer-sheets-${printBatchId}.pdf`);
-			message.success("打印包已下载，请按原始尺寸打印并保持页面顺序");
-		} catch (downloadError) {
-			if (downloadError instanceof ApiClientError && downloadError.status === 409) {
-				message.error("该批次已有答卷被扫描或已作废，不能再次下载；补打请走作废与重印流程");
-				await loadPrintContext(selectedTemplateId);
-			} else {
-				message.error(formatError(downloadError));
-			}
-		} finally {
-			setPrintBusy(false);
-		}
-	}
-
-	async function issuePrintPackage() {
-		if (!selectedTemplate || !selectedPrintClassIds.length) return;
-		const selectedClasses = new Set(selectedPrintClassIds);
-		const studentIds = printableCandidates
-			.filter((item) => selectedClasses.has(item.class_id))
-			.map((item) => item.student_id);
-		if (!studentIds.length) {
-			message.error("所选班级没有可签发的应考学生");
-			return;
-		}
-		const signature = [...studentIds].sort().join(",");
-		if (printIssueRequestRef.current?.signature !== signature) {
-			printIssueRequestRef.current = { signature, key: `web-print-${crypto.randomUUID()}` };
-		}
-		setPrintBusy(true);
-		try {
-			const response = await issueStudentPrintBatch(
-				selectedTemplate.id,
-				studentIds,
-				printIssueRequestRef.current.key
-			);
-			printIssueRequestRef.current = undefined;
-			setPrintModalOpen(false);
-			await loadPrintContext(selectedTemplate.id);
-			const download = await downloadStudentPrintPackage(response.barcodes.print_batch_id);
-			saveDownload(download.blob, download.filename ?? `edugrade-answer-sheets-${response.barcodes.print_batch_id}.pdf`);
-			message.success(`已签发 ${response.barcodes.students.length} 份答题卡并下载打印包`);
-		} catch (issueError) {
-			message.error(formatError(issueError));
-			await loadPrintContext(selectedTemplate.id);
-		} finally {
-			setPrintBusy(false);
-		}
-	}
 
   if (loading) return <LoadingState label="正在加载答题卡模板" />;
   if (error) return <ErrorState message={error} onRetry={() => void loadData()} />;
   if (!papers.length) return <EmptyState title="尚未上传试卷" description="先在“试卷”步骤上传 PDF 或图片，再建立答题卡模板。" />;
 
-  const draftRect = interaction?.kind === "draw" ? { x: Math.min(interaction.startX, interaction.x), y: Math.min(interaction.startY, interaction.y), width: Math.abs(interaction.x - interaction.startX), height: Math.abs(interaction.y - interaction.startY) } : undefined;
 	const selectedCalibrationIndex = calibrationDetail && selectedCalibrationCase ? calibrationDetail.cases.findIndex((item) => item.id === selectedCalibrationCase.id) : -1;
 	const calibrationProgress = calibrationDetail ? Math.round((calibrationDetail.session.summary.labeled_count / Math.max(calibrationDetail.session.summary.total_count, 1)) * 100) : 0;
 
@@ -727,7 +189,7 @@ export function AnswerSheetTemplatePage({ examId, canManage, canCalibrate = fals
           <Button icon={<RefreshCw size={16} />} onClick={() => void loadData()}>刷新</Button>
           {!selectedTemplate ? <Button type="primary" icon={<Plus size={16} />} loading={saving} onClick={() => void createDraft()}>新建模板</Button> : null}
           {selectedTemplate?.status === "locked" ? <Button icon={<Copy size={16} />} loading={saving} onClick={() => void cloneTemplate()}>克隆新版本</Button> : null}
-			{canManage && selectedTemplate?.status === "locked" && (examBinding?.template_id !== selectedTemplate.id || examBinding.mode === "bound_auto") ? <Button loading={bindingBusy} onClick={bindTemplateForExam}>{examBinding?.template_id === selectedTemplate.id ? "确认本场模板" : "用于本场考试"}</Button> : null}
+			{canManage && selectedTemplate?.status === "locked" && (examBinding?.template_id !== selectedTemplate.id || examBinding.mode === "bound_auto") ? <Button loading={bindingBusy} onClick={() => bindTemplateForExam(selectedTemplate)}>{examBinding?.template_id === selectedTemplate.id ? "确认本场模板" : "用于本场考试"}</Button> : null}
           {selectedTemplate?.status === "draft" ? <><Button icon={<WandSparkles size={16} />} loading={suggestingRegions} onClick={() => void suggestQuestionRegions()}>自动识别区域</Button><Button icon={<Save size={16} />} loading={saving} onClick={() => void saveDraft()}>保存</Button><Button type="primary" icon={<LockKeyhole size={16} />} disabled={!questions.length} onClick={confirmLock}>锁定模板</Button></> : null}
         </Space>
       </section>
