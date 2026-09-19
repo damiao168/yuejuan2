@@ -17,10 +17,10 @@ import (
 // means policy/evidence operations are not reimplemented in a page handler.
 type Handler struct {
 	service *Service
-	audit   auth.Store
+	audit   auth.AuditRecorder
 }
 
-func NewHandler(service *Service, audit auth.Store) *Handler {
+func NewHandler(service *Service, audit auth.AuditRecorder) *Handler {
 	return &Handler{service: service, audit: audit}
 }
 

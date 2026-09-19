@@ -13,10 +13,10 @@ import (
 
 type Handler struct {
 	store Store
-	audit auth.Store
+	audit auth.AuditRecorder
 }
 
-func NewHandler(store Store, audit auth.Store) *Handler { return &Handler{store: store, audit: audit} }
+func NewHandler(store Store, audit auth.AuditRecorder) *Handler { return &Handler{store: store, audit: audit} }
 
 func (h *Handler) CreateAnnotation(w http.ResponseWriter, r *http.Request) {
 	user, _ := auth.UserFromContext(r.Context())

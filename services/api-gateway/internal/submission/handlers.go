@@ -17,10 +17,10 @@ import (
 type Handler struct {
 	store     Store
 	fileStore files.Store
-	audit     auth.Store
+	audit     auth.AuditRecorder
 }
 
-func NewHandler(store Store, fileStore files.Store, audit auth.Store) *Handler {
+func NewHandler(store Store, fileStore files.Store, audit auth.AuditRecorder) *Handler {
 	return &Handler{store: store, fileStore: fileStore, audit: audit}
 }
 

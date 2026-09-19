@@ -48,7 +48,12 @@ export function useExamCaptureContext({
 
   const handleLoadCaptureBatches = async (examID = selectedExamId) => {
     const requestID = ++captureBatchLoadRef.current;
-    if (!examID) { setCaptureBatches([]); return; }
+    if (!examID) {
+      setCaptureBatches([]);
+      setCaptureBatchId("");
+      setIsLoadingCaptureBatches(false);
+      return;
+    }
     setIsLoadingCaptureBatches(true);
     try {
       const result = await listCaptureBatches(client, examID);
@@ -69,7 +74,16 @@ export function useExamCaptureContext({
   };
 
   useEffect(() => {
-    if (workspace === "scan" && token && selectedExamId) void handleLoadCaptureBatches(selectedExamId);
+    if (workspace === "scan" && token && selectedExamId) {
+      void handleLoadCaptureBatches(selectedExamId);
+      return;
+    }
+    captureBatchLoadRef.current += 1;
+    if (!selectedExamId || !token) {
+      setCaptureBatches([]);
+      setCaptureBatchId("");
+      setIsLoadingCaptureBatches(false);
+    }
   }, [workspace, token, selectedExamId]);
 
   return {

@@ -44,7 +44,8 @@ export function useScanQueue({
     if (hasDurableDesktopStore()) {
       durablePersistenceRef.current = durablePersistenceRef.current
         .catch(() => undefined)
-        .then(() => Promise.all(next.filter((item) => item.kind === "scan_upload").map(persistDurableScanQueueItem)))
+        .then(() => Promise.all(next.filter((item) => item.kind === "scan_upload")
+          .map((item) => persistDurableScanQueueItem(item))))
         .then(() => undefined)
         .catch((error) => console.warn("durable scan queue persistence failed", error));
     } else {
@@ -55,7 +56,13 @@ export function useScanQueue({
   useEffect(() => {
     if (hasDurableDesktopStore()) {
       void listDurableScanQueue()
-        .then((items) => { queueRef.current = items; setQueue(items); })
+        .then((items) => {
+          const current = queueRef.current;
+          const currentIDs = new Set(current.map((item) => item.id));
+          const merged = [...current, ...items.filter((item) => !currentIDs.has(item.id))];
+          queueRef.current = merged;
+          setQueue(merged);
+        })
         .catch((error) => setDiagnosticError(getUserErrorMessage(error, "本地耐久队列无法恢复")));
     }
     void listOfflineDraftEnvelopes().then((drafts) => setOfflineDraftCount(drafts.length)).catch(() => undefined);

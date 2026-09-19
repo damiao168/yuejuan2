@@ -1,28 +1,27 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, type SetStateAction } from "react";
 import { App } from "antd";
 import { ApiClientError, getUserErrorMessage } from "../../../api/client";
-import { listAuditLogs, type AuditLog } from "../../../api/audit";
-import { listExams, type Exam } from "../../../api/exams";
+import { listAuditLogs } from "../../../api/audit";
+import { listExams } from "../../../api/exams";
 import { listClasses, listStudents, type SchoolClass, type Student } from "../../../api/org";
 import {
   checkExamGradeQuality,
   listExamGrades,
   listExamRoster,
-  type QualityCheckResult,
-  type RosterReport,
-  type SubmissionGrade
+  type RosterReport
 } from "../../../api/scores";
 import {
   getScoreReleaseGate,
   listRegradeJobs,
   listScoreReleases,
-  type RegradeJob,
-  type ScoreRelease,
-  type ScoreReleaseGate
 } from "../../../api/scoreReleases";
-import { listSubmissions, type Submission } from "../../../api/submissions";
+import { listSubmissions } from "../../../api/submissions";
 import { hashQueryParam } from "../../../router/query";
 import { LatestRequestController } from "../../shared/latestRequest";
+import {
+  emptyScoreWorkspaceSnapshot, initialScoreWorkspaceState, scoreWorkspaceReducer,
+  type ScoreWorkspaceSnapshot
+} from "./scoreWorkspaceState";
 
 export interface ScoreIdentityMaps {
   students: Record<string, Student>;
@@ -71,72 +70,40 @@ export function useScoreWorkspaceData({
   initialExamId: string;
 }) {
   const { message } = App.useApp();
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [selectedExamId, setSelectedExamId] = useState(initialExamId);
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [grades, setGrades] = useState<SubmissionGrade[]>([]);
-  const [gradeTotal, setGradeTotal] = useState(0);
-  const [filteredGradeTotal, setFilteredGradeTotal] = useState(0);
-  const [allGradesLocked, setAllGradesLocked] = useState(false);
-  const [gradeNextCursor, setGradeNextCursor] = useState("");
-  const [gradesHaveMore, setGradesHaveMore] = useState(false);
-  const [quality, setQuality] = useState<QualityCheckResult | null>(null);
-  const [releaseGate, setReleaseGate] = useState<ScoreReleaseGate | null>(null);
-  const [scoreReleases, setScoreReleases] = useState<ScoreRelease[]>([]);
-  const [regradeJobs, setRegradeJobs] = useState<RegradeJob[]>([]);
-  const [roster, setRoster] = useState<RosterReport | null>(null);
-  const [identities, setIdentities] = useState<ScoreIdentityMaps>({ students: {}, classes: {} });
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [keyword, setKeyword] = useState("");
-  const [appliedKeyword, setAppliedKeyword] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [loadingExams, setLoadingExams] = useState(true);
-  const [loadingScores, setLoadingScores] = useState(false);
-  const [loadingMoreGrades, setLoadingMoreGrades] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(scoreWorkspaceReducer, initialExamId, initialScoreWorkspaceState);
   const scoreRequestsRef = useRef(new LatestRequestController());
+  const { selectedExamId, snapshot, appliedKeyword, statusFilter } = state;
+
+  const setSelectedExamId = useCallback((value: SetStateAction<string>) => {
+    dispatch({ type: "selectExamUpdate", value });
+  }, []);
+  const setKeyword = useCallback((value: string) => dispatch({ type: "patch", patch: { keyword: value } }), []);
+  const setAppliedKeyword = useCallback((value: string) => dispatch({ type: "patch", patch: { appliedKeyword: value } }), []);
+  const setStatusFilter = useCallback((value: string) => dispatch({ type: "patch", patch: { statusFilter: value } }), []);
+  const setRoster = useCallback((roster: RosterReport | null) => dispatch({ type: "setRoster", roster }), []);
 
   const loadExamList = useCallback(async () => {
-    setLoadingExams(true);
-    setError(null);
+    dispatch({ type: "patch", patch: { loadingExams: true, error: null } });
     try {
       const result = await listExams();
-      setExams(result.exams);
-      setSelectedExamId((current) => {
-        if (initialExamId && result.exams.some((exam) => exam.id === initialExamId)) return initialExamId;
-        const requestedStatus = hashQueryParam("status");
-        const requestedExam = requestedStatus ? result.exams.find((exam) => exam.status === requestedStatus) : undefined;
-        if (requestedExam) return requestedExam.id;
-        return result.exams.some((exam) => exam.id === current) ? current : result.exams[0]?.id || "";
+      dispatch({
+        type: "examsLoaded", exams: result.exams, initialExamId,
+        requestedStatus: hashQueryParam("status") || ""
       });
     } catch (currentError) {
-      setError(formatError(currentError));
+      dispatch({ type: "patch", patch: { error: formatError(currentError) } });
     } finally {
-      setLoadingExams(false);
+      dispatch({ type: "patch", patch: { loadingExams: false } });
     }
   }, [initialExamId]);
 
   const loadScores = useCallback(async (examId: string) => {
     const request = scoreRequestsRef.current.begin(examId);
+    dispatch({ type: "loadStarted", examId });
     if (!examId) {
-      setSubmissions([]);
-      setGrades([]);
-      setGradeTotal(0);
-      setFilteredGradeTotal(0);
-      setAllGradesLocked(false);
-      setGradeNextCursor("");
-      setGradesHaveMore(false);
-      setQuality(null);
-      setReleaseGate(null);
-      setScoreReleases([]);
-      setRegradeJobs([]);
-      setRoster(null);
-      setAuditLogs([]);
-      setLoadingScores(false);
+      dispatch({ type: "loadSucceeded", examId, snapshot: emptyScoreWorkspaceSnapshot() });
       return;
     }
-    setLoadingScores(true);
-    setError(null);
     try {
       const results = await Promise.allSettled([
         listSubmissions(examId, { limit: 50 }),
@@ -154,42 +121,43 @@ export function useScoreWorkspaceData({
       ]);
       if (!request.isCurrent()) return;
       const [submissionResult, gradeResult, qualityResult, rosterResult, auditResult, releaseGateResult, releasesResult, regradesResult] = results;
+      // Validate all required data before publishing any part of the workspace.
       if (submissionResult.status !== "fulfilled") throw submissionResult.reason;
-      setSubmissions(submissionResult.value.submissions);
       if (gradeResult.status !== "fulfilled") throw gradeResult.reason;
-      setGrades(gradeResult.value.grades);
-      setGradeTotal(gradeResult.value.total);
-      setFilteredGradeTotal(gradeResult.value.filtered_total);
-      setAllGradesLocked(gradeResult.value.all_locked);
-      setGradeNextCursor(gradeResult.value.next_cursor);
-      setGradesHaveMore(gradeResult.value.has_more);
+      if (qualityResult.status !== "fulfilled") throw qualityResult.reason;
+      if (rosterResult.status !== "fulfilled") throw rosterResult.reason;
+      if (releaseGateResult.status !== "fulfilled") throw releaseGateResult.reason;
+      if (releasesResult.status !== "fulfilled") throw releasesResult.reason;
+      if (regradesResult.status !== "fulfilled") throw regradesResult.reason;
       const identityResult = await loadIdentities(
         canReadStudentNames,
         gradeResult.value.grades.flatMap((grade) => grade.student_id ? [grade.student_id] : [])
       );
       if (!request.isCurrent()) return;
-      setIdentities(identityResult);
-      if (qualityResult.status !== "fulfilled") throw qualityResult.reason;
-      setQuality(qualityResult.value);
-      if (rosterResult.status !== "fulfilled") throw rosterResult.reason;
-      setRoster(rosterResult.value.roster);
-      if (auditResult.status === "fulfilled") setAuditLogs(auditResult.value.audit_logs);
-      if (releaseGateResult.status === "fulfilled") setReleaseGate(releaseGateResult.value.release_gate);
-      else if (canManage) throw releaseGateResult.reason;
-      if (releasesResult.status === "fulfilled") setScoreReleases(releasesResult.value.score_releases);
-      else if (canManage) throw releasesResult.reason;
-      if (regradesResult.status === "fulfilled") setRegradeJobs(regradesResult.value.regrade_jobs);
-      else if (canManage) throw regradesResult.reason;
+      const complete: ScoreWorkspaceSnapshot = {
+        examId, submissions: submissionResult.value.submissions,
+        grades: gradeResult.value.grades, gradeTotal: gradeResult.value.total,
+        filteredGradeTotal: gradeResult.value.filtered_total,
+        allGradesLocked: gradeResult.value.all_locked,
+        gradeNextCursor: gradeResult.value.next_cursor,
+        gradesHaveMore: gradeResult.value.has_more,
+        quality: qualityResult.value, roster: rosterResult.value.roster,
+        identities: identityResult,
+        auditLogs: auditResult.status === "fulfilled" ? auditResult.value.audit_logs : [],
+        releaseGate: releaseGateResult.value.release_gate,
+        scoreReleases: releasesResult.value.score_releases,
+        regradeJobs: regradesResult.value.regrade_jobs
+      };
+      dispatch({ type: "loadSucceeded", examId, snapshot: complete });
     } catch (currentError) {
-      if (request.isCurrent()) setError(formatError(currentError));
-    } finally {
-      if (request.isCurrent()) setLoadingScores(false);
+      if (request.isCurrent()) dispatch({ type: "loadFailed", examId, error: formatError(currentError) });
     }
   }, [appliedKeyword, canManage, canReadAudit, canReadStudentNames, statusFilter]);
 
   useEffect(() => { void loadExamList(); }, [loadExamList]);
-  useEffect(() => { if (initialExamId) setSelectedExamId(initialExamId); }, [initialExamId]);
+  useEffect(() => { if (initialExamId) setSelectedExamId(initialExamId); }, [initialExamId, setSelectedExamId]);
   useEffect(() => { void loadScores(selectedExamId); }, [loadScores, selectedExamId]);
+  useEffect(() => () => scoreRequestsRef.current.invalidate(), []);
 
   const refresh = async () => {
     await loadExamList();
@@ -197,49 +165,48 @@ export function useScoreWorkspaceData({
   };
 
   const loadMoreGrades = async () => {
-    if (!selectedExamId || !gradesHaveMore || !gradeNextCursor || loadingMoreGrades) return;
+    if (!selectedExamId || snapshot.examId !== selectedExamId || !snapshot.gradesHaveMore
+      || !snapshot.gradeNextCursor || state.loadingMoreGrades || state.loadingScores) return;
+    const expectedCursor = snapshot.gradeNextCursor;
     const request = scoreRequestsRef.current.begin(selectedExamId);
-    setLoadingMoreGrades(true);
+    dispatch({ type: "patch", patch: { loadingMoreGrades: true } });
     try {
       const result = await listExamGrades(selectedExamId, {
         status: statusFilter === "all" ? undefined : statusFilter,
         q: appliedKeyword || undefined,
         limit: 50,
-        cursor: gradeNextCursor
+        cursor: expectedCursor
       });
       const identityResult = await loadIdentities(
         canReadStudentNames,
         result.grades.flatMap((grade) => grade.student_id ? [grade.student_id] : [])
       );
       if (!request.isCurrent()) return;
-      setGrades((current) => {
-        const byId = new Map(current.map((grade) => [grade.id, grade]));
-        for (const grade of result.grades) byId.set(grade.id, grade);
-        return [...byId.values()];
+      dispatch({
+        type: "appendGrades", examId: selectedExamId, expectedCursor,
+        grades: result.grades, total: result.total, filteredTotal: result.filtered_total,
+        allLocked: result.all_locked, nextCursor: result.next_cursor,
+        hasMore: result.has_more, identities: identityResult
       });
-      setIdentities((current) => ({
-        students: { ...current.students, ...identityResult.students },
-        classes: { ...current.classes, ...identityResult.classes },
-        error: [current.error, identityResult.error].filter(Boolean).join("；") || undefined
-      }));
-      setGradeTotal(result.total);
-      setFilteredGradeTotal(result.filtered_total);
-      setAllGradesLocked(result.all_locked);
-      setGradeNextCursor(result.next_cursor);
-      setGradesHaveMore(result.has_more);
     } catch (currentError) {
-      message.error(formatError(currentError));
+      if (request.isCurrent()) message.error(formatError(currentError));
     } finally {
-      setLoadingMoreGrades(false);
+      if (request.isCurrent()) dispatch({ type: "patch", patch: { loadingMoreGrades: false } });
     }
   };
 
   return {
-    exams, selectedExamId, setSelectedExamId, submissions, grades, gradeTotal,
-    filteredGradeTotal, allGradesLocked, quality, releaseGate, scoreReleases,
-    regradeJobs, roster, setRoster, identities, auditLogs, keyword, setKeyword,
-    appliedKeyword, setAppliedKeyword, statusFilter, setStatusFilter, loadingExams,
-    loadingScores, loadingMoreGrades, error, loadExamList, loadScores, refresh,
-    loadMoreGrades, gradesHaveMore
+    exams: state.exams, selectedExamId, setSelectedExamId,
+    submissions: snapshot.submissions, grades: snapshot.grades,
+    gradeTotal: snapshot.gradeTotal, filteredGradeTotal: snapshot.filteredGradeTotal,
+    allGradesLocked: snapshot.allGradesLocked, quality: snapshot.quality,
+    releaseGate: snapshot.releaseGate, scoreReleases: snapshot.scoreReleases,
+    regradeJobs: snapshot.regradeJobs, roster: snapshot.roster, setRoster,
+    identities: snapshot.identities, auditLogs: snapshot.auditLogs,
+    keyword: state.keyword, setKeyword, appliedKeyword, setAppliedKeyword,
+    statusFilter, setStatusFilter, loadingExams: state.loadingExams,
+    loadingScores: state.loadingScores, loadingMoreGrades: state.loadingMoreGrades,
+    error: state.error, loadExamList, loadScores, refresh, loadMoreGrades,
+    gradesHaveMore: snapshot.gradesHaveMore
   };
 }

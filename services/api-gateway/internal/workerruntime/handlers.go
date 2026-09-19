@@ -13,7 +13,7 @@ import (
 
 type Handler struct {
 	store              Store
-	audit              auth.Store
+	audit              auth.AuditRecorder
 	sourceLeaseRenewer SourceLeaseRenewer
 }
 
@@ -21,7 +21,7 @@ type SourceLeaseRenewer interface {
 	RenewSourceLease(ctx context.Context, task Task) error
 }
 
-func NewHandler(store Store, audit auth.Store, renewers ...SourceLeaseRenewer) *Handler {
+func NewHandler(store Store, audit auth.AuditRecorder, renewers ...SourceLeaseRenewer) *Handler {
 	handler := &Handler{store: store, audit: audit}
 	if len(renewers) > 0 {
 		handler.sourceLeaseRenewer = renewers[0]

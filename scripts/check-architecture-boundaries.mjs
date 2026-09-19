@@ -39,15 +39,31 @@ export function findLargeInterfaces(source, filename, threshold = 20) {
   return warnings;
 }
 
-export function pageWarning(source, filename, threshold = 1000) {
+export function pageWarning(source, filename, threshold = 700) {
   const lines = source.trimEnd().split("\n").length;
   return lines > threshold ? `${filename}: ${lines} lines` : null;
 }
 
+export function hookWarnings(source, filename, lineThreshold = 350, stateThreshold = 15) {
+  const warnings = [];
+  const lines = source.trimEnd().split("\n").length;
+  const states = [...source.matchAll(/\buseState\s*(?:<[^()\n]*>)?\s*\(/g)].length;
+  if (lines > lineThreshold) warnings.push(`${filename}: ${lines} hook lines`);
+  if (states > stateThreshold) warnings.push(`${filename}: ${states} useState calls`);
+  return warnings;
+}
+
+export const MAX_BROAD_AUTH_STORE_CONSUMERS = 11;
+
+export function countBroadAuthStoreConsumers(sources) {
+  return sources.reduce((count, source) => count
+    + [...source.matchAll(/^\s*(?:audit|Audit)\s+auth\.Store\b/gm)].length, 0);
+}
+
 function main() {
   const serverDirectory = join(root, "services", "api-gateway", "internal", "server");
-  const moduleSource = readFileSync(join(serverDirectory, "modules.go"), "utf8");
   const serverSources = walk(serverDirectory, ".go").filter((path) => !path.endsWith("_test.go"));
+  const moduleSource = serverSources.map((path) => readFileSync(path, "utf8")).join("\n");
   const failures = checkModuleBoundaries(moduleSource);
   for (const path of serverSources) {
     if (/\bConnectOperations\s*\(/.test(readFileSync(path, "utf8"))) {
@@ -66,11 +82,27 @@ function main() {
   const desktopApp = join(root, "apps", "desktop-client", "src", "App.tsx");
   const desktopWarning = pageWarning(readFileSync(desktopApp, "utf8"), relative(root, desktopApp));
   if (desktopWarning) warnings.push(desktopWarning);
+  for (const app of ["web-admin", "desktop-client"]) {
+    const features = join(root, "apps", app, "src", "features");
+    for (const extension of [".ts", ".tsx"]) {
+      for (const path of walk(features, extension)) {
+        if (!/^use[A-Z].*\.tsx?$/.test(path.split(/[\\/]/).at(-1))) continue;
+        warnings.push(...hookWarnings(readFileSync(path, "utf8"), relative(root, path)));
+      }
+    }
+  }
   const goDirectory = join(root, "services", "api-gateway", "internal");
+  const goSources = [];
   for (const path of walk(goDirectory, ".go")) {
     if (!path.endsWith("_test.go")) {
-      warnings.push(...findLargeInterfaces(readFileSync(path, "utf8"), relative(root, path)));
+      const source = readFileSync(path, "utf8");
+      goSources.push(source);
+      warnings.push(...findLargeInterfaces(source, relative(root, path)));
     }
+  }
+  const broadAuthConsumers = countBroadAuthStoreConsumers(goSources);
+  if (broadAuthConsumers > MAX_BROAD_AUTH_STORE_CONSUMERS) {
+    failures.push(`broad audit auth.Store consumers grew to ${broadAuthConsumers}; budget is ${MAX_BROAD_AUTH_STORE_CONSUMERS}`);
   }
 
   for (const warning of warnings) console.warn(`architecture warning: ${warning}`);

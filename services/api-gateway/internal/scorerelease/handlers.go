@@ -17,7 +17,7 @@ import (
 
 type Handler struct {
 	service                     *Service
-	audit                       auth.Store
+	audit                       auth.AuditRecorder
 	publisher                   PublicationPublisher
 	studentQuestionImageReader  segment.CropImageReader
 	studentPaperPageImageReader segment.PageImageReader
@@ -30,7 +30,7 @@ type PublicationPublisher interface {
 	PublishPublication(context.Context, string, string, string, string) (Release, error)
 }
 
-func NewHandler(service *Service, audit auth.Store) *Handler {
+func NewHandler(service *Service, audit auth.AuditRecorder) *Handler {
 	return &Handler{service: service, audit: audit}
 }
 

@@ -13,7 +13,7 @@ import (
 
 // Serve writes the same private-object response for direct and delegated
 // routes, after the caller has completed its own authorization checks.
-func Serve(w http.ResponseWriter, r *http.Request, resource binaryresource.Resource, audit auth.Store) {
+func Serve(w http.ResponseWriter, r *http.Request, resource binaryresource.Resource, audit auth.AuditRecorder) {
 	if resource.ETag != "" {
 		w.Header().Set("ETag", resource.ETag)
 	}

@@ -22,7 +22,7 @@ type Handler struct {
 	corrections CorrectionStore
 	pilotGates  PilotGateStore
 	reviews     reviewAssignmentStore
-	audit       auth.Store
+	audit       auth.AuditRecorder
 	runtime     workerruntime.Store
 	rubrics     FrozenRubricSource
 	crops       ActiveMathCropSource
@@ -32,7 +32,7 @@ type reviewAssignmentStore interface {
 	HasActiveAssignment(ctx context.Context, tenantID string, reviewerID string, answerSegmentID string) (bool, error)
 }
 
-func NewHandler(artifacts Store, corrections CorrectionStore, pilotGates PilotGateStore, reviews reviewAssignmentStore, audit auth.Store) *Handler {
+func NewHandler(artifacts Store, corrections CorrectionStore, pilotGates PilotGateStore, reviews reviewAssignmentStore, audit auth.AuditRecorder) *Handler {
 	h := &Handler{artifacts: artifacts, corrections: corrections, pilotGates: pilotGates, reviews: reviews, audit: audit}
 	if source, ok := artifacts.(FrozenRubricSource); ok {
 		h.rubrics = source

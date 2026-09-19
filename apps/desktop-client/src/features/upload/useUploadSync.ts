@@ -1,4 +1,4 @@
-import { useCallback, useEffect, type MutableRefObject } from "react";
+import { useCallback, useEffect, useRef, type MutableRefObject } from "react";
 import { resumeCaptureUpload, type CaptureUploadSource } from "../../api/captureUploads";
 import type { DesktopApiClient } from "../../api/client";
 import { getUserErrorMessage } from "../../api/userError";
@@ -34,6 +34,8 @@ export function useUploadSync({
   updateQueue: UpdateQueue;
   logEvent: LogEvent;
 }) {
+  const onlineRef = useRef(isOnline);
+  onlineRef.current = isOnline;
   const uploadQueueItem = useCallback(async (id: string) => {
     const item = queueRef.current.find((candidate) => candidate.id === id);
     const uploadState = item ? uploadStateFromQueueItem(item) : undefined;
@@ -45,7 +47,7 @@ export function useUploadSync({
         : candidate));
       return;
     }
-    if (!isOnline) {
+    if (!onlineRef.current) {
       updateQueue((current) => updateScanQueueItem(current, id, { status: "pending", detail: "当前离线，等待联网后继续上传" }));
       return;
     }
@@ -140,7 +142,7 @@ export function useUploadSync({
     } finally {
       uploadInFlightRef.current.delete(id);
     }
-  }, [client, isOnline, logEvent, token, updateQueue]);
+  }, [client, logEvent, token, updateQueue]);
 
   const uploadQueueItems = useCallback(async (mode: "pending" | "failed" | "all") => {
     const candidates = queueRef.current.filter((item) => item.kind === "scan_upload"
@@ -150,11 +152,13 @@ export function useUploadSync({
 
   useEffect(() => {
     const handleOnline = () => {
+      onlineRef.current = true;
       setIsOnline(true);
       void logEvent("info", "network online", "scan queue auto resume");
       void uploadQueueItems("all");
     };
     const handleOffline = () => {
+      onlineRef.current = false;
       setIsOnline(false);
       void logEvent("warning", "network offline", "scan upload paused");
     };

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { getUserErrorMessage } from "../../api/userError";
 import { isTauriRuntime } from "../../lib/localRuntime";
 import {
@@ -13,6 +13,7 @@ import {
   type ScannerProfile
 } from "../../lib/scannerProfile";
 import type { LocalLogEntry, WorkspaceKey } from "../../types";
+import { initialScannerDraft, scannerDraftReducer } from "./scannerDraft";
 
 type LogEvent = (level: LocalLogEntry["level"], message: string, context?: string) => Promise<void>;
 
@@ -27,16 +28,19 @@ export function useScannerController({ workspace, isOnline, logEvent }: {
   const [scannerIntegration, setScannerIntegration] = useState<ScannerIntegrationStatus | null>(null);
   const [scannerPreflightError, setScannerPreflightError] = useState<string | null>(null);
   const [isCheckingScannerPreflight, setIsCheckingScannerPreflight] = useState(false);
-  const [expectedPaperSize, setExpectedPaperSize] = useState<ScannerProfile["paperSize"]>("A4");
-  const [expectedTemplatePreset, setExpectedTemplatePreset] = useState("");
-  const [expectedDuplex, setExpectedDuplex] = useState(false);
-  const [expectedDpi, setExpectedDpi] = useState(300);
+  const [draft, dispatchDraft] = useReducer(scannerDraftReducer, initialScannerDraft);
+  const { expectedPaperSize, expectedTemplatePreset, expectedDuplex, expectedDpi,
+    scannerProfileName, scannerDeviceFingerprint } = draft;
+  const setExpectedPaperSize = (value: ScannerProfile["paperSize"]) => dispatchDraft({ type: "patch", patch: { expectedPaperSize: value } });
+  const setExpectedTemplatePreset = (value: string) => dispatchDraft({ type: "patch", patch: { expectedTemplatePreset: value } });
+  const setExpectedDuplex = (value: boolean) => dispatchDraft({ type: "patch", patch: { expectedDuplex: value } });
+  const setExpectedDpi = (value: number) => dispatchDraft({ type: "patch", patch: { expectedDpi: value } });
+  const setScannerProfileName = (value: string) => dispatchDraft({ type: "patch", patch: { scannerProfileName: value } });
+  const setScannerDeviceFingerprint = (value: string) => dispatchDraft({ type: "patch", patch: { scannerDeviceFingerprint: value } });
   const [isScannerProfileModalOpen, setIsScannerProfileModalOpen] = useState(false);
   const [scannerDevices, setScannerDevices] = useState<ScannerDevice[]>([]);
   const [isLoadingScannerDevices, setIsLoadingScannerDevices] = useState(false);
   const [isSavingScannerProfile, setIsSavingScannerProfile] = useState(false);
-  const [scannerProfileName, setScannerProfileName] = useState("");
-  const [scannerDeviceFingerprint, setScannerDeviceFingerprint] = useState("");
 
   const handleLoadScannerProfiles = async () => {
     if (!isTauriRuntime()) return;
@@ -57,12 +61,12 @@ export function useScannerController({ workspace, isOnline, logEvent }: {
   const handleOpenScannerProfileSetup = async () => {
     if (!isTauriRuntime()) return;
     setScannerPreflightError(null);
-    setScannerProfileName((current) => current || `扫描站 ${expectedPaperSize} ${expectedDpi} DPI`);
+    dispatchDraft({ type: "nameIfEmpty", defaultName: `扫描站 ${expectedPaperSize} ${expectedDpi} DPI` });
     setIsLoadingScannerDevices(true);
     try {
       const devices = await listScannerDevices();
       setScannerDevices(devices);
-      setScannerDeviceFingerprint((current) => current || devices[0]?.fingerprint || "");
+      dispatchDraft({ type: "deviceIfEmpty", fingerprint: devices[0]?.fingerprint || "" });
       setIsScannerProfileModalOpen(true);
     } catch (error) {
       const message = getUserErrorMessage(error, "无法读取 Windows 扫描设备。");

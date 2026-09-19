@@ -17,7 +17,7 @@ import (
 // and visibility boundary are materially different.
 type PublishedQuestionAppealHandler struct {
 	service      *PublishedQuestionAppealService
-	audit        auth.Store
+	audit        auth.AuditRecorder
 	segmentImage segment.CropImageReader
 }
 
@@ -72,7 +72,7 @@ func (h *PublishedQuestionAppealHandler) AnswerImage(w http.ResponseWriter, r *h
 	binaryresourcehttp.Serve(w, r, resource, h.audit)
 }
 
-func NewPublishedQuestionAppealHandler(service *PublishedQuestionAppealService, auditStore auth.Store) *PublishedQuestionAppealHandler {
+func NewPublishedQuestionAppealHandler(service *PublishedQuestionAppealService, auditStore auth.AuditRecorder) *PublishedQuestionAppealHandler {
 	return &PublishedQuestionAppealHandler{service: service, audit: auditStore}
 }
 

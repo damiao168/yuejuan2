@@ -14,13 +14,13 @@ import (
 
 type Handler struct {
 	store      Store
-	audit      auth.Store
+	audit      auth.AuditRecorder
 	references goldpaper.ActiveApprovedReader
 }
 
-func NewHandler(store Store, audit auth.Store) *Handler { return &Handler{store: store, audit: audit} }
+func NewHandler(store Store, audit auth.AuditRecorder) *Handler { return &Handler{store: store, audit: audit} }
 
-func NewHandlerWithReferences(store Store, audit auth.Store, references goldpaper.ActiveApprovedReader) *Handler {
+func NewHandlerWithReferences(store Store, audit auth.AuditRecorder, references goldpaper.ActiveApprovedReader) *Handler {
 	return &Handler{store: store, audit: audit, references: references}
 }
 

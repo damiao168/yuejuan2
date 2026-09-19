@@ -13,7 +13,7 @@ import (
 type Handler struct {
 	store         Store
 	adapter       LLMGradingAdapter
-	audit         auth.Store
+	audit         auth.AuditRecorder
 	runtime       workerruntime.Store
 	eligibility   EligibilityGate
 	evaluation    EvaluationEvidenceProvider
@@ -25,7 +25,7 @@ type Handler struct {
 	activeCrops   *ActiveCropResolver
 }
 
-func NewHandler(store Store, adapter LLMGradingAdapter, audit auth.Store) *Handler {
+func NewHandler(store Store, adapter LLMGradingAdapter, audit auth.AuditRecorder) *Handler {
 	return &Handler{store: store, adapter: adapter, audit: audit}
 }
 

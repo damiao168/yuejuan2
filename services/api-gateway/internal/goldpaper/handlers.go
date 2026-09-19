@@ -15,10 +15,10 @@ import (
 
 type Handler struct {
 	store Store
-	audit auth.Store
+	audit auth.AuditRecorder
 }
 
-func NewHandler(store Store, audit auth.Store) *Handler { return &Handler{store: store, audit: audit} }
+func NewHandler(store Store, audit auth.AuditRecorder) *Handler { return &Handler{store: store, audit: audit} }
 
 func RegisterRoutes(mux *http.ServeMux, h *Handler, requireRead, requireManage func(http.HandlerFunc) http.Handler) {
 	mux.Handle("POST /api/v1/exams/{examId}/questions/{questionId}/gold-papers", requireManage(h.Nominate))
