@@ -9,11 +9,7 @@ request-local references and restores the authoritative values after inference.
 
 from __future__ import annotations
 
-import math
 import re
-import unicodedata
-from dataclasses import dataclass
-
 
 MAX_BLOCKS_PER_CHUNK = 48
 MAX_TEXT_CHARS_PER_CHUNK = 1_100

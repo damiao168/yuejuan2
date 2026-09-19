@@ -33,6 +33,13 @@ from .paper_validation import (
 )
 from .paper_visual import PaperVisualParser
 
+__all__ = [
+    "PaperParser",
+    "paper_import_schema",
+    "visual_model_output_schema",
+    "visual_paper_import_schema",
+]
+
 
 class PaperParser:
     def __init__(self, model):

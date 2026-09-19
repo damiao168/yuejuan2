@@ -12,11 +12,11 @@ from .schema import (
 )
 
 __all__ = [
-    "CompactChunk",
     "MAX_BLOCKS_PER_CHUNK",
     "MAX_DIRECT_TEXT_CHARS_PER_CHUNK",
     "MAX_REFS_PER_CANDIDATE",
     "MAX_TEXT_CHARS_PER_CHUNK",
+    "CompactChunk",
     "anchored_paper_result",
     "build_compact_chunks",
     "compact_paper_import_schema",

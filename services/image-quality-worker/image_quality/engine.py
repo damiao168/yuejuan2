@@ -7,9 +7,6 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 from image_quality.errors import ImageQualityError
 from image_quality.geometry import (
-    MAX_DESKEW_DEGREES,
-    MIN_DESKEW_CONFIDENCE,
-    PERSPECTIVE_SUSPECTED_SCORE,
     _analysis_image,
     _apply_deskew,
     _detect_page_border,
@@ -32,8 +29,6 @@ from image_quality.metrics import (
 )
 from image_quality.policy import _decision, _hard_gates, _issues, _quality_score
 from image_quality.report import (
-    METRIC_SCHEMA_VERSION,
-    REPORT_SCHEMA_VERSION,
     build_normalization_transform,
     build_quality_report,
 )

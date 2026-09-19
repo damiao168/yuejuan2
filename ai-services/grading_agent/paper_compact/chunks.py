@@ -5,11 +5,11 @@ from dataclasses import dataclass
 from .anchors import _without_page_furniture
 from .layout import _reading_order
 from .schema import (
+    _QUESTION_START,
+    _SECTION_START,
     MAX_BLOCKS_PER_CHUNK,
     MAX_DIRECT_TEXT_CHARS_PER_CHUNK,
     MAX_TEXT_CHARS_PER_CHUNK,
-    _QUESTION_START,
-    _SECTION_START,
 )
 
 
