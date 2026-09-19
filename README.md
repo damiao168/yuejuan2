@@ -1,5 +1,5 @@
 # EduGrade Enterprise
-
+1
 > [!IMPORTANT]
 > ## Source Code Notice / 源代码使用声明
 >
