@@ -16,7 +16,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 aes-gcm = "0.10"
-base64 = "0.22"
+base64 = "0.23"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 regex = "1"
 rusqlite = { version = "0.33", features = ["bundled"] }
