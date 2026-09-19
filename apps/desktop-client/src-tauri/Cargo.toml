@@ -15,7 +15,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-aes-gcm = "0.10"
+aes-gcm = "0.11"
 base64 = "0.22"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 regex = "1"
