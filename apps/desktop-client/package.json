@@ -19,7 +19,7 @@
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
     "@tauri-apps/api": "^2.11.1",
     "antd": "^5.27.6",
-    "framer-motion": "^12.23.0",
+    "framer-motion": "^13.3.0",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
