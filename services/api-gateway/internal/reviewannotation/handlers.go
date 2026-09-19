@@ -16,7 +16,9 @@ type Handler struct {
 	audit auth.AuditRecorder
 }
 
-func NewHandler(store Store, audit auth.AuditRecorder) *Handler { return &Handler{store: store, audit: audit} }
+func NewHandler(store Store, audit auth.AuditRecorder) *Handler {
+	return &Handler{store: store, audit: audit}
+}
 
 func (h *Handler) CreateAnnotation(w http.ResponseWriter, r *http.Request) {
 	user, _ := auth.UserFromContext(r.Context())

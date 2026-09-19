@@ -18,7 +18,9 @@ type Handler struct {
 	references goldpaper.ActiveApprovedReader
 }
 
-func NewHandler(store Store, audit auth.AuditRecorder) *Handler { return &Handler{store: store, audit: audit} }
+func NewHandler(store Store, audit auth.AuditRecorder) *Handler {
+	return &Handler{store: store, audit: audit}
+}
 
 func NewHandlerWithReferences(store Store, audit auth.AuditRecorder, references goldpaper.ActiveApprovedReader) *Handler {
 	return &Handler{store: store, audit: audit, references: references}
