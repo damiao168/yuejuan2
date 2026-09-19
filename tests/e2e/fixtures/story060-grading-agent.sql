@@ -43,6 +43,24 @@ BEGIN
     '00000000-0000-0000-0000-000000000621', 'Synthetic Class', 'S060-C1', 'active'
   );
 
+  INSERT INTO student (
+    id, tenant_id, school_id, class_id, student_no, name, status, admission_year
+  ) VALUES (
+    '00000000-0000-0000-0000-000000000622', tenant_uuid,
+    '00000000-0000-0000-0000-000000000601', '00000000-0000-0000-0000-000000000603',
+    'S060-001', 'STORY-060 Synthetic Student', 'active', 2025
+  );
+
+  INSERT INTO student_enrollment (
+    id, tenant_id, school_id, student_id, academic_year_id, grade_cohort_id,
+    class_id, status, start_date
+  ) VALUES (
+    '00000000-0000-0000-0000-000000000623', tenant_uuid,
+    '00000000-0000-0000-0000-000000000601', '00000000-0000-0000-0000-000000000622',
+    '00000000-0000-0000-0000-000000000620', '00000000-0000-0000-0000-000000000621',
+    '00000000-0000-0000-0000-000000000603', 'enrolled', DATE '2026-09-01'
+  );
+
   INSERT INTO exam (id, tenant_id, school_id, name, subject, exam_type, total_score, status, grading_mode, appeal_enabled, publish_policy, created_by)
   VALUES ('00000000-0000-0000-0000-000000000604', tenant_uuid, '00000000-0000-0000-0000-000000000601', 'STORY-060 Synthetic Chinese Exam', 'chinese', 'formal_exam', 4, 'draft', 'ai_assisted', true, 'after_admin_approval', actor_uuid);
 
@@ -203,6 +221,16 @@ BEGIN
     '00000000-0000-0000-0000-000000000615', tenant_uuid, '00000000-0000-0000-0000-000000000614',
     '因为他对家乡有责任感，也希望帮助村里的孩子继续读书。', '{"synthetic":true}', 'ocr_text', 0.96, actor_uuid
   );
+
+  UPDATE app_user
+  SET school_id = '00000000-0000-0000-0000-000000000601',
+      updated_at = now()
+  WHERE tenant_id = tenant_uuid
+    AND username = 'story060_school_admin'
+    AND deleted_at IS NULL;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'STORY-060 school administrator was not seeded';
+  END IF;
 
   UPDATE user_role ur
   SET data_scope = jsonb_build_object(

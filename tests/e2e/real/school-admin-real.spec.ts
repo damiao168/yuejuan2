@@ -20,6 +20,18 @@ test("学校管理员通过真实网关登录并查看已持久化考试", async
     password: process.env.EDUGRADE_E2E_SCHOOL_ADMIN_PASSWORD ?? "",
   });
   authenticated = true;
+  const readiness = await page.evaluate(async () => {
+    const response = await fetch("/api/v1/onboarding/readiness", { credentials: "include" });
+    if (!response.ok) throw new Error(`readiness request failed: ${response.status}`);
+    return response.json() as Promise<{
+      ready_for_use: boolean;
+      checks: Array<{ key: string; state: string }>;
+    }>;
+  });
+  expect(readiness.ready_for_use).toBe(true);
+  for (const key of ["school", "teaching_structure", "students", "staff"]) {
+    expect(readiness.checks.find((check) => check.key === key)?.state).toBe("ready");
+  }
   await page.getByText("考试列表", { exact: true }).click();
   await expect(page).toHaveURL(/#\/admin\/exams/);
   const examLink = page.getByText("STORY-060 Synthetic Chinese Exam", { exact: true });

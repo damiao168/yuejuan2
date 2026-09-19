@@ -1,5 +1,11 @@
 // Generated from services/api-gateway/openapi/edugrade-api.openapi.json. DO NOT EDIT.
 
+export type OnboardingNextAction = { "code": string; "path": string; };
+
+export type OnboardingCheck = { "key": string; "state": "ready" | "action_required" | "warning" | "optional" | "unavailable"; "severity": "blocking" | "recommended" | "optional"; "title": string; "description"?: string; "action_code"?: string; "action_path"?: string; "metadata"?: Record<string, unknown>; };
+
+export type OnboardingReadiness = { "scope": "platform" | "school"; "ready_for_use": boolean; "completed_count": number; "total_required": number; "checks": Array<OnboardingCheck>; "next_action"?: OnboardingNextAction; };
+
 export type MFAStatusResponse = { "available": boolean; "enabled": boolean; "recovery_codes_remaining": number; };
 
 export type TOTPEnrollmentRequest = { "password": string; };
@@ -782,7 +788,7 @@ export type ExamSessionSubjectRequest = { "subject": string; "total_score": numb
 
 export type CreateExamSessionRequest = { "school_id": string; "grade_id": string; "template_id"?: string; "name": string; "exam_type": string; "grading_mode": string; "appeal_enabled"?: boolean; "publish_policy": string; "class_ids"?: Array<string>; "subjects": Array<ExamSessionSubjectRequest>; "command_id": string; };
 
-export type ExamSessionChild = { "id": string; "tenant_id": string; "school_id": string; "name": string; "subject": string; "exam_type": string; "total_score": number; "status": string; "grading_mode": string; "appeal_enabled": boolean; "publish_policy": string; "created_by": string; "class_ids": Array<string>; "revision": number; "created_at": string; "updated_at": string; };
+export type ExamSessionChild = { "id": string; "tenant_id": string; "school_id": string; "exam_session_id"?: string; "exam_session_name"?: string; "exam_session_grade_id"?: string; "name": string; "subject": string; "exam_type": string; "total_score": number; "status": string; "grading_mode": string; "appeal_enabled": boolean; "publish_policy": string; "created_by": string; "class_ids": Array<string>; "revision": number; "created_at": string; "updated_at": string; };
 
 export type ExamSession = { "id": string; "tenant_id": string; "school_id": string; "grade_id": string; "template_id"?: string; "template_version"?: number; "name": string; "exam_type": string; "status": string; "grading_mode": string; "appeal_enabled": boolean; "publish_policy": string; "created_by": string; "revision": number; "exams": Array<ExamSessionChild>; "created_at": string; "updated_at": string; };
 
@@ -1060,6 +1066,9 @@ export type QuestionBankBatchImportResult = { "items": Array<QuestionBankBatchIm
 
 export interface components {
   schemas: {
+    "OnboardingNextAction": OnboardingNextAction;
+    "OnboardingCheck": OnboardingCheck;
+    "OnboardingReadiness": OnboardingReadiness;
     "MFAStatusResponse": MFAStatusResponse;
     "TOTPEnrollmentRequest": TOTPEnrollmentRequest;
     "TOTPEnrollmentResponse": TOTPEnrollmentResponse;

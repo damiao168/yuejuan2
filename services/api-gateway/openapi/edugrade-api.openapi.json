@@ -27887,6 +27887,15 @@
           "school_id": {
             "type": "string"
           },
+          "exam_session_id": {
+            "type": "string"
+          },
+          "exam_session_name": {
+            "type": "string"
+          },
+          "exam_session_grade_id": {
+            "type": "string"
+          },
           "name": {
             "type": "string"
           },

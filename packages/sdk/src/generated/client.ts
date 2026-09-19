@@ -3,6 +3,7 @@
 import type { ApiTransport } from "../runtime";
 import { appendQuery, fillPath } from "../runtime";
 import type {
+  OnboardingReadiness,
   MFAStatusResponse,
   TOTPEnrollmentRequest,
   TOTPEnrollmentResponse,
@@ -493,6 +494,7 @@ export interface operations {
   "previewQuestionBankImports": { args: { body: QuestionBankImportPreviewRequest; signal?: AbortSignal; }; response: QuestionBankImportPreviewBatch; };
   "confirmQuestionBankImportBatch": { args: { body: QuestionBankBatchImportRequest; signal?: AbortSignal; }; response: QuestionBankBatchImportResult; };
   "importQuestionBankItemFromExamQuestion": { args: { path: { "questionId": string; }; headers: { "Idempotency-Key": string; }; body: QuestionBankImportRequest; signal?: AbortSignal; }; response: QuestionBankImportResult; };
+  "getOnboardingReadiness": { args: { signal?: AbortSignal; }; response: OnboardingReadiness; };
 }
 
 export class EduGradeApi {
@@ -1651,5 +1653,10 @@ export class EduGradeApi {
   importQuestionBankItemFromExamQuestion(args: operations["importQuestionBankItemFromExamQuestion"]["args"]): Promise<operations["importQuestionBankItemFromExamQuestion"]["response"]> {
     const requestPath = fillPath("/api/v1/question-bank/items/import-from-question/{questionId}", args.path);
     return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body), headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) });
+  }
+
+  getOnboardingReadiness(args: operations["getOnboardingReadiness"]["args"] = {}): Promise<operations["getOnboardingReadiness"]["response"]> {
+    const requestPath = "/api/v1/onboarding/readiness";
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
   }
 }
