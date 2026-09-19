@@ -294,6 +294,8 @@ jobs:
           cache-dependency-path: lab/package-lock.json
       - run: npm ci --prefix lab
       - run: npm run check:lab-integration
+      - run: node scripts/check-architecture-boundaries.mjs
+      - run: node --test scripts/ci/architecture-boundaries.test.mjs
 
   python-static:
     runs-on: ubuntu-latest
