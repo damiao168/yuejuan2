@@ -1,0 +1,24 @@
+name: One-time mirror from yuejuan
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mirror branches and tags
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git clone --bare https://github.com/damiao168/yuejuan.git source.git
+          cd source.git
+          git remote add target "https://x-access-token:${GH_TOKEN}@github.com/damiao168/yuejuan2.git"
+          git push --force target 'refs/heads/*:refs/heads/*'
+          git push --force target 'refs/tags/*:refs/tags/*'
