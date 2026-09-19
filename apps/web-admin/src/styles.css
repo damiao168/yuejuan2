@@ -620,7 +620,7 @@ body {
 .capture-batch-row:focus-visible,
 .teacher-task-list button:focus-visible,
 .teacher-exam-list button:focus-visible,
-.exam-name-cell button:focus-visible {
+.exam-name-link:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: -2px;
 }
@@ -5480,7 +5480,13 @@ select {
 }
 
 .exam-management-table {
-  margin-top: 2px;
+  margin-top: 8px;
+}
+
+.exam-list-section {
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .exam-create-guidance {
@@ -5629,8 +5635,8 @@ select {
 }
 
 .exam-management-table .ant-table-thead > tr > th {
-  height: 46px;
-  padding-block: 10px;
+  height: 40px;
+  padding: 8px 12px;
   background: #f7f9fc;
   color: var(--text-muted);
   font-size: var(--eg-font-body);
@@ -5639,25 +5645,17 @@ select {
 }
 
 .exam-management-table .ant-table-tbody > tr > td {
-  height: 68px;
-  padding-block: 10px;
+  height: 48px;
+  padding: 6px 12px;
   vertical-align: middle;
+  white-space: nowrap;
 }
 
 .exam-management-table .ant-table-tbody > tr:hover > td {
   background: var(--hover-bg) !important;
 }
 
-.exam-name-cell,
-.exam-scope-cell,
-.exam-created-cell {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.exam-name-cell button {
+.exam-name-link {
   max-width: 100%;
   padding: 0;
   border: 0;
@@ -5672,28 +5670,18 @@ select {
   cursor: pointer;
 }
 
-.exam-name-cell button:hover {
+.exam-name-link:hover {
   color: var(--primary);
 }
 
-.exam-name-cell span,
-.exam-scope-cell span,
-.exam-created-cell span {
-  color: var(--text-muted);
-  font-size: var(--eg-font-caption);
+.exam-subject-select {
+  width: 100%;
 }
 
-.exam-scope-cell strong,
-.exam-created-cell strong {
-  color: var(--text);
-  font-size: var(--eg-font-body);
-  font-weight: 500;
-}
-
-.exam-mode-text {
-  display: block;
-  color: #445066;
-  line-height: 1.45;
+.exam-edit-context {
+  margin: 0 0 18px;
+  color: var(--text-secondary);
+  font-weight: 600;
 }
 
 .exam-table-actions {

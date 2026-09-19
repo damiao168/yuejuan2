@@ -66,9 +66,11 @@ func (s *PostgresStore) ListExams(ctx context.Context, scope auth.AccessScope, f
 SELECT e.id::text, e.tenant_id::text, e.school_id::text, e.name, e.subject, e.exam_type,
        e.total_score::float8, e.status, e.grading_mode, e.appeal_enabled, e.publish_policy,
        e.created_by::text, e.revision, e.created_at, e.updated_at,
-       COALESCE(array_agg(DISTINCT ec.class_id::text) FILTER (WHERE ec.class_id IS NOT NULL), '{}')
+       COALESCE(array_agg(DISTINCT ec.class_id::text) FILTER (WHERE ec.class_id IS NOT NULL), '{}'),
+       COALESCE(es.id::text, ''), COALESCE(es.name, ''), COALESCE(es.grade_id::text, '')
 FROM exam e
 LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL
+LEFT JOIN exam_session es ON es.tenant_id=e.tenant_id AND es.id=e.exam_session_id AND es.deleted_at IS NULL
 WHERE e.tenant_id = $1 AND e.deleted_at IS NULL
   AND (` + examScopePredicate("e", "ec") + `)`
 	args := scopeQueryArgs(scope)
@@ -84,7 +86,7 @@ WHERE e.tenant_id = $1 AND e.deleted_at IS NULL
 		query += fmt.Sprintf(` AND (e.created_at, e.id) < ($%d, $%d::uuid)`, len(args)+1, len(args)+2)
 		args = append(args, filter.CursorAt, filter.CursorID)
 	}
-	query += ` GROUP BY e.id ORDER BY e.created_at DESC, e.id DESC`
+	query += ` GROUP BY e.id, es.id ORDER BY e.created_at DESC, e.id DESC`
 	if filter.Limit > 0 {
 		query += fmt.Sprintf(` LIMIT $%d`, len(args)+1)
 		args = append(args, filter.Limit)
@@ -97,7 +99,7 @@ WHERE e.tenant_id = $1 AND e.deleted_at IS NULL
 	out := []Exam{}
 	for rows.Next() {
 		var item Exam
-		if err := scanExamWithClasses(rows, &item); err != nil {
+		if err := scanExamWithSession(rows, &item); err != nil {
 			return nil, err
 		}
 		out = append(out, item)
@@ -400,6 +402,10 @@ func scanExam(row scanner, out *Exam) error {
 
 func scanExamWithClasses(row scanner, out *Exam) error {
 	return row.Scan(&out.ID, &out.TenantID, &out.SchoolID, &out.Name, &out.Subject, &out.ExamType, &out.TotalScore, &out.Status, &out.GradingMode, &out.AppealEnabled, &out.PublishPolicy, &out.CreatedBy, &out.Revision, &out.CreatedAt, &out.UpdatedAt, examTextArray(&out.ClassIDs))
+}
+
+func scanExamWithSession(row scanner, out *Exam) error {
+	return row.Scan(&out.ID, &out.TenantID, &out.SchoolID, &out.Name, &out.Subject, &out.ExamType, &out.TotalScore, &out.Status, &out.GradingMode, &out.AppealEnabled, &out.PublishPolicy, &out.CreatedBy, &out.Revision, &out.CreatedAt, &out.UpdatedAt, examTextArray(&out.ClassIDs), &out.SessionID, &out.SessionName, &out.SessionGradeID)
 }
 
 func examTextArray(target *[]string) any {

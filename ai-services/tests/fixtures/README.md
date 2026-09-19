@@ -1,11 +1,5 @@
-# Paper parser replay fixtures
+# 试卷解析回放样例
 
-`expected_multimodal_math_paper.json` is a manually reviewed expected result
-for the sample mathematics page. It is not a captured DeepSeek response and
-must not be presented as provider benchmark evidence.
+`expected_multimodal_math_paper.json` 是针对数学试卷样页人工核对的预期解析结果，**不是**从 DeepSeek 实际响应中截取的数据，不能作为模型提供方的效果基准。
 
-The parser tests inject this JSON through a fake model adapter. This exercises
-schema validation, source grounding, formula preservation, and noise filtering
-without making a paid network request. A future real provider response may be
-added only after its exact validated JSON has been captured and labelled with
-the provider model/version.
+解析器测试通过模拟模型适配器注入这份 JSON，在不发起付费网络请求的情况下验证数据结构、内容与来源的对应关系、公式保留和噪声过滤。若将来加入真实提供方响应，应先保存经过校验的原始 JSON，并明确标注提供方、模型和版本，再说明其适用的测试范围。

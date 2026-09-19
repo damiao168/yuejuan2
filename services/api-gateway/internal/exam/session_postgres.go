@@ -110,6 +110,9 @@ RETURNING id::text, tenant_id::text, school_id::text, name, subject, exam_type, 
 			return ExamSession{}, err
 		}
 		child.ClassIDs = cloneStrings(classIDs)
+		child.SessionID = session.ID
+		child.SessionName = session.Name
+		child.SessionGradeID = session.GradeID
 		questionOrder := 1
 		for sectionOrder, section := range subject.Sections {
 			var sectionID string

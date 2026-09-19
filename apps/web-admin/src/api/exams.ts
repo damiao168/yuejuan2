@@ -9,6 +9,9 @@ export interface Exam {
   id: string;
   tenant_id: string;
   school_id: string;
+  exam_session_id?: string;
+  exam_session_name?: string;
+  exam_session_grade_id?: string;
   name: string;
   subject: string;
   exam_type: string;

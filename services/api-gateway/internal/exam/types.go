@@ -20,22 +20,25 @@ var (
 )
 
 type Exam struct {
-	ID            string    `json:"id"`
-	TenantID      string    `json:"tenant_id"`
-	SchoolID      string    `json:"school_id"`
-	Name          string    `json:"name"`
-	Subject       string    `json:"subject"`
-	ExamType      string    `json:"exam_type"`
-	TotalScore    float64   `json:"total_score"`
-	Status        string    `json:"status"`
-	GradingMode   string    `json:"grading_mode"`
-	AppealEnabled bool      `json:"appeal_enabled"`
-	PublishPolicy string    `json:"publish_policy"`
-	CreatedBy     string    `json:"created_by"`
-	ClassIDs      []string  `json:"class_ids"`
-	Revision      int64     `json:"revision"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID             string    `json:"id"`
+	TenantID       string    `json:"tenant_id"`
+	SchoolID       string    `json:"school_id"`
+	SessionID      string    `json:"exam_session_id,omitempty"`
+	SessionName    string    `json:"exam_session_name,omitempty"`
+	SessionGradeID string    `json:"exam_session_grade_id,omitempty"`
+	Name           string    `json:"name"`
+	Subject        string    `json:"subject"`
+	ExamType       string    `json:"exam_type"`
+	TotalScore     float64   `json:"total_score"`
+	Status         string    `json:"status"`
+	GradingMode    string    `json:"grading_mode"`
+	AppealEnabled  bool      `json:"appeal_enabled"`
+	PublishPolicy  string    `json:"publish_policy"`
+	CreatedBy      string    `json:"created_by"`
+	ClassIDs       []string  `json:"class_ids"`
+	Revision       int64     `json:"revision"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 // ExamSession is the grade-level parent of one or more subject exams. Existing

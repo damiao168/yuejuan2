@@ -107,6 +107,26 @@ func TestCreateMultiSubjectExamSession(t *testing.T) {
 	if response.Session.TemplateID != "00000000-0000-0000-0000-000000000601" || response.Session.TemplateVersion != 1 {
 		t.Fatalf("expected selected template version to be recorded, got %#v", response.Session)
 	}
+	listReq := authedRequest(http.MethodGet, "/api/v1/exams", nil, token)
+	listRec := httptest.NewRecorder()
+	router.ServeHTTP(listRec, listReq)
+	if listRec.Code != http.StatusOK {
+		t.Fatalf("list subject exams expected 200, got %d %s", listRec.Code, listRec.Body.String())
+	}
+	var listed struct {
+		Exams []exam.Exam `json:"exams"`
+	}
+	if err := json.NewDecoder(listRec.Body).Decode(&listed); err != nil {
+		t.Fatalf("decode subject exams: %v", err)
+	}
+	if len(listed.Exams) != 2 {
+		t.Fatalf("expected both subject exams in list, got %#v", listed.Exams)
+	}
+	for _, child := range listed.Exams {
+		if child.SessionID != response.Session.ID || child.SessionName != response.Session.Name || child.SessionGradeID != response.Session.GradeID {
+			t.Fatalf("missing parent exam information on subject %s: %#v", child.Subject, child)
+		}
+	}
 }
 
 func TestListExamTemplatesFiltersEducationStage(t *testing.T) {

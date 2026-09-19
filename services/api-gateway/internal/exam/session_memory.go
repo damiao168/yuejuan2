@@ -63,6 +63,12 @@ func (s *MemoryStore) CreateExamSession(ctx context.Context, scope auth.AccessSc
 		if err != nil {
 			return ExamSession{}, err
 		}
+		child.SessionID = session.ID
+		child.SessionName = session.Name
+		child.SessionGradeID = session.GradeID
+		s.mu.Lock()
+		s.items[child.ID] = child
+		s.mu.Unlock()
 		session.Exams = append(session.Exams, child)
 	}
 	if commandKey != "" {
