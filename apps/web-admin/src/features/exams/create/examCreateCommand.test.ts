@@ -22,6 +22,13 @@ describe("exam create command recovery", () => {
     expect(loadExamCreateCommand(target, "key:operation:command-1234")).toEqual(command);
   });
 
+  it("persists the creation mode so recovery keeps the original destination", () => {
+    const command = beginExamCreateCommand(payload, "command-with-mode", "quick");
+    const target = storage();
+    persistExamCreateCommand(target, "key", command);
+    expect(loadExamCreateCommand(target, "key")?.creationMode).toBe("quick");
+  });
+
   it("keeps separate operation receipts when a new explicit draft is submitted", () => {
     const target = storage();
     const first = beginExamCreateCommand(payload,"operation-first");

@@ -282,9 +282,6 @@ func validateCreateSession(input CreateSessionInput) error {
 		if subject.CandidateRule != "" && subject.CandidateRule != "all_selected_classes" && subject.CandidateRule != "subject_selected_classes" {
 			return errors.New("参考范围规则无效")
 		}
-		if len(subject.Sections) == 0 {
-			return errors.New("每个科目至少需要一个试卷分区")
-		}
 		total := 0.0
 		for _, section := range subject.Sections {
 			if section.Title == "" || !validQuestionTypes[section.QuestionType] || section.QuestionCount <= 0 || section.ScorePerQuestion <= 0 {
@@ -292,7 +289,7 @@ func validateCreateSession(input CreateSessionInput) error {
 			}
 			total += float64(section.QuestionCount) * section.ScorePerQuestion
 		}
-		if total-subject.TotalScore > 0.001 || subject.TotalScore-total > 0.001 {
+		if len(subject.Sections) > 0 && (total-subject.TotalScore > 0.001 || subject.TotalScore-total > 0.001) {
 			return errors.New("各分区题目分值之和必须等于科目满分")
 		}
 	}

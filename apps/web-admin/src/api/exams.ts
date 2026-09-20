@@ -61,7 +61,7 @@ export interface ExamSessionPayload {
     duration_minutes: number;
     candidate_rule: string;
     class_ids: string[];
-    sections: Array<{ title: string; question_type: string; question_count: number; score_per_question: number }>;
+    sections?: Array<{ title: string; question_type: string; question_count: number; score_per_question: number }>;
   }>;
 }
 

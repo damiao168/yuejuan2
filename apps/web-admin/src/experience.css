@@ -40,7 +40,6 @@ body { font-family: var(--eg-font-family); font-size: var(--eg-font-body); line-
 .exam-context-header { flex-wrap: wrap; gap: 12px; }
 .exam-context-title { min-width: 0; flex: 1 1 280px; }
 .exam-context-title h1 { white-space: normal; }
-.exam-create-stage > footer { position: sticky; bottom: 0; background: var(--eg-color-surface); border-top: 1px solid var(--border); padding: 16px 0; z-index: 5; gap: 12px; flex-wrap: wrap; }
 .exam-draft-status { font-size: var(--eg-font-body); }
 .grading-shell { container: grading / inline-size; }
 .grading-field { margin-block: 12px; }

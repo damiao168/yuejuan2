@@ -5,15 +5,12 @@ const commandKey = "exam-create-command:v1:demo-school:user-school_admin";
 
 async function prepare(page: Page) {
   await page.goto("/#/admin/exams/new");
+  await page.getByRole("button", { name: /快速创建/ }).click();
   await page.getByRole("textbox", { name: "考试名称 *" }).fill("命令恢复验收考试");
   await page.getByRole("combobox", { name: /考试类型/ }).click();
   await page.getByTitle("期中考试").click();
   await page.getByRole("button", { name: /高二（1）班/ }).click();
-  await page.getByRole("button", { name: /下一步/ }).click();
-  await page.getByRole("button", { name: /系统通用高中考试方案/ }).click();
-  await page.getByRole("button", { name: /下一步/ }).click();
-  await expect(page.getByText("150 / 150 分").first()).toBeVisible();
-  await page.getByRole("button", { name: /下一步/ }).click();
+  await page.getByRole("button", { name: "数学", exact: true }).click();
 }
 
 test("CMD browser refresh retains unknown command and replays its original request", async ({ page }) => {
@@ -27,7 +24,7 @@ test("CMD browser refresh retains unknown command and replays its original reque
   });
   await page.route("**/api/v1/exam-sessions/commands/*", async (route) => route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({command:{command_id:route.request().url().split("/").at(-1),status:"unknown"}})}));
   await prepare(page);
-  await page.getByRole("button", { name: "创建 3 个科目工作区" }).click();
+  await page.getByRole("button", { name: "创建考试", exact: true }).click();
   await expect(page.getByText("正在恢复上一次考试创建命令")).toBeVisible();
   await expect.poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key)!).state,commandKey)).toBe("unknown");
   const stored = await page.evaluate((key) => localStorage.getItem(key),commandKey);
@@ -54,7 +51,7 @@ test("CMD browser double click and failed draft cleanup preserve a successful co
       return original.call(this,key);
     };
   });
-  await page.getByRole("button", { name: "创建 3 个科目工作区" }).evaluate((button) => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
+  await page.getByRole("button", { name: "创建考试", exact: true }).evaluate((button) => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
   await expect(page).toHaveURL(/exam-created-math\/settings/);
   expect(submissions).toBe(1);
   const receipt = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!),commandKey);

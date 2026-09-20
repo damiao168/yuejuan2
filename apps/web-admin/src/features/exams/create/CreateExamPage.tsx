@@ -6,33 +6,23 @@ import { listExamTemplates, type ExamTemplate } from "../../../api/examTemplates
 import { listClasses, listGrades, listSchools, type Grade, type School, type SchoolClass } from "../../../api/org";
 import type { SessionUser } from "../../../auth/session";
 import { ErrorState, LoadingState } from "../../../components/PageState";
-import { initialCreateExamDraft, subjectScore } from "./createExamDraft";
-import { CreateExamWizard } from "./CreateExamWizard";
-import type { CreateExamDraft } from "./types";
+import { initialCreateExamDraft } from "./createExamDraft";
+import { CreateExamComposer } from "./CreateExamComposer";
+import { createExamFieldId, type CreateExamValidationIssue, validateCreateExam } from "./createExamValidation";
+import type { CreateExamDraft, ExamCreationMode } from "./types";
 import { beginExamCreateCommand, commandAfterFailure, commandRecoveryDelayMS, commandSnapshotKey, createExamCreateSubmissionGate, loadExamCreateCommand, nextCommandRecovery, persistExamCreateCommand, recordExamCreateSuccess, type ExamCreateCommandSnapshot } from "./examCreateCommand";
 
-function validationMessage(step: number, draft: CreateExamDraft) {
-  if (step === 0 && !draft.schoolId) return "请选择考试所属学校";
-  if (step === 0 && !draft.gradeId) return "请选择考试年级";
-  if (step === 0 && !draft.name.trim()) return "考试名称不能为空";
-  if (step === 0 && !draft.examType) return "请选择考试类型";
-  if (step === 0 && draft.classIds.length === 0) return "请至少选择一个参考班级";
-  if (step === 1 && !draft.templateId) return "请选择考试方案或完全自定义";
-  if (step === 1 && draft.subjects.length === 0) return "请至少选择一个考试科目";
-  if (step === 2) {
-    for (const subject of draft.subjects) {
-      if (subject.totalScore <= 0 || subject.durationMinutes <= 0 || !subject.sections.length) return "请完整设置每个科目的满分、时长和试卷分区";
-      if (subject.candidateRule === "subject_selected_classes" && !subject.classIds.length) return "单独指定范围的科目必须选择参考班级";
-      if (Math.abs(subjectScore(subject) - subject.totalScore) > .001) return "每个科目的题目分值合计必须等于科目满分";
-    }
-  }
-  if (step === 3 && !draft.gradingMode) return "请选择阅卷方式";
-  return "";
+function draftStorageKey(tenant: string, userId: string) {
+  return `exam-create-draft:v2:${tenant}:${userId}`;
+}
+
+function completionPath(mode: ExamCreationMode, examId?: string) {
+  if (!examId) return "/exams";
+  return mode === "materials" ? `/exams/${encodeURIComponent(examId)}/paper` : `/exams/${encodeURIComponent(examId)}/settings`;
 }
 
 export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavigate: (path: string) => void }) {
   const { message } = App.useApp();
-  const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<CreateExamDraft>(() => initialCreateExamDraft());
   const [schools, setSchools] = useState<School[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
@@ -42,6 +32,8 @@ export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavi
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [issues, setIssues] = useState<CreateExamValidationIssue[]>([]);
+  const draftKey = draftStorageKey(user.tenant, user.id);
   const commandStorageKey = commandSnapshotKey(user.tenant, user.id);
   const [command, setCommand] = useState<ExamCreateCommandSnapshot | null>(() => loadExamCreateCommand(localStorage, commandStorageKey));
   const submissionGate = useRef(createExamCreateSubmissionGate());
@@ -75,9 +67,9 @@ export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavi
       setTemplates(templateResult.exam_templates);
       const fallback = initialCreateExamDraft(school?.id ?? "", defaultGrade);
       try {
-        const stored = localStorage.getItem(`exam-create-draft:${user.tenant}:${user.id}`);
+        const stored = localStorage.getItem(draftKey);
         const restored = stored ? JSON.parse(stored) as CreateExamDraft : null;
-        setDraft(restored && scopedSchools.some((item) => item.id === restored.schoolId) && scopedGrades.some((item) => item.id === restored.gradeId)
+        setDraft(restored?.version === 2 && scopedSchools.some((item) => item.id === restored.schoolId) && scopedGrades.some((item) => item.id === restored.gradeId)
           ? { ...fallback, ...restored, templateId: restored.templateId ?? "" }
           : fallback);
       } catch {
@@ -88,7 +80,7 @@ export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavi
     } finally {
       setLoading(false);
     }
-  }, [user.id, user.organizationScope, user.school, user.tenant]);
+  }, [draftKey, user.organizationScope, user.school]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -98,11 +90,11 @@ export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavi
   useEffect(() => {
     if (loading) return;
     const timer = window.setTimeout(() => {
-      localStorage.setItem(`exam-create-draft:${user.tenant}:${user.id}`, JSON.stringify(draft));
+      localStorage.setItem(draftKey, JSON.stringify(draft));
       setSavedAt(new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }));
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [draft, loading, user.id, user.tenant]);
+  }, [draft, draftKey, loading]);
 
   useEffect(() => {
     if (!command) return;
@@ -121,11 +113,11 @@ export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavi
     const recover = () => void recoverExamSessionCommand(command.commandId).then(({ command: recovered }) => {
       if (!active) return;
       if (recovered.status === "succeeded" && recovered.exam_session) {
-        const completed = recordExamCreateSuccess(localStorage, commandStorageKey, `exam-create-draft:${user.tenant}:${user.id}`, command, recovered.exam_session);
+        const completed = recordExamCreateSuccess(localStorage, commandStorageKey, draftKey, command, recovered.exam_session);
         setCommand(completed);
         const firstExam = recovered.exam_session.exams[0];
         message.success("已恢复之前提交的考试创建结果");
-        onNavigate(firstExam ? `/exams/${encodeURIComponent(firstExam.id)}/settings` : "/exams");
+        onNavigate(completionPath(command.creationMode ?? draft.creationMode, firstExam?.id));
         return;
       }
       if (recovered.status === "rejected") {
@@ -155,15 +147,7 @@ export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavi
     });
     timer = window.setTimeout(recover, commandRecoveryDelayMS(command));
     return () => { active = false; if (timer !== undefined) window.clearTimeout(timer); };
-  }, [command, commandStorageKey, loading, message, onNavigate, user.id, user.tenant]);
-
-  const changeStep = (next: number) => {
-    if (next > step) {
-      const invalid = validationMessage(step, draft);
-      if (invalid) { message.warning(invalid); return; }
-    }
-    setStep(Math.max(0, Math.min(3, next)));
-  };
+  }, [command, commandStorageKey, draft.creationMode, draftKey, loading, message, onNavigate]);
 
   const submit = async () => {
     if (!submissionGate.current.enter()) return;
@@ -177,8 +161,18 @@ export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavi
       message.info("服务正在处理，请稍后继续确认原操作");
       return;
     }
-    const invalid = activeCommand ? "" : validationMessage(0, draft) || validationMessage(1, draft) || validationMessage(2, draft) || validationMessage(3, draft);
-    if (invalid) { submissionGate.current.leave(); message.warning(invalid); return; }
+    const nextIssues = activeCommand ? [] : validateCreateExam(draft);
+    if (nextIssues.length) {
+      setIssues(nextIssues);
+      submissionGate.current.leave();
+      window.setTimeout(() => {
+        const target = document.getElementById(createExamFieldId(nextIssues[0].field));
+        const container = target ?? document.querySelector<HTMLElement>(`[data-exam-field="${nextIssues[0].field}"]`);
+        container?.scrollIntoView({ behavior: "smooth", block: "center" });
+        (target ?? container?.querySelector<HTMLElement>("input, button, [tabindex]"))?.focus();
+      }, 20);
+      return;
+    }
     setSubmitting(true);
     const payload: ExamSessionPayload = activeCommand?.payload ?? {
       school_id: draft.schoolId,
@@ -192,18 +186,18 @@ export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavi
       class_ids: draft.classIds,
       subjects: draft.subjects.map((subject) => ({ subject: subject.subject, total_score: subject.totalScore, duration_minutes: subject.durationMinutes, candidate_rule: subject.candidateRule, class_ids: subject.candidateRule === "subject_selected_classes" ? subject.classIds : [], sections: subject.sections.map((section) => ({ title: section.title.trim(), question_type: section.questionType, question_count: section.questionCount, score_per_question: section.scorePerQuestion })) }))
     };
-    const submitted = activeCommand ?? beginExamCreateCommand(payload);
+    const submitted = activeCommand ?? beginExamCreateCommand(payload, undefined, draft.creationMode);
     setCommand(submitted);
     try {
       // Persist synchronously before the first network byte is sent. React state
       // effects are intentionally not the durability boundary for this command.
       persistExamCreateCommand(localStorage, commandStorageKey, submitted);
       const result = await createExamSession(submitted.payload, submitted.commandId);
-      const completed = recordExamCreateSuccess(localStorage, commandStorageKey, `exam-create-draft:${user.tenant}:${user.id}`, submitted, result.exam_session);
+      const completed = recordExamCreateSuccess(localStorage, commandStorageKey, draftKey, submitted, result.exam_session);
       setCommand(completed);
       const firstExam = result.exam_session.exams[0];
-      message.success(`已创建 ${result.exam_session.exams.length} 个科目工作区`);
-      onNavigate(firstExam ? `/exams/${encodeURIComponent(firstExam.id)}/settings` : "/exams");
+      message.success("考试创建成功");
+      onNavigate(completionPath(submitted.creationMode ?? draft.creationMode, firstExam?.id));
     } catch (submitError) {
       const next = commandAfterFailure(submitted, submitError);
       setCommand(next);
@@ -228,7 +222,7 @@ export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavi
     <div className="create-exam-page">
       {command && command.state !== "succeeded" ? <Alert type={command.state === "conflict" ? "error" : "info"} showIcon message="正在恢复上一次考试创建命令" description="为避免重复创建，本次确认会继续使用首次提交时保存的内容和操作编号。" action={<Button loading={submitting} onClick={() => void submit()}>继续确认原操作</Button>} /> : null}
       {!grades.length ? <Alert type="warning" showIcon message="当前学校还没有可用年级" description="请先到成员管理建立年级和班级。" /> : null}
-      <CreateExamWizard step={step} draft={draft} schools={schools} grades={visibleGrades} classes={visibleClasses} templates={templates} scopeLocked={user.organizationScope.resolved && !user.organizationScope.tenantWide} savedAt={savedAt} submitting={submitting} onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))} onStepChange={changeStep} onSubmit={() => void submit()} onCancel={() => onNavigate("/exams")} />
+      <CreateExamComposer draft={draft} schools={schools} grades={visibleGrades} classes={visibleClasses} templates={templates} savedAt={savedAt} submitting={submitting} issues={issues} onChange={(patch) => { setIssues([]); setDraft((current) => ({ ...current, ...patch })); }} onSubmit={() => void submit()} />
     </div>
   );
 }

@@ -7,7 +7,7 @@ function localId(prefix: string) {
 }
 
 export function createSubjectDraft(subject: string): SubjectExamDraft {
-  return { subject, totalScore: 100, durationMinutes: 90, candidateRule: "all_selected_classes", classIds: [], sections: [{ id: localId("section"), title: "全卷", questionType: "short_answer", questionCount: 10, scorePerQuestion: 10 }] };
+  return { subject, totalScore: 100, durationMinutes: 90, candidateRule: "all_selected_classes", classIds: [], sections: [] };
 }
 
 export function subjectDraftFromTemplate(subject: ExamTemplateSubject): SubjectExamDraft {
@@ -27,6 +27,8 @@ export function createBlankSection(): BlueprintSectionDraft {
 
 export function initialCreateExamDraft(schoolId = "", grade?: Grade): CreateExamDraft {
   return {
+    version: 2,
+    creationMode: "materials",
     schoolId,
     name: "",
     examType: "",

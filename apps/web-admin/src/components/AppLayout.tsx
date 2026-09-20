@@ -17,6 +17,7 @@ const DESKTOP_NAVIGATION_WIDTH = 192;
 const DESKTOP_NAVIGATION_COLLAPSED_WIDTH = 64;
 const MOBILE_NAVIGATION_WIDTH = 280;
 const NAVIGATION_COLLAPSED_STORAGE_KEY = "edugrade.navigation.collapsed";
+export type ShellMode = "standard" | "focused" | "grading";
 
 export function AppLayout({
   user,
@@ -29,7 +30,7 @@ export function AppLayout({
   onLogout,
   onLockSession,
   onReauthenticate,
-  immersive = false
+  shellMode = "standard"
 }: {
   user: SessionUser;
   currentRoute: AppRoute;
@@ -41,8 +42,10 @@ export function AppLayout({
   onLogout: () => void;
   onLockSession: () => Promise<void>;
   onReauthenticate: (password: string) => Promise<void>;
-  immersive?: boolean;
+  shellMode?: ShellMode;
 }) {
+  const immersive = shellMode !== "standard";
+  const focused = shellMode === "focused";
   const screens = Grid.useBreakpoint();
   const [readingSize, setReadingSize] = useState(readReadingSize);
   useEffect(() => { applyReadingSize(readingSize); }, [readingSize]);
@@ -335,7 +338,7 @@ export function AppLayout({
         }
       }}
     >
-      <Layout className={immersive ? "app-frame immersive-frame" : "app-frame"}>
+      <Layout className={shellMode === "grading" ? "app-frame immersive-frame" : focused ? "app-frame focused-frame" : "app-frame"}>
         <a className="skip-to-workspace" href="#main-workspace" onClick={(event) => { event.preventDefault(); document.getElementById("main-workspace")?.focus(); }}>跳到主要内容</a>
         {!immersive && desktopNavigation ? (
           <Sider width={DESKTOP_NAVIGATION_WIDTH} collapsedWidth={DESKTOP_NAVIGATION_COLLAPSED_WIDTH} collapsed={navigationCollapsed} trigger={null} className="sidebar">
@@ -362,7 +365,19 @@ export function AppLayout({
               <Button danger size="small" onClick={onLogout}>立即退出</Button>
             </div>
           ) : null}
-          {immersive ? (
+          {focused ? (
+            <Header className="topbar focused-topbar">
+              <div className="topbar-left">
+                <Button type="text" icon={<ArrowLeft size={17} />} aria-label="返回考试列表" onClick={() => onNavigate("/exams")}>返回考试列表</Button>
+                <strong>新建考试</strong>
+              </div>
+              <Space className="topbar-actions">
+                <Dropdown menu={accountMenu} placement="bottomRight" trigger={["click"]}>
+                  <Button className="user-button"><Avatar size={24} icon={<UserRound size={15} />} /><span>{user.username}</span><ChevronDown size={14} /></Button>
+                </Dropdown>
+              </Space>
+            </Header>
+          ) : shellMode === "grading" ? (
             <Header className="topbar immersive-topbar">
               <div className="topbar-left">
                 <Space size="middle">
@@ -391,7 +406,7 @@ export function AppLayout({
           <Content
             id="main-workspace"
             tabIndex={-1}
-            className={immersive ? "workspace immersive-workspace" : "workspace"}
+            className={shellMode === "grading" ? "workspace immersive-workspace" : focused ? "workspace focused-workspace" : "workspace"}
             onMouseEnter={showWorkspaceScrollbar}
             onMouseLeave={scheduleWorkspaceScrollbarHide}
           >

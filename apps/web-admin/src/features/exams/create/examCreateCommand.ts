@@ -1,5 +1,6 @@
 import { ApiClientError } from "../../../api/client";
 import type { ExamSession, ExamSessionPayload } from "../../../api/exams";
+import type { ExamCreationMode } from "./types";
 
 export type ExamCreateCommandState = "submitting" | "unknown" | "conflict" | "succeeded";
 
@@ -9,6 +10,7 @@ export interface ExamCreateCommandSnapshot {
   operation: "create_exam_session";
   target: { schoolId: string; gradeId: string };
   payload: ExamSessionPayload;
+  creationMode?: ExamCreationMode;
   state: ExamCreateCommandState;
   createdAt: string;
   recoveryAttempt?: number;
@@ -30,13 +32,14 @@ export function loadExamCreateCommand(storage: Pick<Storage, "getItem">, key: st
   }
 }
 
-export function beginExamCreateCommand(payload: ExamSessionPayload, commandId: string = crypto.randomUUID()): ExamCreateCommandSnapshot {
+export function beginExamCreateCommand(payload: ExamSessionPayload, commandId: string = crypto.randomUUID(), creationMode?: ExamCreationMode): ExamCreateCommandSnapshot {
   return {
     version: 1,
     commandId,
     operation: "create_exam_session",
     target: { schoolId: payload.school_id, gradeId: payload.grade_id },
     payload: structuredClone(payload),
+    creationMode,
     state: "submitting",
     createdAt: new Date().toISOString()
   };

@@ -386,7 +386,7 @@ export function AppShell() {
           onLogout={logout}
           onLockSession={lockSession}
           onReauthenticate={reauthenticate}
-          immersive={experience === "teacher" && (route.path === "/grading" || examWorkspace?.section === "grading")}
+          shellMode={route.path === "/exams/new" ? "focused" : experience === "teacher" && (route.path === "/grading" || examWorkspace?.section === "grading") ? "grading" : "standard"}
         >
           <OnboardingGate user={user} currentPath={canonicalPath} navigate={navigate} />
           <PendingBusinessCommands key={`${user.tenant}:${user.id}`} tenant={user.tenant} actor={user.id} />

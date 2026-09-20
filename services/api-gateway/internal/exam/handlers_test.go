@@ -155,6 +155,18 @@ func TestExamSessionRejectsScoreMismatch(t *testing.T) {
 	}
 }
 
+func TestExamSessionAllowsSubjectsWithoutPaperSections(t *testing.T) {
+	router := testRouter(authStoreWithPermissions(t, []string{"exam:manage"}), exam.NewMemoryStore())
+	token := login(t, router)
+	payload := `{"school_id":"school-1","grade_id":"grade-1","name":"轻量创建测试","exam_type":"quiz","grading_mode":"ai_assisted","publish_policy":"after_admin_approval","class_ids":["class-1"],"subjects":[{"subject":"math","total_score":100,"duration_minutes":60,"sections":[]}]}`
+	req := authedRequest(http.MethodPost, "/api/v1/exam-sessions", bytes.NewBufferString(payload), token)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("session without sections expected 201, got %d %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestExamSessionRejectsMismatchedCommandIdentity(t *testing.T) {
 	router := testRouter(authStoreWithPermissions(t, []string{"exam:manage"}), exam.NewMemoryStore())
 	token := login(t, router)
