@@ -31,7 +31,7 @@ func TestManagedCapabilityPayloadBoundsOutputAndDisablesOptionalThinking(t *test
 	deepSeek := managedCapabilityPayload(ManagedAPIConnection{Config: ManagedAPIConfig{
 		ProviderKey: "deepseek", ModelName: "deepseek-v4-pro",
 	}})
-	if deepSeek["max_tokens"] != managedCapabilityMaxTokens || deepSeek["stream"] != false {
+	if deepSeek["max_tokens"] != 1024 || deepSeek["stream"] != false {
 		t.Fatalf("DeepSeek capability probe is not bounded: %#v", deepSeek)
 	}
 	thinking, ok := deepSeek["thinking"].(map[string]string)
@@ -46,6 +46,9 @@ func TestManagedCapabilityPayloadBoundsOutputAndDisablesOptionalThinking(t *test
 	qwen := managedCapabilityPayload(ManagedAPIConnection{Config: ManagedAPIConfig{
 		ProviderKey: "aliyun", ModelName: "qwen3.8-flash",
 	}})
+	if qwen["max_tokens"] != 1024 {
+		t.Fatalf("Qwen capability probe does not use the standard output limit: %#v", qwen)
+	}
 	if enabled, exists := qwen["enable_thinking"]; !exists || enabled != false {
 		t.Fatalf("Qwen hybrid thinking was not disabled: %#v", qwen)
 	}

@@ -87,7 +87,7 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusBadRequest, "file_seek_failed", "failed to inspect uploaded file")
 		return
 	}
-	contentType, err := ValidateFileType(originalName, header.Header.Get("Content-Type"), SniffContentType(sample[:n]), h.cfg.AllowedExtensions)
+	contentType, err := ValidateFileType(originalName, header.Header.Get("Content-Type"), SniffFileContentType(originalName, sample[:n]), h.cfg.AllowedExtensions)
 	if err != nil {
 		httpx.Error(w, r, http.StatusBadRequest, "unsupported_file_type", "file type is not allowed")
 		return

@@ -13,6 +13,19 @@ const supportedMimeTypes = new Set([
 
 export const MAX_PASTED_MATERIAL_CHARS = 500_000;
 
+/**
+ * Keep Markdown and LaTeX source intact while removing clipboard-only control
+ * bytes that make an otherwise textual upload look like binary data.
+ */
+export function normalizePastedMarkdown(value: string) {
+  return value
+    .replace(/^\uFEFF/u, "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/\f/g, "\n\n")
+    .replace(/[\u0000-\u0008\u000B\u000E-\u001F\u007F]/g, "")
+    .trim();
+}
+
 export function isSupportedPaperImportFile(file: File) {
   const name = file.name.toLowerCase();
   return supportedMimeTypes.has(file.type.toLowerCase()) || supportedExtensions.some((extension) => name.endsWith(extension));
@@ -43,9 +56,9 @@ export function filesFromClipboard(data: Pick<DataTransfer, "files" | "items"> |
 }
 
 export function pastedMarkdownFile(value: string, now = new Date()) {
-  const content = value.replace(/\r\n?/g, "\n").trim();
+  const content = normalizePastedMarkdown(value);
   return new File([content], `pasted-material-${clipboardTimestamp(now)}.md`, {
-    type: "text/plain",
+    type: "text/markdown",
     lastModified: now.getTime()
   });
 }
@@ -152,7 +165,7 @@ export function paperImportProgress(job: PaperImportJob): { percent: number | un
 		paper_formula: "数学公式识别",
 		formula_detection: "公式区域检测",
 		formula_recognition: "数学公式识别",
-		paper_parse: "AI 内容解析"
+		paper_parse: "题目结构解析"
 	};
 	if (runtime) {
 		const completed = Math.max(0, runtime.completed ?? 0);

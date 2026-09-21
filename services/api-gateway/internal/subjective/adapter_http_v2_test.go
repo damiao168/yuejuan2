@@ -77,7 +77,7 @@ func writeMathAgentV2Success(t *testing.T, w http.ResponseWriter, extra map[stri
 		"schema_version": "grading-agent-v2", "request_id": "sg-test-request-0001", "status": "candidate_mapping", "delivery": "teacher_suggestion",
 		"criterion_candidates":           []any{map[string]any{"rubric_point_id": "p1", "status": "supported", "evidence_ids": []string{"s1", "f1"}, "confidence": .91, "reason_code": "semantic_alignment"}},
 		"alternative_solution_candidate": false, "risk_flags": []string{"human_review_required"}, "needs_human_review": true,
-		"model_version": "Qwen/Qwen3-4B-GGUF:Q4_K_M", "prompt_version": "subjective-governed-cn-subject-routing-v5", "rubric_version": "rubric-v3",
+		"model_version": "Qwen/Qwen3-4B-GGUF:Q4_K_M", "prompt_version": "subjective-governed-cn-subject-routing-v6", "rubric_version": "rubric-v3",
 		"capability_profile": "local-pilot-v1", "mock": false,
 		"telemetry": map[string]any{"adapter": "local_llama_cpp", "provider": "local", "deployment": "local-qwen3-4b-q4-k-m", "region": "on_premise", "attempts": 1, "repair_attempted": false, "prior_error_codes": []string{}, "elapsed_ms": 1},
 	}

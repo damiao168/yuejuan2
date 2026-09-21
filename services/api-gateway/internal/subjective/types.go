@@ -36,6 +36,13 @@ const (
 	RunConflict   = "conflict"
 )
 
+const (
+	AgentRoleSingle   = "single"
+	AgentRolePrimaryA = "primary_a"
+	AgentRolePrimaryB = "primary_b"
+	AgentRoleArbiter  = "arbiter"
+)
+
 type ModelPolicy struct {
 	ModelVersion  string  `json:"model_version"`
 	PromptVersion string  `json:"prompt_version"`
@@ -67,6 +74,7 @@ type AdapterInput struct {
 	SegmentID          string                          `json:"answer_segment_id"`
 	Subject            string                          `json:"subject"`
 	GradeLevel         string                          `json:"grade_level"`
+	AgentRole          string                          `json:"agent_role"`
 	Question           paper.Question                  `json:"question"`
 	Rubric             paper.Rubric                    `json:"rubric"`
 	AnswerText         string                          `json:"answer_text"`
@@ -185,6 +193,8 @@ type GradingRun struct {
 	PromptVersion          string     `json:"prompt_version"`
 	MinConfidence          float64    `json:"min_confidence"`
 	RequestID              string     `json:"request_id"`
+	PanelID                string     `json:"panel_id,omitempty"`
+	AgentRole              string     `json:"agent_role"`
 	MathArtifactID         string     `json:"math_artifact_id,omitempty"`
 	MathArtifactVersion    int64      `json:"math_artifact_version,omitempty"`
 	MathCorrectionRevision int64      `json:"math_correction_revision,omitempty"`
@@ -209,6 +219,8 @@ type CreateRunInput struct {
 	PromptVersion          string
 	MinConfidence          float64
 	RequestID              string
+	PanelID                string
+	AgentRole              string
 	MathArtifactID         string
 	MathArtifactVersion    int64
 	MathCorrectionRevision int64

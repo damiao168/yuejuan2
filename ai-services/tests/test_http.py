@@ -79,7 +79,11 @@ class HTTPTests(unittest.TestCase):
         self.assertIn("base", component_keys)
         self.assertIn("structured", component_keys)
         self.assertIn("subject.chinese.essay", component_keys)
-        self.assertIn("subject.math.calculation", component_keys)
+        self.assertIn("subject.mathematics.calculation", component_keys)
+        self.assertIn("role.primary", component_keys)
+        self.assertIn("role.arbiter", component_keys)
+        self.assertIn("stage.junior", component_keys)
+        self.assertIn("stage.senior", component_keys)
         self.assertNotIn("calculation", component_keys)
 
     def test_paper_parse_can_stream_factual_progress_and_result(self):

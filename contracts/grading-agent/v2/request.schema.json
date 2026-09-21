@@ -9,6 +9,7 @@
     "request_id",
     "subject",
     "grade_level",
+    "agent_role",
     "question_id",
     "answer_segment_id",
     "question_type",
@@ -30,9 +31,10 @@
     "request_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$"},
     "subject": {
       "type": "string",
-      "enum": ["chinese", "math", "english", "physics", "chemistry", "biology", "history", "politics", "geography", "computer_science"]
+      "enum": ["chinese", "mathematics", "english", "physics", "chemistry", "biology", "history", "geography", "ethics_politics"]
     },
-    "grade_level": {"const": "junior_middle"},
+    "grade_level": {"type": "string", "enum": ["junior", "senior"]},
+    "agent_role": {"type": "string", "enum": ["single", "primary", "arbiter"]},
     "question_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
     "answer_segment_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
     "question_type": {"type": "string", "enum": ["short_answer", "calculation", "essay", "discussion"]},

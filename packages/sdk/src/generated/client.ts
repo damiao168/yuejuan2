@@ -17,6 +17,10 @@ import type {
   MFADisableResponse,
   AuthLoginRequest,
   AuthLoginResponse,
+  WechatLoginStartRequest,
+  WechatLoginChallenge,
+  WechatLoginPollRequest,
+  WechatLoginStatus,
   AuthTokenResponse,
   ReauthenticateRequest,
   SessionLockResponse,
@@ -271,6 +275,9 @@ export interface operations {
   "completeMathVerificationRuntimeTask": { args: { path: { "taskId": string; }; body: CompleteMathVerificationRuntimeRequest; signal?: AbortSignal; }; response: MathVerificationRuntimeResponse; };
   "failMathVerificationRuntimeTask": { args: { path: { "taskId": string; }; body: FailMathVerificationRuntimeRequest; signal?: AbortSignal; }; response: MathVerificationFailureResponse; };
   "login": { args: { body: AuthLoginRequest; signal?: AbortSignal; }; response: AuthLoginResponse; };
+  "startWechatLogin": { args: { body: WechatLoginStartRequest; signal?: AbortSignal; }; response: WechatLoginChallenge; };
+  "completeWechatAuthorization": { args: { query: { "code": string; "state": string; }; signal?: AbortSignal; }; response: unknown; };
+  "pollWechatLogin": { args: { body: WechatLoginPollRequest; signal?: AbortSignal; }; response: WechatLoginStatus; };
   "createAccessToken": { args: { body: AuthLoginRequest; signal?: AbortSignal; }; response: AuthTokenResponse; };
   "lockPublicComputerSession": { args: { signal?: AbortSignal; }; response: SessionLockResponse; };
   "reauthenticateSession": { args: { body: ReauthenticateRequest; signal?: AbortSignal; }; response: ReauthenticateResponse; };
@@ -537,6 +544,21 @@ export class EduGradeApi {
 
   login(args: operations["login"]["args"]): Promise<operations["login"]["response"]> {
     const requestPath = "/api/v1/auth/login";
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  startWechatLogin(args: operations["startWechatLogin"]["args"]): Promise<operations["startWechatLogin"]["response"]> {
+    const requestPath = "/api/v1/auth/wechat/challenges";
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  completeWechatAuthorization(args: operations["completeWechatAuthorization"]["args"]): Promise<operations["completeWechatAuthorization"]["response"]> {
+    const requestPath = appendQuery("/api/v1/auth/wechat/callback", args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  pollWechatLogin(args: operations["pollWechatLogin"]["args"]): Promise<operations["pollWechatLogin"]["response"]> {
+    const requestPath = "/api/v1/auth/wechat/session";
     return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
   }
 

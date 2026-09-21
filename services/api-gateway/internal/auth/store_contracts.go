@@ -17,4 +17,6 @@ var (
 	_ ActivationRepository         = (*PostgresStore)(nil)
 	_ RecoveryRepository           = (*MemoryStore)(nil)
 	_ RecoveryRepository           = (*PostgresStore)(nil)
+	_ WechatLoginRepository        = (*MemoryStore)(nil)
+	_ WechatLoginRepository        = (*PostgresStore)(nil)
 )

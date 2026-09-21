@@ -109,7 +109,7 @@ func loadGradingAgentV2Fixture(t *testing.T, name string) map[string]any {
 func validateGradingAgentV2RequestFixture(request map[string]any) error {
 	if err := exactV2Fields(
 		request,
-		"schema_version", "request_id", "subject", "grade_level", "question_id", "answer_segment_id",
+		"schema_version", "request_id", "subject", "grade_level", "agent_role", "question_id", "answer_segment_id",
 		"question_type", "question_text", "max_score", "answer_text", "ocr_confidence", "rubric_version",
 		"prompt_version", "rubric", "model_policy", "prompt_guard", "output_constraint", "media_evidence", "math_evidence",
 	); err != nil {

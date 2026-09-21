@@ -10,6 +10,13 @@ import (
 )
 
 func (s *PostgresStore) CompletePaperImportParseTask(ctx context.Context, tenantID, taskID, leaseToken string, binding PaperImportRunBinding, parsed PaperImportParseResult, durationMS int) (PaperImportJob, error) {
+	if binding.CommandType == "add_sources" {
+		previous, err := s.GetPaperImport(ctx, tenantID, binding.ImportID)
+		if err != nil {
+			return PaperImportJob{}, err
+		}
+		parsed = mergePaperImportAppendResult(previous, parsed)
+	}
 	drafts, structured := reconcilePaperImportCandidates(parsed.QuestionCandidates, parsed.AnswerCandidates, parsed.SolutionCandidates, parsed.RubricCandidates, appendDetectedRoleIssues(parsed.Issues, parsed.Documents))
 	if err := s.applyPaperImportAssessmentArchetypes(ctx, tenantID, binding.ImportID, drafts); err != nil {
 		return PaperImportJob{}, err

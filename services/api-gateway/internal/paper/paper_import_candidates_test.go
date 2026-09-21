@@ -216,6 +216,42 @@ func TestObjectiveCandidateGetsDeterministicRubricButEssayDoesNotInventAnswer(t 
 	}
 }
 
+func TestFillBlankCandidateUsesAnswerKeyWithoutRubricConfiguration(t *testing.T) {
+	store, job := candidateImport(t)
+	score := 2.0
+	legacyRubricScore := 1.0
+	out, err := store.CompletePaperImportCandidates(context.Background(), "tenant", job.ID, nil,
+		[]QuestionCandidate{{CandidateID: "q8", QuestionNoRaw: "8", QuestionType: "fill_blank", Score: &score, Stem: "函数的零点是 ____。", Confidence: .95}},
+		[]AnswerCandidate{{CandidateID: "a8", QuestionNoHint: "8", StandardAnswer: "1", Confidence: .95}}, nil,
+		[]RubricCandidate{{CandidateID: "legacy-r8", QuestionNoHint: "8", MaxScore: &legacyRubricScore, Points: []RubricCandidatePoint{{ID: "legacy", Description: "旧评分点", Score: &legacyRubricScore}}}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Questions) != 1 || out.Questions[0].AnswerKey == nil {
+		t.Fatalf("fill blank answer was not matched: %#v", out.Questions)
+	}
+	if out.Questions[0].Rubric != nil || out.Questions[0].RubricCandidateID != "" {
+		t.Fatalf("fill blank retained redundant rubric configuration: %#v", out.Questions[0])
+	}
+	for _, code := range []string{"CONFLICTING_RUBRICS", "RUBRIC_SCORE_MISMATCH", "RUBRIC_POINTS_SCORE_MISMATCH", "MISSING_RUBRIC"} {
+		if issueCodes(out)[code] {
+			t.Fatalf("fill blank produced rubric issue %s: %#v", code, out.StructuredIssues)
+		}
+	}
+
+	draft := out.Questions[0]
+	draft.RubricCandidateID = "legacy-r8"
+	draft.Rubric = &RubricInput{Status: "draft", MaxScore: 1, Points: []RubricPoint{{ID: "legacy", Description: "旧评分点", Score: 1}}}
+	draft.HumanConfirmedFields = append(requiredHumanConfirmedFields(draft), "rubric")
+	saved, err := store.SavePaperImportReview(context.Background(), "tenant", job.ID, "user", ReviewPaperImportInput{ExpectedGeneration: out.Generation, Questions: []PaperImportDraftQuestion{draft}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.Questions[0].Rubric != nil || saved.Questions[0].RubricCandidateID != "" || stringSet(saved.Questions[0].HumanConfirmedFields)["rubric"] {
+		t.Fatalf("review kept legacy fill blank rubric: %#v", saved.Questions[0])
+	}
+}
+
 func TestExplicitRubricCandidateMatchesAndPersistsWithProvenance(t *testing.T) {
 	store, job := candidateImport(t)
 	score := 6.0

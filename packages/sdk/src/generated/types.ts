@@ -36,6 +36,14 @@ export type AuthLoginRequest = { "tenant_code"?: string; "tenant_hint"?: string;
 
 export type AuthLoginResponse = { "expires_at": string; "user": AuthUser; };
 
+export type WechatLoginStartRequest = { "tenant_code"?: string; "tenant_hint"?: string; "remember_device"?: boolean; "public_device"?: boolean; };
+
+export type WechatLoginChallenge = { "challenge_id": string; "poll_token": string; "qr_code_data_url": string; "expires_at": string; };
+
+export type WechatLoginPollRequest = { "challenge_id": string; "poll_token": string; };
+
+export type WechatLoginStatus = { "status": "pending" | "failed" | "expired" | "consumed" | "authenticated"; "error_code"?: string; "expires_at": string; "user"?: AuthUser; };
+
 export type AuthTokenResponse = { "token_type": "Bearer"; "access_token": string; "expires_at": string; "user": AuthUser; };
 
 export type ReauthenticateRequest = { "password": string; };
@@ -1084,6 +1092,10 @@ export interface components {
     "AuthUser": AuthUser;
     "AuthLoginRequest": AuthLoginRequest;
     "AuthLoginResponse": AuthLoginResponse;
+    "WechatLoginStartRequest": WechatLoginStartRequest;
+    "WechatLoginChallenge": WechatLoginChallenge;
+    "WechatLoginPollRequest": WechatLoginPollRequest;
+    "WechatLoginStatus": WechatLoginStatus;
     "AuthTokenResponse": AuthTokenResponse;
     "ReauthenticateRequest": ReauthenticateRequest;
     "SessionLockResponse": SessionLockResponse;

@@ -145,9 +145,10 @@ func (s *PostgresStore) CreateSession(ctx context.Context, input CreateSessionIn
 INSERT INTO auth_session (
   tenant_id, user_id, token_hash, session_type, device_id, device_name,
   user_agent_hash, ip_prefix, expires_at, last_seen_at, reauthenticated_at, security_epoch, auth_method, auth_level,
-  risk_level, risk_action, risk_score, risk_evaluated_at, risk_policy_version, risk_evidence_quality
+	  risk_level, risk_action, risk_score, risk_evaluated_at, risk_policy_version, risk_evidence_quality
 )
-SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, now(), now(), security_epoch, 'password', 1,
+SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, now(), now(), security_epoch,
+       CASE WHEN $17 IN ('password', 'wechat') THEN $17 ELSE 'password' END, 1,
        $11, $12, $13, $14, $15, $16
 FROM app_user
 WHERE tenant_id=$1::uuid AND id=$2::uuid AND status='active' AND deleted_at IS NULL
@@ -156,7 +157,7 @@ RETURNING id::text, session_type, device_name, created_at, last_seen_at, expires
 `, input.TenantID, input.UserID, input.TokenHash, input.SessionType, input.DeviceID,
 		input.DeviceName, input.UserAgentHash, input.IPPrefix, input.ExpiresAt, input.SecurityEpoch,
 		normalizeRiskLevel(input.RiskLevel), normalizeRiskAction(input.RiskAction), max(0, min(input.RiskScore, 100)),
-		riskEvaluatedAt, normalizeRiskPolicyVersion(input.RiskPolicyVersion), normalizeRiskEvidenceQuality(input.RiskEvidenceQuality),
+		riskEvaluatedAt, normalizeRiskPolicyVersion(input.RiskPolicyVersion), normalizeRiskEvidenceQuality(input.RiskEvidenceQuality), input.AuthMethod,
 	).Scan(&session.ID, &session.SessionType, &session.DeviceName, &session.CreatedAt, &session.LastSeenAt, &session.ExpiresAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return DeviceSession{}, ErrInvalidCredentials

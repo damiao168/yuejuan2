@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { App, Button, Form, Input, List, Popconfirm, Tag } from "antd";
 import { KeyRound, LogOut, RefreshCw, ShieldCheck, Smartphone } from "lucide-react";
 import { getUserErrorMessage } from "../api/client";
@@ -67,6 +67,11 @@ export function SessionManagementPage({ onLoggedOut, accountLabel }: { onLoggedO
 
   useEffect(() => { void load(); }, [load]);
 
+  const securityActivity = useMemo(() => [
+    ...sessions.map((session) => ({ id: `session:${session.id}`, kind: "session" as const, occurredAt: session.last_seen_at, session })),
+    ...events.map((event) => ({ id: `event:${event.id}`, kind: "event" as const, occurredAt: event.occurred_at, event }))
+  ].sort((left, right) => new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime()), [events, sessions]);
+
   const revoke = async (session: DeviceSession) => {
     setActioning(session.id);
     try {
@@ -110,7 +115,7 @@ export function SessionManagementPage({ onLoggedOut, accountLabel }: { onLoggedO
     }
   };
 
-  if (loading && sessions.length === 0) return <LoadingState label="正在读取登录设备" />;
+  if (loading && sessions.length === 0) return <LoadingState label="正在读取账户安全信息" />;
   if (error && sessions.length === 0) return <ErrorState message={error} onRetry={() => void load()} />;
 
   return (
@@ -148,51 +153,27 @@ export function SessionManagementPage({ onLoggedOut, accountLabel }: { onLoggedO
         <div className="section-heading compact">
           <div>
             <h2>安全活动</h2>
-            <p>仅展示与你本人相关的最近记录，不显示完整 IP 或浏览器指纹。</p>
+            <p>登录中的设备与最近安全记录集中展示；不显示完整 IP 或浏览器指纹。</p>
           </div>
         </div>
         <List
-          dataSource={events}
+          dataSource={securityActivity}
+          rowKey="id"
           locale={{ emptyText: "暂时没有安全活动" }}
-          renderItem={(event) => (
+          renderItem={(item) => item.kind === "session" ? (
+            <List.Item actions={[<Popconfirm key="revoke" title={item.session.current ? "退出当前设备？" : "让该设备退出？"} description="被撤销的会话需要重新输入密码登录。" onConfirm={() => void revoke(item.session)}><Button danger loading={actioning === item.session.id}>退出</Button></Popconfirm>]}>
+              <List.Item.Meta
+                avatar={<Smartphone size={22} />}
+                title={<span>{item.session.device_name || "未命名设备"} {item.session.current ? <Tag color="blue">当前设备</Tag> : <Tag>登录中</Tag>}</span>}
+                description={`${sessionTypeLabel(item.session.session_type)} · 最近使用 ${new Date(item.session.last_seen_at).toLocaleString("zh-CN")} · 有效至 ${new Date(item.session.expires_at).toLocaleString("zh-CN")}`}
+              />
+            </List.Item>
+          ) : (
             <List.Item>
               <List.Item.Meta
                 avatar={<ShieldCheck size={20} />}
-                title={<span>{securityEventLabel(event.event_type)} {event.risk_level !== "low" ? <Tag color={event.risk_level === "high" ? "red" : "orange"}>需要关注</Tag> : null}</span>}
-                description={`${event.device_summary} · ${new Date(event.occurred_at).toLocaleString("zh-CN")}`}
-              />
-            </List.Item>
-          )}
-        />
-      </section>
-
-      <section className="workspace-section">
-        <div className="section-heading compact">
-          <div>
-            <h2>登录设备</h2>
-            <p>退出不再使用的设备，降低账号被冒用的风险。</p>
-          </div>
-        </div>
-        <List
-          dataSource={sessions}
-          locale={{ emptyText: "当前没有其他有效会话" }}
-          renderItem={(session) => (
-            <List.Item
-              actions={[
-                <Popconfirm
-                  key="revoke"
-                  title={session.current ? "退出当前设备？" : "让该设备退出？"}
-                  description="被撤销的会话需要重新输入密码登录。"
-                  onConfirm={() => void revoke(session)}
-                >
-                  <Button danger loading={actioning === session.id}>退出</Button>
-                </Popconfirm>
-              ]}
-            >
-              <List.Item.Meta
-                avatar={<Smartphone size={22} />}
-                title={<span>{session.device_name || "未命名设备"} {session.current ? <Tag color="blue">当前设备</Tag> : null}</span>}
-                description={`${sessionTypeLabel(session.session_type)} · 最近使用 ${new Date(session.last_seen_at).toLocaleString("zh-CN")} · 有效至 ${new Date(session.expires_at).toLocaleString("zh-CN")}`}
+                title={<span>{securityEventLabel(item.event.event_type)} {item.event.risk_level !== "low" ? <Tag color={item.event.risk_level === "high" ? "red" : "orange"}>需要关注</Tag> : null}</span>}
+                description={`${item.event.device_summary} · ${new Date(item.event.occurred_at).toLocaleString("zh-CN")}`}
               />
             </List.Item>
           )}

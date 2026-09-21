@@ -10,6 +10,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"edugrade-enterprise/services/api-gateway/internal/gradingdisagreement"
+
 	"github.com/google/uuid"
 )
 
@@ -143,8 +145,7 @@ func RecommendedFollowUps(t Taxonomy) []string {
 }
 
 func calculate(source ActualComparison, at time.Time) (Disagreement, bool) {
-	delta := source.AISuggestedScore - source.HumanScore
-	absDelta := math.Abs(delta)
+	delta, absDelta, normalized := gradingdisagreement.ScoreDelta(source.AISuggestedScore, source.HumanScore, source.MaxScore)
 	evidenceGap := source.AIEvidenceCount == 0
 	criterionGap := source.AIMatchedCriterionCount != source.HumanCriterionCount
 	// Exact score with otherwise comparable criterion/evidence summaries does
@@ -182,7 +183,9 @@ func calculate(source ActualComparison, at time.Time) (Disagreement, bool) {
 		rules = append(rules, "middle_score_diagnostic")
 	}
 	severity := SeverityWarning
-	normalized := absDelta / math.Max(source.MaxScore, 1)
+	if source.MaxScore <= 0 {
+		normalized = absDelta / math.Max(source.MaxScore, 1)
+	}
 	// A severe score gap is intentionally conservative. R3 then receives the
 	// highest queue priority but a small variation is never labelled severe.
 	if normalized >= .40 || (source.RiskTier == "R3" && absDelta >= 1) {

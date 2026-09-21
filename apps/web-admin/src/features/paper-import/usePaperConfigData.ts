@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiClientError, getUserErrorMessage } from "../../api/client";
-import { listExams, type Exam } from "../../api/exams";
+import { getExam, listExams, type Exam } from "../../api/exams";
 import {
   listPaperImports,
   listPapers,
@@ -17,7 +17,7 @@ function formatError(error: unknown) {
   return getUserErrorMessage(error, "操作失败，请稍后重试");
 }
 
-export function usePaperConfigData(initialExamId: string) {
+export function usePaperConfigData({ initialExamId = "", fixedExamId }: { initialExamId?: string; fixedExamId?: string } = {}) {
   const [exams, setExams] = useState<Exam[]>([]);
   const [selectedExamId, setSelectedExamId] = useState(initialExamId);
   const [papers, setPapers] = useState<PaperVersion[]>([]);
@@ -36,9 +36,10 @@ export function usePaperConfigData(initialExamId: string) {
     setLoading(true);
     setError(null);
     try {
-      const result = await listExams();
+      const result = fixedExamId ? { exams: [(await getExam(fixedExamId)).exam] } : await listExams();
       setExams(result.exams);
       setSelectedExamId((current) => {
+        if (fixedExamId) return fixedExamId;
         if (initialExamId && result.exams.some((exam) => exam.id === initialExamId)) return initialExamId;
         return result.exams.some((exam) => exam.id === current) ? current : result.exams[0]?.id || "";
       });
@@ -47,7 +48,7 @@ export function usePaperConfigData(initialExamId: string) {
     } finally {
       setLoading(false);
     }
-  }, [initialExamId]);
+  }, [fixedExamId, initialExamId]);
 
   const loadConfig = useCallback(async (examId: string, options: { silent?: boolean } = {}) => {
     const requestId = ++configRequestRef.current;
@@ -88,7 +89,7 @@ export function usePaperConfigData(initialExamId: string) {
   }, []);
 
   useEffect(() => { void loadExams(); }, [loadExams]);
-  useEffect(() => { if (initialExamId) setSelectedExamId(initialExamId); }, [initialExamId]);
+  useEffect(() => { if (fixedExamId || initialExamId) setSelectedExamId(fixedExamId || initialExamId); }, [fixedExamId, initialExamId]);
   useEffect(() => { void loadConfig(selectedExamId); }, [loadConfig, selectedExamId]);
 
   const processingImportId = paperImports.find((item) => item.status === "processing")?.id;

@@ -18,6 +18,11 @@ const DESKTOP_NAVIGATION_COLLAPSED_WIDTH = 64;
 const MOBILE_NAVIGATION_WIDTH = 280;
 const NAVIGATION_COLLAPSED_STORAGE_KEY = "edugrade.navigation.collapsed";
 export type ShellMode = "standard" | "focused" | "grading";
+export interface FocusedShellContext {
+  title: string;
+  backLabel: string;
+  backPath: string;
+}
 
 export function AppLayout({
   user,
@@ -30,7 +35,8 @@ export function AppLayout({
   onLogout,
   onLockSession,
   onReauthenticate,
-  shellMode = "standard"
+  shellMode = "standard",
+  focusedContext = { title: "新建考试", backLabel: "返回考试列表", backPath: "/exams" }
 }: {
   user: SessionUser;
   currentRoute: AppRoute;
@@ -43,6 +49,7 @@ export function AppLayout({
   onLockSession: () => Promise<void>;
   onReauthenticate: (password: string) => Promise<void>;
   shellMode?: ShellMode;
+  focusedContext?: FocusedShellContext;
 }) {
   const immersive = shellMode !== "standard";
   const focused = shellMode === "focused";
@@ -255,7 +262,6 @@ export function AppLayout({
         <button type="button" className="brand-block brand-button" onClick={() => { setNavigationOpen(false); onNavigate("/dashboard"); }} aria-label={`返回${experienceLabel(experience)}工作台`}>
           <div className="brand-copy">
             <strong>EduGrade</strong>
-            <span title={user.school}>{user.school || productIdentityLabel(user)}</span>
           </div>
         </button>
         {desktopNavigation ? (
@@ -329,9 +335,12 @@ export function AppLayout({
           controlHeightSM: 36,
           lineHeight: 1.6,
           colorPrimary: "#1677ff",
+          colorText: "#172033",
+          colorTextSecondary: "#667085",
+          colorBorder: "#e4e7ec",
           colorSuccess: "#52c41a",
-          colorWarning: "#faad14",
-          colorError: "#ff4d4f",
+          colorWarning: "#ad6800",
+          colorError: "#c9363e",
           colorInfo: "#13c2c2",
           borderRadius: 6,
           fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', Arial, sans-serif"
@@ -368,8 +377,8 @@ export function AppLayout({
           {focused ? (
             <Header className="topbar focused-topbar">
               <div className="topbar-left">
-                <Button type="text" icon={<ArrowLeft size={17} />} aria-label="返回考试列表" onClick={() => onNavigate("/exams")}>返回考试列表</Button>
-                <strong>新建考试</strong>
+                <Button type="text" icon={<ArrowLeft size={17} />} aria-label={focusedContext.backLabel} onClick={() => onNavigate(focusedContext.backPath)}>{focusedContext.backLabel}</Button>
+                <strong>{focusedContext.title}</strong>
               </div>
               <Space className="topbar-actions">
                 <Dropdown menu={accountMenu} placement="bottomRight" trigger={["click"]}>

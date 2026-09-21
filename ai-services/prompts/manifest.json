@@ -1,8 +1,12 @@
 {
-  "prompt_version": "subjective-governed-cn-subject-routing-v5",
+  "prompt_version": "subjective-governed-cn-subject-routing-v6",
   "files": {
     "base_grading.md": "73158c6911024c3c2d08f8ee7d06355656105f7d7f85d8fbb53b2beb8a02b06c",
     "local_structured_grading.md": "98e48b8bcf27cc7849f3a4b3a958c7179c876a3389e5400036e101adbe7fb1cb",
+    "roles/arbiter.md": "235306bb5624d583d65571728eeba2871f48cd69c64da103cd9c2bf1fc274bea",
+    "roles/primary.md": "20f0735f1d263b51e1c2e6b30598a25dffbd1ab27280e6bd4caff3a0e248b06f",
+    "stages/junior.md": "7ce733824690a66676278b8843bef7a1a02d69b15513290afbef5aa08f0de299",
+    "stages/senior.md": "e916a303c1027e427f23bc370ecb9c0730e47b9df36facbf9ec31d88c7597f30",
     "subjects/biology/calculation.md": "4fdd195fe7bf945da92118454fec4ed979e64eb4424d9feca5b49cb7e2c43355",
     "subjects/biology/discussion.md": "af646742ac6b35d9e4bf6bc022121277dd9cf62403daa8c93d7f1e98d08ee6b3",
     "subjects/biology/short_answer.md": "4e9fbe4678005e134197cce61f8d7922918a38eb351d1ded2e50b62f354cf1d3",
@@ -12,9 +16,6 @@
     "subjects/chinese/discussion.md": "3259fabb861e300469e5e18367f673aaeb1573403de9f38e803d687c579f5aa4",
     "subjects/chinese/essay.md": "71da4667f8863fe18ea09efec488ba9f58cfd611121a2b28b17e9731ad1eca50",
     "subjects/chinese/short_answer.md": "d1c5873cd46d9196055b3fbb733cbf44334afb09c088159bfd085431b0b58f88",
-    "subjects/computer_science/calculation.md": "22e1b94db478f0520b5369704459df87e1ca272bd81e6eaceed7f1c85ada17ed",
-    "subjects/computer_science/discussion.md": "fd6d189bea3a8cc2a532992688a816710f41be7db6012a0d0f8b3a5e625cf0c0",
-    "subjects/computer_science/short_answer.md": "bb2eaf226404e884e6aceb255c21042e0d03b63aa56638b1422668162ae3b556",
     "subjects/english/discussion.md": "5dc036f3e1f0547e7e639ac04b422ede5f816d6bc90342a4bdd18c8ab5633943",
     "subjects/english/essay.md": "5f6ac000908483fd614985fd85cd40ad2e936d4ba30af96aeba9f1ea3e1b185a",
     "subjects/english/short_answer.md": "0c327ada9e19bc896cd95e2ccd5d61562e24e2903c13dcacbbeb7356b8a81e00",

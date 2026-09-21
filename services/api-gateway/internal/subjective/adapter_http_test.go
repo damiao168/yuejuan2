@@ -43,7 +43,7 @@ func TestHTTPAdapterSendsGovernedIdentityFreeContract(t *testing.T) {
 			t.Fatalf("grading request leaked forbidden field %s", forbidden)
 		}
 	}
-	if received["subject"] != "chinese" || received["grade_level"] != "junior_middle" {
+	if received["subject"] != "chinese" || received["grade_level"] != "junior" || received["agent_role"] != "single" {
 		t.Fatalf("missing capability context: %#v", received)
 	}
 	constraint, ok := received["output_constraint"].(map[string]any)
@@ -61,6 +61,25 @@ func TestHTTPAdapterSendsGovernedIdentityFreeContract(t *testing.T) {
 	}
 	if raw, _ := json.Marshal(output.RawOutput); strings.Contains(string(raw), input.AnswerText) {
 		t.Fatal("raw output must not duplicate complete answer text")
+	}
+}
+
+func TestHTTPAdapterMapsPanelRolesWithoutExposingPrimaryIdentity(t *testing.T) {
+	for _, test := range []struct{ inputRole, contractRole string }{
+		{AgentRolePrimaryA, "primary"}, {AgentRolePrimaryB, "primary"}, {AgentRoleArbiter, "arbiter"},
+	} {
+		var received map[string]any
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_ = json.NewDecoder(r.Body).Decode(&received)
+			writeAgentSuccess(t, w, received["request_id"].(string))
+		}))
+		input := validHTTPAdapterInput()
+		input.AgentRole = test.inputRole
+		_, err := testHTTPAdapter(server.URL, 0).Grade(context.Background(), input)
+		server.Close()
+		if err != nil || received["agent_role"] != test.contractRole {
+			t.Fatalf("role %s mapped to %#v with error %v", test.inputRole, received["agent_role"], err)
+		}
 	}
 }
 
@@ -175,7 +194,7 @@ func TestHTTPAdapterMapsCanonicalAssessmentVocabularyToAgentContract(t *testing.
 	if _, err := testHTTPAdapter(server.URL, 0).Grade(context.Background(), input); err != nil {
 		t.Fatalf("grade through canonical vocabulary bridge: %v", err)
 	}
-	if received["subject"] != "math" || received["grade_level"] != "junior_middle" {
+	if received["subject"] != "mathematics" || received["grade_level"] != "junior" {
 		t.Fatalf("agent request did not receive mapped protocol values: %#v", received)
 	}
 }
@@ -187,7 +206,7 @@ func testHTTPAdapter(baseURL string, retries int) *HTTPAdapter {
 		Timeout:       2 * time.Second,
 		MaxRetries:    retries,
 		ModelVersion:  "Qwen/Qwen3-4B-GGUF:Q4_K_M",
-		PromptVersion: "subjective-governed-cn-subject-routing-v5",
+		PromptVersion: "subjective-governed-cn-subject-routing-v6",
 		MinConfidence: 0.8,
 	})
 }
@@ -198,7 +217,7 @@ func validHTTPAdapterInput() AdapterInput {
 		RequestID:  "sg-test-request-0001",
 		SegmentID:  "segment-001",
 		Subject:    "chinese",
-		GradeLevel: "junior_middle",
+		GradeLevel: "junior",
 		Question: paper.Question{
 			ID:           "question-001",
 			TenantID:     "tenant-must-not-leak",
@@ -253,7 +272,7 @@ func writeAgentSuccess(t *testing.T, w http.ResponseWriter, requestID string) {
 		"student_feedback":   "待教师复核。",
 		"teacher_note":       "本地模型置信度尚未校准。",
 		"model_version":      "Qwen/Qwen3-4B-GGUF:Q4_K_M",
-		"prompt_version":     "subjective-governed-cn-subject-routing-v5",
+		"prompt_version":     "subjective-governed-cn-subject-routing-v6",
 		"rubric_version":     "rubric-v3",
 		"capability_profile": "local-pilot-v1",
 		"mock":               false,

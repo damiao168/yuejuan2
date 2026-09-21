@@ -9,18 +9,59 @@ import (
 )
 
 type MemoryStore struct {
-	mu           sync.RWMutex
-	next         int
-	runs         map[string]Run
-	observations map[string][]Observation
-	slices       map[string][]SliceMetric
-	difficulty   map[string][]ResponseDifficulty
+	mu                sync.RWMutex
+	next              int
+	runs              map[string]Run
+	observations      map[string][]Observation
+	panelObservations map[string][]PanelObservation
+	slices            map[string][]SliceMetric
+	difficulty        map[string][]ResponseDifficulty
 }
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		runs: map[string]Run{}, observations: map[string][]Observation{}, slices: map[string][]SliceMetric{}, difficulty: map[string][]ResponseDifficulty{},
+		runs: map[string]Run{}, observations: map[string][]Observation{}, panelObservations: map[string][]PanelObservation{}, slices: map[string][]SliceMetric{}, difficulty: map[string][]ResponseDifficulty{},
 	}
+}
+
+func (s *MemoryStore) AddPanelObservation(_ context.Context, tenantID, runID string, input PanelObservation) (PanelObservation, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	key := itemKey(tenantID, runID)
+	run, ok := s.runs[key]
+	if !ok {
+		return PanelObservation{}, ErrNotFound
+	}
+	if run.Status != RunDraft {
+		return PanelObservation{}, ErrStateConflict
+	}
+	if !validPersistedPanelObservation(input) {
+		return PanelObservation{}, ErrInvalidInput
+	}
+	for _, item := range s.panelObservations[key] {
+		if item.ResponseKey == input.ResponseKey {
+			return PanelObservation{}, ErrConflict
+		}
+	}
+	input.ID, input.RunID, input.ObservedAt = s.id("panel-observation"), runID, time.Now().UTC()
+	input = clonePanelObservation(input)
+	s.panelObservations[key] = append(s.panelObservations[key], input)
+	return clonePanelObservation(input), nil
+}
+
+func (s *MemoryStore) ListPanelObservations(_ context.Context, tenantID, runID string) ([]PanelObservation, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	key := itemKey(tenantID, runID)
+	if _, ok := s.runs[key]; !ok {
+		return nil, ErrNotFound
+	}
+	items := s.panelObservations[key]
+	result := make([]PanelObservation, len(items))
+	for index, item := range items {
+		result[index] = clonePanelObservation(item)
+	}
+	return result, nil
 }
 
 func (s *MemoryStore) CreateRun(_ context.Context, tenantID, actorID string, input CreateRunInput) (Run, error) {
@@ -46,7 +87,7 @@ func (s *MemoryStore) GetRun(_ context.Context, tenantID, runID string) (Run, er
 	if !ok {
 		return Run{}, ErrNotFound
 	}
-	item.ObservationCount = len(s.observations[itemKey(tenantID, runID)])
+	item.ObservationCount = len(s.observations[itemKey(tenantID, runID)]) + len(s.panelObservations[itemKey(tenantID, runID)])
 	return item, nil
 }
 
@@ -56,7 +97,7 @@ func (s *MemoryStore) ListRuns(_ context.Context, tenantID string, filter RunFil
 	items := []Run{}
 	for _, item := range s.runs {
 		if item.TenantID == tenantID {
-			item.ObservationCount = len(s.observations[itemKey(tenantID, item.ID)])
+			item.ObservationCount = len(s.observations[itemKey(tenantID, item.ID)]) + len(s.panelObservations[itemKey(tenantID, item.ID)])
 			items = append(items, item)
 		}
 	}
@@ -114,11 +155,12 @@ func (s *MemoryStore) ReplaceComputed(_ context.Context, tenantID, runID string,
 	if run.Status != RunDraft {
 		return Run{}, ErrStateConflict
 	}
-	if len(s.observations[key]) != expectedCount {
+	actualCount := len(s.observations[key]) + len(s.panelObservations[key])
+	if actualCount != expectedCount {
 		return Run{}, ErrConflict
 	}
 	completedAt := at.UTC()
-	run.Status, run.CompletedAt, run.ObservationCount = RunCompleted, &completedAt, len(s.observations[key])
+	run.Status, run.CompletedAt, run.ObservationCount = RunCompleted, &completedAt, actualCount
 	s.runs[key], s.slices[key], s.difficulty[key] = run, append([]SliceMetric(nil), slices...), append([]ResponseDifficulty(nil), difficulty...)
 	return run, nil
 }
@@ -154,7 +196,7 @@ func (s *MemoryStore) InvalidateRun(_ context.Context, tenantID, runID, reason s
 	}
 	invalidated := at.UTC()
 	run.Status, run.InvalidatedAt, run.InvalidationReason = RunInvalid, &invalidated, reason
-	run.ObservationCount = len(s.observations[key])
+	run.ObservationCount = len(s.observations[key]) + len(s.panelObservations[key])
 	s.runs[key] = run
 	return run, nil
 }

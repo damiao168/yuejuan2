@@ -28,6 +28,8 @@ func registerGovernanceRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("PATCH /api/v1/platform/model-api-configs/{id}", ctx.guards.requirePlatformModelManage(ctx.modules.AIGovernance.ModelGovernanceHandler.UpdateManagedAPIConfig))
 	mux.Handle("DELETE /api/v1/platform/model-api-configs/{id}", ctx.guards.requirePlatformModelManage(ctx.modules.AIGovernance.ModelGovernanceHandler.DeleteManagedAPIConfig))
 	mux.Handle("POST /api/v1/platform/model-api-configs/{id}/probe", ctx.guards.requirePlatformModelManage(ctx.modules.AIGovernance.ModelGovernanceHandler.ProbeManagedAPIConfig))
+	mux.Handle("GET /api/v1/ai-chat/model", ctx.guards.requireSchoolAdmin(ctx.modules.AIGovernance.ModelGovernanceHandler.GetManagedChatModel))
+	mux.Handle("POST /api/v1/ai-chat/completions", ctx.guards.requireSchoolAdmin(ctx.modules.AIGovernance.ModelGovernanceHandler.CreateManagedChatCompletion))
 	mux.Handle("GET /api/v1/model-sandbox-approvals", ctx.guards.requireModelRead(ctx.modules.AIGovernance.ModelGovernanceHandler.ListSandboxApprovals))
 	mux.Handle("POST /api/v1/model-sandbox-approvals", ctx.guards.requireModelProviderManage(ctx.modules.AIGovernance.ModelGovernanceHandler.CreateSandboxApproval))
 	mux.Handle("POST /api/v1/model-sandbox-approvals/{id}/revoke", ctx.guards.requireModelProviderManage(ctx.modules.AIGovernance.ModelGovernanceHandler.RevokeSandboxApproval))

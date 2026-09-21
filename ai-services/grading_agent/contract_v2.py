@@ -31,6 +31,7 @@ _REQUEST_FIELDS = {
     "request_id",
     "subject",
     "grade_level",
+    "agent_role",
     "question_id",
     "answer_segment_id",
     "question_type",

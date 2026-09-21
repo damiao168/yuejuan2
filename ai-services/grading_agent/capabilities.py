@@ -20,8 +20,8 @@ class CapabilityMatrix:
             raise ValueError("unsupported capability profile")
         if self.payload.get("final_grade_publication_allowed") is not False:
             raise ValueError("capability matrix must disable final grade publication")
-        if self.payload.get("grade_levels") != ["junior_middle"]:
-            raise ValueError("local pilot must be restricted to junior_middle")
+        if self.payload.get("grade_levels") != ["junior", "senior"]:
+            raise ValueError("local pilot must use canonical junior/senior stages")
         for item in self.payload.get("capabilities", []):
             if item.get("review_policy") != "always":
                 raise ValueError("all model-backed capabilities must require review")

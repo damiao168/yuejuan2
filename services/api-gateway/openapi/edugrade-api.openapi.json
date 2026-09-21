@@ -625,6 +625,58 @@
         }
       }
     },
+    "/api/v1/auth/wechat/challenges": {
+      "post": {
+        "operationId": "startWechatLogin",
+        "description": "Creates a five-minute, one-time WeChat Open Platform QR authorization challenge for a tenant. The poll token is an opaque browser secret and must not be logged or shared.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WechatLoginStartRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "One-time QR challenge created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WechatLoginChallenge" } } } },
+          "400": { "description": "Invalid tenant or device mode" },
+          "503": { "description": "WeChat login is not configured or its durable storage is unavailable" }
+        }
+      }
+    },
+    "/api/v1/auth/wechat/callback": {
+      "get": {
+        "operationId": "completeWechatAuthorization",
+        "description": "WeChat Open Platform OAuth callback. It exchanges the short-lived code server-side and authorizes the matching one-time browser challenge only when a tenant-scoped account binding exists.",
+        "security": [],
+        "parameters": [
+          { "name": "code", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "state", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Authorization accepted", "content": { "text/html": { "schema": { "type": "string" } } } },
+          "400": { "description": "Challenge is invalid or expired" },
+          "403": { "description": "WeChat identity is not bound to an active tenant account" },
+          "502": { "description": "WeChat code exchange failed" },
+          "503": { "description": "WeChat login is unavailable" }
+        }
+      }
+    },
+    "/api/v1/auth/wechat/session": {
+      "post": {
+        "operationId": "pollWechatLogin",
+        "description": "Polls and atomically consumes a one-time QR challenge. A successful response creates the browser session in an HttpOnly cookie; the session credential is never exposed to JavaScript.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WechatLoginPollRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Current challenge status or authenticated browser session", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WechatLoginStatus" } } } },
+          "400": { "description": "Malformed challenge credentials" },
+          "401": { "description": "Unknown challenge credentials or unavailable bound account" },
+          "409": { "description": "Authorized challenge was already consumed" },
+          "503": { "description": "WeChat login or browser session creation is unavailable" }
+        }
+      }
+    },
     "/api/v1/auth/token": {
       "post": {
         "operationId": "createAccessToken",
@@ -15994,6 +16046,47 @@
           "user": {
             "$ref": "#/components/schemas/AuthUser"
           }
+        }
+      },
+      "WechatLoginStartRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tenant_code": { "type": "string", "maxLength": 128 },
+          "tenant_hint": { "type": "string", "maxLength": 128 },
+          "remember_device": { "type": "boolean" },
+          "public_device": { "type": "boolean" }
+        }
+      },
+      "WechatLoginChallenge": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["challenge_id", "poll_token", "qr_code_data_url", "expires_at"],
+        "properties": {
+          "challenge_id": { "type": "string", "format": "uuid" },
+          "poll_token": { "type": "string" },
+          "qr_code_data_url": { "type": "string", "pattern": "^data:image/png;base64," },
+          "expires_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "WechatLoginPollRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["challenge_id", "poll_token"],
+        "properties": {
+          "challenge_id": { "type": "string", "format": "uuid" },
+          "poll_token": { "type": "string" }
+        }
+      },
+      "WechatLoginStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "expires_at"],
+        "properties": {
+          "status": { "type": "string", "enum": ["pending", "failed", "expired", "consumed", "authenticated"] },
+          "error_code": { "type": "string" },
+          "expires_at": { "type": "string", "format": "date-time" },
+          "user": { "$ref": "#/components/schemas/AuthUser" }
         }
       },
       "AuthTokenResponse": {

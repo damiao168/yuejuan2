@@ -389,6 +389,7 @@ func (s *PostgresStore) SavePaperImportReview(ctx context.Context, tenantID, id,
 		return PaperImportJob{}, err
 	}
 	for i := range input.Questions {
+		normalizeAnswerKeyOnlyPaperImportDraft(&input.Questions[i])
 		input.Questions[i].HumanConfirmedFields = normalizeHumanConfirmedFields(input.Questions[i].HumanConfirmedFields)
 		refreshDraftCompleteness(&input.Questions[i], len(job.QuestionCandidates) > 0)
 	}

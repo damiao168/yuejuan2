@@ -7,16 +7,16 @@ SCHEMA_VERSION = "grading-agent-v1"
 OCR_REVIEW_THRESHOLD = 0.85
 SUBJECTS = {
     "chinese",
-    "math",
+    "mathematics",
     "english",
     "physics",
     "chemistry",
     "biology",
     "history",
-    "politics",
+    "ethics_politics",
     "geography",
-    "computer_science",
 }
+GRADE_LEVELS = {"junior", "senior"}
 QUESTION_TYPES = {"short_answer", "calculation", "essay", "discussion"}
 CANONICAL_RISK_FLAGS = {
     "ocr_low_confidence",
@@ -46,6 +46,7 @@ _REQUEST_FIELDS = {
     "request_id",
     "subject",
     "grade_level",
+    "agent_role",
     "question_id",
     "answer_segment_id",
     "question_type",
@@ -117,8 +118,10 @@ def validate_request(payload):
     _string(payload["request_id"], "request_id", request_id, 8, 128)
     if payload["subject"] not in SUBJECTS:
         _fail("subject is unsupported", request_id)
-    if payload["grade_level"] != "junior_middle":
+    if payload["grade_level"] not in GRADE_LEVELS:
         _fail("grade_level is outside the approved profile", request_id)
+    if payload["agent_role"] not in {"single", "primary", "arbiter"}:
+        _fail("agent_role is outside the approved profile", request_id)
     if payload["question_type"] not in QUESTION_TYPES:
         _fail("question_type is unsupported", request_id)
     _string(payload["question_id"], "question_id", request_id)

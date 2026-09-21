@@ -172,9 +172,51 @@ type CreateSessionInput struct {
 	RiskEvaluatedAt     time.Time
 	RiskPolicyVersion   string
 	RiskEvidenceQuality RiskEvidenceQuality
+	AuthMethod          string
 	// SecurityEpoch is the credential snapshot verified during login. A
 	// positive value must still match when the session is created.
 	SecurityEpoch int64
+}
+
+var ErrWechatIdentityUnbound = errors.New("wechat identity is not bound")
+
+type WechatLoginChallenge struct {
+	ID             string
+	StateHash      string
+	PollTokenHash  string
+	TenantCode     string
+	Status         string
+	ErrorCode      string
+	TenantID       string
+	UserID         string
+	RememberDevice bool
+	PublicDevice   bool
+	ExpiresAt      time.Time
+	AuthorizedAt   time.Time
+	ConsumedAt     time.Time
+}
+
+type CreateWechatLoginChallengeInput struct {
+	ID             string
+	StateHash      string
+	PollTokenHash  string
+	TenantCode     string
+	RememberDevice bool
+	PublicDevice   bool
+	ExpiresAt      time.Time
+}
+
+// WechatLoginRepository keeps one-time browser challenges and tenant-scoped
+// Open Platform bindings durable so callbacks can land on any API instance.
+type WechatLoginRepository interface {
+	CreateWechatLoginChallenge(context.Context, CreateWechatLoginChallengeInput) error
+	FindWechatLoginChallengeByState(context.Context, string, time.Time) (WechatLoginChallenge, error)
+	FindWechatLoginChallenge(context.Context, string, string, time.Time) (WechatLoginChallenge, error)
+	FindUserByWechatIdentity(context.Context, string, string, string, string) (UserWithPassword, error)
+	FindUserByID(context.Context, string, string) (UserWithPassword, error)
+	AuthorizeWechatLoginChallenge(context.Context, string, string, string, time.Time) error
+	FailWechatLoginChallenge(context.Context, string, string, time.Time) error
+	ConsumeWechatLoginChallenge(context.Context, string, string, time.Time) (WechatLoginChallenge, error)
 }
 
 type DeviceSession struct {

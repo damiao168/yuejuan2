@@ -136,7 +136,7 @@ BEGIN
   ) VALUES (
     '00000000-0000-0000-0000-000000000617', tenant_uuid,
     'story060-protocol-evaluation', 'STORY-060 protocol emulator evaluation',
-    'Qwen/Qwen3-4B-GGUF:Q4_K_M', 'subjective-governed-cn-subject-routing-v5', 'rubric-v3',
+    'Qwen/Qwen3-4B-GGUF:Q4_K_M', 'subjective-governed-cn-subject-routing-v6', 'rubric-v3',
     'story060-protocol-fixture', repeat('0', 64), 'draft', actor_uuid
   );
 
@@ -164,7 +164,7 @@ BEGIN
   ) VALUES (
     '00000000-0000-0000-0000-000000000619', tenant_uuid,
     'story060-protocol-calibration', '00000000-0000-0000-0000-000000000617',
-    'Qwen/Qwen3-4B-GGUF:Q4_K_M', 'subjective-governed-cn-subject-routing-v5', 'rubric-v3',
+    'Qwen/Qwen3-4B-GGUF:Q4_K_M', 'subjective-governed-cn-subject-routing-v6', 'rubric-v3',
     'chinese', 'short_constructed', 'all', 'isotonic', 'approved', 1,
     'fixture://story060/protocol-calibration', repeat('2', 64),
     '{"schema_version":1,"method":"isotonic","bins":[{"min_raw_confidence":0,"max_raw_confidence":1,"calibrated_confidence":0.9,"sample_count":1,"correct_count":1}],"metrics":{"sample_count":1,"brier_score":0.01,"expected_calibration_error":0.1,"middle_score_sample_count":0},"risk_coverage_curve":[{"threshold":0,"coverage":1,"sample_count":1,"empirical_risk":0,"severe_error_rate":0}]}',

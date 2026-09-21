@@ -1,8 +1,9 @@
 {
   "schema_version": "grading-agent-v2",
   "request_id": "subjective-grade-image-0001",
-  "subject": "math",
-  "grade_level": "junior_middle",
+  "subject": "mathematics",
+  "grade_level": "senior",
+  "agent_role": "primary",
   "question_id": "question-001",
   "answer_segment_id": "segment-001",
   "question_type": "calculation",

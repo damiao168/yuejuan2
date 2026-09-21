@@ -609,7 +609,7 @@ func subjectiveContext(kind string, score float64, answerText string, ocrConfide
 	return subjective.Context{
 		AnswerVersion: "answer-v1",
 		Subject:       "chinese",
-		GradeLevel:    "junior_middle",
+		GradeLevel:    "junior",
 		Question: paper.Question{
 			ID:           "question-" + kind,
 			TenantID:     tenantID,

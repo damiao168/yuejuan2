@@ -16,6 +16,7 @@ describe("user-facing API errors", () => {
     ["backmark_preview_stale", "回标范围或原评分已变化，请重新预览影响范围后再创建。"],
     ["exam_not_collecting", "当前考试尚未进入答卷采集阶段，请先完成考试准备并开始采集。"],
     ["capture_duplicate_file", "该文件已加入当前批次，无需重复导入。"],
+    ["unsupported_file_type", "文件内容与格式不匹配，或包含无法识别的隐藏字符。请使用 UTF-8 文本、PDF、Word 或图片后重试。"],
     ["student_no_conflict", "该学号已存在，请更换学号。"],
     ["class_code_conflict", "该年级中已存在相同的班级代码，请更换代码。"],
     ["username_exists", "该登录账号已被使用，请更换账号。"],

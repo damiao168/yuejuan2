@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, App, Button, Checkbox, Progress, Space } from "antd";
-import { ArrowRight, CircleAlert, ClipboardCheck, Play, RefreshCw, Save } from "lucide-react";
+import { Alert, App, Button, Checkbox, Space } from "antd";
+import { ArrowRight, ClipboardCheck, Play, RefreshCw, Save } from "lucide-react";
 import { ApiClientError, getSafeUserText, getUserErrorMessage } from "../api/client";
 import { confirmExamReadiness, getExamReadiness, startExamCollection, type ExamReadiness } from "../api/configuration";
 import { getExam, refreshExamCandidates, updateExam, type Exam } from "../api/exams";
 import { listClasses, listGrades, type Grade, type SchoolClass } from "../api/org";
 import { ErrorState, LoadingState } from "../components/PageState";
-import { StatusTag } from "../components/StatusTag";
-import { gradingLabel } from "../features/exams/create/presentation";
 
 const readinessSectionRoutes: Record<string, string> = {
   students: "students",
@@ -118,12 +116,15 @@ export function ExamReadinessPage({ examId, canManage, onNavigate, onExamChanged
 
   useEffect(() => { void load(); }, [load]);
 
-  const passed = readiness?.checks.filter((item) => item.passed).length ?? 0;
-  const total = readiness?.checks.length ?? 0;
-  const percent = total ? Math.round((passed / total) * 100) : 0;
-  const studentChecks = readiness?.checks.filter((item) => item.section === "students") ?? [];
-  const materialChecks = readiness?.checks.filter((item) => ["paper", "questions", "template"].includes(item.section)) ?? [];
-  const failedChecks = readiness?.checks.filter((item) => !item.passed) ?? [];
+  const setupQuestions = [
+    { key: "students", label: "学生范围", sections: ["students"], route: "students", action: "设置范围" },
+    { key: "questions", label: "小题与分值", sections: ["questions"], route: "questions", action: "核对题目" },
+    { key: "materials", label: "分学科考试资料", sections: ["paper"], route: "paper", action: "上传资料" },
+    { key: "answer-sheets", label: "答题卡导入", sections: ["template"], route: exam?.status === "collecting" ? "capture" : "template", action: exam?.status === "collecting" ? "导入答题卡" : "设置答题卡" }
+  ].map((question) => {
+    const checks = readiness?.checks.filter((check) => question.sections.includes(check.section)) ?? [];
+    return { ...question, checks };
+  });
 
   async function confirm() {
     setWorking(true);
@@ -153,26 +154,20 @@ export function ExamReadinessPage({ examId, canManage, onNavigate, onExamChanged
   if (!readiness || !exam) return null;
 
   return (
-    <div className="preparation-page readiness-page">
-      <section className="preparation-heading"><div><h2>考试准备</h2><p>完成学生范围、试卷、答案、评分标准和答题卡配置后，即可开始导入答卷。</p></div><Space><Button icon={<RefreshCw size={16} />} loading={loading} onClick={() => void load()}>重新检查</Button>{readiness.ready && !readiness.confirmed && exam.status !== "collecting" ? <Button type="primary" icon={<ClipboardCheck size={16} />} disabled={!canManage} loading={working} onClick={() => void confirm()}>确认准备完成</Button> : null}{readiness.confirmed && exam.status === "ready" ? <Button type="primary" icon={<Play size={16} />} disabled={!canManage} loading={working} onClick={confirmStart}>开始导入答卷</Button> : null}</Space></section>
+    <div className="preparation-page readiness-page exam-setup-form-page">
+      <ol className="exam-setup-questions" aria-label="考试设置问题">
+        {setupQuestions.map((question, index) => {
+          const issues = question.checks.filter((check) => !check.passed);
+          return <li key={question.key} className={issues.length ? "has-issues" : "is-complete"}>
+            <div className="exam-setup-question-content"><div className="exam-setup-question-heading"><h3>{index + 1}. {question.label}</h3><Button type="link" onClick={() => onNavigate(`/exams/${encodeURIComponent(examId)}/${question.route}`)}>{question.action} <ArrowRight size={15} /></Button></div>
+              {issues.length ? <ul className="exam-setup-inline-issues">{issues.map((check) => <li key={check.code}><strong>{getSafeUserText(check.label, "需要完善")}</strong><span>{getSafeUserText(check.message, "请完成相关设置")}</span></li>)}</ul> : null}
+            </div>
+          </li>;
+        })}
+      </ol>
 
-      <section className="readiness-summary"><div><span>准备进度</span><strong>{passed}/{total}</strong></div><Progress percent={percent} status={readiness.ready ? "success" : "active"} /><div className="readiness-summary-state"><StatusTag tone={exam.status === "collecting" ? "processing" : readiness.confirmed ? "success" : readiness.ready ? "processing" : "warning"}>{exam.status === "collecting" ? "采集中" : readiness.confirmed ? "准备完成" : readiness.ready ? "等待确认" : "存在阻断项"}</StatusTag>{readiness.confirmed_at ? <span>确认时间：{new Date(readiness.confirmed_at).toLocaleString("zh-CN", { hour12: false })}</span> : null}</div></section>
-
-      <section className="preparation-overview" aria-label="考试准备分组">
-        <button type="button" onClick={() => onNavigate(`/exams/${encodeURIComponent(examId)}/students`)}><span><strong>学生范围</strong><small>{getSafeUserText(studentChecks[0]?.message, "检查参加考试的班级和学生")}</small></span><StatusTag tone={studentChecks.length > 0 && studentChecks.every((item) => item.passed) ? "success" : "warning"}>{studentChecks.length > 0 && studentChecks.every((item) => item.passed) ? "已完成" : "待完成"}</StatusTag><ArrowRight size={16} /></button>
-        <button type="button" onClick={() => onNavigate(`/exams/${encodeURIComponent(examId)}/paper`)}><span><strong>考试资料</strong><small>试卷、题目、标准答案、评分标准和答题卡</small></span><StatusTag tone={materialChecks.length > 0 && materialChecks.every((item) => item.passed) ? "success" : "warning"}>{`${materialChecks.filter((item) => item.passed).length}/${materialChecks.length} 项`}</StatusTag><ArrowRight size={16} /></button>
-        <div><span><strong>阅卷设置</strong><small>{gradingLabel(exam.grading_mode)}</small></span><StatusTag tone="info">已设置</StatusTag></div>
-        <div><span><strong>开考检查</strong><small>{readiness.ready ? "所有真实检查项均已通过" : `${total - passed} 项仍需完成`}</small></span><StatusTag tone={readiness.ready ? "success" : "warning"}>{readiness.ready ? "可确认" : "待完成"}</StatusTag></div>
-      </section>
-
-      {failedChecks.length ? (
-        <section className="readiness-attention" aria-labelledby="readiness-attention-title">
-          <div className="readiness-attention-heading"><h3 id="readiness-attention-title">还需处理 {failedChecks.length} 项</h3><span>只显示会阻止考试进入下一阶段的问题</span></div>
-          <div className="readiness-attention-list">
-            {failedChecks.map((check) => <button type="button" key={check.code} onClick={() => onNavigate(readinessCheckRoute(examId, check.section))}><CircleAlert size={18} /><span><strong>{getSafeUserText(check.label, "准备检查")}</strong><small>{getSafeUserText(check.message, "检查未通过，请完成相关设置")}</small></span><span>去处理</span><ArrowRight size={16} /></button>)}
-          </div>
-        </section>
-      ) : null}
+      {readiness.ready && !readiness.confirmed && exam.status !== "collecting" ? <div className="exam-setup-actions"><Button type="primary" icon={<ClipboardCheck size={16} />} disabled={!canManage} loading={working} onClick={() => void confirm()}>确认准备完成</Button></div> : null}
+      {readiness.confirmed && exam.status === "ready" ? <div className="exam-setup-actions"><Button type="primary" icon={<Play size={16} />} disabled={!canManage} loading={working} onClick={confirmStart}>开始导入答题卡</Button></div> : null}
 
       {readiness.ready && !readiness.confirmed ? <Alert type="info" showIcon message="所有检查已通过" description="请由考试负责人确认准备完成。确认后若修改题目、答案、模板或学生范围，系统会自动撤销本次确认。" /> : null}
       {exam.status === "collecting" ? <Alert type="success" showIcon message="考试已进入答卷导入阶段" description="后续答卷导入与页面处理将在答卷导入工作区完成。" /> : null}

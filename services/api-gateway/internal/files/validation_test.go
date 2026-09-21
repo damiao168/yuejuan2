@@ -2,6 +2,7 @@ package files
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -44,5 +45,30 @@ func TestSniffContentTypeRecognizesTIFFByteOrders(t *testing.T) {
 		if got := SniffContentType(sample); got != "image/tiff" {
 			t.Fatalf("got %q", got)
 		}
+	}
+}
+
+func TestSniffFileContentTypeAcceptsUTF8MarkdownWithMathAndHTML(t *testing.T) {
+	for _, sample := range [][]byte{
+		[]byte("# 数学\n\n已知 $x^2=4$，求解。"),
+		[]byte("<details>\n<summary>解析</summary>\n\\[x^2=4\\]\n</details>"),
+		[]byte("第一题\f解答：\\(x=2\\)"),
+	} {
+		if got := SniffFileContentType("questions.md", sample); got != "text/plain; charset=utf-8" {
+			t.Fatalf("got %q for %q", got, sample)
+		}
+	}
+}
+
+func TestSniffFileContentTypeAcceptsUTF8CutAtInspectionBoundary(t *testing.T) {
+	sample := append([]byte(strings.Repeat("a", 510)), 0xe4, 0xb8)
+	if got := SniffFileContentType("questions.md", sample); got != "text/plain; charset=utf-8" {
+		t.Fatalf("truncated UTF-8 tail was rejected as %q", got)
+	}
+}
+
+func TestSniffFileContentTypeRejectsBinaryDisguisedAsMarkdown(t *testing.T) {
+	if got := SniffFileContentType("questions.md", []byte{'#', ' ', 'x', 0, 1, 2}); got != "application/octet-stream" {
+		t.Fatalf("binary markdown was accepted as %q", got)
 	}
 }

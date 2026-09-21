@@ -3,6 +3,7 @@ import {
   Activity,
   BarChart3,
   BrainCircuit,
+  MessageCircle,
   BookOpenCheck,
   Building2,
   Cable,
@@ -66,6 +67,11 @@ const productionRouteDefinitions: AppRoute[] = [
     experiences: { admin: { title: "工作台", group: "工作台" }, teacher: { title: "我的工作", group: "工作台" }, auditor: { title: "审计总览", group: "工作台" }, student: { title: "我的学习", group: "工作台" } }
   },
   {
+    key: "schoolAiChat", path: "/ai-chat", title: "AI 对话", group: "工作台", icon: <MessageCircle size={18} />, permissions: [],
+    allowedRoles: ["school_admin"], workspaces: ["school_admin"], mock: false, productionReady: true,
+    experiences: { admin: { title: "AI 对话", group: "工作台" } }
+  },
+  {
     key: "sessions", path: "/account/sessions", title: "账户安全", group: "账号", icon: <LockKeyhole size={18} />, permissions: [],
     navigation: false, mock: false, productionReady: true,
     workspaces: ["platform", "tenant_admin", "school_admin", "exam_owner", "teacher", "grader", "arbitrator", "auditor", "student"],
@@ -106,6 +112,7 @@ const productionRouteDefinitions: AppRoute[] = [
     icon: <ScanLine size={18} />,
     permissions: ["submission:manage", "file:manage", "ocr:manage", "segment:manage"],
     excludedRoles: ["platform_admin"],
+    navigation: false,
     mock: false,
     productionReady: true,
     workspaces: ["tenant_admin", "school_admin", "exam_owner"], experiences: { admin: { title: "答题卡导入", group: "考试管理" } }

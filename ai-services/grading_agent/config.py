@@ -43,7 +43,7 @@ class Settings:
     adapter_type: str = "local_llama_cpp"
     deployment_region: str = "on_premise"
     capability_profile: str = "local-pilot-v1"
-    prompt_version: str = "subjective-governed-cn-subject-routing-v5"
+    prompt_version: str = "subjective-governed-cn-subject-routing-v6"
     model_timeout_seconds: int = 230
     model_ready_timeout_seconds: int = 3
     model_readiness_cache_seconds: int = 10
@@ -81,7 +81,7 @@ class Settings:
             capability_profile=os.getenv(
                 "EDUGRADE_GRADING_CAPABILITY_PROFILE", "local-pilot-v1"
             ).strip(),
-            prompt_version=os.getenv("EDUGRADE_GRADING_PROMPT_VERSION", "subjective-governed-cn-subject-routing-v5").strip(),
+            prompt_version=os.getenv("EDUGRADE_GRADING_PROMPT_VERSION", "subjective-governed-cn-subject-routing-v6").strip(),
             model_timeout_seconds=_integer("EDUGRADE_GRADING_MODEL_TIMEOUT_SECONDS", 230, 1, 600),
             model_ready_timeout_seconds=_integer("EDUGRADE_GRADING_MODEL_READY_TIMEOUT_SECONDS", 3, 1, 30),
             model_readiness_cache_seconds=_integer("EDUGRADE_GRADING_MODEL_READINESS_CACHE_SECONDS", 10, 5, 60),

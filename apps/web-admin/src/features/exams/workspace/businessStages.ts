@@ -30,12 +30,11 @@ function lifecycleBusinessStage(stage: string): ExamBusinessStage {
 export function examBusinessStages(data: ExamWorkspaceProjection) {
   const current = lifecycleBusinessStage(data.stage);
   const currentIndex = stageOrder.indexOf(current);
-  const progress = new Map(data.stage_progress.map((item) => [item.stage, item.summary]));
   return [
-    { key: "preparation", label: "考试准备", action_route: `/exams/${encodeURIComponent(data.exam_id)}/settings`, summary: progress.get("prepare") },
-    { key: "capture", label: "答卷导入", action_route: `/exams/${encodeURIComponent(data.exam_id)}/capture`, summary: progress.get("capture") },
-    { key: "grading", label: "阅卷", action_route: `/exams/${encodeURIComponent(data.exam_id)}/grading`, summary: data.stage === "quality" ? progress.get("quality") : progress.get("grading") },
-    { key: "results", label: "成绩", action_route: `/exams/${encodeURIComponent(data.exam_id)}/scores`, summary: progress.get("results") }
+    { key: "preparation", label: "考试准备", action_route: `/exams/${encodeURIComponent(data.exam_id)}/settings`, summary: `${data.subject_summary.configured_question_count}/${data.subject_summary.question_count} 题已配置` },
+    { key: "capture", label: "答卷导入", action_route: `/exams/${encodeURIComponent(data.exam_id)}/capture`, summary: `${data.counts.submission_count} 份答卷` },
+    { key: "grading", label: "阅卷", action_route: `/exams/${encodeURIComponent(data.exam_id)}/grading`, summary: `${data.counts.pending_review_count} 项待阅` },
+    { key: "results", label: "成绩", action_route: `/exams/${encodeURIComponent(data.exam_id)}/scores`, summary: current === "results" ? "查看成绩" : "尚未开始" }
   ].map((stage, index) => ({ ...stage, state: index < currentIndex ? "completed" : index === currentIndex ? "current" : "pending" }));
 }
 

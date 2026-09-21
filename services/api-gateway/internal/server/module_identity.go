@@ -37,6 +37,11 @@ func NewIdentityModule(cfg config.Config, stores IdentityStores, loginGuard auth
 			LoginGuard:             loginGuard,
 			LoginLimiterFailClosed: cfg.Auth.LoginLimiterFailClosed,
 			TrustedProxyCIDRs:      cfg.Security.TrustedProxyCIDRs,
+			WechatEnabled:          cfg.Auth.WechatEnabled,
+			WechatAppID:            cfg.Auth.WechatAppID,
+			WechatAppSecret:        cfg.Auth.WechatAppSecret,
+			WechatRedirectURL:      cfg.Auth.WechatRedirectURL,
+			WechatChallengeTTL:     cfg.Auth.WechatChallengeTTL,
 		}),
 		OrgHandler: org.NewHandler(stores.Org, stores.Auth),
 	}

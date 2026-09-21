@@ -162,7 +162,7 @@ services:
       EDUGRADE_GRADING_ADAPTER_TYPE: local_llama_cpp
       EDUGRADE_GRADING_DEPLOYMENT_REGION: on_premise
       EDUGRADE_GRADING_CAPABILITY_PROFILE: local-pilot-v1
-      EDUGRADE_GRADING_PROMPT_VERSION: subjective-governed-cn-subject-routing-v5
+      EDUGRADE_GRADING_PROMPT_VERSION: subjective-governed-cn-subject-routing-v6
       EDUGRADE_GRADING_MODEL_TIMEOUT_SECONDS: "230"
       EDUGRADE_GRADING_MODEL_MAX_OUTPUT_TOKENS: "384"
       EDUGRADE_GRADING_MODEL_READY_TIMEOUT_SECONDS: "3"
@@ -213,7 +213,7 @@ services:
       EDUGRADE_AI_SERVICE_TIMEOUT: 250s
       EDUGRADE_AI_SERVICE_MAX_RETRIES: "1"
       EDUGRADE_AI_MODEL_VERSION: Qwen/Qwen3-4B-GGUF:Q4_K_M
-      EDUGRADE_AI_PROMPT_VERSION: subjective-governed-cn-subject-routing-v5
+      EDUGRADE_AI_PROMPT_VERSION: subjective-governed-cn-subject-routing-v6
       EDUGRADE_AI_MIN_CONFIDENCE: "0.8"
       EDUGRADE_AI_PROVIDER_KEY: local
       EDUGRADE_AI_DEPLOYMENT_KEY: local-qwen3-4b-q4-k-m

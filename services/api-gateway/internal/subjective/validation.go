@@ -5,6 +5,8 @@ import (
 	"strings"
 	"unicode"
 
+	"edugrade-enterprise/services/api-gateway/internal/paper"
+
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -13,6 +15,31 @@ var supportedQuestionTypes = map[string]bool{
 	"calculation":  true,
 	"essay":        true,
 	"discussion":   true,
+}
+
+// ProjectPanelRubricScore discards all model-authored numeric point and total
+// scores. A panel agent supplies only supported/missing decisions and evidence;
+// the frozen rubric is the sole numeric scoring authority.
+func ProjectPanelRubricScore(output *AdapterOutput, rubric paper.Rubric) error {
+	if output == nil || len(rubric.Points) == 0 {
+		return ErrInvalidModelOutput
+	}
+	weights := make(map[string]float64, len(rubric.Points))
+	for _, point := range rubric.Points {
+		if point.ID == "" || math.IsNaN(point.Score) || math.IsInf(point.Score, 0) || point.Score <= 0 {
+			return ErrInvalidModelOutput
+		}
+		weights[point.ID] = point.Score
+	}
+	for index := range output.MatchedPoints {
+		weight, ok := weights[output.MatchedPoints[index].Code]
+		if !ok {
+			return ErrInvalidModelOutput
+		}
+		output.MatchedPoints[index].Score = weight
+	}
+	DeriveSuggestedScore(output)
+	return nil
 }
 
 func NormalizePolicy(policy ModelPolicy) ModelPolicy {

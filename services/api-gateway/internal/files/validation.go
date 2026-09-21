@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 var allowedOwnerTypes = map[string]bool{
@@ -165,6 +166,41 @@ func SniffContentType(sample []byte) string {
 		return "image/tiff"
 	}
 	return http.DetectContentType(sample)
+}
+
+// SniffFileContentType keeps server-side inspection authoritative while
+// treating UTF-8 Markdown and plain text as text even when the generic MIME
+// sniffer encounters Markdown HTML or clipboard control whitespace.
+func SniffFileContentType(filename string, sample []byte) string {
+	ext := strings.ToLower(filepath.Ext(filename))
+	if (ext == ".txt" || ext == ".md" || ext == ".markdown") && looksLikeUTF8Text(sample) {
+		return "text/plain; charset=utf-8"
+	}
+	return SniffContentType(sample)
+}
+
+func looksLikeUTF8Text(sample []byte) bool {
+	if len(sample) == 0 {
+		return false
+	}
+	for _, b := range sample {
+		if b == 0 || b == 0x7f || (b < 0x20 && b != '\t' && b != '\n' && b != '\r' && b != '\f') {
+			return false
+		}
+	}
+	if utf8.Valid(sample) {
+		return true
+	}
+	// The 512-byte inspection window may end in the middle of a valid UTF-8
+	// rune. Accept only that specific incomplete-tail case.
+	for tailLength := 1; tailLength < utf8.UTFMax && tailLength <= len(sample); tailLength++ {
+		cut := len(sample) - tailLength
+		tail := sample[cut:]
+		if utf8.Valid(sample[:cut]) && utf8.RuneStart(tail[0]) && !utf8.FullRune(tail) {
+			return true
+		}
+	}
+	return false
 }
 
 func extensionAllowed(ext string, allowed []string) bool {

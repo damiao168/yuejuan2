@@ -75,6 +75,43 @@ func (s *Service) Complete(ctx context.Context, tenantID, runID string) (Run, er
 	return s.store.ReplaceComputed(ctx, tenantID, runID, len(items), sliceMetrics(runID, items, computedAt), responseDifficulty(runID, items, computedAt), computedAt)
 }
 
+// CompletePanel closes a panel-only evaluation run after validating every
+// de-identified A/B/C observation. Mixing legacy single-model observations
+// and panel observations in one run is rejected to preserve metric meaning.
+func (s *Service) CompletePanel(ctx context.Context, tenantID, runID string) (Run, PanelMetrics, error) {
+	if s == nil || s.store == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(runID) == "" {
+		return Run{}, PanelMetrics{}, ErrInvalidInput
+	}
+	panelStore, ok := s.store.(PanelEvaluationStore)
+	if !ok {
+		return Run{}, PanelMetrics{}, ErrInvalidInput
+	}
+	run, err := s.store.GetRun(ctx, tenantID, runID)
+	if err != nil {
+		return Run{}, PanelMetrics{}, err
+	}
+	if run.Status != RunDraft {
+		return Run{}, PanelMetrics{}, ErrStateConflict
+	}
+	legacy, err := s.store.ListObservations(ctx, tenantID, runID)
+	if err != nil {
+		return Run{}, PanelMetrics{}, err
+	}
+	items, err := panelStore.ListPanelObservations(ctx, tenantID, runID)
+	if err != nil {
+		return Run{}, PanelMetrics{}, err
+	}
+	if len(legacy) != 0 || len(items) == 0 {
+		return Run{}, PanelMetrics{}, ErrInvalidInput
+	}
+	metrics, err := CalculatePanelMetrics(items)
+	if err != nil {
+		return Run{}, PanelMetrics{}, err
+	}
+	completed, err := s.store.ReplaceComputed(ctx, tenantID, runID, len(items), nil, nil, s.now().UTC())
+	return completed, metrics, err
+}
+
 func (s *Service) GetRun(ctx context.Context, tenantID, runID string) (Run, error) {
 	if s.store == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(runID) == "" {
 		return Run{}, ErrInvalidInput

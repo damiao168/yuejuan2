@@ -23,6 +23,7 @@ import {
   isTextPasteTarget,
   MAX_PASTED_MATERIAL_CHARS,
   markImportFieldConfirmed,
+  normalizePastedMarkdown,
   orderedSourcesAfterRemoval,
   pastedMarkdownFile
 } from "./materials";
@@ -36,6 +37,7 @@ function pointTotal(points: NonNullable<PaperImportDraftQuestion["rubric"]>["poi
 }
 
 function reviewRubricHasScoreMismatch(draft: PaperImportDraftQuestion) {
+  if (draft.question_type === "fill_blank") return false;
   return Boolean(draft.rubric
     && (Math.abs(draft.rubric.max_score - draft.score) > 0.0001
       || Math.abs(pointTotal(draft.rubric.points) - draft.score) > 0.0001));
@@ -43,12 +45,19 @@ function reviewRubricHasScoreMismatch(draft: PaperImportDraftQuestion) {
 
 function confirmedImportDrafts(drafts: PaperImportDraftQuestion[]) {
   return drafts.map((draft) => {
+    const answerKeyOnly = draft.question_type === "fill_blank";
     const fields = new Set(draft.human_confirmed_fields ?? []);
+    if (answerKeyOnly) fields.delete("rubric");
     for (const field of ["question_no", "question_type", "score", "stem"]) fields.add(field);
     if (draft.answer_key) fields.add("answer");
     if (draft.solution) fields.add("solution");
-    if (draft.rubric) fields.add("rubric");
-    return { ...draft, human_confirmed_fields: [...fields] };
+    if (draft.rubric && !answerKeyOnly) fields.add("rubric");
+    return {
+      ...draft,
+      rubric_candidate_id: answerKeyOnly ? undefined : draft.rubric_candidate_id,
+      rubric: answerKeyOnly ? undefined : draft.rubric,
+      human_confirmed_fields: [...fields]
+    };
   });
 }
 
@@ -108,8 +117,20 @@ export function usePaperImportWorkflow({
         })).file);
       }
       const activeImport = paperImports.find((item) => ["review_required", "failed", "cancelled"].includes(item.status));
+      const existingAssetIDs = new Set(activeImport?.sources.map((source) => source.file_asset_id).filter(Boolean) ?? []);
+      const acceptedAssetIDs = new Set<string>();
+      const newAssets = uploaded.filter((file) => {
+        if (existingAssetIDs.has(file.id) || acceptedAssetIDs.has(file.id)) return false;
+        acceptedAssetIDs.add(file.id);
+        return true;
+      });
+      const duplicateCount = uploaded.length - newAssets.length;
+      if (activeImport && newAssets.length === 0) {
+        message.info("这份资料已在当前识别任务中，无需重复添加");
+        return true;
+      }
       const startIndex = activeImport?.sources.length ?? 0;
-      const sources = uploaded.map((file, index) => ({
+      const sources = newAssets.map((file, index) => ({
         file_asset_id: file.id,
         document_index: startIndex + index,
         role_hint: roleHint
@@ -124,8 +145,10 @@ export function usePaperImportWorkflow({
           }, commandId);
       if (result.import.status === "failed") {
         message.error(getPaperImportUserMessage(result.import.issues[0], "考试资料识别失败，请检查资料后重试"));
+      } else if (duplicateCount > 0) {
+        message.success(`已忽略 ${duplicateCount} 份重复资料，新增 ${newAssets.length} 份并开始识别`);
       } else {
-        message.success(`已添加 ${supportedFiles.length} 份资料，系统正在识别和匹配`);
+        message.success(`已添加 ${newAssets.length} 份资料，系统正在识别和匹配`);
       }
       await loadConfig(selectedExam.id, { silent: true });
       return true;
@@ -140,7 +163,7 @@ export function usePaperImportWorkflow({
   materialUploadRef.current = (files) => { void handleMaterialFiles(files); };
 
   const importPastedText = async (value: string, roleHint: PaperImportRole) => {
-    const content = value.trim();
+    const content = normalizePastedMarkdown(value);
     if (content.length < 20) {
       message.error("请至少粘贴 20 个字符的考试资料");
       return false;
@@ -204,11 +227,12 @@ export function usePaperImportWorkflow({
   };
 
   const retryImportParse = async (job: PaperImportJob) => {
-    if (job.status !== "failed" || job.error_code !== "ai_parse_failed" || retryingParse) return;
+    const retryable = (job.status === "failed" && job.error_code === "ai_parse_failed") || job.status === "cancelled";
+    if (!retryable || retryingParse) return;
     setRetryingParse(true);
     try {
       await retryPaperImportParse(job.id, job.generation);
-      message.success("已复用文字和公式识别结果，正在重新解析题目结构");
+      message.success("已复用本次新增资料，正在重新解析题目结构");
       if (selectedExam) await loadConfig(selectedExam.id, { silent: true });
     } catch (error) {
       message.error(formatError(error));

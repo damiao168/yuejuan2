@@ -80,6 +80,11 @@ type AuthConfig struct {
 	DeviceBindingTTL       time.Duration
 	MFAEnabled             bool
 	MFAMasterKey           string
+	WechatEnabled          bool
+	WechatAppID            string
+	WechatAppSecret        string
+	WechatRedirectURL      string
+	WechatChallengeTTL     time.Duration
 }
 
 type SecurityConfig struct {
@@ -180,6 +185,7 @@ func Load(envFile string) (Config, error) {
 		"EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY": localModelCredentialMasterKey,
 		"EDUGRADE_BARCODE_HMAC_KEYS":           "",
 		"EDUGRADE_MFA_MASTER_KEY":              "",
+		"EDUGRADE_WECHAT_APP_SECRET":           "",
 	}
 	secretValues := make(map[string]string, len(secretDefaults))
 	for key, fallback := range secretDefaults {
@@ -223,6 +229,11 @@ func Load(envFile string) (Config, error) {
 			DeviceBindingTTL:       parser.Duration("EDUGRADE_DEVICE_BINDING_TTL", 180*24*time.Hour),
 			MFAEnabled:             parser.Bool("EDUGRADE_MFA_ENABLED", false),
 			MFAMasterKey:           secretValues["EDUGRADE_MFA_MASTER_KEY"],
+			WechatEnabled:          parser.Bool("EDUGRADE_WECHAT_LOGIN_ENABLED", false),
+			WechatAppID:            strings.TrimSpace(os.Getenv("EDUGRADE_WECHAT_APP_ID")),
+			WechatAppSecret:        secretValues["EDUGRADE_WECHAT_APP_SECRET"],
+			WechatRedirectURL:      strings.TrimSpace(os.Getenv("EDUGRADE_WECHAT_REDIRECT_URL")),
+			WechatChallengeTTL:     parser.Duration("EDUGRADE_WECHAT_CHALLENGE_TTL", 5*time.Minute),
 		},
 		Security: SecurityConfig{
 			MaxHeaderBytes:      parser.Int("EDUGRADE_HTTP_MAX_HEADER_BYTES", 1<<20),
@@ -275,7 +286,7 @@ func Load(envFile string) (Config, error) {
 			Timeout:           parser.Duration("EDUGRADE_AI_SERVICE_TIMEOUT", 750*time.Second),
 			MaxRetries:        parser.Int("EDUGRADE_AI_SERVICE_MAX_RETRIES", 0),
 			ModelVersion:      getEnv("EDUGRADE_AI_MODEL_VERSION", "Qwen/Qwen3-4B-GGUF:Q4_K_M"),
-			PromptVersion:     getEnv("EDUGRADE_AI_PROMPT_VERSION", "subjective-governed-cn-subject-routing-v5"),
+			PromptVersion:     getEnv("EDUGRADE_AI_PROMPT_VERSION", "subjective-governed-cn-subject-routing-v6"),
 			MinConfidence:     parser.Float("EDUGRADE_AI_MIN_CONFIDENCE", 0.8),
 			ProviderKey:       getEnv("EDUGRADE_AI_PROVIDER_KEY", "local"),
 			DeploymentKey:     getEnv("EDUGRADE_AI_DEPLOYMENT_KEY", "local-qwen3-4b-q4-k-m"),
@@ -329,6 +340,18 @@ func validateProductionConfig(cfg Config) error {
 		}
 		if strings.TrimSpace(cfg.Auth.MFAMasterKey) == strings.TrimSpace(cfg.ModelSecrets.MasterKey) {
 			return fmt.Errorf("EDUGRADE_MFA_MASTER_KEY must not reuse EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY")
+		}
+	}
+	if cfg.Auth.WechatEnabled {
+		if len(cfg.Auth.WechatAppID) < 6 || len(cfg.Auth.WechatAppID) > 128 || len(cfg.Auth.WechatAppSecret) < 16 {
+			return fmt.Errorf("EDUGRADE_WECHAT_APP_ID and EDUGRADE_WECHAT_APP_SECRET are required when WeChat login is enabled")
+		}
+		redirect, err := url.Parse(cfg.Auth.WechatRedirectURL)
+		if err != nil || redirect.Scheme != "https" || redirect.Host == "" {
+			return fmt.Errorf("EDUGRADE_WECHAT_REDIRECT_URL must be an absolute HTTPS URL when WeChat login is enabled")
+		}
+		if cfg.Auth.WechatChallengeTTL < time.Minute || cfg.Auth.WechatChallengeTTL > 10*time.Minute {
+			return fmt.Errorf("EDUGRADE_WECHAT_CHALLENGE_TTL must be between 1m and 10m")
 		}
 	}
 	if cfg.Auth.RiskMode != "off" && cfg.Auth.RiskMode != "shadow" {

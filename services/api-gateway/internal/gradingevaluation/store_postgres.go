@@ -36,6 +36,7 @@ func (s *PostgresStore) GetRun(ctx context.Context, tenantID, runID string) (Run
 SELECT run.id::text,run.tenant_id::text,run.run_key,run.display_name,run.model_reference,run.prompt_version,run.rubric_version,
        run.dataset_reference,run.dataset_sha256,run.status,run.created_by::text,run.created_at,run.completed_at,run.invalidated_at,run.invalidation_reason,
        (SELECT count(*) FROM grading_evaluation_observation obs WHERE obs.tenant_id=run.tenant_id AND obs.run_id=run.id)
+       + (SELECT count(*) FROM grading_panel_evaluation_observation panel_obs WHERE panel_obs.tenant_id=run.tenant_id AND panel_obs.run_id=run.id)
 FROM grading_evaluation_run run WHERE run.tenant_id=$1::uuid AND run.id=$2::uuid`, tenantID, runID)
 	item, err := scanRunWithCount(row)
 	return item, mapStoreError(err)
@@ -49,6 +50,7 @@ func (s *PostgresStore) ListRuns(ctx context.Context, tenantID string, filter Ru
 SELECT run.id::text,run.tenant_id::text,run.run_key,run.display_name,run.model_reference,run.prompt_version,run.rubric_version,
        run.dataset_reference,run.dataset_sha256,run.status,run.created_by::text,run.created_at,run.completed_at,run.invalidated_at,run.invalidation_reason,
        (SELECT count(*) FROM grading_evaluation_observation obs WHERE obs.tenant_id=run.tenant_id AND obs.run_id=run.id)
+       + (SELECT count(*) FROM grading_panel_evaluation_observation panel_obs WHERE panel_obs.tenant_id=run.tenant_id AND panel_obs.run_id=run.id)
 FROM grading_evaluation_run run WHERE run.tenant_id=$1::uuid ORDER BY run.created_at DESC,run.id DESC LIMIT $2`, tenantID, filter.Limit)
 	if err != nil {
 		return nil, err
@@ -84,6 +86,81 @@ RETURNING id::text,run_id::text,response_key,response_fingerprint,reference_kind
 		input.NeedsHumanReview, input.ReferenceReviewers, input.ReferenceAdjudicated)
 	item, err := scanObservation(row)
 	return item, mapStoreError(err)
+}
+
+func (s *PostgresStore) AddPanelObservation(ctx context.Context, tenantID, runID string, input PanelObservation) (PanelObservation, error) {
+	if s.db == nil || !validPersistedPanelObservation(input) {
+		return PanelObservation{}, ErrInvalidInput
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return PanelObservation{}, err
+	}
+	defer tx.Rollback()
+	var status RunStatus
+	if err = tx.QueryRowContext(ctx, `SELECT status FROM grading_evaluation_run WHERE tenant_id=$1::uuid AND id=$2::uuid FOR UPDATE`, tenantID, runID).Scan(&status); err != nil {
+		return PanelObservation{}, mapStoreError(err)
+	}
+	if status != RunDraft {
+		return PanelObservation{}, ErrStateConflict
+	}
+	item, err := scanPanelObservation(tx.QueryRowContext(ctx, `
+INSERT INTO grading_panel_evaluation_observation(
+ tenant_id,run_id,response_key,response_fingerprint,education_stage,subject_code,archetype_code,
+ reference_score,max_score,score_a,score_b,score_c,resolved_score,arbitration_triggered,
+ resolution_source,human_escalated,reference_kind,reference_reviewer_count,reference_adjudicated,
+ primary_a_cost_micros,primary_b_cost_micros,arbiter_cost_micros
+) VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
+RETURNING id::text,run_id::text,response_key,response_fingerprint,education_stage,subject_code,archetype_code,
+ reference_kind,reference_score,max_score,score_a,score_b,score_c,resolved_score,arbitration_triggered,
+ resolution_source,human_escalated,reference_reviewer_count,reference_adjudicated,
+ primary_a_cost_micros,primary_b_cost_micros,arbiter_cost_micros,observed_at`,
+		tenantID, runID, input.ResponseKey, input.ResponseFingerprint, input.EducationStage, input.Subject, input.Archetype,
+		input.ReferenceScore, input.MaxScore, input.ScoreA, input.ScoreB, input.ScoreC, input.ResolvedScore,
+		input.ArbitrationTriggered, input.ResolutionSource, input.HumanEscalated, input.ReferenceKind,
+		input.ReferenceReviewers, input.ReferenceAdjudicated, input.PrimaryACostMicros, input.PrimaryBCostMicros,
+		input.ArbiterCostMicros))
+	if err != nil {
+		return PanelObservation{}, mapStoreError(err)
+	}
+	if err = tx.Commit(); err != nil {
+		return PanelObservation{}, mapStoreError(err)
+	}
+	return item, nil
+}
+
+func (s *PostgresStore) ListPanelObservations(ctx context.Context, tenantID, runID string) ([]PanelObservation, error) {
+	if s.db == nil {
+		return nil, ErrInvalidInput
+	}
+	rows, err := s.db.QueryContext(ctx, `
+SELECT id::text,run_id::text,response_key,response_fingerprint,education_stage,subject_code,archetype_code,
+ reference_kind,reference_score,max_score,score_a,score_b,score_c,resolved_score,arbitration_triggered,
+ resolution_source,human_escalated,reference_reviewer_count,reference_adjudicated,
+ primary_a_cost_micros,primary_b_cost_micros,arbiter_cost_micros,observed_at
+FROM grading_panel_evaluation_observation
+WHERE tenant_id=$1::uuid AND run_id=$2::uuid ORDER BY observed_at,id`, tenantID, runID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []PanelObservation{}
+	for rows.Next() {
+		item, scanErr := scanPanelObservation(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		items = append(items, item)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(items) == 0 {
+		if _, getErr := s.GetRun(ctx, tenantID, runID); getErr != nil {
+			return nil, getErr
+		}
+	}
+	return items, nil
 }
 
 func (s *PostgresStore) ListObservations(ctx context.Context, tenantID, runID string) ([]Observation, error) {
@@ -135,7 +212,9 @@ func (s *PostgresStore) ReplaceComputed(ctx context.Context, tenantID, runID str
 		return Run{}, ErrStateConflict
 	}
 	var actual int
-	if err = tx.QueryRowContext(ctx, `SELECT count(*) FROM grading_evaluation_observation WHERE tenant_id=$1::uuid AND run_id=$2::uuid`, tenantID, runID).Scan(&actual); err != nil {
+	if err = tx.QueryRowContext(ctx, `SELECT
+  (SELECT count(*) FROM grading_evaluation_observation WHERE tenant_id=$1::uuid AND run_id=$2::uuid)
+  + (SELECT count(*) FROM grading_panel_evaluation_observation WHERE tenant_id=$1::uuid AND run_id=$2::uuid)`, tenantID, runID).Scan(&actual); err != nil {
 		return Run{}, err
 	}
 	if actual != expectedCount {
@@ -259,7 +338,9 @@ RETURNING id::text,tenant_id::text,run_key,display_name,model_reference,prompt_v
 		return Run{}, mapStoreError(err)
 	}
 	var count int
-	if err = s.db.QueryRowContext(ctx, `SELECT count(*) FROM grading_evaluation_observation WHERE tenant_id=$1::uuid AND run_id=$2::uuid`, tenantID, runID).Scan(&count); err != nil {
+	if err = s.db.QueryRowContext(ctx, `SELECT
+  (SELECT count(*) FROM grading_evaluation_observation WHERE tenant_id=$1::uuid AND run_id=$2::uuid)
+  + (SELECT count(*) FROM grading_panel_evaluation_observation WHERE tenant_id=$1::uuid AND run_id=$2::uuid)`, tenantID, runID).Scan(&count); err != nil {
 		return Run{}, err
 	}
 	run.ObservationCount = count
@@ -317,6 +398,31 @@ func scanObservation(row scanner) (Observation, error) {
 		&item.ObservedAt,
 	)
 	return item, err
+}
+
+func scanPanelObservation(row scanner) (PanelObservation, error) {
+	var item PanelObservation
+	var scoreC, resolved sql.NullFloat64
+	err := row.Scan(
+		&item.ID, &item.RunID, &item.ResponseKey, &item.ResponseFingerprint, &item.EducationStage, &item.Subject, &item.Archetype,
+		&item.ReferenceKind, &item.ReferenceScore, &item.MaxScore, &item.ScoreA, &item.ScoreB, &scoreC, &resolved,
+		&item.ArbitrationTriggered, &item.ResolutionSource, &item.HumanEscalated, &item.ReferenceReviewers,
+		&item.ReferenceAdjudicated, &item.PrimaryACostMicros, &item.PrimaryBCostMicros, &item.ArbiterCostMicros,
+		&item.ObservedAt,
+	)
+	if err != nil {
+		return PanelObservation{}, err
+	}
+	if scoreC.Valid {
+		value := scoreC.Float64
+		item.ScoreC = &value
+	}
+	if resolved.Valid {
+		value := resolved.Float64
+		item.ResolvedScore = &value
+	}
+	item.ObservedAt = item.ObservedAt.UTC()
+	return item, nil
 }
 
 func scanSliceMetric(row scanner) (SliceMetric, error) {

@@ -196,6 +196,7 @@ func (a *HTTPAdapter) buildRequest(requestID string, input AdapterInput) (gradin
 		RequestID:       requestID,
 		Subject:         gradingAgentSubject(input.Subject),
 		GradeLevel:      gradingAgentGradeLevel(input.GradeLevel),
+		AgentRole:       gradingAgentContractRole(input.AgentRole),
 		QuestionID:      input.Question.ID,
 		AnswerSegmentID: input.SegmentID,
 		QuestionType:    input.Question.QuestionType,
@@ -235,26 +236,40 @@ func (a *HTTPAdapter) buildRequest(requestID string, input AdapterInput) (gradin
 	}, nil
 }
 
-// The governed assessment domain uses canonical cross-product values while
-// the currently approved local grading-agent contract retains its original
-// compact vocabulary. Keep that protocol compatibility at the boundary only;
-// stored assessment facts must remain canonical.
+// The grading-agent protocol uses the same canonical vocabulary as the
+// assessment domain. Legacy aliases are accepted only at this adapter boundary
+// so old callers cannot leak non-canonical values into the agent contract.
 func gradingAgentSubject(subject string) string {
 	switch strings.ToLower(strings.TrimSpace(subject)) {
-	case "mathematics":
-		return "math"
-	case "ethics_politics":
-		return "politics"
+	case "math":
+		return "mathematics"
+	case "politics", "civics":
+		return "ethics_politics"
 	default:
 		return strings.ToLower(strings.TrimSpace(subject))
 	}
 }
 
 func gradingAgentGradeLevel(stage string) string {
-	if strings.EqualFold(strings.TrimSpace(stage), "junior") {
-		return "junior_middle"
+	switch strings.ToLower(strings.TrimSpace(stage)) {
+	case "junior_middle":
+		return "junior"
+	case "senior_middle", "high_school":
+		return "senior"
+	default:
+		return strings.ToLower(strings.TrimSpace(stage))
 	}
-	return strings.ToLower(strings.TrimSpace(stage))
+}
+
+func gradingAgentContractRole(role string) string {
+	switch strings.TrimSpace(role) {
+	case AgentRolePrimaryA, AgentRolePrimaryB:
+		return "primary"
+	case AgentRoleArbiter:
+		return "arbiter"
+	default:
+		return "single"
+	}
 }
 
 func (a *HTTPAdapter) request(ctx context.Context, requestID string, body []byte) (gradingAgentResponse, error) {
@@ -481,6 +496,7 @@ type gradingAgentRequest struct {
 	RequestID        string                       `json:"request_id"`
 	Subject          string                       `json:"subject"`
 	GradeLevel       string                       `json:"grade_level"`
+	AgentRole        string                       `json:"agent_role"`
 	QuestionID       string                       `json:"question_id"`
 	AnswerSegmentID  string                       `json:"answer_segment_id"`
 	QuestionType     string                       `json:"question_type"`

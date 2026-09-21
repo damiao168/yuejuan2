@@ -1020,10 +1020,14 @@ func (s *PostgresStore) LoadPaperImportParseInput(ctx context.Context, tenantID,
 
 func (s *PostgresStore) LoadPaperImportParseRunInput(ctx context.Context, tenantID, inputID string) (PaperImportRunBinding, error) {
 	var binding PaperImportRunBinding
-	var documents, pages, issues []byte
-	err := s.db.QueryRowContext(ctx, `SELECT paper_import_id::text,run_id::text,generation,source_revision,input_hash,documents,pages,extra_issues
-FROM paper_import_parse_input WHERE tenant_id=$1 AND id=$2::uuid AND protocol_version=2`, tenantID, inputID).Scan(
-		&binding.ImportID, &binding.RunID, &binding.Generation, &binding.SourceRevision, &binding.InputHash, &documents, &pages, &issues,
+	var documents, pages, issues, previousSnapshot []byte
+	err := s.db.QueryRowContext(ctx, `SELECT input.paper_import_id::text,input.run_id::text,input.generation,input.source_revision,input.input_hash,
+       input.documents,input.pages,input.extra_issues,run.command_type,previous.source_snapshot
+FROM paper_import_parse_input input
+JOIN paper_import_run run ON run.tenant_id=input.tenant_id AND run.id=input.run_id AND run.generation=input.generation
+LEFT JOIN paper_import_run previous ON previous.tenant_id=input.tenant_id AND previous.paper_import_id=input.paper_import_id AND previous.generation=input.generation-1
+WHERE input.tenant_id=$1 AND input.id=$2::uuid AND input.protocol_version=2`, tenantID, inputID).Scan(
+		&binding.ImportID, &binding.RunID, &binding.Generation, &binding.SourceRevision, &binding.InputHash, &documents, &pages, &issues, &binding.CommandType, &previousSnapshot,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return PaperImportRunBinding{}, ErrNotFound
@@ -1034,6 +1038,21 @@ FROM paper_import_parse_input WHERE tenant_id=$1 AND id=$2::uuid AND protocol_ve
 	binding.InputID = inputID
 	if json.Unmarshal(documents, &binding.Input.Documents) != nil || json.Unmarshal(pages, &binding.Input.Pages) != nil || json.Unmarshal(issues, &binding.Input.ExtraIssues) != nil || len(binding.Input.Documents) == 0 {
 		return PaperImportRunBinding{}, ErrInvalidInput
+	}
+	if binding.CommandType == "add_sources" && len(previousSnapshot) > 0 {
+		var previousSources []PaperImportSource
+		if json.Unmarshal(previousSnapshot, &previousSources) != nil {
+			return PaperImportRunBinding{}, ErrInvalidInput
+		}
+		previousIDs := make(map[string]bool, len(previousSources))
+		for _, source := range previousSources {
+			previousIDs[source.ID] = true
+		}
+		for _, document := range binding.Input.Documents {
+			if !previousIDs[document.SourceID] {
+				binding.NewSourceIDs = append(binding.NewSourceIDs, document.SourceID)
+			}
+		}
 	}
 	serialized, err := json.Marshal(binding.Input)
 	if err != nil || contentHash(serialized) != binding.InputHash {

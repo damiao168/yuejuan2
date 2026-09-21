@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Button, Checkbox, Drawer, Input, InputNumber, Radio, Select } from "antd";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, ChevronDown, FileText, Gauge, LayoutTemplate, Sparkles, Upload, Zap } from "lucide-react";
+import { Check, ChevronDown, Gauge, LayoutTemplate, Upload, Zap } from "lucide-react";
 import type { ExamTemplate } from "../../../api/examTemplates";
 import type { Grade, School, SchoolClass } from "../../../api/org";
 import { examTypeOptions } from "../../../constants/examCatalog";
@@ -22,13 +22,6 @@ const creationModes: Array<{
   { value: "materials", title: "从试卷资料创建", description: "已有 Word、PDF、图片或文本，创建后直接上传识别", icon: Upload, recommended: true },
   { value: "quick", title: "快速创建", description: "先建立考试与科目，稍后继续完善资料和设置", icon: Zap },
   { value: "template", title: "使用考试方案", description: "套用学校或系统方案中的科目和试卷结构", icon: LayoutTemplate }
-];
-
-const sectionItems = [
-  { id: "basic", label: "基本信息" },
-  { id: "scope", label: "参考范围" },
-  { id: "subjects", label: "考试科目" },
-  { id: "advanced", label: "高级设置" }
 ];
 
 function issueFor(issues: CreateExamValidationIssue[], field: string) {
@@ -141,7 +134,6 @@ export function CreateExamComposer({ draft, schools, grades, classes, templates,
     onChange({ creationMode: "template", templateId: template.id, subjects: template.subjects.map(subjectDraftFromTemplate) });
     setTemplateOpen(false);
   };
-  const scrollTo = (id: string) => document.getElementById(`exam-section-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   const cta = draft.creationMode === "materials" ? "创建考试并上传试卷" : draft.creationMode === "template" ? "使用方案创建考试" : "创建考试";
 
   return <div className="exam-composer">
@@ -168,14 +160,9 @@ export function CreateExamComposer({ draft, schools, grades, classes, templates,
       </section>
 
       <div className="exam-composer-layout">
-        <nav className="exam-composer-nav" aria-label="考试设置章节">
-          <span>考试设置</span>
-          {sectionItems.map((item, index) => <button type="button" key={item.id} onClick={() => scrollTo(item.id)}><span>{index + 1}</span>{item.label}</button>)}
-        </nav>
-
         <main className="exam-composer-main">
           <section className="exam-section" id="exam-section-basic">
-            <header><h2>基本信息</h2><p>名称与类型用于考试列表、阅卷和成绩发布。</p></header>
+            <header><h2>1. 考试名称与基本信息</h2><p>名称用于考试列表；类型和年级决定后续可选范围。</p></header>
             <label className="exam-composer-field" data-exam-field="name" htmlFor={createExamFieldId("name")}>
               <span>考试名称 <em>*</em></span>
               <Input id={createExamFieldId("name")} value={draft.name} maxLength={100} placeholder="例如：2026—2027学年高二第一学期期中考试" status={issueFor(issues, "name") ? "error" : undefined} aria-invalid={Boolean(issueFor(issues, "name"))} onChange={(event) => onChange({ name: event.target.value })} />
@@ -200,15 +187,8 @@ export function CreateExamComposer({ draft, schools, grades, classes, templates,
             </div>
           </section>
 
-          <section className="exam-section" id="exam-section-scope" data-exam-field="classIds">
-            <header className="exam-section-toolbar"><div><h2>参考范围</h2><p>选择本场考试统一覆盖的班级。</p></div><Button type="link" disabled={!availableClasses.length} onClick={() => onChange({ classIds: allClassesSelected ? [] : availableClasses.map((item) => item.id) })}>{allClassesSelected ? "取消全选" : "全选本年级"}</Button></header>
-            {availableClasses.length ? <ClassChips classes={availableClasses} selectedIds={draft.classIds} onChange={(classIds) => onChange({ classIds })} /> : <div className="exam-composer-empty">选择年级后，可在这里确定参考班级。</div>}
-            <p className="exam-selection-count">已选择 <strong>{draft.classIds.length}</strong> 个班级</p>
-            <FieldError message={issueFor(issues, "classIds")} />
-          </section>
-
           <section className="exam-section" id="exam-section-subjects" data-exam-field="subjects">
-            <header><h2>考试科目</h2><p>这里只设置满分和时长，题型与评分信息将在上传资料后识别。</p></header>
+            <header><h2>2. 添加考试学科</h2><p>选择本场考试包含的学科，并设置每科满分和考试时间。</p></header>
             <div className="exam-subject-picker" role="group" aria-label="选择考试科目">
               {examSubjectOptions.map((item) => {
                 const selected = draft.subjects.some((subject) => subject.subject === item.value);
@@ -223,9 +203,21 @@ export function CreateExamComposer({ draft, schools, grades, classes, templates,
             </motion.div>
           </section>
 
+          <section className="exam-section" id="exam-section-scope" data-exam-field="classIds">
+            <header className="exam-section-toolbar"><div><h2>3. 考试班级范围</h2><p>选择本场考试统一覆盖的班级；各学科仍可单独调整。</p></div><Button type="link" disabled={!availableClasses.length} onClick={() => onChange({ classIds: allClassesSelected ? [] : availableClasses.map((item) => item.id) })}>{allClassesSelected ? "取消全选" : "全选本年级"}</Button></header>
+            {availableClasses.length ? <ClassChips classes={availableClasses} selectedIds={draft.classIds} onChange={(classIds) => onChange({ classIds })} /> : <div className="exam-composer-empty">选择年级后，可在这里确定参考班级。</div>}
+            <p className="exam-selection-count">已选择 <strong>{draft.classIds.length}</strong> 个班级</p>
+            <FieldError message={issueFor(issues, "classIds")} />
+          </section>
+
+          <section className="exam-section" id="exam-section-materials">
+            <header><h2>4. 分学科导入考试资料</h2><p>考试创建后，按学科上传试卷、答案、解析和评分标准；系统会逐科识别，不混合资料。</p></header>
+            {draft.subjects.length ? <div className="exam-material-plan">{draft.subjects.map((subject) => <div key={subject.subject}><span>{examSubjectLabel(subject.subject)}</span><small>创建后上传试卷与答案</small><strong>{subject.totalScore} 分</strong></div>)}</div> : <div className="exam-composer-empty">先在第 2 题添加学科，资料入口会按学科生成。</div>}
+          </section>
+
           <section className="exam-section" id="exam-section-advanced">
             <button type="button" className="exam-advanced-trigger" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen((open) => !open)}>
-              <span><Gauge size={18} /><span><strong>高级设置</strong><small>阅卷：{gradingLabel(draft.gradingMode)} · 成绩：管理员确认后发布</small></span></span>
+              <span><Gauge size={18} /><span><strong>5. 阅卷与发布设置</strong><small>阅卷：{gradingLabel(draft.gradingMode)} · 成绩：管理员确认后发布</small></span></span>
               <ChevronDown size={18} className={advancedOpen ? "is-open" : ""} />
             </button>
             <AnimatePresence initial={false}>
@@ -239,22 +231,12 @@ export function CreateExamComposer({ draft, schools, grades, classes, templates,
               </motion.div> : null}
             </AnimatePresence>
           </section>
-        </main>
 
-        <aside className="exam-composer-summary">
-          <div className="exam-summary-icon"><FileText size={20} /></div>
-          <span className="exam-section-kicker">创建摘要</span>
-          <h2>{draft.name.trim() || "尚未命名的考试"}</h2>
-          <p>{draft.examType ? examTypeLabel(draft.examType) : "请选择考试类型"}</p>
-          <dl>
-            <div><dt>范围</dt><dd>{grade?.name ?? "未选择年级"}<small>{selectedClasses.length ? `${selectedClasses.length} 个班级` : "未选择班级"}</small></dd></div>
-            <div><dt>科目</dt><dd>{draft.subjects.length ? draft.subjects.map((subject) => <span key={subject.subject}>{examSubjectLabel(subject.subject)} <small>{subject.totalScore} 分</small></span>) : <small>尚未选择科目</small>}</dd></div>
-            <div><dt>阅卷</dt><dd>{gradingLabel(draft.gradingMode)}</dd></div>
-          </dl>
-          <div className="exam-summary-next"><Sparkles size={17} /><div><strong>创建后下一步</strong><span>{draft.creationMode === "materials" ? "上传试卷、答案和评分标准，系统将自动识别资料。" : "进入考试设置，继续完善资料与开考准备。"}</span></div></div>
-          <Button type="primary" size="large" block loading={submitting} onClick={onSubmit}>{cta}</Button>
-          <small className="exam-summary-mode">{mode.title} · 所有设置创建后仍可修改</small>
-        </aside>
+          <footer className="exam-composer-submit">
+            <div><strong>{draft.name.trim() || "尚未命名的考试"}</strong><span>{draft.examType ? examTypeLabel(draft.examType) : "未选择考试类型"} · {grade?.name ?? "未选择年级"} · {selectedClasses.length} 个班级 · {draft.subjects.length} 个学科</span><small>{mode.title} · 创建后进入工作区按学科继续上传资料</small></div>
+            <Button type="primary" size="large" loading={submitting} onClick={onSubmit}>{cta}</Button>
+          </footer>
+        </main>
       </div>
     </div>
 

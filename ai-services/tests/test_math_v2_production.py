@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from urllib import request as urlrequest
 
 from grading_agent.app import GradingAgentApplication
+from grading_agent.app_v2 import math_candidate_messages
 from grading_agent.server import GradingAgentHTTPServer
 from helpers import ROOT, settings
 
@@ -14,7 +15,7 @@ def valid_math_v2_request():
     path = ROOT / "contracts" / "grading-agent" / "v2" / "fixtures" / "valid-request.json"
     value = json.loads(path.read_text(encoding="utf-8"))
     value["model_policy"]["model_version"] = "Qwen/Qwen3-4B-GGUF:Q4_K_M"
-    value["prompt_version"] = "subjective-governed-cn-subject-routing-v5"
+    value["prompt_version"] = "subjective-governed-cn-subject-routing-v6"
     return value
 
 
@@ -80,6 +81,25 @@ class ProductionMathV2Tests(unittest.TestCase):
             sum(call[0] == "request_structured" for call in self.model.calls),
             1,
         )
+
+    def test_primary_and_arbiter_prompts_are_blind_and_role_specific(self):
+        primary = valid_math_v2_request()
+        primary["agent_role"] = "primary"
+        arbiter = copy.deepcopy(primary)
+        arbiter["agent_role"] = "arbiter"
+
+        primary_system = math_candidate_messages(primary)[0]["content"]
+        arbiter_system = math_candidate_messages(arbiter)[0]["content"]
+
+        self.assertIn("independent blind primary grader", primary_system)
+        self.assertIn("independent blind arbiter", arbiter_system)
+        self.assertIn("no A/B scores or conclusions are available", arbiter_system)
+        self.assertNotEqual(primary_system, arbiter_system)
+
+        junior = copy.deepcopy(primary)
+        junior["grade_level"] = "junior"
+        self.assertIn("junior secondary mathematics", math_candidate_messages(junior)[0]["content"])
+        self.assertIn("senior secondary mathematics", primary_system)
 
     def test_http_v2_route_returns_candidate_mapping(self):
         server = GradingAgentHTTPServer(("127.0.0.1", 0), self.app)

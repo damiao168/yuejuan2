@@ -53,6 +53,7 @@ type routerGuards struct {
 	requireReportRead            func(http.HandlerFunc) http.Handler
 	requireSystemRead            func(http.HandlerFunc) http.Handler
 	requireOnboardingRead        func(http.HandlerFunc) http.Handler
+	requireSchoolAdmin           func(http.HandlerFunc) http.Handler
 	requireModelRead             func(http.HandlerFunc) http.Handler
 	requirePlatformModelManage   func(http.HandlerFunc) http.Handler
 	requireModelProviderManage   func(http.HandlerFunc) http.Handler
@@ -229,6 +230,10 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 	requireOnboardingRead := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequireAnyRole("platform_admin", "tenant_admin", "school_admin")(handler))
 	}
+	requireSchoolAdmin := func(handler http.HandlerFunc) http.Handler {
+		// Chat bodies and model answers must not be persisted in idempotency receipts.
+		return authenticate(auth.RequireRequestResourceBoundary(resourceResolver)(auth.RequireAnyRole("school_admin")(handler)))
+	}
 	requireModelRead := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequirePermission("model:read")(handler))
 	}
@@ -324,6 +329,7 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 		requireReportRead:            requireReportRead,
 		requireSystemRead:            requireSystemRead,
 		requireOnboardingRead:        requireOnboardingRead,
+		requireSchoolAdmin:           requireSchoolAdmin,
 		requireModelRead:             requireModelRead,
 		requirePlatformModelManage:   requirePlatformModelManage,
 		requireModelProviderManage:   requireModelProviderManage,

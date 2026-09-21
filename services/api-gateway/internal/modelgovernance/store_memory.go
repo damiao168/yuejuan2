@@ -22,6 +22,7 @@ type MemoryStore struct {
 	modelApprovals map[string]ModelApproval
 	managedConfigs map[string]ManagedAPIConfig
 	managedSecrets map[string]string
+	roleBindings   map[string]ModelRoleBinding
 }
 
 func NewMemoryStore() *MemoryStore {
@@ -35,6 +36,7 @@ func NewMemoryStore() *MemoryStore {
 		modelApprovals: map[string]ModelApproval{},
 		managedConfigs: map[string]ManagedAPIConfig{},
 		managedSecrets: map[string]string{},
+		roleBindings:   map[string]ModelRoleBinding{},
 	}
 }
 

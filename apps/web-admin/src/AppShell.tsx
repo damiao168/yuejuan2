@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 import { App as AntApp, ConfigProvider } from "antd";
 import "antd/dist/reset.css";
-import { getCurrentUser, lockCurrentSession, login as loginWithPassword, logout as logoutSession, reauthenticate as reauthenticateSession } from "./api/auth";
+import { getCurrentUser, lockCurrentSession, login as loginWithPassword, logout as logoutSession, reauthenticate as reauthenticateSession, type LoginResponse } from "./api/auth";
 import { listSchools } from "./api/org";
 import { ApiClientError } from "./api/client";
 import { hasAnyPermission, hasEveryPermission, sessionFromAuthUser, type SessionUser } from "./auth/session";
@@ -33,6 +33,7 @@ import type { LoginFormValues } from "./pages/LoginPage";
 import { invalidateExamWorkspace } from "./query/examWorkspace";
 import { legacyRedirectForPath, normalizeEntryPath } from "./router/navigation";
 import { OnboardingGate } from "./features/onboarding/OnboardingGate";
+import { defaultExamWorkspaceRoute } from "./features/exams/workspace/defaultExamWorkspaceRoute";
 
 const AppealCenterPage = lazy(() => import("./pages/AppealCenterPage").then((module) => ({ default: module.AppealCenterPage })));
 const ArbitrationPage = lazy(() => import("./pages/ArbitrationPage").then((module) => ({ default: module.ArbitrationPage })));
@@ -53,6 +54,7 @@ const TeacherManagementPage = lazy(() => import("./features/members/teachers/Tea
 const PlatformSchoolsPage = lazy(() => import("./pages/PlatformSchoolsPage").then((module) => ({ default: module.PlatformSchoolsPage })));
 const PlatformGettingStartedPage = lazy(() => import("./pages/PlatformGettingStartedPage").then((module) => ({ default: module.PlatformGettingStartedPage })));
 const PlatformModelConfigPage = lazy(() => import("./pages/PlatformModelConfigPage").then((module) => ({ default: module.PlatformModelConfigPage })));
+const SchoolAIChatPage = lazy(() => import("./pages/SchoolAIChatPage").then((module) => ({ default: module.SchoolAIChatPage })));
 const ExamWorkspacePage = lazy(() => import("./pages/ExamWorkspacePage").then((module) => ({ default: module.ExamWorkspacePage })));
 const AnswerSheetTemplatePage = lazy(() => import("./pages/AnswerSheetTemplatePage").then((module) => ({ default: module.AnswerSheetTemplatePage })));
 const CaptureBatchPage = lazy(() => import("./pages/CaptureBatchPage").then((module) => ({ default: module.CaptureBatchPage })));
@@ -154,16 +156,20 @@ export function AppShell() {
     navigate(pathForExperience("/dashboard", nextExperience));
   };
 
+  const finishLogin = useCallback((response: LoginResponse) => {
+    const nextUser = sessionFromAuthUser(response.user);
+    const nextPath = pathForExperience("/dashboard", defaultExperience(nextUser));
+    clearAllReviewDraftFallbacks();
+    setUser(nextUser);
+    router.history.push(nextPath);
+  }, [router]);
+
   const login = async (values: LoginFormValues) => {
     setLoginLoading(true);
     setLoginError(undefined);
     try {
       const response = await loginWithPassword(values);
-      const nextUser = sessionFromAuthUser(response.user);
-      const nextPath = pathForExperience("/dashboard", defaultExperience(nextUser));
-      clearAllReviewDraftFallbacks();
-      setUser(nextUser);
-      router.history.push(nextPath);
+      finishLogin(response);
     } catch (error) {
       setLoginError(error instanceof ApiClientError && error.code === "invalid_credentials" ? "学校或登录信息不正确。" : error instanceof ApiClientError && error.code === "login_rate_limited" ? `尝试次数过多，请${error.retryAfterSeconds ? `在 ${error.retryAfterSeconds} 秒后` : "稍后"}重试。` : "暂时无法登录，请检查网络连接后重试。");
     } finally {
@@ -223,6 +229,7 @@ export function AppShell() {
         <AntApp>
           <LoginPage
             onLogin={login}
+            onWechatLogin={finishLogin}
             loading={loginLoading}
             error={loginError}
           />
@@ -239,7 +246,7 @@ export function AppShell() {
         return <ExamStudentScopePage examId={examId} canManage={hasEveryPermission(user, ["exam:manage", "org:manage"])} onExamChanged={refreshWorkspace} />;
       case "paper":
       case "questions":
-        return <PaperRubricPage canManage={hasEveryPermission(user, ["exam:manage", "file:manage"])} canReadQuestionBank={hasEveryPermission(user,["question_bank:read"])} canImportQuestionBank={hasEveryPermission(user,["question_bank:read","question_bank:create","question_bank:edit"])} questionBankScope={`${user.tenant}:${user.id}`} canManageAssessment={experience === "admin" && hasEveryPermission(user, ["exam:manage"])} initialExamId={examId} onExamChanged={refreshWorkspace} onNavigate={navigate} />;
+        return <PaperRubricPage canManage={hasEveryPermission(user, ["exam:manage", "file:manage"])} canReadQuestionBank={hasEveryPermission(user,["question_bank:read"])} canImportQuestionBank={hasEveryPermission(user,["question_bank:read","question_bank:create","question_bank:edit"])} questionBankScope={`${user.tenant}:${user.id}`} canManageAssessment={experience === "admin" && hasEveryPermission(user, ["exam:manage"])} fixedExamId={examId} mode="embedded" initialView={examWorkspace.section === "questions" ? "questions" : "materials"} onExamChanged={refreshWorkspace} onNavigate={navigate} />;
       case "template":
         return <AnswerSheetTemplatePage examId={examId} canManage={experience === "admin" && hasEveryPermission(user, ["exam:manage", "file:manage"])} canCalibrate={experience === "admin" && hasEveryPermission(user, ["grading:manage"])} onExamChanged={refreshWorkspace} />;
       case "settings":
@@ -284,7 +291,7 @@ export function AppShell() {
         mode={experience}
         canManage={experience === "admin" && hasEveryPermission(user, ["exam:manage"])}
         currentUser={user}
-        onOpenWorkspace={(examId) => navigate(`/exams/${encodeURIComponent(examId)}/overview`)}
+        onOpenWorkspace={(exam) => navigate(defaultExamWorkspaceRoute(exam))}
         onCreateExam={() => navigate("/exams/new")}
       />
     ) : route.path === "/organization/setup" ? (
@@ -301,6 +308,8 @@ export function AppShell() {
       <PlatformGettingStartedPage onNavigate={navigate} />
     ) : route.path === "/platform/model-config" ? (
       <PlatformModelConfigPage />
+    ) : route.path === "/ai-chat" ? (
+      <SchoolAIChatPage key={`${user.tenant}:${user.id}`} user={user} />
     ) : route.path === "/papers" ? (
       <PaperRubricPage canManage={hasEveryPermission(user, ["exam:manage", "file:manage"])} canReadQuestionBank={hasEveryPermission(user,["question_bank:read"])} canImportQuestionBank={hasEveryPermission(user,["question_bank:read","question_bank:create","question_bank:edit"])} questionBankScope={`${user.tenant}:${user.id}`} canManageAssessment={experience === "admin" && hasEveryPermission(user, ["exam:manage"])} />
     ) : route.path === "/question-bank" ? (

@@ -79,7 +79,6 @@ interface ExamFormValues {
 interface Filters {
   search: string;
   schoolId: string;
-  subject: string;
   gradeId: string;
   status: string;
   examType: string;
@@ -117,17 +116,16 @@ function formatTime(value?: string) {
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString("zh-CN", { hour12: false });
 }
 
-export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspace, onCreateExam }: { mode: ProductExperience; canManage: boolean; currentUser: SessionUser; onOpenWorkspace: (examId: string) => void; onCreateExam: () => void }) {
+export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspace, onCreateExam }: { mode: ProductExperience; canManage: boolean; currentUser: SessionUser; onOpenWorkspace: (exam: Exam) => void; onCreateExam: () => void }) {
   const { message, modal } = App.useApp();
   const [form] = Form.useForm<ExamFormValues>();
   const watchedSchoolId = Form.useWatch("school_id", form);
   const watchedGradingMode = Form.useWatch("grading_mode", form);
   const [filters, setFilters] = useState<Filters>(() => {
     const status = hashQueryParam("status");
-    return { search: "", schoolId: "", subject: "", gradeId: "", status: status === "active" || statusFlow.includes(status) ? status : "", examType: "" };
+    return { search: "", schoolId: "", gradeId: "", status: status === "active" || statusFlow.includes(status) ? status : "", examType: "" };
   });
   const [exams, setExams] = useState<Exam[]>([]);
-  const [selectedExamIds, setSelectedExamIds] = useState<Record<string, string>>({});
   const [schools, setSchools] = useState<School[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
@@ -179,10 +177,6 @@ export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspa
   useEffect(() => {
     void loadData();
   }, [loadData]);
-
-  useEffect(() => {
-    setSelectedExamIds({});
-  }, [filters.subject, filters.status]);
 
   useEffect(() => {
     if (!drawer) {
@@ -242,21 +236,19 @@ export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspa
   const filteredGroups = useMemo(() => {
     const keyword = filters.search.trim().toLowerCase();
     return groupExams(exams).filter((group) => {
-      const keywordMatched = !keyword || group.name.toLowerCase().includes(keyword)
-        || group.exams.some((exam) => labelFrom(subjectOptions, exam.subject).toLowerCase().includes(keyword));
+      const keywordMatched = !keyword || group.name.toLowerCase().includes(keyword);
       const typeMatched = !filters.examType || group.examType === filters.examType;
       return keywordMatched && typeMatched && group.exams.some((exam) => {
-        const subjectMatched = !filters.subject || exam.subject === filters.subject;
         const statusMatched = !filters.status || (filters.status === "active"
           ? !["published", "archived"].includes(exam.status) : exam.status === filters.status);
         const gradeMatched = !filters.gradeId || group.gradeId === filters.gradeId
           || exam.class_ids.some((classId) => classById.get(classId)?.grade_id === filters.gradeId);
-        return subjectMatched && statusMatched && gradeMatched;
+        return statusMatched && gradeMatched;
       });
     });
-  }, [classById, exams, filters.examType, filters.gradeId, filters.search, filters.status, filters.subject]);
+  }, [classById, exams, filters.examType, filters.gradeId, filters.search, filters.status]);
 
-  const examForGroup = (group: ExamGroup) => selectedGroupExam(group, selectedExamIds[group.id], filters.subject, filters.status);
+  const examForGroup = (group: ExamGroup) => selectedGroupExam(group, undefined, "", filters.status);
 
   const openDetail = async (exam: Exam) => {
     setDetailOpen(true);
@@ -350,7 +342,7 @@ export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspa
       dataIndex: "name",
       width: 250,
       ellipsis: true,
-      render: (value: string, group) => <Tooltip title={value}><button className="exam-name-link" type="button" onClick={() => onOpenWorkspace(examForGroup(group).id)}>{value}</button></Tooltip>
+      render: (value: string, group) => <Tooltip title={value}><button className="exam-name-link" type="button" onClick={() => onOpenWorkspace(examForGroup(group))}>{value}</button></Tooltip>
     },
     {
       title: "考试类型",
@@ -358,30 +350,16 @@ export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspa
       width: 102,
       render: (value: string) => labelFrom(examTypeOptions, value)
     },
-    {
-      title: "学科",
-      width: 138,
-      render: (_, group) => group.exams.length === 1
-        ? labelFrom(subjectOptions, group.exams[0].subject)
-        : <Select
-            className="exam-subject-select"
-            size="small"
-            aria-label={`${group.name}选择学科`}
-            value={examForGroup(group).id}
-            options={group.exams.map((exam) => ({ label: labelFrom(subjectOptions, exam.subject), value: exam.id }))}
-            onChange={(id) => setSelectedExamIds((current) => ({ ...current, [group.id]: id }))}
-          />
-    },
     { title: "年级", width: 95, ellipsis: true, render: (_, group) => group.gradeId ? gradeById.get(group.gradeId)?.name ?? gradeNamesForExam(examForGroup(group)) : gradeNamesForExam(examForGroup(group)) },
     { title: "班级", width: 95, render: (_, group) => {
-      const exam = examForGroup(group);
-      const names = exam.class_ids.map((id) => classById.get(id)?.name).filter(Boolean).join("、");
-      return <Tooltip title={names || "暂无班级信息"}>{exam.class_ids.length} 个班级</Tooltip>;
+      const classIds = [...new Set(group.exams.flatMap((exam) => exam.class_ids))];
+      const names = classIds.map((id) => classById.get(id)?.name).filter(Boolean).join("、");
+      return <Tooltip title={names || "暂无班级信息"}>{classIds.length} 个班级</Tooltip>;
     } },
-    { title: "总分", width: 64, align: "right", render: (_, group) => examForGroup(group).total_score },
     { title: "状态", width: 108, render: (_, group) => {
       const status = examForGroup(group).status;
-      return <StatusTag tone={examStatusTone(status)}>{examStatusLabels[status] ?? "未知状态"}</StatusTag>;
+      const sameStatus = group.exams.every((exam) => exam.status === status);
+      return <StatusTag tone={sameStatus ? examStatusTone(status) : "processing"}>{sameStatus ? examStatusLabels[status] ?? "未知状态" : "配置进行中"}</StatusTag>;
     } },
     {
       title: "操作",
@@ -400,7 +378,7 @@ export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspa
         ];
         return (
           <Space className="table-actions exam-table-actions" size={6}>
-            <Button size="small" icon={<LayoutDashboard size={14} />} onClick={() => onOpenWorkspace(exam.id)}>
+            <Button size="small" icon={<LayoutDashboard size={14} />} onClick={() => onOpenWorkspace(exam)}>
               工作区
             </Button>
             <Dropdown
@@ -415,7 +393,7 @@ export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspa
                 }
               }}
             >
-              <Button size="small" loading={actioningId === exam.id} aria-label={`${group.name} ${labelFrom(subjectOptions, exam.subject)}更多操作`} icon={<MoreHorizontal size={15} />} />
+              <Button size="small" loading={actioningId === exam.id} aria-label={`${group.name}更多操作`} icon={<MoreHorizontal size={15} />} />
             </Dropdown>
           </Space>
         );
@@ -446,7 +424,7 @@ export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspa
         <div className="filter-grid exam-filter-primary">
           <Input
             prefix={<Search size={16} />}
-            placeholder="搜索考试名称或学科"
+            placeholder="搜索考试名称"
             value={filters.search}
             onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
           />
@@ -465,7 +443,6 @@ export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspa
           <summary>更多筛选</summary>
           <div className="filter-grid">
             <Select placeholder="学校" allowClear value={filters.schoolId || undefined} options={schoolOptions} onChange={(value) => setFilters((current) => ({ ...current, schoolId: value ?? "", gradeId: "" }))} />
-            <Select placeholder="学科" allowClear value={filters.subject || undefined} options={subjectOptions} onChange={(value) => setFilters((current) => ({ ...current, subject: value ?? "" }))} />
             <Select placeholder="年级" allowClear value={filters.gradeId || undefined} options={gradeOptions} onChange={(value) => setFilters((current) => ({ ...current, gradeId: value ?? "" }))} />
             <Select placeholder="考试类型" allowClear value={filters.examType || undefined} options={examTypeOptions} onChange={(value) => setFilters((current) => ({ ...current, examType: value ?? "" }))} />
           </div>
@@ -495,7 +472,7 @@ export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspa
               size="small"
               className="exam-management-table"
               tableLayout="fixed"
-              scroll={{ x: 1000 }}
+              scroll={{ x: 760 }}
             />
           </div>
         </section>

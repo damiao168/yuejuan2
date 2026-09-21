@@ -93,6 +93,7 @@ const apiErrorMessages: Record<string, string> = {
   request_body_too_large: "填写内容过长，请精简后重试。",
   file_too_large: "上传内容过大，请调整文件后重试。",
   unsupported_media_type: "文件格式不受支持，请更换文件后重试。",
+  unsupported_file_type: "文件内容与格式不匹配，或包含无法识别的隐藏字符。请使用 UTF-8 文本、PDF、Word 或图片后重试。",
   provider_unknown: "暂时无法识别模型供应商，请选择服务来源。",
   invalid_managed_model_api: "模型 API 配置不完整或接口地址不安全。",
   managed_model_api_conflict: "该学校已经配置了同一供应商。",
@@ -118,7 +119,11 @@ const apiErrorMessages: Record<string, string> = {
   semantic_mismatch: "模型返回的 JSON 内容与测试文本不一致。",
   response_format_unsupported: "当前模型接口不支持 JSON 输出模式。",
   generation_failed: "模型生成请求失败。",
-  managed_model_validation_failed: "模型配置验证失败，请检查后重试。"
+  managed_model_validation_failed: "模型配置验证失败，请检查后重试。",
+  ai_chat_model_unavailable: "当前没有可用的学校对话模型，请联系平台管理员。",
+  invalid_ai_chat_request: "对话内容为空、过长或格式不正确。",
+  ai_chat_rate_limited: "模型服务繁忙，请稍后重试。",
+  ai_chat_provider_failed: "模型暂时无法回答，请稍后重试。"
 };
 
 const httpErrorMessages: Record<number, string> = {

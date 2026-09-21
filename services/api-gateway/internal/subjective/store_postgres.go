@@ -17,30 +17,79 @@ func (s *PostgresStore) GetOrCreateRun(ctx context.Context, tenantID string, _ s
 	if tenantID == "" || input.AnswerSegmentID == "" || input.QuestionID == "" || input.RequestID == "" {
 		return GradingRun{}, ErrInvalidInput
 	}
+	if input.AgentRole == "" {
+		input.AgentRole = AgentRoleSingle
+	}
+	if !validRunPanelRole(input.PanelID, input.AgentRole) {
+		return GradingRun{}, ErrInvalidInput
+	}
 	status := RunProcessing
 	attemptCount := 1
-	if input.BatchID != "" {
+	if input.BatchID != "" || input.PanelID != "" {
 		status = RunQueued
 		attemptCount = 0
 	}
 	row := s.db.QueryRowContext(ctx, `
 INSERT INTO subjective_grading_run (
   tenant_id, batch_id, answer_segment_id, answer_version, question_id, rubric_version,
-  model_version, prompt_version, min_confidence, request_id,
+  model_version, prompt_version, min_confidence, request_id, panel_id, agent_role,
   math_artifact_id, math_artifact_version, math_correction_revision, math_scoring_version,
   status, attempt_count, started_at
 )
 VALUES ($1::uuid, NULLIF($2, '')::uuid, $3::uuid, $4, $5::uuid, $6, $7, $8, $9, $10, NULLIF($11, '')::uuid, $12,
-  $13, $14, $15, $16, CASE WHEN $15 = 'processing' THEN now() ELSE NULL END)
+  NULLIF($13, '')::uuid, $14, $15, $16, $17, $18, CASE WHEN $17 = 'processing' THEN now() ELSE NULL END)
 ON CONFLICT (tenant_id, request_id) DO UPDATE SET updated_at = subjective_grading_run.updated_at
 RETURNING id::text, tenant_id::text, COALESCE(batch_id::text, ''), answer_segment_id::text, answer_version,
   question_id::text, rubric_version, model_version, prompt_version, min_confidence::float8, request_id,
+  COALESCE(panel_id::text, ''), agent_role,
   COALESCE(math_artifact_id::text, ''), math_artifact_version, math_correction_revision, math_scoring_version,
   status, attempt_count, COALESCE(grade_id::text, ''), COALESCE(error_code, ''),
   started_at, completed_at, created_at, updated_at
 `, tenantID, input.BatchID, input.AnswerSegmentID, input.AnswerVersion, input.QuestionID, input.RubricVersion, input.ModelVersion, input.PromptVersion, input.MinConfidence, input.RequestID,
-		input.MathArtifactID, input.MathArtifactVersion, input.MathCorrectionRevision, input.MathScoringVersion, status, attemptCount)
-	return scanRun(row)
+		input.PanelID, input.AgentRole, input.MathArtifactID, input.MathArtifactVersion, input.MathCorrectionRevision, input.MathScoringVersion, status, attemptCount)
+	run, err := scanRun(row)
+	if err != nil {
+		if input.PanelID != "" && panelPersistenceConflict(err) {
+			return GradingRun{}, ErrIdempotencyConflict
+		}
+		return GradingRun{}, err
+	}
+	if input.PanelID != "" && !runPanelIdentityMatches(run, input) {
+		return GradingRun{}, ErrIdempotencyConflict
+	}
+	return run, nil
+}
+
+func (s *PostgresStore) ClaimPanelRun(ctx context.Context, tenantID, runID string) (GradingRun, bool, error) {
+	if tenantID == "" || runID == "" {
+		return GradingRun{}, false, ErrInvalidInput
+	}
+	row := s.db.QueryRowContext(ctx, `
+UPDATE subjective_grading_run
+SET status='processing',attempt_count=attempt_count+1,started_at=COALESCE(started_at,now()),updated_at=now()
+WHERE tenant_id=$1::uuid AND id=$2::uuid AND panel_id IS NOT NULL AND agent_role<>'single'
+  AND status='queued' AND deleted_at IS NULL
+RETURNING id::text, tenant_id::text, COALESCE(batch_id::text, ''), answer_segment_id::text, answer_version,
+  question_id::text, rubric_version, model_version, prompt_version, min_confidence::float8, request_id,
+  COALESCE(panel_id::text, ''), agent_role,
+  COALESCE(math_artifact_id::text, ''), math_artifact_version, math_correction_revision, math_scoring_version,
+  status, attempt_count, COALESCE(grade_id::text, ''), COALESCE(error_code, ''),
+  started_at, completed_at, created_at, updated_at`, tenantID, runID)
+	run, err := scanRun(row)
+	if err == nil {
+		return run, true, nil
+	}
+	if !errors.Is(err, ErrNotFound) {
+		return GradingRun{}, false, err
+	}
+	run, err = s.GetRun(ctx, tenantID, runID)
+	if err != nil {
+		return GradingRun{}, false, err
+	}
+	if run.PanelID == "" || run.AgentRole == AgentRoleSingle {
+		return GradingRun{}, false, ErrInvalidInput
+	}
+	return run, false, nil
 }
 
 func (s *PostgresStore) UpdateRun(ctx context.Context, tenantID string, runID string, input UpdateRunInput) (GradingRun, error) {
@@ -59,6 +108,7 @@ SET status=$3,
 WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL
 RETURNING id::text, tenant_id::text, COALESCE(batch_id::text, ''), answer_segment_id::text, answer_version,
   question_id::text, rubric_version, model_version, prompt_version, min_confidence::float8, request_id,
+  COALESCE(panel_id::text, ''), agent_role,
   COALESCE(math_artifact_id::text, ''), math_artifact_version, math_correction_revision, math_scoring_version,
   status, attempt_count, COALESCE(grade_id::text, ''), COALESCE(error_code, ''),
   started_at, completed_at, created_at, updated_at
@@ -70,6 +120,7 @@ func (s *PostgresStore) GetRun(ctx context.Context, tenantID string, runID strin
 	row := s.db.QueryRowContext(ctx, `
 SELECT id::text, tenant_id::text, COALESCE(batch_id::text, ''), answer_segment_id::text, answer_version,
   question_id::text, rubric_version, model_version, prompt_version, min_confidence::float8, request_id,
+  COALESCE(panel_id::text, ''), agent_role,
   COALESCE(math_artifact_id::text, ''), math_artifact_version, math_correction_revision, math_scoring_version,
   status, attempt_count, COALESCE(grade_id::text, ''), COALESCE(error_code, ''),
   started_at, completed_at, created_at, updated_at
@@ -189,6 +240,7 @@ func scanRun(row runScanner) (GradingRun, error) {
 	var out GradingRun
 	var startedAt, completedAt sql.NullTime
 	if err := row.Scan(&out.ID, &out.TenantID, &out.BatchID, &out.AnswerSegmentID, &out.AnswerVersion, &out.QuestionID, &out.RubricVersion, &out.ModelVersion, &out.PromptVersion, &out.MinConfidence, &out.RequestID,
+		&out.PanelID, &out.AgentRole,
 		&out.MathArtifactID, &out.MathArtifactVersion, &out.MathCorrectionRevision, &out.MathScoringVersion,
 		&out.Status, &out.AttemptCount, &out.GradeID, &out.ErrorCode, &startedAt, &completedAt, &out.CreatedAt, &out.UpdatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -231,8 +283,8 @@ JOIN exam_question_snapshot eqs ON eqs.tenant_id = q.tenant_id AND eqs.exam_id =
 JOIN exam e ON e.tenant_id = q.tenant_id AND e.id = q.exam_id AND e.deleted_at IS NULL
 LEFT JOIN LATERAL (
   SELECT CASE
-    WHEN COUNT(DISTINCT g.level_no) = 1 AND MIN(g.level_no) BETWEEN 7 AND 9 THEN 'junior_middle'
-    WHEN COUNT(DISTINCT g.level_no) = 1 AND MIN(g.level_no) BETWEEN 10 AND 12 THEN 'senior_middle'
+    WHEN COUNT(DISTINCT g.level_no) = 1 AND MIN(g.level_no) BETWEEN 7 AND 9 THEN 'junior'
+    WHEN COUNT(DISTINCT g.level_no) = 1 AND MIN(g.level_no) BETWEEN 10 AND 12 THEN 'senior'
     ELSE ''
   END AS grade_level
   FROM exam_class ec

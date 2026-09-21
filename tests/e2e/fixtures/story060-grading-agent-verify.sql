@@ -65,7 +65,7 @@ BEGIN
     AND confidence = 0
     AND answer_version = '00000000-0000-0000-0000-000000000615'
     AND model_version = 'Qwen/Qwen3-4B-GGUF:Q4_K_M'
-    AND prompt_version = 'subjective-governed-cn-subject-routing-v5'
+    AND prompt_version = 'subjective-governed-cn-subject-routing-v6'
     AND rubric_version = 'rubric-v3'
     AND delivery_mode = 'teacher_suggestion'
     AND capability_profile = 'local-pilot-v1'

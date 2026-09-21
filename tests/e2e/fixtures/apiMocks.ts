@@ -58,6 +58,16 @@ export async function installApiMocks(
       });
     }
     if (path === "/api/v1/auth/logout") return json(route, { status: "ok" });
+    if (path === "/api/v1/auth/mfa" && request.method() === "GET") return json(route, { available: true, enabled: false, recovery_codes_remaining: 0 });
+    if (path === "/api/v1/auth/sessions" && request.method() === "GET") return json(route, { sessions: [
+      { id: "session-current", session_type: "remembered_device", device_name: "办公室 Windows 电脑", created_at: "2026-09-20T08:00:00Z", last_seen_at: "2026-09-20T12:00:00Z", expires_at: "2026-10-20T08:00:00Z", current: true },
+      { id: "session-tablet", session_type: "standard", device_name: "教务处平板", created_at: "2026-09-19T08:00:00Z", last_seen_at: "2026-09-19T10:00:00Z", expires_at: "2026-09-21T08:00:00Z", current: false }
+    ] });
+    if (path === "/api/v1/auth/security-events" && request.method() === "GET") return json(route, { events: [
+      { id: "security-login", event_type: "auth.login_succeeded", risk_level: "low", device_summary: "Windows 设备", occurred_at: "2026-09-20T11:59:00Z" }
+    ] });
+    if (path.startsWith("/api/v1/auth/sessions/") && request.method() === "DELETE") return json(route, { status: "revoked" });
+    if (path === "/api/v1/auth/logout-all" && request.method() === "POST") return json(route, { status: "ok", revoked_count: 2 });
 
     if (path === "/api/v1/dashboard/summary") {
       if (options.dashboardMode === "empty") {
@@ -220,6 +230,28 @@ export async function installApiMocks(
         }]
       });
     }
+    const examDetailMatch = path.match(/^\/api\/v1\/exams\/([^/]+)$/);
+    if (examDetailMatch && request.method() === "GET") {
+      const examID = decodeURIComponent(examDetailMatch[1]);
+      const newlyCreated = examID.startsWith("exam-created");
+      return json(route, { exam: {
+        id: examID,
+        tenant_id: "tenant-school",
+        school_id: "school-1",
+        name: newlyCreated ? "2026-2027学年高二期中考试 · 数学" : "2026 春季数学期中考试",
+        subject: "math",
+        exam_type: "midterm",
+        total_score: 150,
+        status: newlyCreated ? "draft" : "collecting",
+        grading_mode: "ai_assisted",
+        appeal_enabled: true,
+        publish_policy: "manual",
+        created_by: "user-school_admin",
+        class_ids: [],
+        revision: 3,
+        created_at: "2026-08-01T00:00:00Z"
+      } });
+    }
     if (path === "/api/v1/exam-sessions" && route.request().method() === "POST") {
       return json(route, {
         exam_session: {
@@ -258,20 +290,35 @@ export async function installApiMocks(
     if (/^\/api\/v1\/exams\/[^/]+\/scoring-summary$/.test(path) && request.method() === "GET") {
       return json(route, { scoring_summary: { questions: [] } });
     }
+    if (/^\/api\/v1\/exams\/[^/]+\/readiness$/.test(path) && request.method() === "GET") {
+      return json(route, { readiness: {
+        ready: false,
+        confirmed: false,
+        configuration_hash: "readiness-demo",
+        import_snapshot_available: false,
+        checks: [
+          { code: "students", label: "学生范围", passed: true, severity: "blocker", message: "已选择 1 个班级", section: "students" },
+          { code: "paper", label: "上传试卷", passed: false, severity: "blocker", message: "请上传并确认考试资料", section: "paper" },
+          { code: "questions", label: "题目与答案", passed: false, severity: "blocker", message: "请完成题目和标准答案配置", section: "questions" },
+          { code: "template", label: "答题卡模板", passed: false, severity: "blocker", message: "请创建并锁定答题卡模板", section: "template" }
+        ]
+      } });
+    }
 
     const workspaceMatch = path.match(/^\/api\/v1\/exams\/([^/]+)\/workspace$/);
     if (workspaceMatch && request.method() === "GET") {
       const examID = decodeURIComponent(workspaceMatch[1]);
+      const newlyCreated = examID.startsWith("exam-created");
       return json(route, {
         workspace: {
           exam_id: examID,
-          exam_name: "2026 春季数学期中考试",
-          exam_status: "collecting",
+          exam_name: newlyCreated ? "2026-2027学年高二期中考试 · 数学" : "2026 春季数学期中考试",
+          exam_status: newlyCreated ? "draft" : "collecting",
           revision: 3,
-          stage: "capture",
+          stage: newlyCreated ? "prepare" : "capture",
           stages: [
-            { key: "prepare", label: "开考准备", state: "completed", action_route: `/exams/${examID}/settings` },
-            { key: "capture", label: "答卷导入", state: "current", action_route: `/exams/${examID}/capture` },
+            { key: "prepare", label: "开考准备", state: newlyCreated ? "current" : "completed", action_route: `/exams/${examID}/settings` },
+            { key: "capture", label: "答卷导入", state: newlyCreated ? "pending" : "current", action_route: `/exams/${examID}/capture` },
             { key: "grading", label: "阅卷", state: "pending", action_route: `/exams/${examID}/grading` },
             { key: "quality", label: "复核与异常", state: "pending", action_route: `/exams/${examID}/quality` },
             { key: "results", label: "成绩与报告", state: "pending", action_route: `/exams/${examID}/scores` }
@@ -301,7 +348,7 @@ export async function installApiMocks(
           }],
           counts: {
             paper_count: 1,
-            question_count: 19,
+            question_count: newlyCreated ? 0 : 19,
             submission_count: 6,
             failed_submission_count: 1,
             quality_issue_submission_count: 1,
@@ -322,8 +369,8 @@ export async function installApiMocks(
             label: "数学",
             total_score: 150,
             question_count: 19,
-            configured_question_count: 19,
-            frozen_question_count: 19,
+            configured_question_count: newlyCreated ? 0 : 19,
+            frozen_question_count: newlyCreated ? 0 : 19,
             risk_tier_source: "snapshot",
             question_types: { single_choice: 10, extended_response: 9 }
           },

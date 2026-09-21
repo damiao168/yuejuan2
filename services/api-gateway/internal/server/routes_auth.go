@@ -9,6 +9,9 @@ import (
 func registerAuthRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("POST /api/v1/auth/login", http.HandlerFunc(ctx.modules.Identity.AuthHandler.Login))
 	mux.Handle("POST /api/v1/auth/token", http.HandlerFunc(ctx.modules.Identity.AuthHandler.TokenLogin))
+	mux.Handle("POST /api/v1/auth/wechat/challenges", http.HandlerFunc(ctx.modules.Identity.AuthHandler.StartWechatLogin))
+	mux.Handle("GET /api/v1/auth/wechat/callback", http.HandlerFunc(ctx.modules.Identity.AuthHandler.WechatCallback))
+	mux.Handle("POST /api/v1/auth/wechat/session", http.HandlerFunc(ctx.modules.Identity.AuthHandler.PollWechatLogin))
 	mux.Handle("POST /api/v1/auth/activation/verify", http.HandlerFunc(ctx.modules.Identity.AuthHandler.VerifyActivation))
 	mux.Handle("POST /api/v1/auth/activation/complete", http.HandlerFunc(ctx.modules.Identity.AuthHandler.CompleteActivation))
 	mux.Handle("POST /api/v1/auth/recovery/verify", http.HandlerFunc(ctx.modules.Identity.AuthHandler.VerifyRecovery))

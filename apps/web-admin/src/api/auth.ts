@@ -45,6 +45,20 @@ export interface LoginResponse {
   user: AuthUser;
 }
 
+export interface WechatLoginChallengeResponse {
+  challenge_id: string;
+  poll_token: string;
+  qr_code_data_url: string;
+  expires_at: string;
+}
+
+export type WechatLoginStatusResponse = {
+  status: "pending" | "failed" | "expired" | "consumed" | "authenticated";
+  error_code?: string;
+  expires_at: string;
+  user?: AuthUser;
+};
+
 export interface DeviceSession {
   id: string;
   session_type: "standard" | "remembered_device" | "public_device" | "desktop_device" | "service";
@@ -67,6 +81,26 @@ export async function login(input: LoginRequest) {
   return apiClient.request<LoginResponse>("/api/v1/auth/login", {
     method: "POST",
     body: JSON.stringify(input)
+  });
+}
+
+export function startWechatLogin(input: {
+  tenant_code?: string;
+  tenant_hint?: string;
+  remember_device?: boolean;
+  public_device?: boolean;
+}) {
+  return apiClient.request<WechatLoginChallengeResponse>("/api/v1/auth/wechat/challenges", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export function pollWechatLogin(input: { challenge_id: string; poll_token: string }, signal?: AbortSignal) {
+  return apiClient.request<WechatLoginStatusResponse>("/api/v1/auth/wechat/session", {
+    method: "POST",
+    body: JSON.stringify(input),
+    signal
   });
 }
 

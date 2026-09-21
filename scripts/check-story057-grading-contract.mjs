@@ -28,7 +28,14 @@ for (const field of contract.forbidden_request_fields) {
   assert.equal(Object.hasOwn(request, field), false, `request leaks forbidden field ${field}`);
 }
 assert.equal(request.schema_version, "grading-agent-v1");
-assert.equal(request.grade_level, "junior_middle");
+assert.equal(request.grade_level, "junior");
+assert.deepEqual(contract.allowed_grade_levels, ["junior", "senior"]);
+assert.deepEqual(contract.allowed_subjects, [
+  "chinese", "mathematics", "english", "physics", "chemistry", "biology", "history", "geography", "ethics_politics",
+]);
+assert.deepEqual(matrix.grade_levels, ["junior", "senior"]);
+assert.deepEqual(contract.allowed_agent_roles, ["single", "primary", "arbiter"]);
+assert.equal(request.agent_role, "single");
 assert.equal(request.model_policy.mode, "shadow");
 assert.equal(request.prompt_guard.student_answer_is_untrusted, true);
 assert.equal(request.rubric_version, request.rubric.rubric_version);
@@ -77,6 +84,10 @@ for (const field of contractV2.forbidden_request_fields) {
   assert.equal(Object.hasOwn(requestV2, field), false, `v2 request leaks forbidden field ${field}`);
 }
 assert.equal(requestV2.media_evidence.kind, "answer_segment_crop");
+assert.equal(requestV2.subject, "mathematics");
+assert.equal(requestV2.grade_level, "senior");
+assert.equal(requestV2.agent_role, "primary");
+assert.deepEqual(contractV2.allowed_agent_roles, ["single", "primary", "arbiter"]);
 assert.equal(requestV2.media_evidence.encoding, "base64");
 assert.equal(requestV2.media_evidence.media_type, "image/png");
 const decodedCrop = Buffer.from(requestV2.media_evidence.data_base64, "base64");

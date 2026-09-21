@@ -415,6 +415,8 @@ type PaperImportRunBinding struct {
 	RunID          string
 	Generation     int64
 	SourceRevision string
+	CommandType    string
+	NewSourceIDs   []string
 	InputID        string
 	InputHash      string
 	Input          PaperImportParseRequest

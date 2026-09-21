@@ -2,7 +2,8 @@
   "schema_version": "grading-agent-v1",
   "request_id": "subjective-grade-0001",
   "subject": "chinese",
-  "grade_level": "junior_middle",
+  "grade_level": "junior",
+  "agent_role": "single",
   "question_id": "question-001",
   "answer_segment_id": "segment-001",
   "question_type": "short_answer",
@@ -11,7 +12,7 @@
   "answer_text": "因为他对家乡有责任感，也希望帮助村里的孩子继续读书。",
   "ocr_confidence": 0.96,
   "rubric_version": "rubric-v3",
-  "prompt_version": "subjective-governed-cn-subject-routing-v5",
+  "prompt_version": "subjective-governed-cn-subject-routing-v6",
   "rubric": {
     "rubric_id": "rubric-001",
     "rubric_version": "rubric-v3",

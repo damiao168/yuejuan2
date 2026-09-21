@@ -59,6 +59,9 @@ export function PaperRubricPage({
   canImportQuestionBank=false,
   questionBankScope="",
   initialExamId = "",
+  fixedExamId,
+  mode = "standalone",
+  initialView = "materials",
   onExamChanged,
   onNavigate
 }: {
@@ -68,11 +71,14 @@ export function PaperRubricPage({
   canImportQuestionBank?:boolean;
   questionBankScope?:string;
   initialExamId?: string;
+  fixedExamId?: string;
+  mode?: "standalone" | "embedded";
+  initialView?: "materials" | "questions";
   onExamChanged?: () => void;
   onNavigate?: (path: string) => void;
 }) {
   const { message } = App.useApp();
-	const config = usePaperConfigData(initialExamId);
+	const config = usePaperConfigData({ initialExamId, fixedExamId });
 	const {
 		exams, selectedExamId, setSelectedExamId, papers, paperImports, questions,
 		selectedQuestionId, setSelectedQuestionId, editorMode, setEditorMode,
@@ -106,7 +112,8 @@ export function PaperRubricPage({
     scoreMismatch, updatePoint, addEvidenceRequirement, updateEvidenceRequirement,
     removeEvidenceRequirement, removePoint, addPoint, saveRubric
   } = rubricWorkflow;
-  const selectedLocked = selectedQuestion?.rubric?.status === "locked";
+  const fillBlankUsesAnswerKey = (watchedQuestionType ?? selectedQuestion?.question_type) === "fill_blank";
+  const selectedLocked = !fillBlankUsesAnswerKey && selectedQuestion?.rubric?.status === "locked";
   const questionDisabled = !canManage || selectedLocked;
   const showTolerance = toleranceQuestionTypes.includes(watchedQuestionType ?? "");
   const showFormulaEvidence = formulaEvidenceEnabled(selectedExam?.subject, selectedQuestion?.question_type);
@@ -239,13 +246,17 @@ export function PaperRubricPage({
     }
   }
 
+  const embedded = mode === "embedded";
 	const latestPaperImport = paperImports[0];
   const editorVisible = !loading && !error && Boolean(selectedExam) && !configLoading && !configError;
+  const showMaterials = initialView === "materials";
+  const showQuestionConfiguration = initialView === "questions" || (!embedded && (questions.length > 0 || Boolean(latestPaperImport)));
+  const questionEditorVisible = initialView === "questions" || showQuestionEditor;
 
   return (
     <div className="page-stack">
       {!editorVisible ? <Form form={form} component={false} /> : null}
-      <section className="page-heading">
+      {!embedded ? <section className="page-heading">
         <div>
           <Space>
             <h1>考试资料与评分配置</h1>
@@ -262,9 +273,9 @@ export function PaperRubricPage({
             完整性检查
           </Button>
         </Space>
-      </section>
+      </section> : null}
 
-      <section className="workspace-section filter-panel">
+      {!embedded ? <section className="workspace-section filter-panel">
         <div className="paper-topline">
           <Select
             className="exam-picker"
@@ -276,7 +287,7 @@ export function PaperRubricPage({
           />
           {selectedExam ? <span className="muted">当前考试总分：{selectedExam.total_score}</span> : null}
         </div>
-      </section>
+      </section> : null}
 
       {loading ? (
         <section className="workspace-section">
@@ -296,16 +307,16 @@ export function PaperRubricPage({
         <ErrorState message={configError} onRetry={() => void loadConfig(selectedExam.id)} />
       ) : (
         <>
-          <PaperImportWorkspace
+          {showMaterials ? <PaperImportWorkspace
             canManage={canManage}
             latestPaperImport={latestPaperImport}
             workflow={importWorkflow}
             setShowQuestionEditor={setShowQuestionEditor}
-            initialExamId={initialExamId}
+            initialExamId={fixedExamId ?? initialExamId}
             onNavigate={onNavigate}
-          />
+          /> : null}
 
-          {validation ? (
+          {showQuestionConfiguration && validation ? (
             <Alert
               type={validation.valid ? "success" : "warning"}
               showIcon
@@ -326,18 +337,18 @@ export function PaperRubricPage({
             />
           ) : null}
 
-          <section id="paper-question-summary" className="workspace-section paper-question-summary">
+          {showQuestionConfiguration ? <section id="paper-question-summary" className="workspace-section paper-question-summary">
             <div>
               <strong>{questions.length}</strong>
               <span>道题目</span>
               <small>{questions.filter((question) => question.answer_key).length} 道已配置标准答案</small>
             </div>
-            <Button onClick={() => setShowQuestionEditor((current) => !current)}>
+            {initialView === "materials" ? <Button onClick={() => setShowQuestionEditor((current) => !current)}>
               {showQuestionEditor ? "收起逐题校对" : questions.length ? "逐题校对" : "手动补充题目"}
-            </Button>
-          </section>
+            </Button> : null}
+          </section> : null}
 
-          {showQuestionEditor ? <section className="paper-workbench">
+          {showQuestionConfiguration && questionEditorVisible ? <section className="paper-workbench">
             <aside className="workspace-section question-list-panel">
               <div className="section-head">
                 <div>
@@ -374,8 +385,10 @@ export function PaperRubricPage({
                     </div>
                     <div>
                       <span>{question.score} 分</span>
-                      <span title={question.rubric?.status}>
-                        <StatusTag tone={rubricTone(question.rubric?.status)}>{rubricStatusLabel(question.rubric?.status)}</StatusTag>
+                      <span title={question.question_type === "fill_blank" ? "按标准答案评分" : question.rubric?.status}>
+                        {question.question_type === "fill_blank"
+                          ? <StatusTag tone="success">按答案评分</StatusTag>
+                          : <StatusTag tone={rubricTone(question.rubric?.status)}>{rubricStatusLabel(question.rubric?.status)}</StatusTag>}
                       </span>
                     </div>
                   </List.Item>
@@ -453,6 +466,7 @@ export function PaperRubricPage({
                 <Form.Item label="标准答案" name="standard_answer" rules={[{ required: true, message: "请输入标准答案" }]}>
                   <Input.TextArea rows={3} />
                 </Form.Item>
+                {fillBlankUsesAnswerKey ? <Alert type="info" showIcon message="填空题按标准答案评分" description="标准答案和等价答案就是判分依据，无需再设置评分细则。" /> : null}
                 <details className="paper-advanced-settings"><summary>高级答案设置</summary><Form.Item label="等价答案" name="equivalent_answers">
                   <Select mode="tags" placeholder="输入后回车" />
                 </Form.Item>
@@ -510,7 +524,7 @@ export function PaperRubricPage({
                 {["single_choice", "true_false"].includes(objectiveRuleType) ? <Alert type="info" showIcon message="使用标准答案精确判定" description="空白、多涂、擦除或识别把握不足的答卷不会自动判零分，将转入人工确认。" /> : null}
               </section></details> : null}
 
-              <div className="rubric-editor">
+              {fillBlankUsesAnswerKey ? null : <div className="rubric-editor">
                 <div className="section-head">
                   <div>
                     <h2>评分细则</h2>
@@ -563,7 +577,7 @@ export function PaperRubricPage({
                     />
                   </label>
                 </div></details>
-              </div>
+              </div>}
             </section>
           </section> : null}
         </>

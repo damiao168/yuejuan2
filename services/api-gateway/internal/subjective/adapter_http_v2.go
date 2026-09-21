@@ -20,6 +20,7 @@ func NewHTTPAdapterV2(cfg HTTPAdapterConfig) *HTTPAdapterV2 {
 func (a *HTTPAdapterV2) Name() string                 { return "governed_math_grading_agent_http_v2" }
 func (a *HTTPAdapterV2) Policy() ModelPolicy          { return a.base.Policy() }
 func (a *HTTPAdapterV2) RuntimeStatus() RuntimeStatus { return a.base.RuntimeStatus() }
+func (a *HTTPAdapterV2) SupportsPanelMathV2() bool    { return true }
 
 type gradingAgentV2Response struct {
 	SchemaVersion                string                    `json:"schema_version"`

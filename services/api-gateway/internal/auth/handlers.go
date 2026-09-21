@@ -26,6 +26,12 @@ type Handler struct {
 	trustedProxies         []*net.IPNet
 	mfaEnabled             bool
 	mfaCipher              *mfaCipher
+	wechatEnabled          bool
+	wechatAppID            string
+	wechatAppSecret        string
+	wechatRedirectURL      string
+	wechatChallengeTTL     time.Duration
+	wechatHTTPClient       *http.Client
 }
 
 type HandlerOptions struct {
@@ -44,6 +50,11 @@ type HandlerOptions struct {
 	TrustedProxyCIDRs      []string
 	MFAEnabled             bool
 	MFAMasterKey           string
+	WechatEnabled          bool
+	WechatAppID            string
+	WechatAppSecret        string
+	WechatRedirectURL      string
+	WechatChallengeTTL     time.Duration
 }
 
 const DefaultSessionCookieName = "edugrade_session"
@@ -85,6 +96,11 @@ func NewHandler(store Store, sessionTTL time.Duration, options ...HandlerOptions
 		cfg.TrustedProxyCIDRs = options[0].TrustedProxyCIDRs
 		cfg.MFAEnabled = options[0].MFAEnabled
 		cfg.MFAMasterKey = options[0].MFAMasterKey
+		cfg.WechatEnabled = options[0].WechatEnabled
+		cfg.WechatAppID = strings.TrimSpace(options[0].WechatAppID)
+		cfg.WechatAppSecret = strings.TrimSpace(options[0].WechatAppSecret)
+		cfg.WechatRedirectURL = strings.TrimSpace(options[0].WechatRedirectURL)
+		cfg.WechatChallengeTTL = options[0].WechatChallengeTTL
 	}
 	if cfg.CookieName == "" {
 		cfg.CookieName = DefaultSessionCookieName
@@ -97,6 +113,9 @@ func NewHandler(store Store, sessionTTL time.Duration, options ...HandlerOptions
 	}
 	if cfg.PublicSessionTTL <= 0 {
 		cfg.PublicSessionTTL = 4 * time.Hour
+	}
+	if cfg.WechatChallengeTTL <= 0 {
+		cfg.WechatChallengeTTL = 5 * time.Minute
 	}
 	if cfg.LoginGuard == nil {
 		if cfg.LoginLimiter != nil {
@@ -126,6 +145,12 @@ func NewHandler(store Store, sessionTTL time.Duration, options ...HandlerOptions
 		trustedProxies:         parseTrustedProxyCIDRs(cfg.TrustedProxyCIDRs),
 		mfaEnabled:             cfg.MFAEnabled,
 		mfaCipher:              credentialCipher,
+		wechatEnabled:          cfg.WechatEnabled,
+		wechatAppID:            cfg.WechatAppID,
+		wechatAppSecret:        cfg.WechatAppSecret,
+		wechatRedirectURL:      cfg.WechatRedirectURL,
+		wechatChallengeTTL:     cfg.WechatChallengeTTL,
+		wechatHTTPClient:       &http.Client{Timeout: 8 * time.Second},
 	}
 	riskStore, _ := store.(RiskStore)
 	handler.loginService = NewLoginService(

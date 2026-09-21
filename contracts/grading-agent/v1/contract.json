@@ -9,7 +9,9 @@
   "student_visible": false,
   "human_review_required": true,
   "ocr_review_threshold": 0.85,
-  "allowed_grade_levels": ["junior_middle"],
+  "allowed_grade_levels": ["junior", "senior"],
+  "allowed_subjects": ["chinese", "mathematics", "english", "physics", "chemistry", "biology", "history", "geography", "ethics_politics"],
+  "allowed_agent_roles": ["single", "primary", "arbiter"],
   "allowed_question_types": ["short_answer", "calculation", "essay", "discussion"],
   "risk_flags": [
     "ocr_low_confidence",

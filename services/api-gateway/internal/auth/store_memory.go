@@ -23,6 +23,8 @@ type MemoryStore struct {
 	mfaChallenges          map[string]MFAChallenge
 	mfaRecovery            map[string]map[string]bool
 	mfaNotificationIntents []memorySecurityNotificationIntent
+	wechatChallenges       map[string]WechatLoginChallenge
+	wechatIdentities       map[string]struct{ TenantID, UserID string }
 	boundaries             map[string]ResourceBoundary
 	audits                 []AuditRecord
 	auditSeq               int
@@ -76,20 +78,146 @@ type memoryRecovery struct {
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		users:          map[string]UserWithPassword{},
-		roles:          map[string]map[string]AssignableRole{},
-		tenantStatuses: map[string]string{},
-		sessions:       map[string]memorySession{},
-		activations:    map[string]memoryActivation{},
-		recoveries:     map[string]memoryRecovery{},
-		devices:        map[string]memoryDeviceBinding{},
-		riskEvents:     []RiskEvent{},
-		totpRecords:    map[string]TOTPRecord{},
-		mfaChallenges:  map[string]MFAChallenge{},
-		mfaRecovery:    map[string]map[string]bool{},
-		boundaries:     map[string]ResourceBoundary{},
-		audits:         []AuditRecord{},
+		users:            map[string]UserWithPassword{},
+		roles:            map[string]map[string]AssignableRole{},
+		tenantStatuses:   map[string]string{},
+		sessions:         map[string]memorySession{},
+		activations:      map[string]memoryActivation{},
+		recoveries:       map[string]memoryRecovery{},
+		devices:          map[string]memoryDeviceBinding{},
+		riskEvents:       []RiskEvent{},
+		totpRecords:      map[string]TOTPRecord{},
+		mfaChallenges:    map[string]MFAChallenge{},
+		mfaRecovery:      map[string]map[string]bool{},
+		wechatChallenges: map[string]WechatLoginChallenge{},
+		wechatIdentities: map[string]struct{ TenantID, UserID string }{},
+		boundaries:       map[string]ResourceBoundary{},
+		audits:           []AuditRecord{},
 	}
+}
+
+// BindWechatIdentity supports local deployments and tests. Production
+// bindings are provisioned in wechat_identity after the account owner has
+// been verified by an administrator.
+func (s *MemoryStore) BindWechatIdentity(appID, tenantCode, unionID, openID, userID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, user := range s.users {
+		if user.TenantCode != tenantCode || user.ID != userID {
+			continue
+		}
+		binding := struct{ TenantID, UserID string }{user.TenantID, user.ID}
+		if unionID != "" {
+			s.wechatIdentities[appID+"|"+tenantCode+"|union|"+unionID] = binding
+		}
+		if openID != "" {
+			s.wechatIdentities[appID+"|"+tenantCode+"|open|"+openID] = binding
+		}
+	}
+}
+
+func (s *MemoryStore) CreateWechatLoginChallenge(_ context.Context, input CreateWechatLoginChallengeInput) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.wechatChallenges[input.ID] = WechatLoginChallenge{
+		ID: input.ID, StateHash: input.StateHash, PollTokenHash: input.PollTokenHash,
+		TenantCode: input.TenantCode, Status: "pending", RememberDevice: input.RememberDevice,
+		PublicDevice: input.PublicDevice, ExpiresAt: input.ExpiresAt,
+	}
+	return nil
+}
+
+func (s *MemoryStore) FindWechatLoginChallengeByState(_ context.Context, stateHash string, now time.Time) (WechatLoginChallenge, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, challenge := range s.wechatChallenges {
+		if challenge.StateHash == stateHash && challenge.ExpiresAt.After(now) && challenge.ConsumedAt.IsZero() {
+			return challenge, nil
+		}
+	}
+	return WechatLoginChallenge{}, ErrInvalidCredentials
+}
+
+func (s *MemoryStore) FindWechatLoginChallenge(_ context.Context, id, pollTokenHash string, now time.Time) (WechatLoginChallenge, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	challenge, ok := s.wechatChallenges[id]
+	if !ok || challenge.PollTokenHash != pollTokenHash {
+		return WechatLoginChallenge{}, ErrInvalidCredentials
+	}
+	if !challenge.ExpiresAt.After(now) && challenge.Status == "pending" {
+		challenge.Status = "expired"
+	}
+	return challenge, nil
+}
+
+func (s *MemoryStore) FindUserByWechatIdentity(_ context.Context, tenantCode, appID, unionID, openID string) (UserWithPassword, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var binding struct{ TenantID, UserID string }
+	var ok bool
+	if unionID != "" {
+		binding, ok = s.wechatIdentities[appID+"|"+tenantCode+"|union|"+unionID]
+	}
+	if !ok && openID != "" {
+		binding, ok = s.wechatIdentities[appID+"|"+tenantCode+"|open|"+openID]
+	}
+	if !ok {
+		return UserWithPassword{}, ErrWechatIdentityUnbound
+	}
+	for _, user := range s.users {
+		if user.TenantID == binding.TenantID && user.ID == binding.UserID && user.Status == "active" {
+			return user, nil
+		}
+	}
+	return UserWithPassword{}, ErrWechatIdentityUnbound
+}
+
+func (s *MemoryStore) FindUserByID(_ context.Context, tenantID, userID string) (UserWithPassword, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, user := range s.users {
+		if user.TenantID == tenantID && user.ID == userID && user.Status == "active" && s.tenantStatuses[user.TenantID] == "active" {
+			return user, nil
+		}
+	}
+	return UserWithPassword{}, ErrInvalidCredentials
+}
+
+func (s *MemoryStore) AuthorizeWechatLoginChallenge(_ context.Context, id, tenantID, userID string, now time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	challenge, ok := s.wechatChallenges[id]
+	if !ok || challenge.Status != "pending" || !challenge.ExpiresAt.After(now) {
+		return ErrInvalidCredentials
+	}
+	challenge.Status, challenge.TenantID, challenge.UserID, challenge.AuthorizedAt = "authorized", tenantID, userID, now
+	s.wechatChallenges[id] = challenge
+	return nil
+}
+
+func (s *MemoryStore) FailWechatLoginChallenge(_ context.Context, id, code string, now time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	challenge, ok := s.wechatChallenges[id]
+	if !ok || challenge.Status != "pending" || !challenge.ExpiresAt.After(now) {
+		return ErrInvalidCredentials
+	}
+	challenge.Status, challenge.ErrorCode = "failed", code
+	s.wechatChallenges[id] = challenge
+	return nil
+}
+
+func (s *MemoryStore) ConsumeWechatLoginChallenge(_ context.Context, id, pollTokenHash string, now time.Time) (WechatLoginChallenge, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	challenge, ok := s.wechatChallenges[id]
+	if !ok || challenge.PollTokenHash != pollTokenHash || challenge.Status != "authorized" || !challenge.ExpiresAt.After(now) {
+		return WechatLoginChallenge{}, ErrInvalidCredentials
+	}
+	challenge.Status, challenge.ConsumedAt = "consumed", now
+	s.wechatChallenges[id] = challenge
+	return challenge, nil
 }
 
 func (s *MemoryStore) AddResourceBoundary(resourceType, resourceID string, boundary ResourceBoundary) {

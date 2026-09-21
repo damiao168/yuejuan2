@@ -22,7 +22,7 @@ func TestHTTPAdapterRealLocalAgent(t *testing.T) {
 		Timeout:       250 * time.Second,
 		MaxRetries:    0,
 		ModelVersion:  "Qwen/Qwen3-4B-GGUF:Q4_K_M",
-		PromptVersion: "subjective-governed-cn-subject-routing-v5",
+		PromptVersion: "subjective-governed-cn-subject-routing-v6",
 		MinConfidence: 0.8,
 	})
 

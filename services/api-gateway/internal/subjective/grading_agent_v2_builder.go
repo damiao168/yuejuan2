@@ -21,7 +21,9 @@ const (
 
 var gradingAgentV2InternalID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`)
 
-var gradingAgentV2Subjects = map[string]bool{"math": true}
+var gradingAgentV2Subjects = map[string]bool{"mathematics": true}
+
+var gradingAgentV2GradeLevels = map[string]bool{"junior": true, "senior": true}
 
 var gradingAgentV2QuestionTypes = map[string]bool{
 	"short_answer": true, "calculation": true, "essay": true, "discussion": true,
@@ -52,6 +54,7 @@ type gradingAgentV2Request struct {
 	RequestID        string                       `json:"request_id"`
 	Subject          string                       `json:"subject"`
 	GradeLevel       string                       `json:"grade_level"`
+	AgentRole        string                       `json:"agent_role"`
 	QuestionID       string                       `json:"question_id"`
 	AnswerSegmentID  string                       `json:"answer_segment_id"`
 	QuestionType     string                       `json:"question_type"`
@@ -87,6 +90,7 @@ type gradingAgentV2DigestRequest struct {
 	RequestID        string                       `json:"request_id"`
 	Subject          string                       `json:"subject"`
 	GradeLevel       string                       `json:"grade_level"`
+	AgentRole        string                       `json:"agent_role"`
 	QuestionID       string                       `json:"question_id"`
 	AnswerSegmentID  string                       `json:"answer_segment_id"`
 	QuestionType     string                       `json:"question_type"`
@@ -130,6 +134,7 @@ func BuildGradingAgentV2Request(
 	questionID := strings.TrimSpace(input.Question.ID)
 	subject := gradingAgentSubject(input.Subject)
 	gradeLevel := gradingAgentGradeLevel(input.GradeLevel)
+	agentRole := gradingAgentContractRole(input.AgentRole)
 	questionType := strings.ToLower(strings.TrimSpace(input.Question.QuestionType))
 	rubricID := strings.TrimSpace(input.Rubric.ID)
 	rubricVersion := strings.TrimSpace(input.Rubric.Version)
@@ -142,7 +147,7 @@ func BuildGradingAgentV2Request(
 		return BuiltGradingAgentV2Request{}, &GradingAgentError{Code: "grading_v2_identifier_invalid"}
 	}
 	if !gradingAgentV2Subjects[subject] ||
-		gradeLevel != "junior_middle" ||
+		!gradingAgentV2GradeLevels[gradeLevel] ||
 		!gradingAgentV2QuestionTypes[questionType] ||
 		!boundedNonBlank(input.Question.Stem, 12_000) ||
 		!boundedNonBlank(input.AnswerText, 20_000) ||
@@ -253,6 +258,7 @@ func BuildGradingAgentV2Request(
 		RequestID:       requestID,
 		Subject:         subject,
 		GradeLevel:      gradeLevel,
+		AgentRole:       agentRole,
 		QuestionID:      questionID,
 		AnswerSegmentID: segmentID,
 		QuestionType:    questionType,
@@ -385,6 +391,7 @@ func gradingAgentV2IdempotencyDigest(request gradingAgentV2Request) (string, err
 		RequestID:        request.RequestID,
 		Subject:          request.Subject,
 		GradeLevel:       request.GradeLevel,
+		AgentRole:        request.AgentRole,
 		QuestionID:       request.QuestionID,
 		AnswerSegmentID:  request.AnswerSegmentID,
 		QuestionType:     request.QuestionType,

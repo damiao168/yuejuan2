@@ -276,6 +276,50 @@ def test_obvious_meeting_screenshot_is_rejected_without_running_full_model():
     assert result["answer_candidates"] == []
 
 
+def test_structured_markdown_with_latex_uses_local_parser_without_model():
+    class ModelMustNotRun(FakeStructuredModel):
+        def request_structured(self, *_args):
+            raise AssertionError("structured Markdown must not be sent to a model")
+
+    request = payload(
+        "# 高二数学试卷\n"
+        "## 一、单选题\n"
+        "**1. 已知 $f(x)=x^2$，则 $f(2)=$（ ）**\n"
+        "A. 2 B. 3 C. 4 D. 5\n"
+        "**【答案】** C\n"
+        "**【详解】** 代入可得 $f(2)=2^2=4$。\n"
+        "## 二、填空题\n"
+        "**2. 若 $x+1=3$，则 $x=$____。**\n"
+        "**【答案】** $2$\n"
+        "**【解析】** 两边同时减去 $1$。\n"
+    )
+    events = []
+
+    result = PaperParser(ModelMustNotRun(output("unknown"))).parse(
+        request, progress=events.append
+    )
+
+    assert [item["question_no_normalized"] for item in result["question_candidates"]] == ["1", "2"]
+    assert [item["standard_answer"] for item in result["answer_candidates"]] == ["C", "$2$"]
+    assert result["question_candidates"][0]["stem"] == "已知 $f(x)=x^2$，则 $f(2)=$（ ）"
+    assert result["solution_candidates"][0]["raw_text"] == "代入可得 $f(2)=2^2=4$。"
+    assert result["question_candidates"][0]["source_refs"][0]["text_start"] is not None
+    assert events[-1]["route"] == "anchored"
+
+
+def test_single_structured_text_question_does_not_need_model():
+    class ModelMustNotRun(FakeStructuredModel):
+        def request_structured(self, *_args):
+            raise AssertionError("one explicit question and answer are deterministic")
+
+    result = PaperParser(ModelMustNotRun(output("unknown"))).parse(
+        payload("**1. 计算 $1+1$。**\n**【答案】** $2$\n**【详解】** 直接计算。")
+    )
+
+    assert len(result["question_candidates"]) == 1
+    assert result["answer_candidates"][0]["standard_answer"] == "$2$"
+
+
 def test_unrelated_guard_progress_explicitly_reports_non_model_route():
     request = payload("北师保研分享会\n会议号：120732118\n发起人：任辰红\n最近入会\n参会时长\n回放")
     events = []

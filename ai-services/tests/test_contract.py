@@ -1,5 +1,9 @@
 import copy
+import json
 import unittest
+from pathlib import Path
+
+from jsonschema import Draft202012Validator
 
 from grading_agent.capabilities import CapabilityMatrix
 from grading_agent.contract import normalize_model_output, validate_request
@@ -57,11 +61,52 @@ class ContractTests(unittest.TestCase):
 
     def test_unapproved_capability_fails_closed(self):
         request = valid_request()
-        request["subject"] = "math"
+        request["subject"] = "mathematics"
         validate_request(request)
         with self.assertRaises(AgentError) as caught:
             self.matrix.route(request["grade_level"], request["subject"], request["question_type"], request["request_id"])
         self.assertEqual(caught.exception.code, "capability_not_supported")
+
+    def test_canonical_stages_and_nine_subjects_are_accepted(self):
+        canonical_subjects = {
+            "chinese", "mathematics", "english", "physics", "chemistry",
+            "biology", "history", "geography", "ethics_politics",
+        }
+        for stage in ("junior", "senior"):
+            for subject in canonical_subjects:
+                request = valid_request()
+                request["grade_level"] = stage
+                request["subject"] = subject
+                with self.subTest(stage=stage, subject=subject):
+                    self.assertIs(validate_request(request), request)
+
+    def test_legacy_stage_and_subject_aliases_are_rejected(self):
+        for field, value in (("grade_level", "junior_middle"), ("subject", "math"), ("subject", "politics")):
+            request = valid_request()
+            request[field] = value
+            with self.subTest(field=field, value=value), self.assertRaises(AgentError):
+                validate_request(request)
+
+    def test_agent_role_is_bounded_to_blind_panel_roles(self):
+        for role in ("single", "primary", "arbiter"):
+            request = valid_request()
+            request["agent_role"] = role
+            self.assertIs(validate_request(request), request)
+        request = valid_request()
+        request["agent_role"] = "primary_a_with_peer_score"
+        with self.assertRaises(AgentError):
+            validate_request(request)
+
+    def test_v1_json_schema_uses_the_canonical_assessment_vocabulary(self):
+        schema_path = Path(self.settings.contract_root) / "request.schema.json"
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        validator = Draft202012Validator(schema)
+        request = valid_request()
+        for stage in ("junior", "senior"):
+            request["grade_level"] = stage
+            self.assertEqual(list(validator.iter_errors(request)), [])
+        request["grade_level"] = "junior_middle"
+        self.assertTrue(list(validator.iter_errors(request)))
 
     def test_evidence_excerpt_must_exist_in_answer(self):
         request = valid_request()

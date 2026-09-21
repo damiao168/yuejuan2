@@ -75,6 +75,22 @@ func (h *Handler) buildAdapterInput(ctx context.Context, tenantID, requestID str
 	return input, h.mathAdapter, true, nil
 }
 
+func (h *Handler) buildPanelMathInput(ctx context.Context, tenantID, requestID string, value Context, policy ModelPolicy, guard PromptGuard, constraint aieligibility.OutputConstraint) (AdapterInput, error) {
+	if !h.mathV2Enabled || !mathSubject(value) || value.MathEvidence == nil || h.activeCrops == nil {
+		return AdapterInput{}, ErrActiveCropUnavailable
+	}
+	crop, err := h.activeCrops.Resolve(ctx, tenantID, value.SegmentID, value.Question.ID)
+	if err != nil {
+		return AdapterInput{}, err
+	}
+	if !mathCropHashMatches(value.MathEvidence.cropInputHash, crop.SHA256) {
+		return AdapterInput{}, mathunderstanding.ErrRevisionConflict
+	}
+	input := newBlindPanelInput(requestID, value, policy, "")
+	input.PromptGuard, input.OutputConstraint, input.ActiveCrop = guard, constraint, &crop
+	return input, nil
+}
+
 func (h *Handler) settleMathOutput(ctx context.Context, tenantID string, value Context, policy ModelPolicy, output *AdapterOutput) error {
 	if output == nil || value.MathEvidence == nil || output.SchemaVersion != gradingAgentV2BuilderSchemaVersion || output.Mock || output.DeliveryMode != "teacher_suggestion" {
 		return ErrInvalidModelOutput

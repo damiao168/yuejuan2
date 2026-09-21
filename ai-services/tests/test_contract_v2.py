@@ -28,6 +28,25 @@ class ContractV2Tests(unittest.TestCase):
         self.assertEqual(compute_media_binding_hash(request), request["media_evidence"]["binding_hash"])
         self.assertIs(validate_response_v2(response, request), response)
 
+    def test_v2_accepts_both_canonical_education_stages(self):
+        for stage in ("junior", "senior"):
+            request = fixture("valid-request.json")
+            request["grade_level"] = stage
+            with self.subTest(stage=stage):
+                self.assertIs(validate_request_v2(request), request)
+
+    def test_v2_json_schema_accepts_senior_mathematics(self):
+        schema_path = FIXTURES.parent / "request.schema.json"
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        self.assertEqual(schema["properties"]["grade_level"]["enum"], ["junior", "senior"])
+        self.assertEqual(
+            schema["properties"]["subject"]["enum"],
+            [
+                "chinese", "mathematics", "english", "physics", "chemistry",
+                "biology", "history", "geography", "ethics_politics",
+            ],
+        )
+
     def test_remote_url_and_whole_page_fixtures_fail_closed(self):
         cases = (
             ("invalid-request-remote-url.json", "encoding must be base64"),

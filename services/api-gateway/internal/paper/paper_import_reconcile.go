@@ -193,6 +193,16 @@ func reconcilePaperImportCandidates(questions []QuestionCandidate, answers []Ans
 	}
 	for _, no := range sortedPaperImportKeys(rubricByNo) {
 		indexes := rubricByNo[no]
+		questionIndexes := questionByNo[no]
+		if len(questionIndexes) > 0 {
+			answerKeyOnly := true
+			for _, questionIndex := range questionIndexes {
+				answerKeyOnly = answerKeyOnly && paperImportUsesAnswerKeyOnly(questions[questionIndex].QuestionType)
+			}
+			if answerKeyOnly {
+				continue
+			}
+		}
 		if len(questionByNo[no]) == 0 {
 			issues = append(issues, candidateIssue("UNMATCHED_RUBRIC", "error", "confirmed", no, "评分标准中检测到第"+no+"题，但尚未检测到对应题目", "继续上传试题资料或人工匹配", rubrics[indexes[0]].SourceRefs))
 		}
@@ -252,7 +262,7 @@ func reconcilePaperImportCandidates(questions []QuestionCandidate, answers []Ans
 		} else if len(indexes) == 0 {
 			issues = append(issues, candidateIssue("MISSING_SOLUTION", "info", "confirmed", no, "第"+no+"题未检测到教师解析", "解析不是所有题型的导入前置条件，可按需继续补充", q.SourceRefs))
 		}
-		if indexes := rubricByNo[no]; len(indexes) >= 1 && rubricCandidatesEquivalent(rubrics, indexes) {
+		if indexes := rubricByNo[no]; !paperImportUsesAnswerKeyOnly(q.QuestionType) && len(indexes) >= 1 && rubricCandidatesEquivalent(rubrics, indexes) {
 			r := rubrics[indexes[0]]
 			for _, i := range indexes[1:] {
 				r.SourceRefs = append(r.SourceRefs, rubrics[i].SourceRefs...)
@@ -280,7 +290,7 @@ func reconcilePaperImportCandidates(questions []QuestionCandidate, answers []Ans
 					issues = append(issues, candidateIssue("RUBRIC_POINTS_SCORE_MISMATCH", "error", "confirmed", no, "第"+no+"题采分点合计与题目分值不一致", "请调整采分点分值", r.SourceRefs))
 				}
 			}
-		} else if len(indexes) > 1 {
+		} else if !paperImportUsesAnswerKeyOnly(q.QuestionType) && len(indexes) > 1 {
 			issues = append(issues, candidateIssue("CONFLICTING_RUBRICS", "error", "confirmed", no, "评分标准候选不唯一", "请人工选择评分标准", draft.SourceRefs))
 		}
 		if draft.Rubric == nil && objectiveRubricEligible(draft) {
@@ -338,6 +348,10 @@ func questionRequiresRubricForArchetype(archetype string) bool {
 	}
 }
 
+func paperImportUsesAnswerKeyOnly(questionType string) bool {
+	return questionType == "fill_blank"
+}
+
 func defaultPaperImportArchetype(questionType string) string {
 	switch questionType {
 	case "single_choice", "multiple_choice", "true_false":
@@ -367,7 +381,7 @@ func objectiveRubricEligible(draft PaperImportDraftQuestion) bool {
 		return false
 	}
 	switch draft.QuestionType {
-	case "single_choice", "multiple_choice", "true_false", "fill_blank", "numeric", "formula":
+	case "single_choice", "multiple_choice", "true_false", "numeric", "formula":
 		return true
 	default:
 		return false
@@ -569,10 +583,25 @@ func requiredHumanConfirmedFields(draft PaperImportDraftQuestion) []string {
 	if draft.Solution != nil {
 		fields = append(fields, "solution")
 	}
-	if questionRequiresRubricForArchetype(draftAssessmentArchetype(draft)) || draft.Rubric != nil {
+	if !paperImportUsesAnswerKeyOnly(draft.QuestionType) && (questionRequiresRubricForArchetype(draftAssessmentArchetype(draft)) || draft.Rubric != nil) {
 		fields = append(fields, "rubric")
 	}
 	return fields
+}
+
+func normalizeAnswerKeyOnlyPaperImportDraft(draft *PaperImportDraftQuestion) {
+	if !paperImportUsesAnswerKeyOnly(draft.QuestionType) {
+		return
+	}
+	draft.Rubric = nil
+	draft.RubricCandidateID = ""
+	confirmed := make([]string, 0, len(draft.HumanConfirmedFields))
+	for _, field := range draft.HumanConfirmedFields {
+		if field != "rubric" {
+			confirmed = append(confirmed, field)
+		}
+	}
+	draft.HumanConfirmedFields = confirmed
 }
 
 func humanReviewComplete(draft PaperImportDraftQuestion) bool {
@@ -740,6 +769,7 @@ func reconcilePaperImportDrafts(drafts []PaperImportDraftQuestion, existing []pa
 	seenDraftNumbers := map[string]bool{}
 	for index := range drafts {
 		draft := &drafts[index]
+		normalizeAnswerKeyOnlyPaperImportDraft(draft)
 		if draft.AssessmentArchetype == "" {
 			draft.AssessmentArchetype = defaultPaperImportArchetype(draft.QuestionType)
 		}
@@ -873,7 +903,7 @@ func paperImportHasBlockingIssues(job PaperImportJob) bool {
 		return true
 	}
 	for _, draft := range job.Questions {
-		if len(job.QuestionCandidates) > 0 && draft.Rubric != nil && !stringSet(draft.HumanConfirmedFields)["rubric"] {
+		if len(job.QuestionCandidates) > 0 && !paperImportUsesAnswerKeyOnly(draft.QuestionType) && draft.Rubric != nil && !stringSet(draft.HumanConfirmedFields)["rubric"] {
 			return true
 		}
 		if len(draft.Issues) > 0 || draft.MatchStatus == "extra" || draft.MatchStatus == "ambiguous" || draft.MatchStatus == "mismatch" {

@@ -261,13 +261,21 @@ class PromptRegistry:
         "base": "base_grading.md",
         "structured": "local_structured_grading.md",
     }
+    ROLE_FILES: ClassVar[dict[str, str]] = {
+        "primary": "roles/primary.md",
+        "arbiter": "roles/arbiter.md",
+    }
+    STAGE_FILES: ClassVar[dict[str, str]] = {
+        "junior": "stages/junior.md",
+        "senior": "stages/senior.md",
+    }
     SUBJECT_FILES: ClassVar[dict[tuple[str, str], str]] = {
         ("chinese", "short_answer"): "subjects/chinese/short_answer.md",
         ("chinese", "essay"): "subjects/chinese/essay.md",
         ("chinese", "discussion"): "subjects/chinese/discussion.md",
-        ("math", "short_answer"): "subjects/math/short_answer.md",
-        ("math", "calculation"): "subjects/math/calculation.md",
-        ("math", "discussion"): "subjects/math/discussion.md",
+        ("mathematics", "short_answer"): "subjects/math/short_answer.md",
+        ("mathematics", "calculation"): "subjects/math/calculation.md",
+        ("mathematics", "discussion"): "subjects/math/discussion.md",
         ("english", "short_answer"): "subjects/english/short_answer.md",
         ("english", "essay"): "subjects/english/essay.md",
         ("english", "discussion"): "subjects/english/discussion.md",
@@ -282,17 +290,11 @@ class PromptRegistry:
         ("biology", "discussion"): "subjects/biology/discussion.md",
         ("history", "short_answer"): "subjects/history/short_answer.md",
         ("history", "discussion"): "subjects/history/discussion.md",
-        ("politics", "short_answer"): "subjects/politics/short_answer.md",
-        ("politics", "discussion"): "subjects/politics/discussion.md",
+        ("ethics_politics", "short_answer"): "subjects/politics/short_answer.md",
+        ("ethics_politics", "discussion"): "subjects/politics/discussion.md",
         ("geography", "short_answer"): "subjects/geography/short_answer.md",
         ("geography", "calculation"): "subjects/geography/calculation.md",
         ("geography", "discussion"): "subjects/geography/discussion.md",
-        (
-            "computer_science",
-            "short_answer",
-        ): "subjects/computer_science/short_answer.md",
-        ("computer_science", "calculation"): "subjects/computer_science/calculation.md",
-        ("computer_science", "discussion"): "subjects/computer_science/discussion.md",
     }
 
     def __init__(self, root, expected_version):
@@ -306,6 +308,8 @@ class PromptRegistry:
         self.prompts = {}
         all_files = {
             **self.CORE_FILES,
+            **{f"role.{role}": filename for role, filename in self.ROLE_FILES.items()},
+            **{f"stage.{stage}": filename for stage, filename in self.STAGE_FILES.items()},
             **{
                 f"subject.{subject}.{question_type}": filename
                 for (subject, question_type), filename in self.SUBJECT_FILES.items()
@@ -325,7 +329,10 @@ class PromptRegistry:
 
     def messages(self, grading_request, repair_reason=None):
         subject = grading_request["subject"]
+        stage = grading_request["grade_level"]
         question_type = grading_request["question_type"]
+        role = grading_request["agent_role"]
+        role_key = "role.arbiter" if role == "arbiter" else "role.primary"
         prompt_key = f"subject.{subject}.{question_type}"
         if prompt_key not in self.prompts:
             raise AgentError(
@@ -350,6 +357,8 @@ class PromptRegistry:
         system = "\n\n".join(
             (
                 self.prompts["base"],
+                self.prompts[f"stage.{stage}"],
+                self.prompts[role_key],
                 self.prompts[prompt_key],
                 self.prompts["structured"],
                 "/no_think",
@@ -376,6 +385,8 @@ class PromptRegistry:
         components = []
         all_files = {
             **self.CORE_FILES,
+            **{f"role.{role}": filename for role, filename in self.ROLE_FILES.items()},
+            **{f"stage.{stage}": filename for stage, filename in self.STAGE_FILES.items()},
             **{
                 f"subject.{subject}.{question_type}": filename
                 for (subject, question_type), filename in self.SUBJECT_FILES.items()

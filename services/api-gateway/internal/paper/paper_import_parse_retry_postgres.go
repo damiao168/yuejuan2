@@ -71,8 +71,10 @@ FOR UPDATE OF task`, tenantID, runID, generation, importID).Scan(&taskID, &taskS
 		}
 		return s.GetPaperImport(ctx, tenantID, importID)
 	}
-	if jobStatus != "failed" || jobError != "ai_parse_failed" || runStatus != "failed" || runError != "paper_parse_failed" ||
-		(taskStatus != "failed" && taskStatus != "dead_letter") || taskError != "paper_parse_failed" {
+	failedParse := jobStatus == "failed" && jobError == "ai_parse_failed" && runStatus == "failed" && runError == "paper_parse_failed" &&
+		(taskStatus == "failed" || taskStatus == "dead_letter") && taskError == "paper_parse_failed"
+	cancelledParse := jobStatus == "cancelled" && jobError == "paper_import_cancelled" && runStatus == "cancelled" && runError == "paper_import_cancelled" && taskStatus == "cancelled"
+	if !failedParse && !cancelledParse {
 		return PaperImportJob{}, ErrConflict
 	}
 
@@ -80,9 +82,9 @@ FOR UPDATE OF task`, tenantID, runID, generation, importID).Scan(&taskID, &taskS
 UPDATE agent_worker_task
 SET status='queued',max_attempts=GREATEST(max_attempts,attempt_count+1),not_before=NULL,
     lease_token=NULL,lease_expires_at=NULL,leased_by=NULL,worker_service=NULL,worker_instance_id=NULL,
-    started_at=NULL,completed_at=NULL,duration_ms=NULL,error_code=NULL,error_detail='{}'::jsonb,
+    started_at=NULL,completed_at=NULL,cancelled_at=NULL,duration_ms=NULL,error_code=NULL,error_detail='{}'::jsonb,
     result='{}'::jsonb,result_schema_version=NULL,result_payload_hash=NULL,
-    progress=jsonb_build_object('stage','paper_parse','completed',0,'total',1,'unit','parse','message','AI 内容解析已重新排队'),
+    progress=jsonb_build_object('stage','paper_parse','completed',0,'total',1,'unit','parse','message','资料结构解析已重新排队'),
     updated_at=now(),revision=revision+1
 WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, taskID); err != nil {
 		return PaperImportJob{}, err

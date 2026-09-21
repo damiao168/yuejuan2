@@ -34,10 +34,13 @@ def anchored_paper_result(documents):
     solutions = []
     for document in documents:
         blocks = document.get("blocks")
+        direct_text = not isinstance(blocks, list) or not blocks
         if not isinstance(blocks, list) or not blocks:
+            blocks = _direct_text_blocks(document.get("content"))
+        if not blocks:
             return None
         segments, _ = _anchored_segments(document, blocks)
-        if len(segments) < 2:
+        if len(segments) < (1 if direct_text else 2):
             return None
         answer_count = sum(
             any(_ANSWER_MARKER.match(_block_text(entry[1])) for entry in segment[2])
@@ -113,10 +116,14 @@ def _anchored_segments(document, blocks):
     for entry in ordered:
         text = _block_text(entry[1])
         if _SECTION_START.match(text):
+            if current:
+                segments.append((current_number, segment_section, current))
+                current = []
+                current_number = 0
+                in_solution = False
             current_section = text
             section_seen = True
-            if not current:
-                continue
+            continue
         match = _QUESTION_NUMBER.match(text)
         if match:
             number = int(match.group(1))
@@ -145,6 +152,9 @@ def _anchored_segments(document, blocks):
 
 
 def _anchored_candidate(document, question_no, section, entries, sequence):
+    source_identity = re.sub(
+        r"[^A-Za-z0-9]", "", str(document.get("source_id", ""))
+    )[:12] or str(document.get("document_index", 0))
     answer_index = next(
         (
             index
@@ -180,7 +190,7 @@ def _anchored_candidate(document, question_no, section, entries, sequence):
     question_type = _question_type(section, options)
     normalized = str(question_no)
     question = {
-        "candidate_id": f"q-rule-{sequence:03d}",
+        "candidate_id": f"q-rule-{source_identity}-{sequence:03d}",
         "question_no_raw": normalized,
         "question_no_normalized": normalized,
         "parent_question_no": None,
@@ -210,7 +220,7 @@ def _anchored_candidate(document, question_no, section, entries, sequence):
             ).strip()
         if value:
             answer = {
-                "candidate_id": f"a-rule-{sequence:03d}",
+                "candidate_id": f"a-rule-{source_identity}-{sequence:03d}",
                 "question_no_hint": normalized,
                 "question_no_normalized": normalized,
                 "subquestion_no_hint": None,
@@ -236,7 +246,7 @@ def _anchored_candidate(document, question_no, section, entries, sequence):
                 contents.append(text)
         if contents:
             solution = {
-                "candidate_id": f"s-rule-{sequence:03d}",
+                "candidate_id": f"s-rule-{source_identity}-{sequence:03d}",
                 "question_no_hint": normalized,
                 "question_no_normalized": normalized,
                 "subquestion_no_hint": None,
@@ -291,6 +301,18 @@ def _question_type(section, options):
 
 
 def _trusted_block_ref(document, block):
+    if block.get("_direct_text"):
+        return {
+            "source_id": str(document.get("source_id", "")),
+            "file_asset_id": str(document.get("file_asset_id", "")),
+            "document_index": int(document.get("document_index", 0)),
+            "page_no": None,
+            "block_id": None,
+            "bbox": None,
+            "text_start": block.get("text_start"),
+            "text_end": block.get("text_end"),
+            "ocr_confidence": None,
+        }
     try:
         page_no = int(block.get("page_no", 0))
     except (TypeError, ValueError):
@@ -310,6 +332,50 @@ def _trusted_block_ref(document, block):
 
 def _block_text(block):
     return str(block.get("text", "")).strip()
+
+
+def _direct_text_blocks(content):
+    """Expose Markdown/plain-text lines to the conservative anchor parser.
+
+    Only presentation markers that can surround a whole anchor are removed.
+    The source text itself remains unchanged and every synthetic block keeps
+    exact character offsets, so formulas and provenance stay authoritative.
+    """
+
+    if not isinstance(content, str) or not content.strip():
+        return []
+    blocks = []
+    offset = 0
+    for line in content.splitlines(keepends=True):
+        raw = line.rstrip("\r\n")
+        start = offset
+        offset += len(line)
+        text = _markdown_anchor_text(raw)
+        if not text:
+            continue
+        blocks.append(
+            {
+                "text": text,
+                "page_no": 0,
+                "block_id": None,
+                "bbox": None,
+                "confidence": None,
+                "text_start": start,
+                "text_end": start + len(raw),
+                "_direct_text": True,
+            }
+        )
+    return blocks
+
+
+def _markdown_anchor_text(value):
+    text = str(value or "").strip()
+    text = re.sub(r"^(?:#{1,6}\s+|>\s*)", "", text).strip()
+    # Markdown emphasis commonly wraps the complete question/answer line.
+    # Removing the delimiter, rather than interpreting the content, preserves
+    # LaTeX commands such as \frac and all mathematical punctuation verbatim.
+    text = text.replace("**", "").replace("__", "").strip()
+    return text
 
 
 def _evidence_confidence(entries, structural_cap):

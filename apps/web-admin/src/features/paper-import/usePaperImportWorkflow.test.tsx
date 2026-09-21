@@ -10,11 +10,11 @@ const mocks = vi.hoisted(() => ({
   replacePaperImportSources: vi.fn(), loadConfig: vi.fn(),
   uploadFile: vi.fn(), createPaperImport: vi.fn(), addPaperImportSources: vi.fn(),
   savePaperImportReview: vi.fn(), applyPaperImport: vi.fn(),
-  error: vi.fn(), success: vi.fn(), warning: vi.fn(), confirm: vi.fn()
+  error: vi.fn(), success: vi.fn(), warning: vi.fn(), info: vi.fn(), confirm: vi.fn()
 }));
 vi.mock("antd", () => ({
   App: { useApp: () => ({
-    message: { error: mocks.error, success: mocks.success, warning: mocks.warning },
+    message: { error: mocks.error, success: mocks.success, warning: mocks.warning, info: mocks.info },
     modal: { confirm: mocks.confirm }
   }) }
 }));
@@ -57,6 +57,8 @@ describe("paper import workflow controller", () => {
     mocks.cancelPaperImport.mockResolvedValue({});
     mocks.retryPaperImportParse.mockResolvedValue({});
     mocks.replacePaperImportSources.mockResolvedValue({});
+    mocks.savePaperImportReview.mockResolvedValue({});
+    mocks.applyPaperImport.mockResolvedValue({});
     mocks.loadConfig.mockResolvedValue(undefined);
     container = document.createElement("div");
     document.body.appendChild(container);
@@ -139,7 +141,7 @@ describe("paper import workflow controller", () => {
     expect(imported).toBe(true);
     const uploaded = mocks.uploadFile.mock.calls[0][0] as File;
     expect(uploaded.name).toMatch(/^pasted-material-\d{8}-\d{6}\.md$/);
-    expect(uploaded.type).toBe("text/plain");
+    expect(uploaded.type).toBe("text/markdown");
     expect(await readFileText(uploaded)).toBe(markdown);
     expect(mocks.addPaperImportSources).toHaveBeenCalledWith(
       "import-1",
@@ -147,6 +149,56 @@ describe("paper import workflow controller", () => {
       [{ file_asset_id: "markdown-asset", document_index: 1, role_hint: "question" }],
       expect.any(String)
     );
+  });
+
+  it("does not restart recognition when the uploaded content is already attached", async () => {
+    const review = {
+      ...job("review_required"),
+      sources: [{ id: "source-1", file_asset_id: "markdown-asset", document_index: 0, role_hint: "auto" }]
+    } as PaperImportJob;
+    mocks.uploadFile.mockResolvedValueOnce({ file: { id: "markdown-asset" } });
+    await mount(review);
+
+    let imported = false;
+    await act(async () => {
+      imported = await current.importPastedText("## 第 1 题\n\n已知 $x^2=4$，求 $x$ 的值，并写出完整步骤。", "question");
+    });
+
+    expect(imported).toBe(true);
+    expect(mocks.addPaperImportSources).not.toHaveBeenCalled();
+    expect(mocks.createPaperImport).not.toHaveBeenCalled();
+    expect(mocks.info).toHaveBeenCalledWith("这份资料已在当前识别任务中，无需重复添加");
+  });
+
+  it("adds only new assets when a batch contains existing and repeated files", async () => {
+    const review = {
+      ...job("review_required"),
+      sources: [{ id: "source-1", file_asset_id: "asset-existing", document_index: 0, role_hint: "auto" }]
+    } as PaperImportJob;
+    mocks.uploadFile
+      .mockResolvedValueOnce({ file: { id: "asset-existing" } })
+      .mockResolvedValueOnce({ file: { id: "asset-new" } })
+      .mockResolvedValueOnce({ file: { id: "asset-new" } });
+    mocks.addPaperImportSources.mockResolvedValueOnce({ import: { ...review, status: "processing" } });
+    await mount(review);
+    const files = [
+      Object.assign(new File(["a"], "old.pdf", { type: "application/pdf" }), { uid: "old" }),
+      Object.assign(new File(["b"], "new.pdf", { type: "application/pdf" }), { uid: "new" }),
+      Object.assign(new File(["b"], "new-copy.pdf", { type: "application/pdf" }), { uid: "new-copy" })
+    ];
+
+    await act(async () => {
+      current.uploadProps.beforeUpload?.(files[0] as never, files as never);
+      await vi.waitFor(() => expect(mocks.addPaperImportSources).toHaveBeenCalled());
+    });
+
+    expect(mocks.addPaperImportSources).toHaveBeenCalledWith(
+      "import-1",
+      7,
+      [{ file_asset_id: "asset-new", document_index: 1, role_hint: "auto" }],
+      expect.any(String)
+    );
+    expect(mocks.success).toHaveBeenCalledWith("已忽略 2 份重复资料，新增 1 份并开始识别");
   });
 
   it("rejects pasted text that is too short before uploading", async () => {
@@ -169,5 +221,26 @@ describe("paper import workflow controller", () => {
     expect(mocks.savePaperImportReview).not.toHaveBeenCalled();
     expect(mocks.applyPaperImport).not.toHaveBeenCalled();
     expect(mocks.error).toHaveBeenCalled();
+  });
+
+  it("confirms a fill-in-the-blank question by answer and removes legacy rubric input", async () => {
+    const review = { ...job("review_required"), questions: [{
+      question_no: "8", question_type: "fill_blank", score: 2, stem: "填空",
+      answer_key: { standard_answer: "1" },
+      rubric_candidate_id: "legacy-rubric",
+      rubric: { max_score: 1, points: [{ score: 1 }] },
+      human_confirmed_fields: ["rubric"]
+    }] } as PaperImportJob;
+    await mount(review);
+
+    expect(current.invalidReviewRubric).toBe(false);
+    await act(async () => { await current.confirmPaperImport(review); });
+
+    const confirmedQuestions = mocks.savePaperImportReview.mock.calls[0][2] as PaperImportJob["questions"];
+    expect(confirmedQuestions[0].rubric).toBeUndefined();
+    expect(confirmedQuestions[0].rubric_candidate_id).toBeUndefined();
+    expect(confirmedQuestions[0].human_confirmed_fields).toContain("answer");
+    expect(confirmedQuestions[0].human_confirmed_fields).not.toContain("rubric");
+    expect(mocks.applyPaperImport).toHaveBeenCalledWith("import-1");
   });
 });

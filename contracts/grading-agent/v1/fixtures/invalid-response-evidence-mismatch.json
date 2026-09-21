@@ -19,7 +19,7 @@
   "student_feedback": "待教师复核。",
   "teacher_note": "此样例必须因证据链接不存在而失败。",
   "model_version": "Qwen/Qwen3-4B-GGUF:Q4_K_M",
-  "prompt_version": "subjective-governed-cn-subject-routing-v5",
+  "prompt_version": "subjective-governed-cn-subject-routing-v6",
   "rubric_version": "rubric-v3",
   "capability_profile": "local-pilot-v1",
   "mock": false,

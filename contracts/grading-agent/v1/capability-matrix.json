@@ -2,7 +2,7 @@
   "schema_version": "capability-matrix-v1",
   "profile_id": "local-pilot-v1",
   "status": "shadow-integration",
-  "grade_levels": ["junior_middle"],
+  "grade_levels": ["junior", "senior"],
   "final_grade_publication_allowed": false,
   "default_route": {
     "mode": "human_only",
@@ -12,7 +12,7 @@
   },
   "capabilities": [
     {
-      "subject": "math",
+      "subject": "mathematics",
       "question_type": "calculation",
       "mode": "hybrid_assisted",
       "grader": "rules_plus_llm",

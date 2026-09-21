@@ -28,6 +28,9 @@
   "final_grade_publication_allowed": false,
   "student_visible": false,
   "human_review_required": true,
+  "allowed_grade_levels": ["junior", "senior"],
+  "allowed_subjects": ["chinese", "mathematics", "english", "physics", "chemistry", "biology", "history", "geography", "ethics_politics"],
+  "allowed_agent_roles": ["single", "primary", "arbiter"],
   "http_route_enabled": false,
   "external_provider_enabled": false,
   "forbidden_request_fields": [

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PaperImportSource } from "../../api/papers";
-import { filesFromClipboard, hasBlockingImportIssues, hasNoExamContentDetected, isPaperImportCancelled, isSupportedPaperImportFile, markImportFieldConfirmed, orderedSourcesAfterMove, orderedSourcesAfterRemoval, paperImportProgress, paperImportReviewIssues, paperImportSummary, pastedMarkdownFile, sourcesAfterRoleChange } from "./materials";
+import { filesFromClipboard, hasBlockingImportIssues, hasNoExamContentDetected, isPaperImportCancelled, isSupportedPaperImportFile, markImportFieldConfirmed, normalizePastedMarkdown, orderedSourcesAfterMove, orderedSourcesAfterRemoval, paperImportProgress, paperImportReviewIssues, paperImportSummary, pastedMarkdownFile, sourcesAfterRoleChange } from "./materials";
 
 describe("paper import materials", () => {
   it("accepts every supported document and image extension", () => {
@@ -13,8 +13,15 @@ describe("paper import materials", () => {
   it("turns pasted Markdown into an auditable UTF-8 source without changing math", async () => {
     const file = pastedMarkdownFile("\r\n# 试题\r\n\r\n已知 $x^2=4$。\r\n", new Date(2026, 8, 19, 9, 8, 7));
     expect(file.name).toBe("pasted-material-20260919-090807.md");
-    expect(file.type).toBe("text/plain");
+    expect(file.type).toBe("text/markdown");
     expect(await file.text()).toBe("# 试题\n\n已知 $x^2=4$。");
+  });
+
+  it("removes binary clipboard controls without changing supported Markdown math delimiters", async () => {
+    const source = "\uFEFF# 数学\r\n\u0000行内 \\(x^2=4\\)\f\u0007块级：\n\\[\\frac{1}{2}\\pi\\]\n$$y=e^x$$";
+    const expected = "# 数学\n行内 \\(x^2=4\\)\n\n块级：\n\\[\\frac{1}{2}\\pi\\]\n$$y=e^x$$";
+    expect(normalizePastedMarkdown(source)).toBe(expected);
+    expect(await pastedMarkdownFile(source).text()).toBe(expected);
   });
 
   it("reorders sources with contiguous stable indexes", () => {

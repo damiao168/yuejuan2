@@ -21,7 +21,7 @@
   "student_feedback": "已识别两个采分点，最终结果以教师复核为准。",
   "teacher_note": "本地模型置信度尚未校准，教师必须复核。",
   "model_version": "Qwen/Qwen3-4B-GGUF:Q4_K_M",
-  "prompt_version": "subjective-governed-cn-subject-routing-v5",
+  "prompt_version": "subjective-governed-cn-subject-routing-v6",
   "rubric_version": "rubric-v3",
   "capability_profile": "local-pilot-v1",
   "mock": false,

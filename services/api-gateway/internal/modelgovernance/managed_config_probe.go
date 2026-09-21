@@ -24,7 +24,7 @@ import (
 
 const (
 	managedProbeResponseLimit     = 1 << 20
-	managedCapabilityMaxTokens    = 64
+	managedCapabilityMaxTokens    = 1024
 	ManagedCapabilityProbeVersion = "structured-json-v3"
 )
 

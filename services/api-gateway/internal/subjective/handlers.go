@@ -39,6 +39,44 @@ func (h *Handler) WithEligibilityGate(gate EligibilityGate) *Handler {
 	return h
 }
 
+// NewShadowPanelOrchestrator connects panel calls to the same A14 admission
+// path used by the legacy synchronous and worker grading flows. A missing
+// production gate fails closed; this does not change the existing HTTP route.
+func (h *Handler) NewShadowPanelOrchestrator(agents PanelAgents) (*PanelOrchestrator, error) {
+	if h == nil || h.eligibility == nil {
+		return nil, ErrPanelConfiguration
+	}
+	store, ok := h.store.(PanelPersistence)
+	if !ok {
+		return nil, ErrPanelConfiguration
+	}
+	panel, err := NewPanelOrchestrator(store, agents, h.decideEligibility)
+	if err != nil {
+		return nil, err
+	}
+	if h.mathV2Enabled {
+		panel.math = &panelMathRuntime{
+			prepare: h.prepareMathEvidence,
+			input:   h.buildPanelMathInput,
+			settle:  h.settleMathOutput,
+		}
+	}
+	return panel, nil
+}
+
+// NewApprovedPanelOrchestrator enables only the evaluation-backed policy
+// entry point. It does not change or auto-enable the existing grading route.
+func (h *Handler) NewApprovedPanelOrchestrator(agents PanelAgents, policies PanelPolicyStore) (*PanelOrchestrator, error) {
+	if policies == nil {
+		return nil, ErrPanelConfiguration
+	}
+	panel, err := h.NewShadowPanelOrchestrator(agents)
+	if err != nil {
+		return nil, err
+	}
+	return panel.WithApprovedPolicyStore(policies), nil
+}
+
 // EvaluationEvidenceProvider supplies only the aggregate, aligned offline
 // evidence needed by A14. It cannot expose answers or make a model eligible
 // by itself; the admission policy remains the final gate.

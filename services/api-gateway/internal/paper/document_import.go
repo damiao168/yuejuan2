@@ -349,13 +349,53 @@ func (s *DocumentImportService) computeParseRun(ctx context.Context, tenantID st
 	}
 	parseContext, release := s.beginParse(ctx, tenantID, job.ID)
 	defer release()
-	parsed, err := s.parseInputForTenantWithProgress(parseContext, tenantID, job.ID, job.Subject, binding.Input.Documents, binding.Input.Pages, onProgress)
+	documents, pages, extraIssues := incrementalPaperImportParseInput(binding)
+	parsed, err := s.parseInputForTenantWithProgress(parseContext, tenantID, job.ID, job.Subject, documents, pages, onProgress)
 	if err != nil {
 		return documentParseResponse{}, err
 	}
-	parsed.Issues = append(parsed.Issues, binding.Input.ExtraIssues...)
-	parsed.Issues = appendNoExamContentIssue(parsed, binding.Input.Documents)
+	parsed.Issues = append(parsed.Issues, extraIssues...)
+	parsed.Issues = appendNoExamContentIssue(parsed, documents)
 	return parsed, nil
+}
+
+func incrementalPaperImportParseInput(binding PaperImportRunBinding) ([]normalizedImportDocument, []PaperImportDecodedPage, []PaperImportIssue) {
+	if binding.CommandType != "add_sources" || len(binding.NewSourceIDs) == 0 {
+		return binding.Input.Documents, binding.Input.Pages, binding.Input.ExtraIssues
+	}
+	selected := make(map[string]bool, len(binding.NewSourceIDs))
+	for _, sourceID := range binding.NewSourceIDs {
+		selected[sourceID] = true
+	}
+	documents := make([]normalizedImportDocument, 0, len(binding.NewSourceIDs))
+	for _, document := range binding.Input.Documents {
+		if selected[document.SourceID] {
+			documents = append(documents, document)
+		}
+	}
+	if len(documents) == 0 {
+		return binding.Input.Documents, binding.Input.Pages, binding.Input.ExtraIssues
+	}
+	pages := make([]PaperImportDecodedPage, 0, len(binding.Input.Pages))
+	for _, page := range binding.Input.Pages {
+		if selected[page.SourceID] {
+			pages = append(pages, page)
+		}
+	}
+	issues := make([]PaperImportIssue, 0, len(binding.Input.ExtraIssues))
+	for _, issue := range binding.Input.ExtraIssues {
+		if len(issue.SourceRefs) == 0 {
+			issues = append(issues, issue)
+			continue
+		}
+		for _, ref := range issue.SourceRefs {
+			if selected[ref.SourceID] {
+				issues = append(issues, issue)
+				break
+			}
+		}
+	}
+	return documents, pages, issues
 }
 
 func sortPaperImportOCRBlocks(blocks []PaperImportOCRBlock) {

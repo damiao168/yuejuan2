@@ -216,7 +216,7 @@ class ModelAdapterTests(unittest.TestCase):
     def test_prompt_registry_routes_by_subject_and_question_type(self):
         registry = PromptRegistry(settings().prompt_root, settings().prompt_version)
         math_request = valid_request()
-        math_request.update({"subject": "math", "question_type": "calculation"})
+        math_request.update({"subject": "mathematics", "question_type": "calculation"})
         system = registry.messages(math_request)[0]["content"]
         self.assertIn("【数学·计算与证明题】", system)
         self.assertNotIn("【物理·计算题】", system)
@@ -226,6 +226,33 @@ class ModelAdapterTests(unittest.TestCase):
         system = registry.messages(chinese_request)[0]["content"]
         self.assertIn("【语文·作文题】", system)
         self.assertNotIn("【英语·书面表达】", system)
+
+    def test_prompt_registry_separates_primary_and_blind_arbiter_roles(self):
+        registry = PromptRegistry(settings().prompt_root, settings().prompt_version)
+        primary = valid_request()
+        primary["agent_role"] = "primary"
+        primary_system = registry.messages(primary)[0]["content"]
+        self.assertIn("【独立主评角色】", primary_system)
+        self.assertNotIn("【独立盲仲裁角色】", primary_system)
+
+        arbiter = valid_request()
+        arbiter["agent_role"] = "arbiter"
+        arbiter_system = registry.messages(arbiter)[0]["content"]
+        self.assertIn("【独立盲仲裁角色】", arbiter_system)
+        self.assertNotIn("【独立主评角色】", arbiter_system)
+
+    def test_prompt_registry_routes_junior_and_senior_stage_guidance(self):
+        registry = PromptRegistry(settings().prompt_root, settings().prompt_version)
+        junior = valid_request()
+        junior["grade_level"] = "junior"
+        senior = valid_request()
+        senior["grade_level"] = "senior"
+        junior_system = registry.messages(junior)[0]["content"]
+        senior_system = registry.messages(senior)[0]["content"]
+        self.assertIn("【初中学段】", junior_system)
+        self.assertNotIn("【高中学段】", junior_system)
+        self.assertIn("【高中学段】", senior_system)
+        self.assertNotIn("【初中学段】", senior_system)
 
     def test_prompt_registry_fails_closed_for_unsupported_pair(self):
         registry = PromptRegistry(settings().prompt_root, settings().prompt_version)

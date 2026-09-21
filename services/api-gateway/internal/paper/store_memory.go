@@ -223,6 +223,7 @@ func (s *MemoryStore) SavePaperImportReview(_ context.Context, tenantID, id, _ s
 		return PaperImportJob{}, ErrConflict
 	}
 	for i := range input.Questions {
+		normalizeAnswerKeyOnlyPaperImportDraft(&input.Questions[i])
 		if input.Questions[i].AssessmentArchetype == "" {
 			input.Questions[i].AssessmentArchetype = defaultPaperImportArchetype(input.Questions[i].QuestionType)
 		}

@@ -11,17 +11,20 @@ import (
 )
 
 type MemoryStore struct {
-	mu           sync.RWMutex
-	next         int
-	contexts     map[string]Context
-	grades       map[string][]Grade
-	runs         map[string]GradingRun
-	batches      map[string]GradingBatch
-	enqueuePlans map[string]memoryEnqueuePlan
+	mu            sync.RWMutex
+	next          int
+	contexts      map[string]Context
+	grades        map[string][]Grade
+	runs          map[string]GradingRun
+	panels        map[string]GradingPanel
+	panelPolicies map[string]PanelPolicy
+	panelReviews  map[string]string
+	batches       map[string]GradingBatch
+	enqueuePlans  map[string]memoryEnqueuePlan
 }
 
 func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{next: 1, contexts: map[string]Context{}, grades: map[string][]Grade{}, runs: map[string]GradingRun{}, batches: map[string]GradingBatch{}}
+	return &MemoryStore{next: 1, contexts: map[string]Context{}, grades: map[string][]Grade{}, runs: map[string]GradingRun{}, panels: map[string]GradingPanel{}, panelPolicies: map[string]PanelPolicy{}, panelReviews: map[string]string{}, batches: map[string]GradingBatch{}, enqueuePlans: map[string]memoryEnqueuePlan{}}
 }
 
 func (s *MemoryStore) AddContext(tenantID string, segmentID string, ctx Context) {
@@ -118,25 +121,77 @@ func (s *MemoryStore) GetOrCreateRun(_ context.Context, tenantID string, _ strin
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if input.AgentRole == "" {
+		input.AgentRole = AgentRoleSingle
+	}
+	if !validRunPanelRole(input.PanelID, input.AgentRole) {
+		return GradingRun{}, ErrInvalidInput
+	}
+	if input.PanelID != "" {
+		panel, ok := s.panels[key(tenantID, input.PanelID)]
+		if !ok || !panelRunSnapshotMatches(panel, input) {
+			return GradingRun{}, ErrIdempotencyConflict
+		}
+		for _, existing := range s.runs {
+			if existing.TenantID == tenantID && existing.PanelID == input.PanelID &&
+				existing.AgentRole == input.AgentRole && existing.RequestID != input.RequestID {
+				return GradingRun{}, ErrIdempotencyConflict
+			}
+		}
+	}
 	runKey := key(tenantID, input.RequestID)
 	if existing, ok := s.runs[runKey]; ok {
+		if input.PanelID != "" && !runPanelIdentityMatches(existing, input) {
+			return GradingRun{}, ErrIdempotencyConflict
+		}
 		return existing, nil
 	}
 	now := time.Now().UTC()
 	status := RunProcessing
 	attemptCount := 1
 	var startedAt *time.Time
-	if input.BatchID == "" {
+	if input.BatchID == "" && input.PanelID == "" {
 		startedAt = &now
 	} else {
 		status = RunQueued
 		attemptCount = 0
 	}
-	run := GradingRun{ID: s.id("subjective-run"), TenantID: tenantID, AnswerSegmentID: input.AnswerSegmentID, BatchID: input.BatchID, AnswerVersion: input.AnswerVersion, QuestionID: input.QuestionID, RubricVersion: input.RubricVersion, ModelVersion: input.ModelVersion, PromptVersion: input.PromptVersion, MinConfidence: input.MinConfidence, RequestID: input.RequestID,
+	run := GradingRun{ID: s.id("subjective-run"), TenantID: tenantID, AnswerSegmentID: input.AnswerSegmentID, BatchID: input.BatchID, AnswerVersion: input.AnswerVersion, QuestionID: input.QuestionID, RubricVersion: input.RubricVersion, ModelVersion: input.ModelVersion, PromptVersion: input.PromptVersion, MinConfidence: input.MinConfidence, RequestID: input.RequestID, PanelID: input.PanelID, AgentRole: input.AgentRole,
 		MathArtifactID: input.MathArtifactID, MathArtifactVersion: input.MathArtifactVersion, MathCorrectionRevision: input.MathCorrectionRevision, MathScoringVersion: input.MathScoringVersion,
 		Status: status, AttemptCount: attemptCount, StartedAt: startedAt, CreatedAt: now, UpdatedAt: now}
 	s.runs[runKey] = run
 	return run, nil
+}
+
+func (s *MemoryStore) ClaimPanelRun(_ context.Context, tenantID, runID string) (GradingRun, bool, error) {
+	if tenantID == "" || runID == "" {
+		return GradingRun{}, false, ErrInvalidInput
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for runKey, run := range s.runs {
+		if run.TenantID != tenantID || run.ID != runID {
+			continue
+		}
+		if run.PanelID == "" || run.AgentRole == AgentRoleSingle {
+			return GradingRun{}, false, ErrInvalidInput
+		}
+		if run.Status != RunQueued {
+			return run, false, nil
+		}
+		now := time.Now().UTC()
+		run.Status, run.AttemptCount, run.StartedAt, run.UpdatedAt = RunProcessing, run.AttemptCount+1, &now, now
+		s.runs[runKey] = run
+		return run, true, nil
+	}
+	return GradingRun{}, false, ErrNotFound
+}
+
+func validRunPanelRole(panelID, role string) bool {
+	if panelID == "" {
+		return role == AgentRoleSingle
+	}
+	return role == AgentRolePrimaryA || role == AgentRolePrimaryB || role == AgentRoleArbiter
 }
 
 func (s *MemoryStore) GetRun(_ context.Context, tenantID string, runID string) (GradingRun, error) {
@@ -318,7 +373,7 @@ func ContextForTest(kind string, score float64, answerText string, ocrConfidence
 	return Context{
 		AnswerVersion: "answer-v1",
 		Subject:       "chinese",
-		GradeLevel:    "junior_middle",
+		GradeLevel:    "junior",
 		Question: paper.Question{
 			ID:           "question-" + kind,
 			TenantID:     "00000000-0000-0000-0000-000000000002",
