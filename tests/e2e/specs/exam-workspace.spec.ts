@@ -93,3 +93,18 @@ test("嵌入式考试资料固定当前考试，并直接显示空资料上传�
   await expect(page.getByPlaceholder("选择考试")).toHaveCount(0);
   expect(examListRequests).toBe(0);
 });
+
+test("同场次学科切换直接使用工作台投影，不拉取全校考试列表", async ({ page }) => {
+  await installApiMocks(page, { role: "school_admin", initiallyAuthenticated: true, sessionSubjects: true });
+  let examListRequests = 0;
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/v1/exams") examListRequests += 1;
+  });
+
+  await page.goto("/#/admin/exams/exam-1/settings", { waitUntil: "networkidle" });
+  await expect(page.getByRole("heading", { name: "2026 春季期中考试" })).toBeVisible();
+  await page.locator(".exam-workspace-subject .ant-select-selector").click();
+  await page.getByTitle("物理 · 100 分").click();
+  await expect(page).toHaveURL(/#\/admin\/exams\/exam-physics\/settings/);
+  expect(examListRequests).toBe(0);
+});

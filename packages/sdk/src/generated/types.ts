@@ -1,5 +1,21 @@
 // Generated from services/api-gateway/openapi/edugrade-api.openapi.json. DO NOT EDIT.
 
+export type ManagedChatAttachment = { "name": string; "media_type": string; "content": string; "size": number; };
+
+export type ManagedChatMessage = { "role": "user" | "assistant"; "content": string; "reasoning_content"?: string; "attachments"?: Array<ManagedChatAttachment>; };
+
+export type ManagedChatRequest = { "messages": Array<ManagedChatMessage>; };
+
+export type ManagedChatModelStatus = { "available": boolean; "display_name"?: string; "model_name"?: string; "provider_key"?: string; "message": string; };
+
+export type ManagedChatModelResponse = { "model": ManagedChatModelStatus; };
+
+export type ManagedChatUsage = { "input_tokens": number; "cached_input_tokens": number; "output_tokens": number; "reasoning_tokens": number; "total_tokens": number; };
+
+export type ManagedChatCompletion = { "message": ManagedChatMessage; "model_name": string; "display_name": string; "provider_key": string; "finish_reason"?: string; "usage": ManagedChatUsage; };
+
+export type ManagedChatCompletionResponse = { "completion": ManagedChatCompletion; };
+
 export type OnboardingNextAction = { "code": string; "path": string; };
 
 export type OnboardingCheck = { "key": string; "state": "ready" | "action_required" | "warning" | "optional" | "unavailable"; "severity": "blocking" | "recommended" | "optional"; "title": string; "description"?: string; "action_code"?: string; "action_path"?: string; "metadata"?: Record<string, unknown>; };
@@ -176,7 +192,9 @@ export type ExamWorkspaceNextAction = { "code": string; "label": string; "descri
 
 export type ExamWorkspaceSubjectSummary = { "code": string; "label": string; "total_score": number; "question_count": number; "configured_question_count": number; "frozen_question_count": number; "risk_tier_source"?: string; "question_types": (Record<string, never> & Record<string, number>); };
 
-export type ExamWorkspaceProjection = { "exam_id": string; "exam_name": string; "exam_status": string; "revision": number; "stage": string; "stages": Array<ExamWorkspaceStage>; "stage_progress": Array<ExamWorkspaceStageProgress>; "blockers": Array<ExamWorkspaceNotice>; "warnings": Array<ExamWorkspaceNotice>; "counts": ExamWorkspaceCounts; "next_actions": Array<ExamWorkspaceNextAction>; "risk_tier": "R1" | "R2" | "R3" | "unknown"; "subject_summary": ExamWorkspaceSubjectSummary; "updated_at": string; };
+export type ExamWorkspaceSubjectExam = { "exam_id": string; "subject": string; "total_score": number; };
+
+export type ExamWorkspaceProjection = { "exam_id": string; "exam_name": string; "exam_session_name"?: string; "subject_exams"?: Array<ExamWorkspaceSubjectExam>; "exam_status": string; "revision": number; "stage": string; "stages": Array<ExamWorkspaceStage>; "stage_progress": Array<ExamWorkspaceStageProgress>; "blockers": Array<ExamWorkspaceNotice>; "warnings": Array<ExamWorkspaceNotice>; "counts": ExamWorkspaceCounts; "next_actions": Array<ExamWorkspaceNextAction>; "risk_tier": "R1" | "R2" | "R3" | "unknown"; "subject_summary": ExamWorkspaceSubjectSummary; "updated_at": string; };
 
 export type ExamWorkspaceResponse = { "workspace": ExamWorkspaceProjection; };
 
@@ -1074,6 +1092,14 @@ export type QuestionBankBatchImportResult = { "items": Array<QuestionBankBatchIm
 
 export interface components {
   schemas: {
+    "ManagedChatAttachment": ManagedChatAttachment;
+    "ManagedChatMessage": ManagedChatMessage;
+    "ManagedChatRequest": ManagedChatRequest;
+    "ManagedChatModelStatus": ManagedChatModelStatus;
+    "ManagedChatModelResponse": ManagedChatModelResponse;
+    "ManagedChatUsage": ManagedChatUsage;
+    "ManagedChatCompletion": ManagedChatCompletion;
+    "ManagedChatCompletionResponse": ManagedChatCompletionResponse;
     "OnboardingNextAction": OnboardingNextAction;
     "OnboardingCheck": OnboardingCheck;
     "OnboardingReadiness": OnboardingReadiness;
@@ -1162,6 +1188,7 @@ export interface components {
     "ExamWorkspaceCounts": ExamWorkspaceCounts;
     "ExamWorkspaceNextAction": ExamWorkspaceNextAction;
     "ExamWorkspaceSubjectSummary": ExamWorkspaceSubjectSummary;
+    "ExamWorkspaceSubjectExam": ExamWorkspaceSubjectExam;
     "ExamWorkspaceProjection": ExamWorkspaceProjection;
     "ExamWorkspaceResponse": ExamWorkspaceResponse;
     "CandidateRefreshResult": CandidateRefreshResult;

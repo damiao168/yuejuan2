@@ -3,12 +3,11 @@ import json
 import unittest
 from pathlib import Path
 
-from jsonschema import Draft202012Validator
-
 from grading_agent.capabilities import CapabilityMatrix
 from grading_agent.contract import normalize_model_output, validate_request
 from grading_agent.errors import AgentError
 from helpers import settings, valid_raw_output, valid_request
+from jsonschema import Draft202012Validator
 
 
 class ContractTests(unittest.TestCase):

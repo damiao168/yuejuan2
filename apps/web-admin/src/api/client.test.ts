@@ -6,6 +6,26 @@ afterEach(() => {
 });
 
 describe("web API diagnostics", () => {
+  it("parses chat events across network chunk boundaries", async () => {
+    const bytes = new TextEncoder().encode('data: {"type":"reasoning","delta":"思考"}\n\ndata: {"type":"content","delta":"答案"}\n\n');
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes.slice(0, 29));
+        controller.enqueue(bytes.slice(29, 46));
+        controller.enqueue(bytes.slice(46));
+        controller.close();
+      }
+    });
+    const fetchMock = vi.fn().mockResolvedValue(new Response(body, { headers: { "Content-Type": "text/event-stream" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const events: Array<{ type: string; delta: string }> = [];
+    await new ApiClient({ baseUrl: "https://grading.example.edu" }).requestEventStream("/api/v1/ai-chat/completions/stream", {
+      method: "POST", body: "{}"
+    }, (event) => events.push(event as { type: string; delta: string }));
+    expect(events).toEqual([{ type: "reasoning", delta: "思考" }, { type: "content", delta: "答案" }]);
+    expect(fetchMock.mock.calls[0]?.[1]?.headers.get("Accept")).toBe("text/event-stream");
+  });
+
   it("preserves request, trace and field context from the shared error envelope", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
       error: { code: "invalid_exam", message: "internal detail" },

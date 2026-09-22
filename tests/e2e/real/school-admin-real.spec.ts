@@ -37,9 +37,19 @@ test("学校管理员通过真实网关登录并查看已持久化考试", async
   const examLink = page.getByText("STORY-060 Synthetic Chinese Exam", { exact: true });
   await expect(examLink).toBeVisible();
   await examLink.click();
-  await expect(page).toHaveURL(/\/exams\/[^/]+\/overview/);
-  const examId = decodeURIComponent(page.url().match(/\/exams\/([^/]+)\/overview/)?.[1] ?? "");
+  await expect(page).toHaveURL(/\/exams\/[^/]+\/(settings|capture|grading|overview)/);
+  const examId = decodeURIComponent(page.url().match(/\/exams\/([^/]+)\/(?:settings|capture|grading|overview)/)?.[1] ?? "");
   expect(examId).not.toBe("");
+  const examStatus = await page.evaluate(async (id) => {
+    const response = await fetch(`/api/v1/exams/${encodeURIComponent(id)}`, { credentials: "include" });
+    if (!response.ok) throw new Error(`exam request failed: ${response.status}`);
+    const payload = await response.json() as { exam: { status: string } };
+    return payload.exam.status;
+  }, examId);
+  const expectedSection = ["draft", "configured", "ready"].includes(examStatus) ? "settings"
+    : examStatus === "collecting" ? "capture"
+    : ["grading", "reviewing"].includes(examStatus) ? "grading" : "overview";
+  expect(page.url()).toContain(`/exams/${encodeURIComponent(examId)}/${expectedSection}`);
 
   for (const section of ["overview", "students", "paper", "questions", "capture", "processing", "grading", "scores", "reports"]) {
     await page.goto(`/#/admin/exams/${encodeURIComponent(examId)}/${section}`);

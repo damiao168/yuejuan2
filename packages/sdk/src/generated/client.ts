@@ -3,6 +3,9 @@
 import type { ApiTransport } from "../runtime";
 import { appendQuery, fillPath } from "../runtime";
 import type {
+  ManagedChatRequest,
+  ManagedChatModelResponse,
+  ManagedChatCompletionResponse,
   OnboardingReadiness,
   MFAStatusResponse,
   TOTPEnrollmentRequest,
@@ -267,6 +270,9 @@ import type {
 } from "./types";
 
 export interface operations {
+  "getManagedChatModel": { args: { signal?: AbortSignal; }; response: ManagedChatModelResponse; };
+  "createManagedChatCompletion": { args: { body: ManagedChatRequest; signal?: AbortSignal; }; response: ManagedChatCompletionResponse; };
+  "streamManagedChatCompletion": { args: { body: ManagedChatRequest; signal?: AbortSignal; }; response: unknown; };
   "createSubjectiveAIGrade": { args: { path: { "id": string; }; body: SubjectiveAIGradeRequest; signal?: AbortSignal; }; response: SubjectiveAIGradeResponse; };
   "getMathRubricScore": { args: { path: { "segmentId": string; }; signal?: AbortSignal; }; response: MathRubricScoreResponse; };
   "getMathUnderstandingRuntimeInput": { args: { path: { "taskId": string; }; signal?: AbortSignal; }; response: MathUnderstandingRuntimeInputResponse; };
@@ -506,6 +512,21 @@ export interface operations {
 
 export class EduGradeApi {
   constructor(private readonly transport: ApiTransport) {}
+
+  getManagedChatModel(args: operations["getManagedChatModel"]["args"] = {}): Promise<operations["getManagedChatModel"]["response"]> {
+    const requestPath = "/api/v1/ai-chat/model";
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  createManagedChatCompletion(args: operations["createManagedChatCompletion"]["args"]): Promise<operations["createManagedChatCompletion"]["response"]> {
+    const requestPath = "/api/v1/ai-chat/completions";
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  streamManagedChatCompletion(args: operations["streamManagedChatCompletion"]["args"]): Promise<operations["streamManagedChatCompletion"]["response"]> {
+    const requestPath = "/api/v1/ai-chat/completions/stream";
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
 
   createSubjectiveAIGrade(args: operations["createSubjectiveAIGrade"]["args"]): Promise<operations["createSubjectiveAIGrade"]["response"]> {
     const requestPath = fillPath("/api/v1/answer-segments/{id}/subjective-ai-grade", args.path);

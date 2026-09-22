@@ -20,7 +20,7 @@ test("桌面壳层取消空置顶栏，并固定品牌、菜单和账户区域",
   await page.goto("/#/admin/dashboard", { waitUntil: "networkidle" });
 
   await expect(page.locator(".topbar")).toHaveCount(0);
-  await expect(page.locator(".brand-copy")).toContainText("示范学校");
+  await expect(page.locator(".brand-copy")).toContainText("EduGrade");
   await expect(page.getByRole("button", { name: "账户菜单：学校管理员" })).toBeVisible();
 
   const expandedWidth = await page.locator(".sidebar").evaluate((element) => element.getBoundingClientRect().width);
@@ -57,7 +57,7 @@ test("移动端只保留导航触发条，账户位于抽屉底部", async ({ pa
   await expect(page.locator(".mobile-navigation .sidebar-footer")).toBeVisible();
 });
 
-test("首页主动作完成分步骤表单新建考试并进入考试准备", async ({ page }) => {
+test("首页主动作完成单页新建考试并进入考试准备", async ({ page }) => {
   test.setTimeout(90_000);
   await installApiMocks(page);
   await loginAsSchoolAdmin(page);
@@ -65,21 +65,19 @@ test("首页主动作完成分步骤表单新建考试并进入考试准备", as
   await page.getByRole("button", { name: "新建考试" }).click();
   await expect(page).toHaveURL(/#\/admin\/exams\/new/);
   await expect(page.getByRole("heading", { name: "新建考试" })).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole("heading", { name: "考试范围" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "1. 考试名称与基本信息" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "2. 添加考试学科" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "3. 考试班级范围" })).toBeVisible();
   await page.getByRole("textbox", { name: "考试名称 *" }).fill("2026-2027学年高二期中考试");
   await page.getByRole("combobox", { name: /考试类型/ }).click();
   await page.getByTitle("期中考试").click();
   await page.getByRole("button", { name: /高二（1）班/ }).click();
   await expect(page.getByText(/已选择.*1.*个班级/)).toBeVisible();
-  await page.getByRole("button", { name: /下一步/ }).click();
-  await expect(page.getByRole("heading", { name: "考试方案" })).toBeVisible();
+  await page.getByRole("button", { name: /使用考试方案/ }).click();
+  await expect(page.getByRole("dialog", { name: "选择考试方案" })).toBeVisible();
   await page.getByRole("button", { name: /系统通用高中考试方案/ }).click();
-  await page.getByRole("button", { name: /下一步/ }).click();
-  await expect(page.getByRole("heading", { name: "试卷结构" }).first()).toBeVisible();
-  await expect(page.getByText("150 / 150 分").first()).toBeVisible();
-  await page.getByRole("button", { name: /下一步/ }).click();
-  await expect(page.getByRole("heading", { name: "检查并创建" })).toBeVisible();
-  await page.getByRole("button", { name: "创建 3 个科目工作区" }).click();
+  await expect(page.getByText("已套用试卷结构")).toHaveCount(3);
+  await page.locator(".exam-composer-submit").getByRole("button", { name: "使用方案创建考试" }).click();
   await expect(page).toHaveURL(/#\/admin\/exams\/exam-created-math\/settings/);
 
   await page.goto("/#/admin/dashboard");

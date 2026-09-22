@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -238,6 +239,7 @@ func (f *activeCropResolverFixture) refresh() {
 }
 
 type activeCropEvidenceFake struct {
+	mu         sync.Mutex
 	tenantID   string
 	segmentID  string
 	questionID string
@@ -247,6 +249,8 @@ type activeCropEvidenceFake struct {
 }
 
 func (f *activeCropEvidenceFake) GetEvidenceForQuestion(_ context.Context, tenantID string, segmentID string, questionID string) (segment.SegmentEvidence, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.calls++
 	if f.err != nil {
 		return segment.SegmentEvidence{}, f.err
@@ -259,6 +263,7 @@ func (f *activeCropEvidenceFake) GetEvidenceForQuestion(_ context.Context, tenan
 }
 
 type activeCropAssetFake struct {
+	mu       sync.Mutex
 	tenantID string
 	assetID  string
 	values   []files.FileAsset
@@ -275,6 +280,8 @@ func (f *activeCropAssetFake) FindDuplicate(context.Context, string, string, str
 }
 
 func (f *activeCropAssetFake) Get(_ context.Context, tenantID string, assetID string) (files.FileAsset, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.calls++
 	if f.err != nil {
 		return files.FileAsset{}, f.err
@@ -291,6 +298,7 @@ func (f *activeCropAssetFake) Delete(context.Context, string, string) (files.Fil
 }
 
 type activeCropObjectFake struct {
+	mu       sync.Mutex
 	bucket   string
 	key      string
 	data     []byte
@@ -303,6 +311,8 @@ func (f *activeCropObjectFake) Put(context.Context, string, string, io.Reader, i
 }
 
 func (f *activeCropObjectFake) Get(_ context.Context, bucket string, key string) (io.ReadCloser, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.getCalls++
 	if f.err != nil {
 		return nil, f.err

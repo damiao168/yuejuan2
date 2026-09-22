@@ -1,11 +1,13 @@
 package modelgovernance
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -20,7 +22,6 @@ const (
 	managedChatMaxAttachments  = 3
 	managedChatMaxFileRunes    = 60_000
 	managedChatMaxTotalRunes   = 200_000
-	managedChatMaxTokens       = 4_096
 	managedChatBodyLimit       = 1 << 20
 )
 
@@ -30,9 +31,10 @@ var (
 )
 
 type ManagedChatMessage struct {
-	Role        string                  `json:"role"`
-	Content     string                  `json:"content"`
-	Attachments []ManagedChatAttachment `json:"attachments,omitempty"`
+	Role             string                  `json:"role"`
+	Content          string                  `json:"content"`
+	ReasoningContent string                  `json:"reasoning_content,omitempty"`
+	Attachments      []ManagedChatAttachment `json:"attachments,omitempty"`
 }
 
 type ManagedChatAttachment struct {
@@ -75,13 +77,23 @@ type ManagedAPIChatter interface {
 	Chat(context.Context, ManagedAPIConnection, []ManagedChatMessage) (ManagedChatCompletion, error)
 }
 
+type ManagedChatEvent struct {
+	Type       string                 `json:"type"`
+	Delta      string                 `json:"delta,omitempty"`
+	Completion *ManagedChatCompletion `json:"completion,omitempty"`
+}
+
+type ManagedAPIStreamChatter interface {
+	StreamChat(context.Context, ManagedAPIConnection, []ManagedChatMessage, func(ManagedChatEvent) error) error
+}
+
 type HTTPManagedAPIChatter struct {
 	timeout time.Duration
 }
 
 func NewHTTPManagedAPIChatter(timeout time.Duration) *HTTPManagedAPIChatter {
-	if timeout <= 0 || timeout > 120*time.Second {
-		timeout = 90 * time.Second
+	if timeout <= 0 || timeout > 12*time.Minute {
+		timeout = 10 * time.Minute
 	}
 	return &HTTPManagedAPIChatter{timeout: timeout}
 }
@@ -93,6 +105,142 @@ func (c *HTTPManagedAPIChatter) Chat(ctx context.Context, connection ManagedAPIC
 	return c.chatOpenAICompatible(ctx, connection, messages)
 }
 
+func (c *HTTPManagedAPIChatter) StreamChat(ctx context.Context, connection ManagedAPIConnection, messages []ManagedChatMessage, emit func(ManagedChatEvent) error) error {
+	var endpoint string
+	var payload []byte
+	var err error
+	dashscope := connection.Config.AdapterType == "dashscope_native"
+	if dashscope {
+		endpoint = strings.TrimRight(connection.Config.BaseURL, "/") + "/services/aigc/text-generation/generation"
+		payload, _ = json.Marshal(map[string]any{
+			"model":      connection.Config.ModelName,
+			"input":      map[string]any{"messages": managedChatProviderMessages(messages)},
+			"parameters": map[string]any{"result_format": "message", "incremental_output": true, "temperature": 0.7},
+		})
+	} else {
+		endpoint, err = managedCompletionEndpoint(connection.Config.BaseURL)
+		if err != nil {
+			return err
+		}
+		payload, _ = json.Marshal(map[string]any{
+			"model": connection.Config.ModelName, "messages": managedChatProviderMessages(messages),
+			"stream": true, "stream_options": map[string]any{"include_usage": true}, "temperature": 0.7,
+		})
+	}
+	transport := &http.Transport{DialContext: safePublicDialContext, TLSHandshakeTimeout: 8 * time.Second, ResponseHeaderTimeout: c.timeout, IdleConnTimeout: 10 * time.Second}
+	defer transport.CloseIdleConnections()
+	client := &http.Client{Transport: transport, Timeout: c.timeout, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+connection.APIKey)
+	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "EduGrade-Admin-Chat/1.0")
+	if dashscope {
+		req.Header.Set("X-DashScope-SSE", "enable")
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		io.Copy(io.Discard, io.LimitReader(response.Body, managedProbeResponseLimit))
+		return ManagedChatProviderError{StatusCode: response.StatusCode}
+	}
+	var content, reasoning, finishReason string
+	var usage ManagedAPIProbeUsage
+	scanner := bufio.NewScanner(response.Body)
+	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if !strings.HasPrefix(line, "data:") {
+			continue
+		}
+		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+		if data == "[DONE]" {
+			break
+		}
+		var chunk struct {
+			Choices []struct {
+				Delta struct {
+					Content          string `json:"content"`
+					ReasoningContent string `json:"reasoning_content"`
+				} `json:"delta"`
+				Message struct {
+					Content          string `json:"content"`
+					ReasoningContent string `json:"reasoning_content"`
+				} `json:"message"`
+				FinishReason string `json:"finish_reason"`
+			} `json:"choices"`
+			Output struct {
+				Choices []struct {
+					Message struct {
+						Content          string `json:"content"`
+						ReasoningContent string `json:"reasoning_content"`
+					} `json:"message"`
+					FinishReason string `json:"finish_reason"`
+				} `json:"choices"`
+			} `json:"output"`
+			Usage json.RawMessage `json:"usage"`
+		}
+		if json.Unmarshal([]byte(data), &chunk) != nil {
+			continue
+		}
+		var answerDelta, reasoningDelta string
+		if dashscope && len(chunk.Output.Choices) > 0 {
+			choice := chunk.Output.Choices[0]
+			answerDelta, reasoningDelta, finishReason = choice.Message.Content, choice.Message.ReasoningContent, choice.FinishReason
+		} else if len(chunk.Choices) > 0 {
+			choice := chunk.Choices[0]
+			answerDelta, reasoningDelta = choice.Delta.Content, choice.Delta.ReasoningContent
+			if choice.FinishReason != "" {
+				finishReason = choice.FinishReason
+			}
+		}
+		if reasoningDelta != "" {
+			reasoning += reasoningDelta
+			if err := emit(ManagedChatEvent{Type: "reasoning", Delta: reasoningDelta}); err != nil {
+				return err
+			}
+		}
+		if answerDelta != "" {
+			content += answerDelta
+			if err := emit(ManagedChatEvent{Type: "content", Delta: answerDelta}); err != nil {
+				return err
+			}
+		}
+		if len(chunk.Usage) > 0 && string(chunk.Usage) != "null" {
+			if dashscope {
+				var value struct {
+					InputTokens  int64 `json:"input_tokens"`
+					OutputTokens int64 `json:"output_tokens"`
+					TotalTokens  int64 `json:"total_tokens"`
+				}
+				if json.Unmarshal(chunk.Usage, &value) == nil {
+					usage = ManagedAPIProbeUsage{InputTokens: value.InputTokens, OutputTokens: value.OutputTokens, TotalTokens: value.TotalTokens}
+				}
+			} else {
+				var value managedOpenAIProbeUsage
+				if json.Unmarshal(chunk.Usage, &value) == nil {
+					usage = value.normalized()
+				}
+			}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	completion, err := managedChatCompletion(connection, content, finishReason, usage)
+	if err != nil {
+		return err
+	}
+	completion.Message.ReasoningContent = reasoning
+	return emit(ManagedChatEvent{Type: "done", Completion: &completion})
+}
+
 func (c *HTTPManagedAPIChatter) chatOpenAICompatible(ctx context.Context, connection ManagedAPIConnection, messages []ManagedChatMessage) (ManagedChatCompletion, error) {
 	endpoint, err := managedCompletionEndpoint(connection.Config.BaseURL)
 	if err != nil {
@@ -100,7 +248,7 @@ func (c *HTTPManagedAPIChatter) chatOpenAICompatible(ctx context.Context, connec
 	}
 	payload, _ := json.Marshal(map[string]any{
 		"model": connection.Config.ModelName, "messages": managedChatProviderMessages(messages),
-		"max_tokens": managedChatMaxTokens, "temperature": 0.7, "stream": false,
+		"temperature": 0.7, "stream": false,
 	})
 	body, status, err := c.request(ctx, endpoint, connection, payload)
 	if err != nil {
@@ -119,7 +267,9 @@ func (c *HTTPManagedAPIChatter) chatOpenAICompatible(ctx context.Context, connec
 	if json.Unmarshal(body, &response) != nil || len(response.Choices) == 0 {
 		return ManagedChatCompletion{}, ErrManagedChatEmptyResponse
 	}
-	return managedChatCompletion(connection, response.Choices[0].Message.Content, response.Choices[0].FinishReason, response.Usage.normalized())
+	completion, err := managedChatCompletion(connection, response.Choices[0].Message.Content, response.Choices[0].FinishReason, response.Usage.normalized())
+	completion.Message.ReasoningContent = response.Choices[0].Message.ReasoningContent
+	return completion, err
 }
 
 func (c *HTTPManagedAPIChatter) chatDashScope(ctx context.Context, connection ManagedAPIConnection, messages []ManagedChatMessage) (ManagedChatCompletion, error) {
@@ -127,7 +277,7 @@ func (c *HTTPManagedAPIChatter) chatDashScope(ctx context.Context, connection Ma
 	payload, _ := json.Marshal(map[string]any{
 		"model":      connection.Config.ModelName,
 		"input":      map[string]any{"messages": managedChatProviderMessages(messages)},
-		"parameters": map[string]any{"max_tokens": managedChatMaxTokens, "result_format": "message", "temperature": 0.7},
+		"parameters": map[string]any{"result_format": "message", "temperature": 0.7},
 	})
 	body, status, err := c.request(ctx, endpoint, connection, payload)
 	if err != nil {
@@ -157,7 +307,9 @@ func (c *HTTPManagedAPIChatter) chatDashScope(ctx context.Context, connection Ma
 		usage.TotalTokens = usage.InputTokens + usage.OutputTokens
 	}
 	choice := response.Output.Choices[0]
-	return managedChatCompletion(connection, choice.Message.Content, choice.FinishReason, usage)
+	completion, err := managedChatCompletion(connection, choice.Message.Content, choice.FinishReason, usage)
+	completion.Message.ReasoningContent = choice.Message.ReasoningContent
+	return completion, err
 }
 
 func (c *HTTPManagedAPIChatter) request(ctx context.Context, endpoint string, connection ManagedAPIConnection, payload []byte) ([]byte, int, error) {
@@ -179,7 +331,8 @@ func (c *HTTPManagedAPIChatter) request(ctx context.Context, endpoint string, co
 	if err != nil {
 		return nil, 0, err
 	}
-	body, err := readManagedProbeBody(response)
+	defer response.Body.Close()
+	body, err := io.ReadAll(response.Body)
 	return body, response.StatusCode, err
 }
 
@@ -288,6 +441,12 @@ func (h *Handler) GetManagedChatModel(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) CreateManagedChatCompletion(w http.ResponseWriter, r *http.Request) {
+	release, allowed := h.reserveManagedChat(r)
+	if !allowed {
+		httpx.Error(w, r, http.StatusTooManyRequests, "ai_chat_concurrency_limit", "最多同时进行 5 个对话")
+		return
+	}
+	defer release()
 	store, ok := h.managedAPIStore(w, r)
 	if !ok {
 		return
@@ -324,4 +483,95 @@ func (h *Handler) CreateManagedChatCompletion(w http.ResponseWriter, r *http.Req
 	h.auditAction(r, "model.managed_chat_completed", "managed_model_api_config", connection.Config.ID, "school administrator used the managed model chat",
 		map[string]any{"provider_key": connection.Config.ProviderKey, "model_name": connection.Config.ModelName, "message_count": len(messages), "total_tokens": completion.Usage.TotalTokens, "finish_reason": completion.FinishReason})
 	httpx.JSON(w, http.StatusOK, map[string]any{"completion": completion})
+}
+
+func (h *Handler) reserveManagedChat(r *http.Request) (func(), bool) {
+	user := mustUser(r)
+	key := user.TenantID + ":" + user.ID
+	h.chatMu.Lock()
+	defer h.chatMu.Unlock()
+	if h.activeChats[key] >= 5 {
+		return nil, false
+	}
+	if h.activeChats == nil {
+		h.activeChats = make(map[string]int)
+	}
+	h.activeChats[key]++
+	return func() {
+		h.chatMu.Lock()
+		defer h.chatMu.Unlock()
+		h.activeChats[key]--
+		if h.activeChats[key] == 0 {
+			delete(h.activeChats, key)
+		}
+	}, true
+}
+
+func (h *Handler) StreamManagedChatCompletion(w http.ResponseWriter, r *http.Request) {
+	release, allowed := h.reserveManagedChat(r)
+	if !allowed {
+		httpx.Error(w, r, http.StatusTooManyRequests, "ai_chat_concurrency_limit", "最多同时进行 5 个对话")
+		return
+	}
+	defer release()
+	store, ok := h.managedAPIStore(w, r)
+	if !ok {
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, managedChatBodyLimit)
+	var input ManagedChatRequest
+	if !decodeStrictJSON(w, r, &input) {
+		return
+	}
+	messages, err := normalizeManagedChatMessages(input.Messages)
+	if err != nil {
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_ai_chat_request", "对话内容为空、过长或格式不正确")
+		return
+	}
+	connection, err := ResolveDefaultManagedAPI(r.Context(), store, mustUser(r).TenantID)
+	if err != nil || connection == nil {
+		httpx.Error(w, r, http.StatusServiceUnavailable, "ai_chat_model_unavailable", "当前没有可用的学校对话模型，请联系平台管理员")
+		return
+	}
+	chatter := h.managedAPIChatter
+	if chatter == nil {
+		chatter = NewHTTPManagedAPIChatter(0)
+	}
+	flusher := http.NewResponseController(w)
+	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache, no-transform")
+	w.Header().Set("X-Accel-Buffering", "no")
+	w.WriteHeader(http.StatusOK)
+	if err := flusher.Flush(); err != nil {
+		return
+	}
+	emit := func(event ManagedChatEvent) error {
+		if event.Type == "done" && event.Completion != nil {
+			h.auditAction(r, "model.managed_chat_completed", "managed_model_api_config", connection.Config.ID, "school administrator used the managed model chat",
+				map[string]any{"provider_key": connection.Config.ProviderKey, "model_name": connection.Config.ModelName, "message_count": len(messages), "total_tokens": event.Completion.Usage.TotalTokens, "finish_reason": event.Completion.FinishReason})
+		}
+		encoded, err := json.Marshal(event)
+		if err != nil {
+			return err
+		}
+		if _, err = fmt.Fprintf(w, "data: %s\n\n", encoded); err != nil {
+			return err
+		}
+		if err := flusher.Flush(); err != nil {
+			return err
+		}
+		return r.Context().Err()
+	}
+	if streamer, ok := chatter.(ManagedAPIStreamChatter); ok {
+		err = streamer.StreamChat(r.Context(), *connection, messages, emit)
+	} else {
+		var completion ManagedChatCompletion
+		completion, err = chatter.Chat(r.Context(), *connection, messages)
+		if err == nil {
+			err = emit(ManagedChatEvent{Type: "done", Completion: &completion})
+		}
+	}
+	if err != nil && r.Context().Err() == nil {
+		_ = emit(ManagedChatEvent{Type: "error"})
+	}
 }

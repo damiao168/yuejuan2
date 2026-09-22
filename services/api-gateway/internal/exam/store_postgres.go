@@ -112,21 +112,49 @@ func (s *PostgresStore) GetExam(ctx context.Context, scope auth.AccessScope, id 
 SELECT e.id::text, e.tenant_id::text, e.school_id::text, e.name, e.subject, e.exam_type,
        e.total_score::float8, e.status, e.grading_mode, e.appeal_enabled, e.publish_policy,
        e.created_by::text, e.revision, e.created_at, e.updated_at,
-       COALESCE(array_agg(DISTINCT ec.class_id::text) FILTER (WHERE ec.class_id IS NOT NULL), '{}')
+       COALESCE(array_agg(DISTINCT ec.class_id::text) FILTER (WHERE ec.class_id IS NOT NULL), '{}'),
+       COALESCE(es.id::text, ''), COALESCE(es.name, ''), COALESCE(es.grade_id::text, '')
 FROM exam e
 LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL
+LEFT JOIN exam_session es ON es.tenant_id=e.tenant_id AND es.id=e.exam_session_id AND es.deleted_at IS NULL
 WHERE e.tenant_id = $1 AND e.id::text = $6 AND e.deleted_at IS NULL
   AND (`+examScopePredicate("e", "ec")+`)
-GROUP BY e.id
+GROUP BY e.id, es.id
 `, append(scopeQueryArgs(scope), id)...)
 	var out Exam
-	if err := scanExamWithClasses(row, &out); err != nil {
+	if err := scanExamWithSession(row, &out); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Exam{}, ErrNotFound
 		}
 		return Exam{}, err
 	}
 	return out, nil
+}
+
+// ListSessionExams returns only accessible subject exams in the current session.
+// It avoids a tenant-wide exam listing on every workspace navigation.
+func (s *PostgresStore) ListSessionExams(ctx context.Context, scope auth.AccessScope, sessionID string) ([]Exam, error) {
+	rows, err := s.db.QueryContext(ctx, `
+SELECT DISTINCT e.id::text, e.subject, e.total_score::float8
+FROM exam e
+LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL
+WHERE e.tenant_id=$1 AND e.exam_session_id::text=$6 AND e.deleted_at IS NULL
+  AND (`+examScopePredicate("e", "ec")+`)
+ORDER BY e.subject, e.id::text
+`, append(scopeQueryArgs(scope), sessionID)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Exam{}
+	for rows.Next() {
+		var item Exam
+		if err := rows.Scan(&item.ID, &item.Subject, &item.TotalScore); err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
 }
 
 func (s *PostgresStore) UpdateExam(ctx context.Context, scope auth.AccessScope, id string, input UpdateInput) (Exam, error) {

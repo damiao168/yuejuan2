@@ -135,6 +135,7 @@ JOIN submission ON submission.tenant_id=segment.tenant_id AND submission.id=segm
 WHERE segment.tenant_id=$1::uuid AND segment.id=$2::uuid AND segment.submission_id=$3::uuid
 ON CONFLICT (tenant_id,answer_segment_id,source,grade_round)
 WHERE status IN ('pending','assigned','in_progress','returned') AND deleted_at IS NULL
+  AND source <> 'ai_panel_disagreement'
 DO NOTHING`, tenantID, member.SegmentID, member.SubmissionID, actorID); err != nil {
 					return nil, err
 				}

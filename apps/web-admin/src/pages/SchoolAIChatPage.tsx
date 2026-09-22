@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
 import { App, Button, Drawer, Input, Tooltip } from "antd";
-import { ArrowUp, Bot, Check, Copy, FileText, Menu, MessageSquareText, Paperclip, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import { ArrowUp, Bot, Check, ChevronDown, Copy, FileText, Menu, MessageSquareText, Paperclip, Plus, RotateCcw, Square, Trash2, X } from "lucide-react";
 import { GlobalWorkerOptions, getDocument } from "pdfjs-dist";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import type { SessionUser } from "../auth/session";
 import { getUserErrorMessage } from "../api/client";
-import { getSchoolChatModel, sendSchoolChat, type SchoolChatAttachment, type SchoolChatMessage, type SchoolChatModel } from "../api/schoolAiChat";
+import { getSchoolChatModel, streamSchoolChat, type SchoolChatAttachment, type SchoolChatMessage, type SchoolChatModel } from "../api/schoolAiChat";
 import { MathMarkdown } from "../components/MathMarkdown";
+import { interruptedMessage, requestMessages } from "./schoolAiChatMessages";
 import "./school-ai-chat.css";
 
 interface ChatThread {
@@ -19,6 +20,7 @@ interface ChatThread {
 GlobalWorkerOptions.workerSrc = pdfWorker;
 
 const MAX_ATTACHMENTS = 3;
+const MAX_ACTIVE_CHATS = 5;
 const MAX_TEXT_FILE_BYTES = 512 * 1024;
 const MAX_PDF_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_ATTACHMENT_CHARACTERS = 60_000;
@@ -45,6 +47,7 @@ function readThreads(storageKey: string): ChatThread[] {
       typeof item.updatedAt === "number" && Array.isArray(item.messages) &&
       item.messages.length <= 50 && item.messages.every((message: SchoolChatMessage) =>
         (message.role === "user" || message.role === "assistant") && typeof message.content === "string" &&
+        (message.reasoning_content === undefined || typeof message.reasoning_content === "string") &&
         (!message.attachments || (Array.isArray(message.attachments) && message.attachments.every(validStoredAttachment)))));
   } catch {
     return [];
@@ -94,13 +97,16 @@ async function readChatAttachment(file: File): Promise<SchoolChatAttachment> {
   return { name: file.name, media_type: attachmentMediaType(file), content, size: file.size };
 }
 
-function requestMessages(messages: SchoolChatMessage[]): SchoolChatMessage[] {
-  return messages.map((message) => {
-    const attachments = message.attachments?.filter((attachment) => attachment.content);
-    const unavailableNames = message.attachments?.filter((attachment) => !attachment.content).map((attachment) => attachment.name) ?? [];
-    const content = message.content || (unavailableNames.length > 0 ? `此前发送过附件：${unavailableNames.join("、")}（文件内容未在浏览器中持久保存）。` : "");
-    return { role: message.role, content, ...(attachments?.length ? { attachments } : {}) };
-  });
+function ReasoningDisclosure({ content, defaultExpanded = false, onToggle }: { content: string; defaultExpanded?: boolean; onToggle?: (expanded: boolean) => void }) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  return <div className={`school-chat-reasoning ${expanded ? "is-expanded" : ""}`}>
+    <button type="button" className="school-chat-reasoning-toggle" aria-expanded={expanded} onClick={() => {
+      const next = !expanded;
+      onToggle?.(next);
+      setExpanded(next);
+    }}><span>思考过程</span><span className="school-chat-reasoning-control">{expanded ? "收起" : "展开"}<ChevronDown size={14} /></span></button>
+    {expanded ? <div className="school-chat-reasoning-content">{content}</div> : null}
+  </div>;
 }
 
 function titleFromMessage(content: string) {
@@ -119,14 +125,20 @@ export function SchoolAIChatPage({ user }: { user: SessionUser }) {
   const [model, setModel] = useState<SchoolChatModel | null>(null);
   const [modelLoading, setModelLoading] = useState(true);
   const [modelError, setModelError] = useState("");
-  const [sendError, setSendError] = useState<{ threadId: string; message: string } | null>(null);
-  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [sendErrors, setSendErrors] = useState<Record<string, string>>({});
+  const [pending, setPending] = useState<Record<string, { content: string; reasoning: string }>>({});
+  const controllers = useRef(new Map<string, AbortController>());
+  const expandedReasoning = useRef(new Set<string>());
   const [historyOpen, setHistoryOpen] = useState(false);
   const [copiedMessage, setCopiedMessage] = useState("");
   const scrollEnd = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeThread = threads.find((thread) => thread.id === activeId);
+  const activePending = activeId ? pending[activeId] : undefined;
+  const activeCount = Object.keys(pending).length;
+
+  useEffect(() => () => { for (const controller of controllers.current.values()) controller.abort(); }, []);
 
   useEffect(() => {
     if (user.publicComputer) return;
@@ -152,37 +164,63 @@ export function SchoolAIChatPage({ user }: { user: SessionUser }) {
     return () => { mounted = false; };
   }, []);
 
-  useEffect(() => { scrollEnd.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [activeId, activeThread?.messages.length, pendingId]);
+  useEffect(() => {
+    if (activeId && expandedReasoning.current.has(activeId)) return;
+    scrollEnd.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [activeId, activeThread?.messages.length, activePending?.content]);
 
   const openNew = useCallback(() => {
     setActiveId(null);
     setDraft("");
     setDraftAttachments([]);
-    setSendError(null);
     setHistoryOpen(false);
     inputRef.current?.focus();
   }, []);
 
   const complete = useCallback(async (threadId: string, messages: SchoolChatMessage[]) => {
-    setPendingId(threadId);
-    setSendError(null);
+    if (controllers.current.has(threadId) || controllers.current.size >= MAX_ACTIVE_CHATS) return;
+    const controller = new AbortController();
+    controllers.current.set(threadId, controller);
+    setPending((current) => ({ ...current, [threadId]: { content: "", reasoning: "" } }));
+    setSendErrors((current) => { const next = { ...current }; delete next[threadId]; return next; });
+    let partial = { content: "", reasoning: "" };
+    let completed = false;
     try {
-      const response = await sendSchoolChat(requestMessages(messages.slice(-49)));
-      setThreads((current) => current.map((thread) => thread.id === threadId ? {
-        ...thread, messages: [...thread.messages, response.completion.message].slice(-50), updatedAt: Date.now()
-      } : thread));
+      await streamSchoolChat(requestMessages(messages.slice(-49)), controller.signal, (event) => {
+        if (event.type === "error") throw new Error("模型暂时无法回答，请稍后重试");
+        if (event.type === "reasoning" || event.type === "content") {
+          partial = { ...partial, [event.type === "reasoning" ? "reasoning" : "content"]: partial[event.type === "reasoning" ? "reasoning" : "content"] + (event.delta ?? "") };
+          setPending((current) => ({ ...current, [threadId]: partial }));
+        }
+        if (event.type === "done" && event.completion) {
+          completed = true;
+          setThreads((current) => current.map((thread) => thread.id === threadId ? {
+            ...thread, messages: [...thread.messages, event.completion!.message].slice(-50), updatedAt: Date.now()
+          } : thread));
+        }
+      });
+      if (!completed) throw new Error("对话流意外中断");
     } catch (error) {
-      setSendError({ threadId, message: getUserErrorMessage(error, "发送失败，请重试") });
+      if (controller.signal.aborted) {
+        const interrupted = completed ? null : interruptedMessage(partial);
+        if (interrupted) setThreads((current) => current.map((thread) => thread.id === threadId ? {
+          ...thread, messages: [...thread.messages, interrupted].slice(-50), updatedAt: Date.now()
+        } : thread));
+      } else {
+        setSendErrors((current) => ({ ...current, [threadId]: getUserErrorMessage(error, "发送失败，请重试") }));
+      }
     } finally {
-      setPendingId(null);
+      controllers.current.delete(threadId);
+      setPending((current) => { const next = { ...current }; delete next[threadId]; return next; });
     }
   }, []);
 
   const send = useCallback((event?: FormEvent) => {
     event?.preventDefault();
     const content = draft.trim();
-    if ((!content && draftAttachments.length === 0) || pendingId || attaching || !model?.available || content.length > 20_000) return;
+    if ((!content && draftAttachments.length === 0) || (activeId && controllers.current.has(activeId)) || controllers.current.size >= MAX_ACTIVE_CHATS || attaching || !model?.available || content.length > 20_000) return;
     const id = activeThread?.id ?? crypto.randomUUID();
+    expandedReasoning.current.delete(id);
     const messages: SchoolChatMessage[] = [...(activeThread?.messages ?? []), {
       role: "user" as const, content, attachments: draftAttachments.length ? draftAttachments : undefined
     }].slice(-49);
@@ -191,13 +229,16 @@ export function SchoolAIChatPage({ user }: { user: SessionUser }) {
       const next: ChatThread = {
         id, title: existing?.title ?? titleFromMessage(content || draftAttachments[0]?.name || "附件对话"), updatedAt: Date.now(), messages
       };
-      return [next, ...current.filter((thread) => thread.id !== id)].slice(0, 20);
+      return [next, ...current.filter((thread) => thread.id !== id)]
+        .filter((thread, index) => index < 20 || controllers.current.has(thread.id));
     });
     setActiveId(id);
     setDraft("");
     setDraftAttachments([]);
     void complete(id, messages);
-  }, [activeThread, attaching, complete, draft, draftAttachments, model?.available, pendingId]);
+  }, [activeId, activeThread, attaching, complete, draft, draftAttachments, model?.available]);
+
+  const stop = () => { if (activeId) controllers.current.get(activeId)?.abort(); };
 
   const onInputKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -214,6 +255,8 @@ export function SchoolAIChatPage({ user }: { user: SessionUser }) {
       cancelText: "取消",
       okButtonProps: { danger: true },
       onOk: () => {
+        controllers.current.get(thread.id)?.abort();
+        setSendErrors((current) => { const next = { ...current }; delete next[thread.id]; return next; });
         setThreads((current) => current.filter((item) => item.id !== thread.id));
         if (activeId === thread.id) openNew();
       }
@@ -235,7 +278,7 @@ export function SchoolAIChatPage({ user }: { user: SessionUser }) {
       try {
         accepted.push(await readChatAttachment(file));
       } catch (error) {
-        toast.error(`${file.name}：${error instanceof Error ? error.message : "文件读取失败"}`);
+        toast.error(`${file.name}：${getUserErrorMessage(error, "文件读取失败")}`);
       }
     }
     if (accepted.length > 0) setDraftAttachments((current) => [...current, ...accepted]);
@@ -254,7 +297,7 @@ export function SchoolAIChatPage({ user }: { user: SessionUser }) {
   };
 
   const retry = () => {
-    if (activeThread && activeThread.messages[activeThread.messages.length - 1]?.role === "user" && !pendingId) {
+    if (activeThread && activeThread.messages[activeThread.messages.length - 1]?.role === "user" && !controllers.current.has(activeThread.id) && controllers.current.size < MAX_ACTIVE_CHATS) {
       void complete(activeThread.id, activeThread.messages);
     }
   };
@@ -267,7 +310,7 @@ export function SchoolAIChatPage({ user }: { user: SessionUser }) {
       <Button className="school-chat-new" icon={<Plus size={17} />} onClick={openNew}>开启新对话</Button>
       <div className="school-chat-thread-list">
         {threads.length === 0 ? <p className="school-chat-history-empty">还没有对话记录</p> : threads.map((thread) => <div className={`school-chat-thread ${activeId === thread.id ? "is-active" : ""}`} key={thread.id}>
-          <button type="button" onClick={() => { setActiveId(thread.id); setHistoryOpen(false); }} title={thread.title}><MessageSquareText size={15} /><span>{thread.title}</span></button>
+          <button type="button" onClick={() => { setActiveId(thread.id); setHistoryOpen(false); }} title={thread.title}><MessageSquareText size={15} /><span>{thread.title}</span>{pending[thread.id] && <i className="school-chat-thread-running" aria-label="回复中" />}</button>
           <Tooltip title="删除对话"><button type="button" className="school-chat-delete" aria-label={`删除对话：${thread.title}`} onClick={() => deleteThread(thread)}><Trash2 size={14} /></button></Tooltip>
         </div>)}
       </div>
@@ -283,7 +326,7 @@ export function SchoolAIChatPage({ user }: { user: SessionUser }) {
     <section className="school-chat-main" aria-label="AI 对话内容">
       <header className="school-chat-topbar">
         <div className="school-chat-topbar-title"><Button className="school-chat-mobile-menu" type="text" icon={<Menu size={18} />} aria-label="打开对话历史" onClick={() => setHistoryOpen(true)} /><Bot size={21} /><span>AI 对话</span></div>
-        <div className="school-chat-model-status"><i className={model?.available ? "is-online" : ""} />{modelLoading ? "正在读取模型" : model?.available ? `${model.display_name} · ${model.model_name}` : "模型未就绪"}</div>
+        <div className="school-chat-model-status"><i className={model?.available ? "is-online" : ""} />{modelLoading ? "正在读取模型" : model?.available ? `${model.display_name} · ${model.model_name}` : "模型未就绪"}{activeCount > 0 ? ` · ${activeCount}/${MAX_ACTIVE_CHATS} 个对话进行中` : ""}</div>
       </header>
 
       <div className={`school-chat-flow ${!activeThread ? "is-empty" : ""}`} aria-live="polite">
@@ -299,13 +342,16 @@ export function SchoolAIChatPage({ user }: { user: SessionUser }) {
               {message.role === "assistant" ? <div className="school-chat-avatar"><Bot size={18} /></div> : null}
               <div className="school-chat-message-body">
                 {message.attachments?.length ? <div className="school-chat-message-files">{message.attachments.map((attachment) => <span key={`${messageKey}-${attachment.name}`}><FileText size={14} />{attachment.name}</span>)}</div> : null}
-                {message.role === "assistant" ? <MathMarkdown>{message.content}</MathMarkdown> : message.content}
-                {message.role === "assistant" ? <div className="school-chat-message-actions"><Button type="text" size="small" icon={copiedMessage === messageKey ? <Check size={14} /> : <Copy size={14} />} onClick={() => void copyReply(message.content, messageKey)}>{copiedMessage === messageKey ? "已复制" : "复制"}</Button></div> : null}
+                {message.role === "assistant" && message.reasoning_content ? <ReasoningDisclosure content={message.reasoning_content} defaultExpanded={index === activeThread.messages.length - 1 && expandedReasoning.current.has(activeThread.id)} /> : null}
+                {message.role === "assistant" ? message.content ? <MathMarkdown>{message.content}</MathMarkdown> : <span className="school-chat-interrupted">已中断，尚未生成正文</span> : message.content}
+                {message.role === "assistant" && message.content ? <div className="school-chat-message-actions"><Button type="text" size="small" icon={copiedMessage === messageKey ? <Check size={14} /> : <Copy size={14} />} onClick={() => void copyReply(message.content, messageKey)}>{copiedMessage === messageKey ? "已复制" : "复制"}</Button></div> : null}
               </div>
             </article>;
           })}
-          {pendingId === activeThread.id ? <div className="school-chat-waiting" role="status"><span className="school-chat-avatar"><Bot size={18} /></span><span className="school-chat-thinking">思考中<span aria-hidden="true"><i /><i /><i /></span></span></div> : null}
-          {sendError?.threadId === activeThread.id ? <div className="school-chat-send-error" role="alert"><span>{sendError.message}</span><Button type="link" size="small" icon={<RotateCcw size={14} />} onClick={retry}>重试</Button></div> : null}
+          {activePending ? <div className="school-chat-waiting" role="status"><span className="school-chat-avatar"><Bot size={18} /></span><div className="school-chat-live-body">{activePending.reasoning ? <ReasoningDisclosure content={activePending.reasoning} onToggle={(expanded) => {
+            if (activeId) { if (expanded) expandedReasoning.current.add(activeId); else expandedReasoning.current.delete(activeId); }
+          }} /> : !activePending.content ? <span className="school-chat-thinking">思考中<span aria-hidden="true"><i /><i /><i /></span></span> : null}{activePending.content ? <MathMarkdown>{activePending.content}</MathMarkdown> : null}</div></div> : null}
+          {sendErrors[activeThread.id] ? <div className="school-chat-send-error" role="alert"><span>{sendErrors[activeThread.id]}</span><Button type="link" size="small" icon={<RotateCcw size={14} />} disabled={activeCount >= MAX_ACTIVE_CHATS} onClick={retry}>重试</Button></div> : null}
           <div ref={scrollEnd} />
         </div>}
       </div>
@@ -315,13 +361,13 @@ export function SchoolAIChatPage({ user }: { user: SessionUser }) {
           {draftAttachments.length > 0 ? <div className="school-chat-attachments">{draftAttachments.map((attachment) => <span key={`${attachment.name}-${attachment.size}`}><FileText size={15} /><b title={attachment.name}>{attachment.name}</b><small>{Math.max(1, Math.round(attachment.size / 1024))} KB</small><button type="button" aria-label={`移除附件：${attachment.name}`} onClick={() => setDraftAttachments((current) => current.filter((item) => item !== attachment))}><X size={13} /></button></span>)}</div> : null}
           <Input.TextArea
             ref={inputRef} value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onInputKeyDown}
-            placeholder={model?.available ? "给 AI 发送消息" : "等待学校模型就绪"} disabled={!model?.available || Boolean(pendingId)}
+            placeholder={model?.available ? activeCount >= MAX_ACTIVE_CHATS && !activePending ? "已达到 5 个并行对话上限" : "给 AI 发送消息" : "等待学校模型就绪"} disabled={!model?.available || Boolean(activePending) || activeCount >= MAX_ACTIVE_CHATS}
             autoSize={{ minRows: 2, maxRows: 7 }} maxLength={20_000} aria-label="对话输入"
           />
           <div className="school-chat-composer-bottom">
             <input ref={fileInputRef} className="school-chat-file-input" type="file" multiple accept=".pdf,.txt,.md,.csv,.json,.xml,.html,.css,.js,.jsx,.ts,.tsx,.py,.java,.go,.sql,.yaml,.yml,.log,.ini,.conf,text/*,application/pdf,application/json" onChange={(event) => void selectFiles(event)} />
-            <Tooltip title="支持 PDF 和常见文本文件，最多 3 个"><Button type="text" size="small" icon={<Paperclip size={17} />} loading={attaching} disabled={Boolean(pendingId) || draftAttachments.length >= MAX_ATTACHMENTS} onClick={() => fileInputRef.current?.click()}>上传文件</Button></Tooltip>
-            <Button type="primary" shape="circle" htmlType="submit" icon={<ArrowUp size={19} />} aria-label="发送消息" disabled={(!draft.trim() && draftAttachments.length === 0) || !model?.available || Boolean(pendingId) || attaching} />
+            <Tooltip title="支持 PDF 和常见文本文件，最多 3 个"><Button type="text" size="small" icon={<Paperclip size={17} />} loading={attaching} disabled={Boolean(activePending) || activeCount >= MAX_ACTIVE_CHATS || draftAttachments.length >= MAX_ATTACHMENTS} onClick={() => fileInputRef.current?.click()}>上传文件</Button></Tooltip>
+            {activePending ? <Button type="primary" shape="circle" icon={<Square size={15} fill="currentColor" />} aria-label="中断当前对话" onClick={stop} /> : <Button type="primary" shape="circle" htmlType="submit" icon={<ArrowUp size={19} />} aria-label="发送消息" disabled={(!draft.trim() && draftAttachments.length === 0) || !model?.available || activeCount >= MAX_ACTIVE_CHATS || attaching} />}
           </div>
         </form>
         <p className="school-chat-disclaimer">模型回答仅供参考，请核实重要信息。请勿输入学生个人敏感信息。</p>

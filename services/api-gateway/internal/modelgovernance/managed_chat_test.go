@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -13,6 +14,73 @@ import (
 type recordingManagedChatter struct {
 	connection ManagedAPIConnection
 	messages   []ManagedChatMessage
+}
+
+type streamingManagedChatter struct{ recordingManagedChatter }
+
+func (c *streamingManagedChatter) StreamChat(_ context.Context, connection ManagedAPIConnection, _ []ManagedChatMessage, emit func(ManagedChatEvent) error) error {
+	if err := emit(ManagedChatEvent{Type: "reasoning", Delta: "先列提纲"}); err != nil {
+		return err
+	}
+	if err := emit(ManagedChatEvent{Type: "content", Delta: "复习计划"}); err != nil {
+		return err
+	}
+	completion := ManagedChatCompletion{Message: ManagedChatMessage{Role: "assistant", Content: "复习计划", ReasoningContent: "先列提纲"}, ModelName: connection.Config.ModelName}
+	return emit(ManagedChatEvent{Type: "done", Completion: &completion})
+}
+
+func TestManagedChatStreamEmitsReasoningAndAnswer(t *testing.T) {
+	store := NewMemoryStore()
+	verified := successfulManagedProbe()
+	verified.ProbeMode, verified.GeneratedRequest = "capability", true
+	_, err := store.CreateManagedAPIConfig(context.Background(), "school-a", "platform-admin", ManagedAPIConfigInput{
+		ProviderKey: "deepseek", DisplayName: "DeepSeek", AdapterType: "openai_compatible",
+		BaseURL: "https://api.deepseek.com", APIKey: "sk-secret-value-at-least-16",
+		ModelName: "deepseek-chat", ModelVersion: "deepseek-chat", Region: "global",
+		Status: "active", IsDefault: true, InitialProbe: &verified,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := NewHandler(store, nil, nil, testBaseline()).WithManagedAPIChatter(&streamingManagedChatter{})
+	user := auth.User{ID: "school-admin", TenantID: "school-a", Roles: []string{"school_admin"}}
+	response := performHandlerRequest(t, user, http.MethodPost, "/api/v1/ai-chat/completions/stream", `{"messages":[{"role":"user","content":"你好"}]}`, handler.StreamManagedChatCompletion)
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"type":"reasoning"`) || !strings.Contains(response.Body.String(), `"type":"content"`) || !strings.Contains(response.Body.String(), `"type":"done"`) {
+		t.Fatalf("unexpected stream %d: %s", response.Code, response.Body.String())
+	}
+	if strings.Contains(response.Body.String(), "sk-secret") {
+		t.Fatal("stream exposed provider credential")
+	}
+	request := performHandlerRequest(t, user, http.MethodPost, "/api/v1/ai-chat/completions/stream", `{"messages":[{"role":"user","content":"你好"}]}`, handler.StreamManagedChatCompletion)
+	if request.Code != http.StatusOK {
+		t.Fatalf("stream slot was not released: %d", request.Code)
+	}
+}
+
+func TestManagedChatLimitsFiveConcurrentRequests(t *testing.T) {
+	handler := NewHandler(NewMemoryStore(), nil, nil, testBaseline())
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/ai-chat/completions", nil)
+	request = request.WithContext(auth.WithUser(request.Context(), auth.User{ID: "school-admin", TenantID: "school-a"}))
+	releases := make([]func(), 0, 5)
+	for range 5 {
+		release, ok := handler.reserveManagedChat(request)
+		if !ok {
+			t.Fatal("rejected one of the first five chats")
+		}
+		releases = append(releases, release)
+	}
+	if _, ok := handler.reserveManagedChat(request); ok {
+		t.Fatal("sixth chat was accepted")
+	}
+	releases[0]()
+	if release, ok := handler.reserveManagedChat(request); !ok {
+		t.Fatal("chat slot was not released")
+	} else {
+		release()
+	}
+	for _, release := range releases[1:] {
+		release()
+	}
 }
 
 func (c *recordingManagedChatter) Chat(_ context.Context, connection ManagedAPIConnection, messages []ManagedChatMessage) (ManagedChatCompletion, error) {

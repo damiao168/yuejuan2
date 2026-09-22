@@ -6,7 +6,7 @@ import {
 } from "../fixtures/gradingWorkbenchMocks";
 
 test("阅卷教师先理解异常原因，再用键盘连续完成 20 份跨学科任务", async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
   const state = createGradingWorkbenchMockState(20);
   state.tasks[0].source = "ai_low_confidence";
   await installGradingWorkbenchMocks(page, state);

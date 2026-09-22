@@ -23,7 +23,7 @@ for (const viewport of viewports) {
     const dimensions = await page.evaluate(() => ({ viewportWidth: window.innerWidth, documentWidth: document.documentElement.scrollWidth }));
     expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
     if (viewport.width < 960) await expect(page.locator(".exam-composer-mobile-action")).toBeVisible();
-    else await expect(page.locator(".exam-composer-summary")).toBeVisible();
+    else await expect(page.locator(".exam-composer-submit")).toBeVisible();
 
     const image = await page.screenshot({ fullPage: false, animations: "disabled", scale: "css" });
     await testInfo.attach(`exam-create-${viewport.name}`, { body: image, contentType: "image/png" });

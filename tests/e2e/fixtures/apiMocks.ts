@@ -34,7 +34,7 @@ function json(route: Route, body: unknown, status = 200) {
 
 export async function installApiMocks(
   page: Page,
-  options: { role?: TestRole; initiallyAuthenticated?: boolean; dashboardMode?: "default" | "empty" } = {}
+  options: { role?: TestRole; initiallyAuthenticated?: boolean; dashboardMode?: "default" | "empty"; sessionSubjects?: boolean } = {}
 ) {
   const role = options.role ?? "school_admin";
   const user = userFor(role);
@@ -234,14 +234,15 @@ export async function installApiMocks(
     if (examDetailMatch && request.method() === "GET") {
       const examID = decodeURIComponent(examDetailMatch[1]);
       const newlyCreated = examID.startsWith("exam-created");
+      const physics = examID === "exam-physics";
       return json(route, { exam: {
         id: examID,
         tenant_id: "tenant-school",
         school_id: "school-1",
-        name: newlyCreated ? "2026-2027学年高二期中考试 · 数学" : "2026 春季数学期中考试",
-        subject: "math",
+        name: newlyCreated ? "2026-2027学年高二期中考试 · 数学" : physics ? "2026 春季物理期中考试" : "2026 春季数学期中考试",
+        subject: physics ? "physics" : "math",
         exam_type: "midterm",
-        total_score: 150,
+        total_score: physics ? 100 : 150,
         status: newlyCreated ? "draft" : "collecting",
         grading_mode: "ai_assisted",
         appeal_enabled: true,
@@ -309,10 +310,16 @@ export async function installApiMocks(
     if (workspaceMatch && request.method() === "GET") {
       const examID = decodeURIComponent(workspaceMatch[1]);
       const newlyCreated = examID.startsWith("exam-created");
+      const subject = examID === "exam-physics" ? "physics" : "math";
       return json(route, {
         workspace: {
           exam_id: examID,
           exam_name: newlyCreated ? "2026-2027学年高二期中考试 · 数学" : "2026 春季数学期中考试",
+          ...(options.sessionSubjects ? { exam_session_name: "2026 春季期中考试" } : {}),
+          subject_exams: options.sessionSubjects ? [
+            { exam_id: "exam-1", subject: "math", total_score: 150 },
+            { exam_id: "exam-physics", subject: "physics", total_score: 100 }
+          ] : [{ exam_id: examID, subject, total_score: 150 }],
           exam_status: newlyCreated ? "draft" : "collecting",
           revision: 3,
           stage: newlyCreated ? "prepare" : "capture",
@@ -365,9 +372,9 @@ export async function installApiMocks(
           }],
           risk_tier: "R2",
           subject_summary: {
-            code: "math",
-            label: "数学",
-            total_score: 150,
+            code: subject,
+            label: subject === "physics" ? "物理" : "数学",
+            total_score: subject === "physics" ? 100 : 150,
             question_count: 19,
             configured_question_count: newlyCreated ? 0 : 19,
             frozen_question_count: newlyCreated ? 0 : 19,

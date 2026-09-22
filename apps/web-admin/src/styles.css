@@ -8007,7 +8007,7 @@ select {
 /* Exam setup is a single questionnaire-like working surface. */
 .exam-workspace-subject { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 12px; font-weight: 500; }
 .exam-workspace-subject .ant-select { width: 176px; }
-.exam-preparation-shell { display: block; }
+.exam-context-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .exam-workspace-content.is-preparation { max-width: none; }
 .exam-setup-form-page { padding: 0 28px 32px; }
 .exam-setup-questions { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--border); }
@@ -8022,6 +8022,7 @@ select {
 .exam-setup-actions { display: flex; justify-content: flex-end; padding-top: 14px; }
 
 @media (max-width: 720px) {
+  .exam-preparation-shell { display: block; }
   .exam-workspace-canvas .exam-context-leading { align-items: flex-start; flex-direction: column; gap: 8px; }
   .exam-context-title { align-items: stretch !important; }
   .exam-workspace-subject { align-items: flex-start; flex-direction: column; gap: 4px; }

@@ -24,6 +24,55 @@ func (f fakeExamReader) GetExam(_ context.Context, scope auth.AccessScope, id st
 	return f.item, nil
 }
 
+type fakeSessionExamReader struct {
+	fakeExamReader
+	siblings []exam.Exam
+	err      error
+}
+
+func (f fakeSessionExamReader) ListSessionExams(_ context.Context, _ auth.AccessScope, _ string) ([]exam.Exam, error) {
+	return f.siblings, f.err
+}
+
+func TestProjectionIncludesSessionSubjectsWithoutFullExamList(t *testing.T) {
+	current := exam.Exam{ID: "math", TenantID: "tenant-1", SessionID: "session-1", SessionName: "期末考试", Name: "数学考试", Subject: "mathematics", TotalScore: 150, Status: "grading"}
+	service := NewService(Dependencies{
+		Exams:  fakeSessionExamReader{fakeExamReader: fakeExamReader{item: current}, siblings: []exam.Exam{current, {ID: "physics", Subject: "physics", TotalScore: 100}}},
+		Papers: fakePaperReader{}, Submissions: fakeSubmissionReader{}, Reviews: fakeReviewReader{},
+	})
+	result, err := service.Get(context.Background(), auth.AccessScope{TenantID: "tenant-1", TenantWide: true}, current.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.ExamSessionName != "期末考试" || len(result.SubjectExams) != 2 || result.SubjectExams[1].ExamID != "physics" {
+		t.Fatalf("expected bounded session subjects, got %#v", result.SubjectExams)
+	}
+}
+
+func TestProjectionKeepsCurrentSubjectWhenSessionLookupFails(t *testing.T) {
+	current := exam.Exam{ID: "math", TenantID: "tenant-1", SessionID: "session-1", Subject: "mathematics", TotalScore: 150, Status: "grading"}
+	service := NewService(Dependencies{
+		Exams:  fakeSessionExamReader{fakeExamReader: fakeExamReader{item: current}, err: errors.New("session lookup unavailable")},
+		Papers: fakePaperReader{}, Submissions: fakeSubmissionReader{}, Reviews: fakeReviewReader{},
+	})
+	result, err := service.Get(context.Background(), auth.AccessScope{TenantID: "tenant-1", TenantWide: true}, current.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.SubjectExams) != 1 || result.SubjectExams[0].ExamID != current.ID {
+		t.Fatalf("current subject disappeared after session lookup failure: %#v", result.SubjectExams)
+	}
+	var found bool
+	for _, warning := range result.Warnings {
+		if warning.Code == "session_subjects_unavailable" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("missing session lookup warning: %#v", result.Warnings)
+	}
+}
+
 type fakePaperReader struct {
 	papers    []paper.Paper
 	questions []paper.Question

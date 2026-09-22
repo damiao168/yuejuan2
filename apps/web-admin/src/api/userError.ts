@@ -123,6 +123,7 @@ const apiErrorMessages: Record<string, string> = {
   ai_chat_model_unavailable: "当前没有可用的学校对话模型，请联系平台管理员。",
   invalid_ai_chat_request: "对话内容为空、过长或格式不正确。",
   ai_chat_rate_limited: "模型服务繁忙，请稍后重试。",
+  ai_chat_concurrency_limit: "最多同时进行 5 个对话，请等待其中一个完成。",
   ai_chat_provider_failed: "模型暂时无法回答，请稍后重试。"
 };
 

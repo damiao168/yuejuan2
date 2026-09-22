@@ -20,6 +20,10 @@ type ExamReader interface {
 	GetExam(context.Context, auth.AccessScope, string) (exam.Exam, error)
 }
 
+type sessionExamReader interface {
+	ListSessionExams(context.Context, auth.AccessScope, string) ([]exam.Exam, error)
+}
+
 type PaperReader interface {
 	ListPapers(context.Context, string, string) ([]paper.Paper, error)
 	ListQuestions(context.Context, string, string) ([]paper.Question, error)
@@ -84,16 +88,18 @@ func (s *Service) Get(ctx context.Context, scope auth.AccessScope, examID string
 	}
 
 	result := Projection{
-		ExamID:      item.ID,
-		ExamName:    item.Name,
-		ExamStatus:  item.Status,
-		Revision:    item.Revision,
-		Stage:       stageForStatus(item.Status),
-		Stages:      buildStages(item.ID, item.Status),
-		Blockers:    []Notice{},
-		Warnings:    []Notice{},
-		NextActions: []NextAction{},
-		RiskTier:    "unknown",
+		ExamID:          item.ID,
+		ExamName:        item.Name,
+		ExamSessionName: item.SessionName,
+		SubjectExams:    []SubjectExam{{ExamID: item.ID, Subject: item.Subject, TotalScore: item.TotalScore}},
+		ExamStatus:      item.Status,
+		Revision:        item.Revision,
+		Stage:           stageForStatus(item.Status),
+		Stages:          buildStages(item.ID, item.Status),
+		Blockers:        []Notice{},
+		Warnings:        []Notice{},
+		NextActions:     []NextAction{},
+		RiskTier:        "unknown",
 		SubjectSummary: SubjectSummary{
 			Code:          item.Subject,
 			Label:         subjectLabel(item.Subject),
@@ -101,6 +107,19 @@ func (s *Service) Get(ctx context.Context, scope auth.AccessScope, examID string
 			QuestionTypes: map[string]int{},
 		},
 		UpdatedAt: s.deps.Now().UTC(),
+	}
+	if item.SessionID != "" {
+		if reader, ok := s.deps.Exams.(sessionExamReader); ok {
+			siblings, listErr := reader.ListSessionExams(ctx, scope, item.SessionID)
+			if listErr != nil {
+				result.Warnings = append(result.Warnings, unavailableNotice("session_subjects_unavailable", "同场次学科暂不可用"))
+			} else {
+				result.SubjectExams = []SubjectExam{}
+				for _, sibling := range siblings {
+					result.SubjectExams = append(result.SubjectExams, SubjectExam{ExamID: sibling.ID, Subject: sibling.Subject, TotalScore: sibling.TotalScore})
+				}
+			}
+		}
 	}
 	if s.deps.Assessments == nil {
 		result.Warnings = append(result.Warnings, riskUnavailableNotice("风险汇总服务尚未接入"))

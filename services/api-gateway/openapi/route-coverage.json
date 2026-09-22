@@ -4,8 +4,8 @@
   "exception_ledger": "contracts/openapi/registered-route-exceptions.json",
   "policy": "Every registered route is covered by OpenAPI or an exact, reviewed exception-ledger entry; generation never invents approvals.",
   "counts": {
-    "registered": 495,
-    "openapi": 225,
+    "registered": 498,
+    "openapi": 228,
     "registered_gaps": 270
   },
   "routes": [
@@ -73,6 +73,27 @@
       "owner": "api-platform",
       "review_after": "2026-12-31",
       "reason": "Internal worker transport is versioned and tested independently from the public SDK."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ai-chat/completions",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
+      "coverage": "openapi",
+      "operation_id": "createManagedChatCompletion"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ai-chat/completions/stream",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
+      "coverage": "openapi",
+      "operation_id": "streamManagedChatCompletion"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ai-chat/model",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
+      "coverage": "openapi",
+      "operation_id": "getManagedChatModel"
     },
     {
       "method": "GET",

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
@@ -22,6 +23,8 @@ type Handler struct {
 	prompts           RuntimePromptSource
 	managedAPIProber  ManagedAPIProber
 	managedAPIChatter ManagedAPIChatter
+	chatMu            sync.Mutex
+	activeChats       map[string]int
 }
 
 func NewHandler(store Store, audit auth.AuditRecorder, secrets SecretReferenceResolver, baseline LocalBaseline) *Handler {

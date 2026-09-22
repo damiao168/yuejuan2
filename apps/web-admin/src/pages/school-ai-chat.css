@@ -12,6 +12,7 @@
 .school-chat-thread.is-active > button:first-child { color: #1554ad; font-weight: 600; }
 .school-chat-delete { display: grid; flex: 0 0 27px; height: 28px; margin-right: 5px; place-items: center; border: 0; border-radius: 6px; background: transparent; color: #9aa3af; opacity: 0; cursor: pointer; }
 .school-chat-thread:hover .school-chat-delete, .school-chat-delete:focus-visible { opacity: 1; }
+.school-chat-thread-running { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: #397acb; animation: school-chat-thinking 1.15s ease-in-out infinite; }
 .school-chat-delete:hover { background: #fff0f0; color: #b42318; }
 .school-chat-history-note { margin: 12px 8px 0; color: #8c96a5; font-size: 11px; line-height: 1.5; }
 .school-chat-mobile-menu { display: none; }
@@ -22,7 +23,7 @@
 .school-chat-model-status { display: flex; min-width: 0; align-items: center; gap: 7px; overflow: hidden; color: #7b8493; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .school-chat-model-status i { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: #c4cbd5; }
 .school-chat-model-status i.is-online { background: #39a778; }
-.school-chat-flow { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; }
+.school-chat-flow { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; overflow-anchor: none; }
 .school-chat-flow.is-empty { display: grid; place-items: center; }
 .school-chat-welcome { width: min(100% - 40px, 630px); margin: -35px auto 0; text-align: center; animation: school-chat-enter .3s ease-out; }
 .school-chat-welcome-mark { display: grid; width: 60px; height: 60px; margin: 0 auto 21px; place-items: center; border-radius: 18px; background: #edf3fb; color: #3168b2; }
@@ -45,6 +46,14 @@
 .school-chat-message .math-markdown > :last-child { margin-bottom: 0; }
 .school-chat-message .math-markdown pre { overflow-x: auto; padding: 14px; border-radius: 8px; background: #f4f6f9; }
 .school-chat-waiting { display: flex; align-items: center; gap: 12px; color: #6f7b8b; font-size: 13px; animation: school-chat-enter .2s ease-out; }
+.school-chat-live-body { min-width: 0; flex: 1; color: #273141; font-size: 14px; line-height: 1.75; overflow-wrap: anywhere; }
+.school-chat-reasoning { margin: 0 0 12px; padding: 9px 12px; border-left: 2px solid #b8c9df; border-radius: 0 7px 7px 0; background: #f7f9fc; color: #687789; font-size: 12px; line-height: 1.65; }
+.school-chat-reasoning-toggle { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; font-weight: 600; text-align: left; }
+.school-chat-reasoning-toggle:focus-visible { outline: 2px solid #397acb; outline-offset: 3px; }
+.school-chat-reasoning-control { display: inline-flex; align-items: center; gap: 3px; color: #3168b2; font-weight: 500; white-space: nowrap; }
+.school-chat-reasoning.is-expanded .school-chat-reasoning-control svg { transform: rotate(180deg); }
+.school-chat-reasoning-content { margin-top: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.school-chat-interrupted { color: #8791a0; font-size: 12px; }
 .school-chat-thinking { display: inline-flex; align-items: center; gap: 7px; }
 .school-chat-thinking > span { display: inline-flex; align-items: center; gap: 3px; }
 .school-chat-thinking i { width: 4px; height: 4px; border-radius: 50%; background: #6984a9; animation: school-chat-thinking 1.15s ease-in-out infinite; }

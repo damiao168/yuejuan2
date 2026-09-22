@@ -57,19 +57,27 @@ type SubjectSummary struct {
 	QuestionTypes           map[string]int `json:"question_types"`
 }
 
+type SubjectExam struct {
+	ExamID     string  `json:"exam_id"`
+	Subject    string  `json:"subject"`
+	TotalScore float64 `json:"total_score"`
+}
+
 type Projection struct {
-	ExamID         string          `json:"exam_id"`
-	ExamName       string          `json:"exam_name"`
-	ExamStatus     string          `json:"exam_status"`
-	Revision       int64           `json:"revision"`
-	Stage          string          `json:"stage"`
-	Stages         []Stage         `json:"stages"`
-	StageProgress  []StageProgress `json:"stage_progress"`
-	Blockers       []Notice        `json:"blockers"`
-	Warnings       []Notice        `json:"warnings"`
-	Counts         Counts          `json:"counts"`
-	NextActions    []NextAction    `json:"next_actions"`
-	RiskTier       string          `json:"risk_tier"`
-	SubjectSummary SubjectSummary  `json:"subject_summary"`
-	UpdatedAt      time.Time       `json:"updated_at"`
+	ExamID          string          `json:"exam_id"`
+	ExamName        string          `json:"exam_name"`
+	ExamSessionName string          `json:"exam_session_name,omitempty"`
+	SubjectExams    []SubjectExam   `json:"subject_exams"`
+	ExamStatus      string          `json:"exam_status"`
+	Revision        int64           `json:"revision"`
+	Stage           string          `json:"stage"`
+	Stages          []Stage         `json:"stages"`
+	StageProgress   []StageProgress `json:"stage_progress"`
+	Blockers        []Notice        `json:"blockers"`
+	Warnings        []Notice        `json:"warnings"`
+	Counts          Counts          `json:"counts"`
+	NextActions     []NextAction    `json:"next_actions"`
+	RiskTier        string          `json:"risk_tier"`
+	SubjectSummary  SubjectSummary  `json:"subject_summary"`
+	UpdatedAt       time.Time       `json:"updated_at"`
 }

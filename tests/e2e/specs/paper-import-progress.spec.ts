@@ -47,9 +47,9 @@ test("识别轮询在短暂失败后恢复，停止及重试保留资料和滚�
 
   await page.getByRole("button", { name: "停止识别", exact: true }).click();
   await page.getByRole("dialog").getByRole("button", { name: "停止识别", exact: true }).click();
-  await expect(page.getByText("已停止识别", { exact: true })).toBeVisible();
-  await expect(page.getByText("1. 会议回放.png")).toBeVisible();
-  await page.getByRole("button", { name: "重新识别", exact: true }).click();
+    await expect(page.getByText("已停止识别", { exact: true })).toBeVisible();
+    await expect(page.getByText("1. 会议回放.png")).toBeVisible();
+    await page.getByRole("button", { name: "重新识别全部", exact: true }).click();
   await expect(page.getByRole("button", { name: "停止识别", exact: true })).toBeVisible();
   const retryScroll = await scrollPosition();
   job.status = "review_required";
@@ -58,9 +58,9 @@ test("识别轮询在短暂失败后恢复，停止及重试保留资料和滚�
     message: "未识别到与考试有关的题目、答案、解析或评分标准，请检查是否上传了无关图片或错误文件" }];
   await expect(page.getByText("未识别到考试内容", { exact: true })).toBeVisible({ timeout: 10_000 });
   await expect(page.getByText("AI 解析服务暂不可用", { exact: false })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "确认导入", exact: true })).toHaveCount(0);
-  expect(await scrollPosition()).toEqual(retryScroll);
-  await page.getByRole("button", { name: "重新识别", exact: true }).click();
+    await expect(page.getByRole("button", { name: "确认导入", exact: true })).toHaveCount(0);
+    expect(await scrollPosition()).toEqual(retryScroll);
+    await page.getByRole("button", { name: "重新识别", exact: true }).click();
   await expect(page.getByRole("button", { name: "停止识别", exact: true })).toBeVisible();
   await expect(page.getByText("未识别到考试内容", { exact: true })).toHaveCount(0);
 });

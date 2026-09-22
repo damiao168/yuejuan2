@@ -96,6 +96,24 @@ func (s *MemoryStore) GetExam(_ context.Context, scope auth.AccessScope, id stri
 	return item, nil
 }
 
+func (s *MemoryStore) ListSessionExams(_ context.Context, scope auth.AccessScope, sessionID string) ([]Exam, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := []Exam{}
+	for _, item := range s.items {
+		if item.SessionID == sessionID && item.TenantID == scope.TenantID && scopeAllowsExam(scope, item) {
+			out = append(out, item)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Subject == out[j].Subject {
+			return out[i].ID < out[j].ID
+		}
+		return out[i].Subject < out[j].Subject
+	})
+	return out, nil
+}
+
 func (s *MemoryStore) UpdateExam(_ context.Context, scope auth.AccessScope, id string, input UpdateInput) (Exam, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -10,6 +10,7 @@ export interface SchoolChatAttachment {
 export interface SchoolChatMessage {
   role: "user" | "assistant";
   content: string;
+  reasoning_content?: string;
   attachments?: SchoolChatAttachment[];
 }
 
@@ -39,4 +40,16 @@ export function sendSchoolChat(messages: SchoolChatMessage[]) {
     method: "POST",
     body: JSON.stringify({ messages })
   });
+}
+
+export interface SchoolChatStreamEvent {
+  type: "reasoning" | "content" | "done" | "error";
+  delta?: string;
+  completion?: SchoolChatCompletion;
+}
+
+export function streamSchoolChat(messages: SchoolChatMessage[], signal: AbortSignal, onEvent: (event: SchoolChatStreamEvent) => void) {
+  return apiClient.requestEventStream<SchoolChatStreamEvent>("/api/v1/ai-chat/completions/stream", {
+    method: "POST", body: JSON.stringify({ messages }), signal
+  }, onEvent);
 }

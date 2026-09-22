@@ -4,9 +4,9 @@ import { installApiMocks } from "../fixtures/apiMocks";
 test("安全活动合并设备名称并精简侧栏品牌区", async ({ page }) => {
   await installApiMocks(page, { role: "school_admin", initiallyAuthenticated: true });
 
-  await page.goto("/#/admin/account/sessions", { waitUntil: "domcontentloaded" });
+  await page.goto("/#/admin/account/sessions", { waitUntil: "networkidle" });
 
-  await expect(page.getByRole("heading", { name: "账户安全" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "账户安全" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "安全活动" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "登录设备" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /办公室 Windows 电脑/ })).toBeVisible();

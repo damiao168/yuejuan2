@@ -111,6 +111,39 @@ export class ApiClient {
     };
   }
 
+  async requestEventStream<T>(path: string, init: RequestInit, onEvent: (event: T) => void): Promise<void> {
+    const headers = new Headers(init.headers);
+    headers.set("Accept", "text/event-stream");
+    headers.set("Content-Type", "application/json");
+    const authorization = this.authorizationHeader();
+    if (authorization) headers.set("Authorization", authorization);
+    addBrowserCSRFHeader(init.method, headers);
+    addIdempotencyHeader(path, init.method, headers);
+    const response = await fetch(this.url(path), { ...init, headers, credentials: init.credentials ?? "include" });
+    if (!response.ok) throw await this.toError(response);
+    if (!response.body) throw new Error("对话流不可用");
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const frames = buffer.split(/\r?\n\r?\n/);
+        buffer = frames.pop() ?? "";
+        for (const frame of frames) {
+          const data = frame.split(/\r?\n/).filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trimStart()).join("\n");
+          if (data) onEvent(JSON.parse(data) as T);
+        }
+      }
+      if (buffer.trim()) throw new Error("对话流意外中断");
+    } finally {
+      await reader.cancel().catch(() => undefined);
+      reader.releaseLock();
+    }
+  }
+
   private async toError(response: Response): Promise<ApiClientError> {
     const retryAfterSeconds = parseRetryAfterSeconds(response.headers.get("Retry-After"));
     try {
