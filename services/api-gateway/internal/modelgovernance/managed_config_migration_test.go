@@ -1,6 +1,8 @@
 package modelgovernance
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -24,5 +26,43 @@ func TestManagedModelMultiModelMigrationKeepsTenantAndDefaultGuards(t *testing.T
 	}
 	if strings.Contains(sql, "DROP INDEX uq_managed_model_api_default") {
 		t.Fatal("multi-model migration must preserve one default model per school")
+	}
+}
+
+func TestLegacyPanelMigrationKeepsRecordedChecksumAndRestoresGuards(t *testing.T) {
+	panel, err := os.ReadFile("../../migrations/000155_subjective_multi_agent_panel.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	currentChecksum := fmt.Sprintf("%x", sha256.Sum256(panel))
+	compose, err := os.ReadFile("../../../../infra/docker-compose/docker-compose.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, required := range []string{
+		"dfca807d099fe84d1f12d522c232c4120a617d31e2b659cc9e4426ae15c60c23",
+		currentChecksum,
+		"000162_subjective_panel_legacy_hardening.sql",
+	} {
+		if !strings.Contains(string(compose), required) {
+			t.Fatalf("migration compatibility allowlist missing %q", required)
+		}
+	}
+	hardening, err := os.ReadFile("../../migrations/000162_subjective_panel_legacy_hardening.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, required := range []string{
+		"uq_subjective_grading_panel_answer_version",
+		"trg_subjective_panel_run_binding_guard",
+		"trg_subjective_panel_role_link_guard",
+		"trg_subjective_panel_status_transition_guard",
+		"trg_subjective_panel_completed_roles_guard",
+		"chk_review_task_subjective_panel_source",
+		"uq_review_task_active_subjective_panel",
+	} {
+		if !strings.Contains(string(hardening), required) {
+			t.Fatalf("legacy panel hardening missing %q", required)
+		}
 	}
 }

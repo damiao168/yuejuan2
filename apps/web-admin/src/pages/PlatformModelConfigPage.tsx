@@ -21,6 +21,7 @@ import {
   deleteManagedModelAPIConfig,
   listAvailableManagedModels,
   listManagedModelAPIConfigs,
+  managedModelDiscoveryErrorMessage,
   probeManagedModelAPIConfig,
   updateManagedModelAPIConfig,
   type ManagedAdapterType,
@@ -298,7 +299,7 @@ export function PlatformModelConfigPage() {
     } catch (error) {
       setModelOptionsOpen(false);
       setFilterAvailableModels(false);
-      message.error(getUserErrorMessage(error, "获取模型列表失败"));
+      message.error(managedModelDiscoveryErrorMessage(error, credentialSource !== null));
     } finally {
       setModelsLoading(false);
     }

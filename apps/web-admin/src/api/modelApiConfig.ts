@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { ApiClientError, apiClient, getUserErrorMessage } from "./client";
 
 export type ManagedAdapterType = "openai_compatible" | "dashscope_native";
 export type ManagedAPIConfigStatus = "active" | "disabled";
@@ -172,6 +172,13 @@ export function listAvailableManagedModels(input: ManagedModelDiscoveryInput) {
     method: "POST",
     body: JSON.stringify(input)
   });
+}
+
+export function managedModelDiscoveryErrorMessage(error: unknown, reusingCredential: boolean) {
+  if (reusingCredential && error instanceof ApiClientError && error.code === "invalid_request") {
+    return "当前 API 服务未识别同 Key 模型请求，请更新 API 服务及数据库迁移后重试。";
+  }
+  return getUserErrorMessage(error, "获取模型列表失败");
 }
 
 export function autoCreateManagedModelAPIConfig(input: AutoManagedModelAPIConfigInput) {

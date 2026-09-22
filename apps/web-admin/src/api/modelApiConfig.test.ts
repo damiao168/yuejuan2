@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { listPanelModelRoleBindings, savePanelModelRoleBinding } from "./modelApiConfig";
+import { ApiClientError } from "./client";
+import { listAvailableManagedModels, listPanelModelRoleBindings, managedModelDiscoveryErrorMessage, savePanelModelRoleBinding } from "./modelApiConfig";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -29,4 +30,18 @@ it("keeps panel-role API calls scoped to a school and separate from the chat def
     status: "active"
   });
   expect(JSON.parse(fetch.mock.calls[1][1].body)).not.toHaveProperty("is_default");
+});
+
+it("uses the saved credential reference for same-key discovery and explains an old API", async () => {
+  const fetch = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ provider: { key: "deepseek" }, models: ["model-a"] })));
+  vi.stubGlobal("fetch", fetch);
+
+  await listAvailableManagedModels({ tenant_id: "school-1", provider: "deepseek", credential_source_id: "existing-model" });
+  const body = JSON.parse(fetch.mock.calls[0][1].body);
+  expect(body).toEqual({ tenant_id: "school-1", provider: "deepseek", credential_source_id: "existing-model" });
+  expect(body).not.toHaveProperty("api_key");
+  expect(managedModelDiscoveryErrorMessage(new ApiClientError(400, "invalid_request", "invalid json body"), true))
+    .toContain("API 服务未识别同 Key 模型请求");
+  expect(managedModelDiscoveryErrorMessage(new ApiClientError(400, "invalid_request", "invalid json body"), false))
+    .toBe("请检查必填项和填写格式。");
 });

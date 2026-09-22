@@ -195,6 +195,15 @@ services:
           stored="$$(psql "$${EDUGRADE_POSTGRES_ADMIN_DSN}" -Atc "SELECT checksum FROM schema_migration WHERE filename = '$${filename}'")"
           if [ -n "$${stored}" ]; then
             if [ "$${stored}" != "$${checksum}" ]; then
+              # One deployed 000155 draft has a known checksum. Keep its true
+              # history intact; 000162 adds the guards missing from that draft.
+              if [ "$${filename}" = "000155_subjective_multi_agent_panel.sql" ] &&
+                 [ "$${stored}" = "dfca807d099fe84d1f12d522c232c4120a617d31e2b659cc9e4426ae15c60c23" ] &&
+                 [ "$${checksum}" = "82db290ede117015fe4dbd7d5d3c6a7ec1328f2713c9eb4ba2425e66ac82a146" ] &&
+                 [ -f /migrations/000162_subjective_panel_legacy_hardening.sql ]; then
+                echo "recognized historical 000155 panel schema; preserving checksum until 000162 hardening"
+                continue
+              fi
               echo "checksum mismatch for applied migration $${filename}" >&2
               exit 43
             fi
@@ -263,7 +272,7 @@ services:
         BUILD_TIME: ${EDUGRADE_BUILD_TIME:-unknown}
         IMAGE_DIGEST: ${EDUGRADE_IMAGE_DIGEST:-unknown}
         RELEASE_ID: ${EDUGRADE_RELEASE_ID:-local}
-        SCHEMA_VERSION: ${EDUGRADE_SCHEMA_VERSION:-000161}
+        SCHEMA_VERSION: ${EDUGRADE_SCHEMA_VERSION:-000162}
         GOPROXY: ${EDUGRADE_GO_PROXY:-}
     image: ${EDUGRADE_API_GATEWAY_IMAGE:-edugrade/api-gateway:local}
     container_name: edugrade-api-gateway

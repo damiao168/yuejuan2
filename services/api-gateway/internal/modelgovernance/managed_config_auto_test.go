@@ -269,6 +269,31 @@ func TestManagedAPIModelDiscoveryUsesSelectedProviderWithoutModelName(t *testing
 	}
 }
 
+func TestManagedAPIModelDiscoveryHandlerReusesSavedKeyWithoutEchoingIt(t *testing.T) {
+	store := NewMemoryStore()
+	const tenantID = "00000000-0000-0000-0000-000000000020"
+	const secret = "deepseek-secret-at-least-16"
+	source, err := store.CreateManagedAPIConfig(context.Background(), tenantID, "actor", ManagedAPIConfigInput{
+		ProviderKey: "deepseek", DisplayName: "DeepSeek", AdapterType: "openai_compatible",
+		BaseURL: "https://api.deepseek.com", APIKey: secret, ModelName: "deepseek-chat",
+		ModelVersion: "deepseek-chat", Region: "global", Status: "active",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	seenKey := ""
+	handler := NewHandler(store, nil, NewEnvironmentSecretResolver(t.TempDir()), testBaseline()).
+		WithManagedAPIProber(listingManagedProber{models: []string{"deepseek-reasoner"}, keySeen: &seenKey})
+	user := auth.User{ID: "actor", TenantID: auth.PlatformTenantID, Permissions: []string{"model:provider:manage"}}
+	response := performHandlerRequest(t, user, http.MethodPost, "/api/v1/platform/model-api-configs/models", `{
+		"tenant_id":"`+tenantID+`","credential_source_id":"`+source.ID+`","provider":"deepseek"
+	}`, handler.ListAvailableManagedAPIModels)
+	if response.Code != http.StatusOK || seenKey != secret ||
+		!strings.Contains(response.Body.String(), "deepseek-reasoner") || strings.Contains(response.Body.String(), secret) {
+		t.Fatalf("saved-key discovery response=%d used_source=%t body=%s", response.Code, seenKey == secret, response.Body.String())
+	}
+}
+
 func TestManagedAPIModelDiscoveryRequiresProviderWhenModelNameIsEmpty(t *testing.T) {
 	providerSeen := ""
 	service := NewAutoManagedAPIConfigService(NewMemoryStore(), listingManagedProber{providerSeen: &providerSeen})
@@ -503,6 +528,7 @@ func (p countingManagedProber) ProbeQuick(_ context.Context, _ ManagedAPIConnect
 type listingManagedProber struct {
 	models       []string
 	providerSeen *string
+	keySeen      *string
 }
 
 func (p listingManagedProber) Probe(_ context.Context, _ ManagedAPIConnection) ManagedAPIProbeResult {
@@ -513,6 +539,9 @@ func (p listingManagedProber) ListModels(_ context.Context, connection ManagedAP
 	provider := connection.Config.ProviderKey
 	if p.providerSeen != nil {
 		*p.providerSeen = provider
+	}
+	if p.keySeen != nil {
+		*p.keySeen = connection.APIKey
 	}
 	return ManagedAPIModelListResult{Provider: provider, Models: p.models}, successfulManagedProbe()
 }
