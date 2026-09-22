@@ -1,5 +1,13 @@
 // Generated from services/api-gateway/openapi/edugrade-api.openapi.json. DO NOT EDIT.
 
+export type PanelModelRoleBindingInput = { "tenant_id": string; "education_stage": "junior" | "senior"; "subject_code": "chinese" | "mathematics" | "english" | "physics" | "chemistry" | "biology" | "history" | "geography" | "ethics_politics"; "archetype_code": string; "agent_role": "primary_a" | "primary_b" | "arbiter"; "managed_model_api_config_id": string; "prompt_version": string; "strength_rank": number; "status": "active" | "disabled"; };
+
+export type PanelModelRoleBinding = { "id": string; "tenant_id": string; "education_stage": "junior" | "senior"; "subject_code": "chinese" | "mathematics" | "english" | "physics" | "chemistry" | "biology" | "history" | "geography" | "ethics_politics"; "archetype_code": string; "agent_role": "primary_a" | "primary_b" | "arbiter"; "managed_model_api_config_id": string; "prompt_version": string; "strength_rank": number; "status": "active" | "disabled"; "created_by": string; "created_at": string; "updated_at": string; };
+
+export type PanelModelRoleBindingList = { "bindings": Array<PanelModelRoleBinding>; };
+
+export type PanelModelRoleBindingResponse = { "binding": PanelModelRoleBinding; };
+
 export type ManagedChatAttachment = { "name": string; "media_type": string; "content": string; "size": number; };
 
 export type ManagedChatMessage = { "role": "user" | "assistant"; "content": string; "reasoning_content"?: string; "attachments"?: Array<ManagedChatAttachment>; };
@@ -1092,6 +1100,10 @@ export type QuestionBankBatchImportResult = { "items": Array<QuestionBankBatchIm
 
 export interface components {
   schemas: {
+    "PanelModelRoleBindingInput": PanelModelRoleBindingInput;
+    "PanelModelRoleBinding": PanelModelRoleBinding;
+    "PanelModelRoleBindingList": PanelModelRoleBindingList;
+    "PanelModelRoleBindingResponse": PanelModelRoleBindingResponse;
     "ManagedChatAttachment": ManagedChatAttachment;
     "ManagedChatMessage": ManagedChatMessage;
     "ManagedChatRequest": ManagedChatRequest;

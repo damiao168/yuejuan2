@@ -4,8 +4,8 @@
   "exception_ledger": "contracts/openapi/registered-route-exceptions.json",
   "policy": "Every registered route is covered by OpenAPI or an exact, reviewed exception-ledger entry; generation never invents approvals.",
   "counts": {
-    "registered": 498,
-    "openapi": 228,
+    "registered": 500,
+    "openapi": 230,
     "registered_gaps": 270
   },
   "routes": [
@@ -3593,6 +3593,20 @@
       "owner": "model-platform",
       "review_after": "2026-12-31",
       "reason": "The managed model page predates OpenAPI migration; these endpoints complete its bounded typed workflow without expanding the generated SDK surface in this release."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/platform/panel-model-bindings",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
+      "coverage": "openapi",
+      "operation_id": "listPlatformPanelModelBindings"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/platform/panel-model-bindings",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
+      "coverage": "openapi",
+      "operation_id": "savePlatformPanelModelBinding"
     },
     {
       "method": "GET",

@@ -305,7 +305,6 @@ export function SchoolAIChatPage({ user }: { user: SessionUser }) {
   const historyContent = <>
       <div className="school-chat-history-head">
         <span>对话历史</span>
-        <Tooltip title="新建对话"><Button type="text" icon={<Plus size={18} />} aria-label="新建对话" onClick={openNew} /></Tooltip>
       </div>
       <Button className="school-chat-new" icon={<Plus size={17} />} onClick={openNew}>开启新对话</Button>
       <div className="school-chat-thread-list">
@@ -314,7 +313,6 @@ export function SchoolAIChatPage({ user }: { user: SessionUser }) {
           <Tooltip title="删除对话"><button type="button" className="school-chat-delete" aria-label={`删除对话：${thread.title}`} onClick={() => deleteThread(thread)}><Trash2 size={14} /></button></Tooltip>
         </div>)}
       </div>
-      <p className="school-chat-history-note">{user.publicComputer ? "公共电脑模式：对话仅在当前页面保留" : "对话记录仅保存在当前浏览器"}</p>
     </>;
 
   return <div className="school-chat-shell">

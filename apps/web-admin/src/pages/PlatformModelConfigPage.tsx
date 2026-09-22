@@ -33,6 +33,7 @@ import { listTenants, type Tenant } from "../api/org";
 import { ResponsiveTable } from "../components/ResponsiveTable";
 import { StatusTag } from "../components/StatusTag";
 import { onboardingQueryKey } from "../features/onboarding/queries";
+import { PanelModelBindingsSection } from "./PanelModelBindingsSection";
 
 type SupplierPreset = "aliyun" | "deepseek" | "openai" | "zhipu" | "moonshot" | "anthropic" | "gemini" | "custom";
 
@@ -130,6 +131,7 @@ export function PlatformModelConfigPage() {
   const [configLoading, setConfigLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<ManagedModelAPIConfig | null>(null);
+  const [credentialSource, setCredentialSource] = useState<ManagedModelAPIConfig | null>(null);
   const [saving, setSaving] = useState(false);
   const [probingID, setProbingID] = useState("");
   const [availableModels, setAvailableModels] = useState<string[]>([]);
@@ -193,6 +195,7 @@ export function PlatformModelConfigPage() {
 
   const openCreate = () => {
     setEditing(null);
+    setCredentialSource(null);
     setAvailableModels([]);
     setModelOptionsOpen(false);
     setFilterAvailableModels(false);
@@ -212,8 +215,31 @@ export function PlatformModelConfigPage() {
     setDrawerOpen(true);
   };
 
+  const openCreateWithKey = useCallback((config: ManagedModelAPIConfig) => {
+    setEditing(null);
+    setCredentialSource(config);
+    setAvailableModels([]);
+    setModelOptionsOpen(false);
+    setFilterAvailableModels(false);
+    form.setFieldsValue({
+      supplier: presetForConfig(config),
+      provider_key: config.provider_key,
+      display_name: config.display_name,
+      adapter_type: config.adapter_type,
+      base_url: config.base_url,
+      api_key: "",
+      model_name: "",
+      model_version: "",
+      region: config.region,
+      enabled: true,
+      is_default: false
+    });
+    setDrawerOpen(true);
+  }, [form]);
+
   const openEdit = useCallback((config: ManagedModelAPIConfig) => {
     setEditing(config);
+    setCredentialSource(null);
     setAvailableModels([]);
     setModelOptionsOpen(false);
     setFilterAvailableModels(false);
@@ -234,7 +260,7 @@ export function PlatformModelConfigPage() {
   }, [form]);
 
   const changeSupplier = (supplier: SupplierPreset) => {
-    if (editing) return;
+    if (editing || credentialSource) return;
     form.setFieldsValue({ ...supplierDefaults[supplier], supplier, base_url: "", model_name: "" });
     setAvailableModels([]);
     setModelOptionsOpen(false);
@@ -246,7 +272,9 @@ export function PlatformModelConfigPage() {
     let values: ConfigFormValues;
     try {
       const supplier = form.getFieldValue("supplier") as SupplierPreset | undefined;
-      await form.validateFields(supplier === "custom" ? ["supplier", "api_key", "base_url"] : ["supplier", "api_key"]);
+      await form.validateFields(credentialSource
+        ? ["supplier"]
+        : supplier === "custom" ? ["supplier", "api_key", "base_url"] : ["supplier", "api_key"]);
       values = form.getFieldsValue();
     } catch {
       return;
@@ -255,7 +283,7 @@ export function PlatformModelConfigPage() {
     try {
       const response = await listAvailableManagedModels({
         tenant_id: selectedTenantID,
-        api_key: values.api_key.trim(),
+        ...(credentialSource ? { credential_source_id: credentialSource.id } : { api_key: values.api_key.trim() }),
         provider: values.supplier,
         base_url: values.supplier === "custom" ? values.base_url?.trim() : undefined
       });
@@ -305,7 +333,7 @@ export function PlatformModelConfigPage() {
       } else {
         const response = await autoCreateManagedModelAPIConfig({
           tenant_id: selectedTenantID,
-          api_key: values.api_key.trim(),
+          ...(credentialSource ? { credential_source_id: credentialSource.id } : { api_key: values.api_key.trim() }),
           model_name: values.model_name.trim(),
           provider: values.supplier,
           base_url: values.supplier === "custom" ? values.base_url?.trim() : undefined
@@ -391,8 +419,8 @@ export function PlatformModelConfigPage() {
         ? response.config
         : response.config.is_default ? { ...item, is_default: false } : item));
       message.success(isDefault
-        ? `${config.display_name} 已设为当前使用`
-        : config.is_default ? "已切回本地模型"
+        ? `${config.display_name} 已设为日常对话模型`
+        : config.is_default ? "日常对话已切回本地模型"
         : status === "disabled" ? `${config.display_name} 已停用` : `${config.display_name} 已启用`);
       void queryClient.invalidateQueries({ queryKey: onboardingQueryKey });
     } catch (error) {
@@ -473,18 +501,19 @@ export function PlatformModelConfigPage() {
       key: "assignment",
       width: 120,
       render: (_value, config) => config.is_default
-        ? <StatusTag tone="info">当前使用</StatusTag>
+        ? <StatusTag tone="info">日常对话</StatusTag>
         : <StatusTag tone={config.status === "active" ? "success" : "neutral"}>{config.status === "active" ? "备用" : "已停用"}</StatusTag>
     },
     {
       title: "操作",
       key: "actions",
-      width: 170,
+      width: 270,
       render: (_value, config) => (
         <Space size={6}>
           <Tooltip title="只检查接口、密钥和模型权限，不发送模型生成请求">
             <Button size="small" icon={<Zap size={14} />} loading={probingID === config.id} onClick={() => void probe(config, "quick")}>检测连接</Button>
           </Tooltip>
+          {config.status === "active" ? <Button size="small" icon={<Plus size={14} />} onClick={() => openCreateWithKey(config)}>同 Key 模型</Button> : null}
           <Tooltip title="编辑配置或更换密钥">
             <Button size="small" type="text" icon={<Pencil size={14} />} aria-label={`编辑${config.display_name}`} onClick={() => openEdit(config)} />
           </Tooltip>
@@ -494,10 +523,10 @@ export function PlatformModelConfigPage() {
               { key: "capability", label: "完整能力检测" },
               ...(config.status === "active" && !config.is_default ? [{
                 key: "current",
-                label: capabilityVerified(config) ? "设为当前使用" : "设为当前使用（需先完整检测）",
+                label: capabilityVerified(config) ? "设为日常对话模型" : "设为日常对话模型（需先完整检测）",
                 disabled: !capabilityVerified(config)
               }] : []),
-              ...(config.is_default ? [{ key: "local", label: "切回本地模型" }] : []),
+              ...(config.is_default ? [{ key: "local", label: "日常对话切回本地模型" }] : []),
               ...(!config.is_default ? [{ key: config.status === "active" ? "disable" : "enable", label: config.status === "active" ? "停用" : "启用" }] : []),
               ...(config.status === "disabled" ? [{ key: "delete", label: "删除", danger: true }] : [])
             ], onClick: async ({ key }) => {
@@ -518,7 +547,7 @@ export function PlatformModelConfigPage() {
         </Space>
       )
     }
-  ], [openEdit, probe, probingID, removeConfig, showCapabilityDetails, updateUsage]);
+  ], [openCreateWithKey, openEdit, probe, probingID, removeConfig, showCapabilityDetails, updateUsage]);
 
   const activeCount = configs.filter((config) => config.status === "active").length;
   const healthyCount = configs.filter((config) => config.last_test_status === "success").length;
@@ -529,7 +558,7 @@ export function PlatformModelConfigPage() {
         <div>
           <span className="platform-model-kicker"><ShieldCheck size={15} /> 平台级密钥托管</span>
           <h1>AI 模型接入</h1>
-          <p>选择学校，配置考试资料解析使用的模型和访问密钥。</p>
+          <p>选择学校，分别配置日常对话模型和三智能体评分模型。</p>
         </div>
         <Space>
           <Button icon={<RefreshCw size={16} />} loading={schoolLoading || configLoading} onClick={() => { void loadSchools(); void loadConfigs(selectedTenantID); }}>刷新</Button>
@@ -558,7 +587,7 @@ export function PlatformModelConfigPage() {
           />
         </div>
         <div className="platform-model-school-summary">
-          <span><Building2 size={15} /> 当前模型：{currentConfig ? `${currentConfig.display_name} · ${currentConfig.model_name} · ${currentConfig.last_test_status === "success" ? "正常" : currentConfig.last_test_status === "failed" ? "异常" : "未测试"}` : "本地模型"}</span>
+          <span><Building2 size={15} /> 日常对话模型：{currentConfig ? `${currentConfig.display_name} · ${currentConfig.model_name} · ${currentConfig.last_test_status === "success" ? "正常" : currentConfig.last_test_status === "failed" ? "异常" : "未测试"}` : "本地模型"}</span>
           <span><Zap size={15} /> {activeCount} 个可用配置</span>
           <span><CheckCircle2 size={15} /> {healthyCount} 个连接正常</span>
         </div>
@@ -568,9 +597,10 @@ export function PlatformModelConfigPage() {
         className="platform-model-security-note"
         type="info"
         showIcon
-        message="密钥加密保存且学校配置相互隔离。连接正常即可保存为备用模型；通过完整能力检测后，才能设为当前使用。"
+        message="密钥加密保存且学校配置相互隔离。模型库中的日常对话默认选择与下方三智能体绑定分开管理；完整能力检测通过后才能启用评分角色。"
       />
 
+      <h2 className="platform-model-section-title">学校模型库</h2>
       <section className="platform-model-table-shell">
         {selectedTenantID ? (
           <ResponsiveTable<ManagedModelAPIConfig>
@@ -587,6 +617,8 @@ export function PlatformModelConfigPage() {
         )}
       </section>
 
+      <PanelModelBindingsSection tenantID={selectedTenantID} configs={configs} loadingConfigs={configLoading} />
+
       <Drawer
         title={editing ? `编辑 ${editing.display_name}` : `为${selectedSchool?.name ?? "学校"}添加模型`}
         width={560}
@@ -601,10 +633,10 @@ export function PlatformModelConfigPage() {
         <Form form={form} layout="vertical" requiredMark={false} className="platform-model-form">
           {!editing ? (
             <Form.Item name="supplier" label="供应商" rules={[{ required: true, message: "请选择供应商" }]}>
-              <Select options={supplierOptions} onChange={changeSupplier} placeholder="选择 API Key 所属供应商" />
+              <Select options={supplierOptions} onChange={changeSupplier} disabled={Boolean(credentialSource)} placeholder="选择 API Key 所属供应商" />
             </Form.Item>
           ) : null}
-          <Form.Item
+          {credentialSource ? <Alert type="info" showIcon message={`沿用已保存的密钥（${credentialSource.credential_hint || "已加密"}）`} description="新模型会单独验证并加密保存；后续更换密钥需逐个更新模型配置。" /> : <Form.Item
             name="api_key"
             label={editing ? `API Key（当前 ${editing.credential_hint ?? "已配置"}）` : "API Key"}
             rules={editing ? [{ min: 16, message: "密钥至少 16 个字符" }] : [{ required: true, message: "请输入 API Key" }, { min: 16, message: "密钥至少 16 个字符" }]}
@@ -623,8 +655,8 @@ export function PlatformModelConfigPage() {
                 }
               }}
             />
-          </Form.Item>
-          {!editing && watchedSupplier === "custom" ? (
+          </Form.Item>}
+          {!editing && watchedSupplier === "custom" && !credentialSource ? (
             <Form.Item
               name="base_url"
               label="API 地址"
@@ -646,7 +678,7 @@ export function PlatformModelConfigPage() {
             name="model_name"
             label="模型名称"
             rules={[{ required: true, message: "请输入模型名称" }]}
-            extra={!editing ? <span className="platform-model-field-help">选择供应商并填写 API Key 后，可零 Token 获取模型列表。<Button type="link" size="small" loading={modelsLoading} onClick={() => {
+            extra={!editing ? <span className="platform-model-field-help">{credentialSource ? "使用已保存的密钥" : "选择供应商并填写 API Key"}，可零 Token 获取模型列表。<Button type="link" size="small" loading={modelsLoading} onClick={() => {
               if (availableModels.length > 0) {
                 setFilterAvailableModels(false);
                 setModelOptionsOpen(true);

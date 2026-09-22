@@ -45,7 +45,11 @@ func ResolvePanelAgents(ctx context.Context, tenantID, stage, subject, archetype
 		if buildErr != nil {
 			return PanelAgentBinding{}, buildErr
 		}
-		return PanelAgentBinding{Adapter: adapter, Policy: policy, StrengthRank: binding.StrengthRank}, nil
+		return PanelAgentBinding{
+			Adapter: adapter, Policy: policy, StrengthRank: binding.StrengthRank,
+			ModelConfigID: connection.Config.ID, ProviderKey: connection.Config.ProviderKey,
+			AdapterType: connection.Config.AdapterType, BaseURL: connection.Config.BaseURL,
+		}, nil
 	}
 	a, err := build(bindings.PrimaryA)
 	if err != nil {

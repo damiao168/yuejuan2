@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -24,8 +25,10 @@ func TestPostgresSubjectivePanelAndEvaluationRoundTrip(t *testing.T) {
 	db := e2eOpenPostgresTestDB(t, dsn)
 	e2eApplyPostgresMigrations(t, db)
 	e2eActivatePostgresDemoUsers(t, db, []string{"tenant_admin"})
+	e2eActivatePostgresUsers(t, db, "platform", []string{"platform_admin"})
 	router := e2ePostgresRouter(db)
 	token := e2eLoginWithTenant(t, router, "demo", "tenant_admin", "ChangeMe123!")
+	platformToken := e2eLoginWithTenant(t, router, "platform", "platform_admin", "ChangeMe123!")
 	suffix := time.Now().UTC().Format("20060102150405.000000000")
 	fixture := e2eCreateStory056AcceptanceFixture(t, db, router, token, suffix)
 	e2eSeedStory056AcceptanceAnswersCount(t, db, fixture, suffix, 1)
@@ -213,7 +216,7 @@ INSERT INTO subjective_grading_run(
 
 	evaluations := gradingevaluation.NewPostgresStore(db)
 	evalRun, err := evaluations.CreateRun(ctx, fixture.TenantID, fixture.AdminID, gradingevaluation.CreateRunInput{
-		Key: "panel-e2e-" + suffix, DisplayName: "Synthetic panel E2E", ModelReference: "panel-shadow",
+		Key: "panel-e2e-" + suffix, DisplayName: "Synthetic panel E2E", ModelReference: e2ePanelModelSetReference(),
 		PromptVersion: "panel-prompt-v1", RubricVersion: "rubric-v1", DatasetReference: "synthetic",
 		DatasetSHA256: strings.Repeat("a", 64),
 	})
@@ -252,7 +255,7 @@ INSERT INTO subjective_grading_run(
 	}
 
 	readyRun, err := evaluations.CreateRun(ctx, fixture.TenantID, fixture.AdminID, gradingevaluation.CreateRunInput{
-		Key: "panel-ready-e2e-" + suffix, DisplayName: "Synthetic ready panel E2E", ModelReference: "panel-shadow",
+		Key: "panel-ready-e2e-" + suffix, DisplayName: "Synthetic ready panel E2E", ModelReference: e2ePanelModelSetReference(),
 		PromptVersion: "panel-prompt-v1", RubricVersion: "rubric-v1", DatasetReference: "synthetic-ready",
 		DatasetSHA256: strings.Repeat("c", 64),
 	})
@@ -290,6 +293,10 @@ INSERT INTO subjective_grading_run(
 	if err != nil || !readyReport.Ready || approvedPolicy.Status != subjective.PanelPolicyApproved {
 		t.Fatalf("ready policy approval did not round-trip: policy=%#v report=%#v err=%v", approvedPolicy, readyReport, err)
 	}
+	if _, err := db.ExecContext(ctx, `UPDATE subjective_panel_policy SET model_set_reference=$3
+WHERE tenant_id=$1::uuid AND id=$2::uuid`, fixture.TenantID, approvedPolicy.ID, "panel:"+strings.Repeat("f", 64)); err == nil {
+		t.Fatal("approved panel policy model set was mutable")
+	}
 	if _, err := evaluations.InvalidateRun(ctx, fixture.TenantID, readyRun.ID, "must be blocked while approved", time.Now().UTC()); err == nil {
 		t.Fatal("approved policy evaluation was invalidated before its policy")
 	}
@@ -300,6 +307,7 @@ INSERT INTO subjective_grading_run(
 		t.Fatalf("evaluation did not invalidate after policy retirement: %#v err=%v", invalidatedRun, err)
 	}
 	modelConfigs := []string{uuid.NewString(), uuid.NewString(), uuid.NewString()}
+	sharedProvider := "panel-e2e-" + strings.ReplaceAll(suffix, ".", "")
 	for index, id := range modelConfigs {
 		if _, err := db.ExecContext(ctx, `
 INSERT INTO managed_model_api_config(
@@ -307,11 +315,21 @@ INSERT INTO managed_model_api_config(
  credential_ciphertext,credential_nonce,status,last_capability_status,last_capability_probe_version,created_by
 ) VALUES($1::uuid,$2::uuid,$3,$4,'openai_compatible','https://example.invalid/v1',$5,$5,
  decode(repeat('00',24),'hex'),decode(repeat('00',12),'hex'),'active','success',$6,$7::uuid)`,
-			id, fixture.TenantID, "panel-e2e-"+strings.ReplaceAll(suffix, ".", "")+"-"+string(rune('a'+index)),
+			id, fixture.TenantID, sharedProvider,
 			"Synthetic panel model", "synthetic-model-"+string(rune('a'+index)), modelgovernance.ManagedCapabilityProbeVersion,
 			fixture.AdminID); err != nil {
 			t.Fatalf("seed synthetic governed model %d: %v", index, err)
 		}
+	}
+	if _, err := db.ExecContext(ctx, `
+INSERT INTO managed_model_api_config(
+ id,tenant_id,provider_key,display_name,adapter_type,base_url,model_name,model_version,
+ credential_ciphertext,credential_nonce,status,created_by
+) VALUES($1::uuid,$2::uuid,$3,'Duplicate synthetic model','openai_compatible',
+ 'https://example.invalid/v1','synthetic-model-a','synthetic-model-a',
+ decode(repeat('00',24),'hex'),decode(repeat('00',12),'hex'),'active',$4::uuid)`,
+		uuid.NewString(), fixture.TenantID, sharedProvider, fixture.AdminID); err == nil {
+		t.Fatal("same school/provider/model was not rejected after multi-model migration")
 	}
 	roleStore := modelgovernance.NewPostgresStore(db, nil)
 	for index, role := range []string{modelgovernance.ModelRolePrimaryA, modelgovernance.ModelRolePrimaryB, modelgovernance.ModelRoleArbiter} {
@@ -328,11 +346,27 @@ INSERT INTO managed_model_api_config(
 	if err != nil || bindings.Arbiter.ManagedModelAPIConfigID != modelConfigs[2] || bindings.Arbiter.StrengthRank != 2 {
 		t.Fatalf("governed role binding did not round-trip: %#v err=%v", bindings, err)
 	}
+	assigned := e2ePostJSON(t, router, http.MethodPut, "/api/v1/platform/panel-model-bindings", platformToken,
+		`{"tenant_id":"`+fixture.TenantID+`","education_stage":"senior","subject_code":"chemistry","archetype_code":"*","agent_role":"primary_a","managed_model_api_config_id":"`+modelConfigs[0]+`","prompt_version":"panel-prompt-v1","strength_rank":1,"status":"active"}`,
+		http.StatusOK)["binding"].(map[string]any)
+	if assigned["managed_model_api_config_id"] != modelConfigs[0] {
+		t.Fatalf("platform administrator could not bind a school-scoped grading model: %#v", assigned)
+	}
+	var roleActor string
+	if err := db.QueryRowContext(ctx, `SELECT created_by::text FROM model_role_binding WHERE id=$1::uuid`, assigned["id"]).Scan(&roleActor); err != nil ||
+		roleActor != e2eLookupUserID(t, db, "platform", "platform_admin") {
+		t.Fatalf("cross-tenant platform actor attribution failed: %q %v", roleActor, err)
+	}
+	listed := e2eGetJSON(t, router, "/api/v1/platform/panel-model-bindings?tenant_id="+fixture.TenantID+
+		"&education_stage=senior&subject_code=chemistry&archetype_code=*", platformToken, http.StatusOK)
+	if len(listed["bindings"].([]any)) != 1 {
+		t.Fatalf("platform role binding was not listed: %#v", listed)
+	}
 }
 
 func e2ePanelPolicyInput(version string, minSamples, minArbitrations int) subjective.CreatePanelPolicyInput {
 	return subjective.CreatePanelPolicyInput{
-		PolicyVersion: version, EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "short_constructed",
+		PolicyVersion: version, ModelSetReference: e2ePanelModelSetReference(), EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "short_constructed",
 		DecisionConfig: subjective.PanelDecisionConfig{
 			PolicyVersion: version, ScoreGapThreshold: .15, CriterionGapThreshold: .2, ConfidenceGapThreshold: .25,
 			ArbiterMinConfidence: .85, ArbiterAgreementThreshold: .8, TriggerAnyCriterionConflict: true,
@@ -345,4 +379,15 @@ func e2ePanelPolicyInput(version string, minSamples, minArbitrations int) subjec
 			MaxArbitrationTriggerRate: .5, MaxCostPer1000AnswersMicros: 0,
 		},
 	}
+}
+
+func e2ePanelModelSetReference() string {
+	policy := func(model string) subjective.ModelPolicy {
+		return subjective.ModelPolicy{ModelVersion: model, PromptVersion: "panel-prompt-v1", MinConfidence: .8}
+	}
+	return subjective.PanelModelSetReference(subjective.PanelAgents{
+		PrimaryA: subjective.PanelAgentBinding{Policy: policy("synthetic-model-a")},
+		PrimaryB: subjective.PanelAgentBinding{Policy: policy("synthetic-model-b")},
+		Arbiter:  subjective.PanelAgentBinding{Policy: policy("synthetic-model-c")},
+	})
 }

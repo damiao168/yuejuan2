@@ -28,6 +28,8 @@ func registerGovernanceRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("PATCH /api/v1/platform/model-api-configs/{id}", ctx.guards.requirePlatformModelManage(ctx.modules.AIGovernance.ModelGovernanceHandler.UpdateManagedAPIConfig))
 	mux.Handle("DELETE /api/v1/platform/model-api-configs/{id}", ctx.guards.requirePlatformModelManage(ctx.modules.AIGovernance.ModelGovernanceHandler.DeleteManagedAPIConfig))
 	mux.Handle("POST /api/v1/platform/model-api-configs/{id}/probe", ctx.guards.requirePlatformModelManage(ctx.modules.AIGovernance.ModelGovernanceHandler.ProbeManagedAPIConfig))
+	mux.Handle("GET /api/v1/platform/panel-model-bindings", ctx.guards.requirePlatformModelManage(ctx.modules.AIGovernance.ModelGovernanceHandler.ListPlatformPanelRoleBindings))
+	mux.Handle("PUT /api/v1/platform/panel-model-bindings", ctx.guards.requirePlatformModelManage(ctx.modules.AIGovernance.ModelGovernanceHandler.SavePlatformPanelRoleBinding))
 	mux.Handle("GET /api/v1/ai-chat/model", ctx.guards.requireSchoolAdmin(ctx.modules.AIGovernance.ModelGovernanceHandler.GetManagedChatModel))
 	mux.Handle("POST /api/v1/ai-chat/completions", ctx.guards.requireSchoolAdmin(ctx.modules.AIGovernance.ModelGovernanceHandler.CreateManagedChatCompletion))
 	mux.Handle("POST /api/v1/ai-chat/completions/stream", ctx.guards.requireSchoolAdmin(ctx.modules.AIGovernance.ModelGovernanceHandler.StreamManagedChatCompletion))

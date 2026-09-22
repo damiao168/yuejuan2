@@ -15,7 +15,7 @@ import (
 func TestPanelPolicyApprovalRequiresCompletedAlignedShadowEvidence(t *testing.T) {
 	ctx := context.Background()
 	evaluations := gradingevaluation.NewMemoryStore()
-	run, err := evaluations.CreateRun(ctx, "tenant-1", "actor-1", gradingevaluation.CreateRunInput{Key: "senior-math-shadow"})
+	run, err := evaluations.CreateRun(ctx, "tenant-1", "actor-1", gradingevaluation.CreateRunInput{Key: "senior-math-shadow", ModelReference: policyTestModelSetReference()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,6 +65,10 @@ func TestPanelPolicyApprovalRequiresCompletedAlignedShadowEvidence(t *testing.T)
 	if err != nil || result.Panel.Status != PanelResolved || result.Panel.PolicyVersion != approved.PolicyVersion {
 		t.Fatalf("approved thresholds were not used by the governed entry point: %#v err=%v", result.Panel, err)
 	}
+	orchestrator.agents.PrimaryB.Policy.ModelVersion = "changed-model-b"
+	if _, err := orchestrator.GradeWithApprovedPolicy(ctx, "tenant-1", "actor-1", gradingContext); !errors.Is(err, ErrPanelPolicyRequired) {
+		t.Fatalf("changed model set reused old policy: %v", err)
+	}
 	invalidated, err := service.Invalidate(ctx, "tenant-1", "actor-1", policy.ID, "new calibration required")
 	if err != nil || invalidated.Status != PanelPolicyInvalidated {
 		t.Fatalf("approved policy was not invalidated: %#v err=%v", invalidated, err)
@@ -80,7 +84,7 @@ func TestPanelPolicyApprovalRequiresCompletedAlignedShadowEvidence(t *testing.T)
 func TestPanelPolicyApprovalFailsClosedForWeakOrMismatchedEvidence(t *testing.T) {
 	ctx := context.Background()
 	evaluations := gradingevaluation.NewMemoryStore()
-	run, _ := evaluations.CreateRun(ctx, "tenant-1", "actor-1", gradingevaluation.CreateRunInput{Key: "weak-shadow"})
+	run, _ := evaluations.CreateRun(ctx, "tenant-1", "actor-1", gradingevaluation.CreateRunInput{Key: "weak-shadow", ModelReference: policyTestModelSetReference()})
 	items := readyPolicyObservations()[:2]
 	for _, item := range items {
 		if _, err := evaluations.AddPanelObservation(ctx, "tenant-1", run.ID, item); err != nil {
@@ -106,12 +110,61 @@ func TestPanelPolicyApprovalFailsClosedForWeakOrMismatchedEvidence(t *testing.T)
 	if _, err := service.Create(ctx, "tenant-1", "actor-1", bad); !errors.Is(err, ErrInvalidInput) {
 		t.Fatalf("mismatched threshold provenance was accepted: %v", err)
 	}
+	bad = readyPanelPolicyInput("policy-v4")
+	bad.ModelSetReference = ""
+	if _, err := service.Create(ctx, "tenant-1", "actor-1", bad); !errors.Is(err, ErrInvalidInput) {
+		t.Fatalf("unbound model set was accepted: %v", err)
+	}
 	wrongStage := readyPolicyObservations()
 	for index := range wrongStage {
 		wrongStage[index].EducationStage = "junior"
 	}
 	if _, err := gradingevaluation.AssessPanelSliceShadowReadiness("senior", "mathematics", "structured_steps", wrongStage, bad.ReadinessPolicy); !errors.Is(err, gradingevaluation.ErrInvalidInput) {
 		t.Fatalf("cross-stage evidence was accepted: %v", err)
+	}
+}
+
+func TestPanelPolicyApprovalRejectsDifferentEvaluatedModelSet(t *testing.T) {
+	ctx := context.Background()
+	evaluations := gradingevaluation.NewMemoryStore()
+	run, err := evaluations.CreateRun(ctx, "tenant-1", "actor-1", gradingevaluation.CreateRunInput{
+		Key: "wrong-model-shadow", ModelReference: "panel:" + strings.Repeat("f", 64),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range readyPolicyObservations() {
+		if _, err := evaluations.AddPanelObservation(ctx, "tenant-1", run.ID, item); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, _, err := gradingevaluation.NewService(evaluations).CompletePanel(ctx, "tenant-1", run.ID); err != nil {
+		t.Fatal(err)
+	}
+	service := NewPanelPolicyService(NewMemoryStore(), evaluations)
+	policy, err := service.Create(ctx, "tenant-1", "actor-1", readyPanelPolicyInput("different-model-v1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := service.EvaluateAndApprove(ctx, "tenant-1", "actor-1", policy.ID, run.ID); !errors.Is(err, ErrPanelPolicyNotReady) {
+		t.Fatalf("different evaluated models approved policy: %v", err)
+	}
+}
+
+func TestPanelModelSetMigrationRequiresMatchingEvaluationAndImmutableIdentity(t *testing.T) {
+	raw, err := os.ReadFile("../../migrations/000160_subjective_panel_model_set_provenance.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sql := string(raw)
+	for _, required := range []string{
+		"ADD COLUMN model_set_reference TEXT", "trg_subjective_panel_model_set_guard",
+		"NEW.model_set_reference IS DISTINCT FROM OLD.model_set_reference",
+		"evaluated_model_set IS DISTINCT FROM NEW.model_set_reference",
+	} {
+		if !strings.Contains(sql, required) {
+			t.Fatalf("model provenance migration missing %q", required)
+		}
 	}
 }
 
@@ -162,7 +215,7 @@ func TestPanelPolicyMigrationFreezesThresholdsAndRequiresReadyEvidence(t *testin
 
 func readyPanelPolicyInput(version string) CreatePanelPolicyInput {
 	return CreatePanelPolicyInput{
-		PolicyVersion: version, EducationStage: "senior", SubjectCode: "math", ArchetypeCode: "structured_steps",
+		PolicyVersion: version, ModelSetReference: policyTestModelSetReference(), EducationStage: "senior", SubjectCode: "math", ArchetypeCode: "structured_steps",
 		DecisionConfig: PanelDecisionConfig{
 			PolicyVersion: version, ScoreGapThreshold: .15, CriterionGapThreshold: .2, ConfidenceGapThreshold: .25,
 			ArbiterMinConfidence: .85, ArbiterAgreementThreshold: .8, TriggerAnyCriterionConflict: true,
@@ -175,6 +228,17 @@ func readyPanelPolicyInput(version string) CreatePanelPolicyInput {
 			MaxArbitrationTriggerRate: .5, MaxCostPer1000AnswersMicros: 0,
 		},
 	}
+}
+
+func policyTestModelSetReference() string {
+	policy := func(model string) ModelPolicy {
+		return ModelPolicy{ModelVersion: model, PromptVersion: "panel-prompt-v1", MinConfidence: .8}
+	}
+	return PanelModelSetReference(PanelAgents{
+		PrimaryA: PanelAgentBinding{Policy: policy("model-a")},
+		PrimaryB: PanelAgentBinding{Policy: policy("model-b")},
+		Arbiter:  PanelAgentBinding{Policy: policy("model-c-strong")},
+	})
 }
 
 func readyPolicyObservations() []gradingevaluation.PanelObservation {

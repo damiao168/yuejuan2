@@ -67,6 +67,128 @@ func TestAutoManagedAPIConfigChecksConnectionBeforeSavingAsBackup(t *testing.T) 
 	}
 }
 
+func TestAutoManagedAPIConfigReusesSchoolCredentialForAnotherModel(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	seen := []ManagedAPIConnection{}
+	service := NewAutoManagedAPIConfigService(store, recordingManagedProber{seen: &seen})
+	secret := "deepseek-secret-at-least-16"
+	first, _, _, err := service.Create(ctx, "school-a", "actor", AutoManagedAPIConfigInput{
+		APIKey: secret, Provider: "deepseek", ModelName: "deepseek-v4-pro",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, _, result, err := service.Create(ctx, "school-a", "actor", AutoManagedAPIConfigInput{
+		CredentialSourceID: first.ID, Provider: "deepseek", ModelName: "deepseek-v4-flash",
+	})
+	if err != nil || !result.OK || second.ID == first.ID || second.IsDefault || second.ModelName != "deepseek-v4-flash" {
+		t.Fatalf("same key must create a separately checked backup model: %#v %#v %v", second, result, err)
+	}
+	if len(seen) != 2 || seen[1].APIKey != secret || seen[1].Config.ModelName != second.ModelName || seen[1].Config.BaseURL != first.BaseURL {
+		t.Fatalf("reuse must probe the new model at the original endpoint: %#v", seen)
+	}
+	connection, err := store.GetManagedAPIConnection(ctx, "school-a", second.ID)
+	if err != nil || connection.APIKey != secret {
+		t.Fatalf("new model did not store its own credential: %v", err)
+	}
+	if _, _, _, err = service.Create(ctx, "school-a", "actor", AutoManagedAPIConfigInput{
+		CredentialSourceID: first.ID, Provider: "deepseek", ModelName: "deepseek-v4-flash",
+	}); !errors.Is(err, ErrConflict) || len(seen) != 2 {
+		t.Fatalf("duplicate provider/model must fail before probing: %v calls=%d", err, len(seen))
+	}
+	if _, _, _, err = service.Create(ctx, "school-b", "actor", AutoManagedAPIConfigInput{
+		CredentialSourceID: first.ID, Provider: "deepseek", ModelName: "deepseek-v4-flash",
+	}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("cross-school credential reuse must fail: %v", err)
+	}
+	if _, _, _, err = service.Create(ctx, "school-a", "actor", AutoManagedAPIConfigInput{
+		CredentialSourceID: first.ID, Provider: "custom", BaseURL: "https://other.example/v1", ModelName: "other-model",
+	}); !errors.Is(err, ErrInvalidManagedConfig) {
+		t.Fatalf("credential must not be forwarded to another endpoint: %v", err)
+	}
+	if _, _, _, err = service.Create(ctx, "school-a", "actor", AutoManagedAPIConfigInput{
+		CredentialSourceID: first.ID, APIKey: "another-secret-at-least-16", Provider: "deepseek", ModelName: "deepseek-v5",
+	}); !errors.Is(err, ErrInvalidManagedConfig) {
+		t.Fatalf("ambiguous credential source must fail: %v", err)
+	}
+	if _, err := store.UpdateManagedAPIConfig(ctx, "school-a", second.ID, ManagedAPIConfigUpdateInput{
+		DisplayName: second.DisplayName, AdapterType: second.AdapterType, BaseURL: second.BaseURL,
+		ModelName: first.ModelName, ModelVersion: first.ModelName, Region: second.Region,
+		Status: "active",
+	}); !errors.Is(err, ErrConflict) {
+		t.Fatalf("editing another model into a duplicate must fail: %v", err)
+	}
+	if _, err := store.UpdateManagedAPIConfig(ctx, "school-a", first.ID, ManagedAPIConfigUpdateInput{
+		DisplayName: first.DisplayName, AdapterType: first.AdapterType, BaseURL: first.BaseURL,
+		ModelName: first.ModelName, ModelVersion: first.ModelVersion, Region: first.Region,
+		Status: "disabled",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, _, err = service.Create(ctx, "school-a", "actor", AutoManagedAPIConfigInput{
+		CredentialSourceID: first.ID, Provider: "deepseek", ModelName: "deepseek-v5",
+	}); !errors.Is(err, ErrInvalidManagedConfig) {
+		t.Fatalf("disabled credential source must not be reused: %v", err)
+	}
+}
+
+func TestManagedAPIModelDiscoveryCanReuseSavedCredential(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	source, err := store.CreateManagedAPIConfig(ctx, "school-a", "actor", ManagedAPIConfigInput{
+		ProviderKey: "deepseek", DisplayName: "DeepSeek", AdapterType: "openai_compatible",
+		BaseURL: "https://api.deepseek.com", APIKey: "deepseek-secret-at-least-16",
+		ModelName: "deepseek-v4-pro", ModelVersion: "deepseek-v4-pro", Region: "global", Status: "active",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	providerSeen := ""
+	service := NewAutoManagedAPIConfigService(store, listingManagedProber{models: []string{"deepseek-v4-flash"}, providerSeen: &providerSeen})
+	_, list, result, err := service.ListModels(ctx, "school-a", AutoManagedAPIConfigInput{
+		CredentialSourceID: source.ID, Provider: "deepseek",
+	})
+	if err != nil || !result.OK || providerSeen != "deepseek" || len(list.Models) != 1 {
+		t.Fatalf("saved credential discovery failed: %#v %#v %v", list, result, err)
+	}
+}
+
+func TestReusedCredentialSavedIsTheOneActuallyProbed(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	oldKey, newKey := "original-secret-at-least-16", "rotated-secret-at-least-16"
+	source, err := store.CreateManagedAPIConfig(ctx, "school-a", "actor", ManagedAPIConfigInput{
+		ProviderKey: "deepseek", DisplayName: "DeepSeek", AdapterType: "openai_compatible",
+		BaseURL: "https://api.deepseek.com", APIKey: oldKey,
+		ModelName: "deepseek-v4-pro", ModelVersion: "deepseek-v4-pro", Region: "global", Status: "active",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := []ManagedAPIConnection{}
+	prober := recordingManagedProber{seen: &seen, onQuick: func() {
+		_, updateErr := store.UpdateManagedAPIConfig(ctx, "school-a", source.ID, ManagedAPIConfigUpdateInput{
+			DisplayName: source.DisplayName, AdapterType: source.AdapterType, BaseURL: source.BaseURL,
+			APIKey: newKey, ModelName: source.ModelName, ModelVersion: source.ModelVersion,
+			Region: source.Region, Status: "active",
+		})
+		if updateErr != nil {
+			t.Fatal(updateErr)
+		}
+	}}
+	created, _, _, err := NewAutoManagedAPIConfigService(store, prober).Create(ctx, "school-a", "actor", AutoManagedAPIConfigInput{
+		CredentialSourceID: source.ID, Provider: "deepseek", ModelName: "deepseek-v4-flash",
+	})
+	if err != nil || len(seen) != 1 || seen[0].APIKey != oldKey {
+		t.Fatalf("quick probe did not use original key: %v %#v", err, seen)
+	}
+	connection, err := store.GetManagedAPIConnection(ctx, "school-a", created.ID)
+	if err != nil || connection.APIKey != oldKey {
+		t.Fatalf("saved key diverged from probed key: %v", err)
+	}
+}
+
 func TestManagedQuickProbeNeverFallsBackToGeneratedRequest(t *testing.T) {
 	calls := 0
 	result := managedQuickProbe(context.Background(), generatedOnlyManagedProber{calls: &calls}, ManagedAPIConnection{
@@ -258,6 +380,34 @@ func TestAutoManagedAPIConfigHandlerReturnsValidationAndNeverEchoesKey(t *testin
 	}
 }
 
+func TestAutoManagedAPIConfigHandlerReusesKeyWithoutEchoingIt(t *testing.T) {
+	store := NewMemoryStore()
+	handler := NewHandler(store, nil, NewEnvironmentSecretResolver(t.TempDir()), testBaseline()).
+		WithManagedAPIProber(staticManagedProber{result: successfulManagedProbe()})
+	user := auth.User{ID: "actor", TenantID: auth.PlatformTenantID, Permissions: []string{"model:provider:manage"}}
+	tenantID := "00000000-0000-0000-0000-000000000020"
+	secret := "deepseek-secret-at-least-16"
+	source, err := store.CreateManagedAPIConfig(context.Background(), tenantID, "actor", ManagedAPIConfigInput{
+		ProviderKey: "deepseek", DisplayName: "DeepSeek", AdapterType: "openai_compatible",
+		BaseURL: "https://api.deepseek.com", APIKey: secret, ModelName: "deepseek-v4-pro",
+		ModelVersion: "deepseek-v4-pro", Region: "global", Status: "active",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := performHandlerRequest(t, user, http.MethodPost, "/api/v1/platform/model-api-configs/auto", `{
+		"tenant_id":"`+tenantID+`","credential_source_id":"`+source.ID+`",
+		"provider":"deepseek","model_name":"deepseek-v4-flash"
+	}`, handler.AutoCreateManagedAPIConfig)
+	if response.Code != http.StatusCreated || strings.Contains(response.Body.String(), secret) || !strings.Contains(response.Body.String(), "deepseek-v4-flash") {
+		t.Fatalf("credential reuse response=%d body=%s", response.Code, response.Body.String())
+	}
+	items, err := store.ListManagedAPIConfigs(context.Background(), tenantID)
+	if err != nil || len(items) != 2 {
+		t.Fatalf("expected two independently managed models: %#v %v", items, err)
+	}
+}
+
 func TestManagedAPIConfigLegacyCreateAlsoValidatesBeforeSaving(t *testing.T) {
 	store := NewMemoryStore()
 	failed := successfulManagedProbe()
@@ -308,6 +458,24 @@ func successfulManagedProbe() ManagedAPIProbeResult {
 type countingManagedProber struct {
 	calls  *int
 	result ManagedAPIProbeResult
+}
+
+type recordingManagedProber struct {
+	seen    *[]ManagedAPIConnection
+	onQuick func()
+}
+
+func (p recordingManagedProber) ProbeQuick(_ context.Context, connection ManagedAPIConnection) ManagedAPIProbeResult {
+	*p.seen = append(*p.seen, connection)
+	if p.onQuick != nil {
+		p.onQuick()
+	}
+	return successfulManagedProbe()
+}
+
+func (p recordingManagedProber) Probe(_ context.Context, connection ManagedAPIConnection) ManagedAPIProbeResult {
+	*p.seen = append(*p.seen, connection)
+	return successfulManagedProbe()
 }
 
 type generatedOnlyManagedProber struct {

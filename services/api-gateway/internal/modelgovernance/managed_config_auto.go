@@ -3,14 +3,17 @@ package modelgovernance
 import (
 	"context"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 type AutoManagedAPIConfigInput struct {
-	TenantID  string `json:"tenant_id"`
-	APIKey    string `json:"api_key"`
-	ModelName string `json:"model_name"`
-	Provider  string `json:"provider,omitempty"`
-	BaseURL   string `json:"base_url,omitempty"`
+	TenantID           string `json:"tenant_id"`
+	APIKey             string `json:"api_key"`
+	CredentialSourceID string `json:"credential_source_id,omitempty"`
+	ModelName          string `json:"model_name"`
+	Provider           string `json:"provider,omitempty"`
+	BaseURL            string `json:"base_url,omitempty"`
 }
 
 type ResolveManagedProviderInput struct {
@@ -52,7 +55,12 @@ func (s *AutoManagedAPIConfigService) Validate(ctx context.Context, tenantID str
 	if err != nil {
 		return ResolvedManagedProvider{}, ManagedAPIProbeResult{}, err
 	}
+	apiKey, err := s.resolveCredential(ctx, tenantID, input, resolved)
+	if err != nil {
+		return ResolvedManagedProvider{}, ManagedAPIProbeResult{}, err
+	}
 	configInput := s.configInput(tenantID, input, resolved, false)
+	configInput.APIKey = apiKey
 	normalized, err := normalizeManagedAPIInput(configInput, true)
 	if err != nil {
 		return ResolvedManagedProvider{}, ManagedAPIProbeResult{}, err
@@ -73,7 +81,12 @@ func (s *AutoManagedAPIConfigService) ListModels(ctx context.Context, tenantID s
 	if err != nil {
 		return ResolvedManagedProvider{}, ManagedAPIModelListResult{}, ManagedAPIProbeResult{}, err
 	}
+	apiKey, err := s.resolveCredential(ctx, tenantID, input, resolved)
+	if err != nil {
+		return ResolvedManagedProvider{}, ManagedAPIModelListResult{}, ManagedAPIProbeResult{}, err
+	}
 	configInput := s.configInput(tenantID, input, resolved, false)
+	configInput.APIKey = apiKey
 	// Model discovery only needs a resolved provider, endpoint and credential.
 	// Use an internal placeholder to reuse the strict config validator, then keep
 	// the externally visible connection model empty until the user selects one.
@@ -107,10 +120,17 @@ func (s *AutoManagedAPIConfigService) Create(ctx context.Context, tenantID, acto
 		return ManagedAPIConfig{}, ResolvedManagedProvider{}, ManagedAPIProbeResult{}, err
 	}
 	for _, item := range items {
-		if item.ProviderKey == resolved.Provider.Key {
+		if item.ProviderKey == resolved.Provider.Key && item.ModelName == resolved.ModelName {
 			return ManagedAPIConfig{}, resolved, ManagedAPIProbeResult{}, ErrConflict
 		}
 	}
+	// Resolve once: the exact credential checked by the quick probe must be
+	// encrypted into the new model even if the source rotates concurrently.
+	apiKey, err := s.resolveCredential(ctx, tenantID, input, resolved)
+	if err != nil {
+		return ManagedAPIConfig{}, resolved, ManagedAPIProbeResult{}, err
+	}
+	input.APIKey, input.CredentialSourceID = apiKey, ""
 	resolved, result, err := s.Validate(ctx, tenantID, input)
 	if err != nil {
 		return ManagedAPIConfig{}, ResolvedManagedProvider{}, ManagedAPIProbeResult{}, err
@@ -124,6 +144,30 @@ func (s *AutoManagedAPIConfigService) Create(ctx context.Context, tenantID, acto
 	configInput.InitialProbe = &result
 	item, err := s.store.CreateManagedAPIConfig(ctx, tenantID, actorID, configInput)
 	return item, resolved, result, err
+}
+
+// A saved credential may only be reused inside the same school and against its
+// original provider endpoint. Never forward a decrypted key to a new URL.
+func (s *AutoManagedAPIConfigService) resolveCredential(ctx context.Context, tenantID string, input AutoManagedAPIConfigInput, resolved ResolvedManagedProvider) (string, error) {
+	sourceID := strings.TrimSpace(input.CredentialSourceID)
+	if sourceID == "" {
+		return input.APIKey, nil
+	}
+	if strings.TrimSpace(input.APIKey) != "" {
+		return "", ErrInvalidManagedConfig
+	}
+	if _, err := uuid.Parse(sourceID); err != nil || s.store == nil {
+		return "", ErrInvalidManagedConfig
+	}
+	source, err := s.store.GetManagedAPIConnection(ctx, tenantID, sourceID)
+	if err != nil {
+		return "", err
+	}
+	if source.Config.Status != "active" || source.Config.ProviderKey != resolved.Provider.Key ||
+		source.Config.AdapterType != resolved.Provider.AdapterType || source.Config.BaseURL != resolved.Provider.BaseURL {
+		return "", ErrInvalidManagedConfig
+	}
+	return source.APIKey, nil
 }
 
 func managedQuickProbe(ctx context.Context, prober ManagedAPIProber, connection ManagedAPIConnection) ManagedAPIProbeResult {

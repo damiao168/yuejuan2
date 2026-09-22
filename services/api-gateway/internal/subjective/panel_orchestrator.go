@@ -2,6 +2,7 @@ package subjective
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -10,9 +11,13 @@ import (
 )
 
 type PanelAgentBinding struct {
-	Adapter      LLMGradingAdapter
-	Policy       ModelPolicy
-	StrengthRank int
+	Adapter       LLMGradingAdapter
+	Policy        ModelPolicy
+	StrengthRank  int
+	ModelConfigID string
+	ProviderKey   string
+	AdapterType   string
+	BaseURL       string
 }
 
 type PanelAgents struct {
@@ -65,7 +70,8 @@ func (o *PanelOrchestrator) GradeWithApprovedPolicy(ctx context.Context, tenantI
 		return PanelResult{}, err
 	}
 	if policy.Status != PanelPolicyApproved || policy.EvaluationRunID == "" || policy.ReadinessReport == nil || !policy.ReadinessReport.Ready ||
-		policy.DecisionConfig.PolicyVersion != policy.PolicyVersion || policy.ReadinessPolicy.PolicyVersion != policy.PolicyVersion {
+		policy.DecisionConfig.PolicyVersion != policy.PolicyVersion || policy.ReadinessPolicy.PolicyVersion != policy.PolicyVersion ||
+		policy.ModelSetReference != PanelModelSetReference(o.agents) {
 		return PanelResult{}, ErrPanelPolicyRequired
 	}
 	return o.gradeWithConfig(ctx, tenantID, actorID, gradingContext, policy.DecisionConfig)
@@ -132,7 +138,7 @@ func (o *PanelOrchestrator) gradeWithConfig(ctx context.Context, tenantID, actor
 	}
 	config = panel.DecisionConfig
 	if panel.Status == PanelHumanReview || panel.Status == PanelResolved || panel.Status == PanelFailed {
-		return PanelResult{Panel: panel}, nil
+		return o.loadTerminalPanelResult(ctx, tenantID, panel)
 	}
 	if o.math != nil && mathSubject(gradingContext) {
 		if err := o.math.prepare(ctx, tenantID, &gradingContext); err != nil || gradingContext.MathEvidence == nil {
@@ -223,6 +229,58 @@ func (o *PanelOrchestrator) gradeWithConfig(ctx context.Context, tenantID, actor
 	return PanelResult{Panel: panel, PrimaryA: primaryA.grade, PrimaryB: primaryB.grade, Arbiter: &arbiterGrade}, err
 }
 
+// A Shadow observation may fail to persist after all role runs have completed.
+// Recover the saved, role-bound grades on replay instead of invoking a model
+// again or silently treating an already-resolved panel as an empty result.
+func (o *PanelOrchestrator) loadTerminalPanelResult(ctx context.Context, tenantID string, panel GradingPanel) (PanelResult, error) {
+	result := PanelResult{Panel: panel}
+	for _, item := range []struct {
+		role  string
+		runID string
+		grade *Grade
+	}{
+		{AgentRolePrimaryA, panel.PrimaryARunID, &result.PrimaryA},
+		{AgentRolePrimaryB, panel.PrimaryBRunID, &result.PrimaryB},
+	} {
+		if item.runID == "" {
+			continue
+		}
+		grade, err := o.loadTerminalRoleGrade(ctx, tenantID, panel, item.role, item.runID)
+		if err != nil {
+			return PanelResult{}, err
+		}
+		*item.grade = grade
+	}
+	if panel.ArbiterRunID != "" {
+		grade, err := o.loadTerminalRoleGrade(ctx, tenantID, panel, AgentRoleArbiter, panel.ArbiterRunID)
+		if err != nil {
+			return PanelResult{}, err
+		}
+		if grade.ID != "" {
+			result.Arbiter = &grade
+		}
+	}
+	return result, nil
+}
+
+func (o *PanelOrchestrator) loadTerminalRoleGrade(ctx context.Context, tenantID string, panel GradingPanel, role, runID string) (Grade, error) {
+	run, err := o.store.GetRun(ctx, tenantID, runID)
+	if err != nil {
+		return Grade{}, err
+	}
+	requestID := fmt.Sprintf("panel:%s:%s", panel.ID, role)
+	if run.PanelID != panel.ID || run.AgentRole != role || run.RequestID != requestID ||
+		run.AnswerSegmentID != panel.AnswerSegmentID || run.AnswerVersion != panel.AnswerVersion ||
+		run.QuestionID != panel.QuestionID || run.RubricVersion != panel.RubricVersion {
+		return Grade{}, ErrIdempotencyConflict
+	}
+	if run.Status != RunSucceeded {
+		return Grade{}, nil
+	}
+	_, grade, err := o.loadSucceededPanelRun(ctx, tenantID, requestID, run)
+	return grade, err
+}
+
 func (o *PanelOrchestrator) executeBlindAgent(ctx context.Context, tenantID, actorID string, panel GradingPanel, gradingContext Context, role string, binding PanelAgentBinding) (GradingRun, Grade, error) {
 	requestID := fmt.Sprintf("panel:%s:%s", panel.ID, role)
 	runInput := runInputFor(gradingContext, "", binding.Policy, requestID)
@@ -277,6 +335,11 @@ func (o *PanelOrchestrator) executeBlindAgent(ctx context.Context, tenantID, act
 		}
 		input.AgentRole = role
 	}
+	input, err = isolatePanelAdapterInput(input)
+	if err != nil {
+		_, _ = o.store.UpdateRun(ctx, tenantID, run.ID, UpdateRunInput{Status: RunFailed, ErrorCode: "panel_input_isolation_failed"})
+		return run, Grade{}, ErrPanelConfiguration
+	}
 	output, err := binding.Adapter.Grade(ctx, input)
 	if err != nil {
 		_, _ = o.store.UpdateRun(ctx, tenantID, run.ID, UpdateRunInput{Status: RunFailed, ErrorCode: "panel_agent_failed"})
@@ -310,6 +373,28 @@ func (o *PanelOrchestrator) executeBlindAgent(ctx context.Context, tenantID, act
 	}
 	run, err = o.store.UpdateRun(ctx, tenantID, run.ID, UpdateRunInput{Status: RunSucceeded, GradeID: grade.ID})
 	return run, grade, err
+}
+
+// A/B run concurrently, and C must receive only the frozen source material.
+// Deep-copy the exported request fields before handing them to any adapter so
+// nested maps, rubric points or math evidence cannot carry peer mutations.
+func isolatePanelAdapterInput(input AdapterInput) (AdapterInput, error) {
+	crop := input.ActiveCrop
+	input.ActiveCrop = nil // image bytes are copied separately, never JSON encoded
+	encoded, err := json.Marshal(input)
+	if err != nil {
+		return AdapterInput{}, err
+	}
+	var isolated AdapterInput
+	if err := json.Unmarshal(encoded, &isolated); err != nil {
+		return AdapterInput{}, err
+	}
+	if crop != nil {
+		copyCrop := *crop
+		copyCrop.Data = append([]byte(nil), crop.Data...)
+		isolated.ActiveCrop = &copyCrop
+	}
+	return isolated, nil
 }
 
 func (o *PanelOrchestrator) loadSucceededPanelRun(ctx context.Context, tenantID, requestID string, run GradingRun) (GradingRun, Grade, error) {

@@ -52,6 +52,13 @@ type ModelRoleBindingStore interface {
 	ListModelRoleBindings(context.Context, string, string, string, string) ([]ModelRoleBinding, error)
 }
 
+// The admin view includes disabled or temporarily unverified bindings. Runtime
+// resolution must continue using ListModelRoleBindings, which filters them out.
+type ModelRoleBindingAdminStore interface {
+	ModelRoleBindingStore
+	ListConfiguredModelRoleBindings(context.Context, string, string, string, string) ([]ModelRoleBinding, error)
+}
+
 func ResolvePanelRoleBindings(ctx context.Context, store ModelRoleBindingStore, tenantID, stage, subject, archetype string) (PanelRoleBindings, error) {
 	if store == nil || strings.TrimSpace(tenantID) == "" {
 		return PanelRoleBindings{}, ErrInvalidManagedConfig

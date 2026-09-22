@@ -90,6 +90,14 @@ func TestResolvePanelAgentsUsesThreeGovernedConnectionsAndStrongerArbiter(t *tes
 	if err != nil || len(seen) != 3 || agents.Arbiter.Policy.ModelVersion != "model-c" || agents.Arbiter.StrengthRank != 2 {
 		t.Fatalf("governed panel agents were not resolved: %#v seen=%#v err=%v", agents, seen, err)
 	}
+	if agents.PrimaryA.ModelConfigID != "config-a" || agents.Arbiter.ModelConfigID != "config-c" {
+		t.Fatalf("governed connection identities were not retained: %#v", agents)
+	}
+	changed := agents
+	changed.PrimaryA.ModelConfigID = "replacement-config-a"
+	if PanelModelSetReference(changed) == PanelModelSetReference(agents) {
+		t.Fatal("replacing a governed config reused the old evaluation identity")
+	}
 	if _, err := NewPanelOrchestrator(NewMemoryStore(), agents, allowPanelAdmission); err != nil {
 		t.Fatalf("resolved agents could not enter shadow orchestrator: %v", err)
 	}

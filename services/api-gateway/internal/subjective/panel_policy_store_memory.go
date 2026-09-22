@@ -23,7 +23,7 @@ func (s *MemoryStore) CreatePanelPolicy(_ context.Context, tenantID, actorID str
 		}
 	}
 	item := PanelPolicy{
-		ID: s.id("panel-policy"), TenantID: tenantID, PolicyVersion: input.PolicyVersion,
+		ID: s.id("panel-policy"), TenantID: tenantID, PolicyVersion: input.PolicyVersion, ModelSetReference: input.ModelSetReference,
 		EducationStage: assessment.EducationStage(input.EducationStage), SubjectCode: assessment.SubjectCode(input.SubjectCode),
 		ArchetypeCode: input.ArchetypeCode, DecisionConfig: clonePanelConfig(input.DecisionConfig),
 		ReadinessPolicy: input.ReadinessPolicy, Status: PanelPolicyShadow, CreatedBy: actorID, CreatedAt: time.Now().UTC(),

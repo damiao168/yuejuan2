@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-const panelPolicyColumns = `id::text,tenant_id::text,policy_version,education_stage,subject_code,archetype_code,
+const panelPolicyColumns = `id::text,tenant_id::text,policy_version,COALESCE(model_set_reference,''),education_stage,subject_code,archetype_code,
  decision_config,readiness_policy,COALESCE(evaluation_run_id::text,''),readiness_report,status,created_by::text,created_at,
  COALESCE(approved_by::text,''),approved_at,COALESCE(invalidated_by::text,''),invalidated_at,invalidation_reason`
 
@@ -34,10 +34,10 @@ func (s *PostgresStore) CreatePanelPolicy(ctx context.Context, tenantID, actorID
 	}
 	item, err := scanPanelPolicy(s.db.QueryRowContext(ctx, `
 INSERT INTO subjective_panel_policy(
- tenant_id,policy_version,education_stage,subject_code,archetype_code,decision_config,readiness_policy,created_by
-) VALUES($1::uuid,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::uuid)
+ tenant_id,policy_version,model_set_reference,education_stage,subject_code,archetype_code,decision_config,readiness_policy,created_by
+) VALUES($1::uuid,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9::uuid)
 RETURNING `+panelPolicyColumns,
-		tenantID, input.PolicyVersion, input.EducationStage, input.SubjectCode, input.ArchetypeCode, decisionConfig, readinessPolicy, actorID))
+		tenantID, input.PolicyVersion, input.ModelSetReference, input.EducationStage, input.SubjectCode, input.ArchetypeCode, decisionConfig, readinessPolicy, actorID))
 	return item, mapPanelPolicyStoreError(err)
 }
 
@@ -99,7 +99,7 @@ func scanPanelPolicy(row panelScanner) (PanelPolicy, error) {
 	var decisionConfig, readinessPolicy, readinessReport []byte
 	var approvedAt, invalidatedAt sql.NullTime
 	if err := row.Scan(
-		&item.ID, &item.TenantID, &item.PolicyVersion, &item.EducationStage, &item.SubjectCode, &item.ArchetypeCode,
+		&item.ID, &item.TenantID, &item.PolicyVersion, &item.ModelSetReference, &item.EducationStage, &item.SubjectCode, &item.ArchetypeCode,
 		&decisionConfig, &readinessPolicy, &item.EvaluationRunID, &readinessReport, &item.Status, &item.CreatedBy, &item.CreatedAt,
 		&item.ApprovedBy, &approvedAt, &item.InvalidatedBy, &invalidatedAt, &item.InvalidationReason,
 	); err != nil {

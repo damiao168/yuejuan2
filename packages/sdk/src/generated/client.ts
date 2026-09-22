@@ -3,6 +3,9 @@
 import type { ApiTransport } from "../runtime";
 import { appendQuery, fillPath } from "../runtime";
 import type {
+  PanelModelRoleBindingInput,
+  PanelModelRoleBindingList,
+  PanelModelRoleBindingResponse,
   ManagedChatRequest,
   ManagedChatModelResponse,
   ManagedChatCompletionResponse,
@@ -270,6 +273,8 @@ import type {
 } from "./types";
 
 export interface operations {
+  "listPlatformPanelModelBindings": { args: { query: { "tenant_id": string; "education_stage": "junior" | "senior"; "subject_code": string; "archetype_code": string; }; signal?: AbortSignal; }; response: PanelModelRoleBindingList; };
+  "savePlatformPanelModelBinding": { args: { body: PanelModelRoleBindingInput; signal?: AbortSignal; }; response: PanelModelRoleBindingResponse; };
   "getManagedChatModel": { args: { signal?: AbortSignal; }; response: ManagedChatModelResponse; };
   "createManagedChatCompletion": { args: { body: ManagedChatRequest; signal?: AbortSignal; }; response: ManagedChatCompletionResponse; };
   "streamManagedChatCompletion": { args: { body: ManagedChatRequest; signal?: AbortSignal; }; response: unknown; };
@@ -512,6 +517,16 @@ export interface operations {
 
 export class EduGradeApi {
   constructor(private readonly transport: ApiTransport) {}
+
+  listPlatformPanelModelBindings(args: operations["listPlatformPanelModelBindings"]["args"]): Promise<operations["listPlatformPanelModelBindings"]["response"]> {
+    const requestPath = appendQuery("/api/v1/platform/panel-model-bindings", args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  savePlatformPanelModelBinding(args: operations["savePlatformPanelModelBinding"]["args"]): Promise<operations["savePlatformPanelModelBinding"]["response"]> {
+    const requestPath = "/api/v1/platform/panel-model-bindings";
+    return this.transport.request(requestPath, { method: "PUT", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
 
   getManagedChatModel(args: operations["getManagedChatModel"]["args"] = {}): Promise<operations["getManagedChatModel"]["response"]> {
     const requestPath = "/api/v1/ai-chat/model";

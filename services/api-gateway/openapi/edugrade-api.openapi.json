@@ -20,6 +20,38 @@
     }
   ],
   "paths": {
+    "/api/v1/platform/panel-model-bindings": {
+      "get": {
+        "tags": ["Model Governance"],
+        "operationId": "listPlatformPanelModelBindings",
+        "summary": "List a school's configured A/B/C grading models for one scoring scope",
+        "parameters": [
+          { "name": "tenant_id", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "education_stage", "in": "query", "required": true, "schema": { "type": "string", "enum": ["junior", "senior"] } },
+          { "name": "subject_code", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "archetype_code", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Configured bindings, including disabled roles", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PanelModelRoleBindingList" } } } },
+          "400": { "description": "Invalid school or scoring scope", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "put": {
+        "tags": ["Model Governance"],
+        "operationId": "savePlatformPanelModelBinding",
+        "summary": "Assign one governed A/B/C grading model without changing the chat default",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PanelModelRoleBindingInput" } } } },
+        "responses": {
+          "200": { "description": "Saved role binding", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PanelModelRoleBindingResponse" } } } },
+          "400": { "description": "Invalid role assignment", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "description": "Model is not capability-tested for this school", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
     "/api/v1/ai-chat/model": {
       "get": {
         "tags": ["AI Chat"],
@@ -15624,6 +15656,50 @@
       }
     },
     "schemas": {
+      "PanelModelRoleBindingInput": {
+        "type": "object", "additionalProperties": false,
+        "required": ["tenant_id", "education_stage", "subject_code", "archetype_code", "agent_role", "managed_model_api_config_id", "prompt_version", "strength_rank", "status"],
+        "properties": {
+          "tenant_id": { "type": "string", "format": "uuid" },
+          "education_stage": { "type": "string", "enum": ["junior", "senior"] },
+          "subject_code": { "type": "string", "enum": ["chinese", "mathematics", "english", "physics", "chemistry", "biology", "history", "geography", "ethics_politics"] },
+          "archetype_code": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "agent_role": { "type": "string", "enum": ["primary_a", "primary_b", "arbiter"] },
+          "managed_model_api_config_id": { "type": "string", "format": "uuid" },
+          "prompt_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "strength_rank": { "type": "integer", "minimum": 1 },
+          "status": { "type": "string", "enum": ["active", "disabled"] }
+        }
+      },
+      "PanelModelRoleBinding": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "tenant_id", "education_stage", "subject_code", "archetype_code", "agent_role", "managed_model_api_config_id", "prompt_version", "strength_rank", "status", "created_by", "created_at", "updated_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "tenant_id": { "type": "string", "format": "uuid" },
+          "education_stage": { "type": "string", "enum": ["junior", "senior"] },
+          "subject_code": { "type": "string", "enum": ["chinese", "mathematics", "english", "physics", "chemistry", "biology", "history", "geography", "ethics_politics"] },
+          "archetype_code": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "agent_role": { "type": "string", "enum": ["primary_a", "primary_b", "arbiter"] },
+          "managed_model_api_config_id": { "type": "string", "format": "uuid" },
+          "prompt_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "strength_rank": { "type": "integer", "minimum": 1 },
+          "status": { "type": "string", "enum": ["active", "disabled"] },
+          "created_by": { "type": "string", "format": "uuid" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "PanelModelRoleBindingList": {
+        "type": "object", "required": ["bindings"], "properties": {
+          "bindings": { "type": "array", "items": { "$ref": "#/components/schemas/PanelModelRoleBinding" } }
+        }
+      },
+      "PanelModelRoleBindingResponse": {
+        "type": "object", "required": ["binding"], "properties": {
+          "binding": { "$ref": "#/components/schemas/PanelModelRoleBinding" }
+        }
+      },
       "ManagedChatAttachment": {
         "type": "object",
         "additionalProperties": false,

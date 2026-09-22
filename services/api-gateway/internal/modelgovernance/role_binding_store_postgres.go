@@ -25,8 +25,8 @@ INSERT INTO model_role_binding AS binding(
 )
 SELECT $1::uuid,$2::uuid,$3,$4,$5,$6,config.id,$8,$9,$10,$11::uuid
 FROM managed_model_api_config config
-WHERE config.tenant_id=$2::uuid AND config.id=$7::uuid AND config.deleted_at IS NULL AND config.status='active'
-  AND config.last_capability_status='success' AND config.last_capability_probe_version=$12
+WHERE config.tenant_id=$2::uuid AND config.id=$7::uuid
+  AND ($10='disabled' OR (config.deleted_at IS NULL AND config.status='active' AND config.last_capability_status='success' AND config.last_capability_probe_version=$12))
 ON CONFLICT(tenant_id,education_stage,subject_code,archetype_code,agent_role)
 DO UPDATE SET managed_model_api_config_id=EXCLUDED.managed_model_api_config_id,prompt_version=EXCLUDED.prompt_version,
   strength_rank=EXCLUDED.strength_rank,status=EXCLUDED.status,updated_at=now()
@@ -36,6 +36,30 @@ RETURNING `+roleBindingColumns, id, tenantID, input.EducationStage, input.Subjec
 		return ModelRoleBinding{}, ErrManagedCapabilityRequired
 	}
 	return item, err
+}
+
+func (s *PostgresStore) ListConfiguredModelRoleBindings(ctx context.Context, tenantID, stage, subject, archetype string) ([]ModelRoleBinding, error) {
+	stage, subject, archetype, err := normalizeRoleScope(stage, subject, archetype)
+	if err != nil || tenantID == "" {
+		return nil, ErrInvalidManagedConfig
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT `+roleBindingColumns+`
+FROM model_role_binding binding
+WHERE binding.tenant_id=$1::uuid AND binding.education_stage=$2 AND binding.subject_code=$3 AND binding.archetype_code=$4
+ORDER BY binding.agent_role`, tenantID, stage, subject, archetype)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ModelRoleBinding{}
+	for rows.Next() {
+		item, scanErr := scanRoleBinding(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
 }
 
 func (s *PostgresStore) ListModelRoleBindings(ctx context.Context, tenantID, stage, subject, archetype string) ([]ModelRoleBinding, error) {

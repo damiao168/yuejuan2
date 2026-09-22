@@ -36,7 +36,7 @@ func (s *MemoryStore) CreateManagedAPIConfig(_ context.Context, tenantID, _ stri
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, item := range s.managedConfigs {
-		if item.TenantID == tenantID && item.ProviderKey == normalized.ProviderKey {
+		if item.TenantID == tenantID && item.ProviderKey == normalized.ProviderKey && item.ModelName == normalized.ModelName {
 			return ManagedAPIConfig{}, ErrConflict
 		}
 	}
@@ -73,6 +73,11 @@ func (s *MemoryStore) UpdateManagedAPIConfig(_ context.Context, tenantID, id str
 	item, ok := s.managedConfigs[id]
 	if !ok || item.TenantID != tenantID {
 		return ManagedAPIConfig{}, ErrNotFound
+	}
+	for otherID, other := range s.managedConfigs {
+		if otherID != id && other.TenantID == tenantID && other.ProviderKey == item.ProviderKey && other.ModelName == normalized.ModelName {
+			return ManagedAPIConfig{}, ErrConflict
+		}
 	}
 	if normalized.IsDefault {
 		s.clearManagedDefault(tenantID, id)

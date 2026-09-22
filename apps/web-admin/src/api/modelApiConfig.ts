@@ -53,6 +53,29 @@ export interface ManagedAPIProbeDiagnostic {
   content_preview?: string;
 }
 
+export type PanelAgentRole = "primary_a" | "primary_b" | "arbiter";
+export type PanelEducationStage = "junior" | "senior";
+
+export interface PanelModelRoleBinding {
+  id: string;
+  tenant_id: string;
+  education_stage: PanelEducationStage;
+  subject_code: string;
+  archetype_code: string;
+  agent_role: PanelAgentRole;
+  managed_model_api_config_id: string;
+  prompt_version: string;
+  strength_rank: number;
+  status: "active" | "disabled";
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PanelModelRoleBindingInput = Pick<PanelModelRoleBinding,
+  "education_stage" | "subject_code" | "archetype_code" | "agent_role" |
+  "managed_model_api_config_id" | "prompt_version" | "strength_rank" | "status"> & { tenant_id: string };
+
 export interface ManagedModelAPIConfigInput {
   tenant_id: string;
   provider_key: string;
@@ -104,7 +127,8 @@ export interface ProviderDefinition {
 
 export interface AutoManagedModelAPIConfigInput {
   tenant_id: string;
-  api_key: string;
+  api_key?: string;
+  credential_source_id?: string;
   model_name: string;
   provider?: string;
   base_url?: string;
@@ -174,5 +198,17 @@ export function probeManagedModelAPIConfig(id: string, tenantId: string, mode: M
 export function deleteManagedModelAPIConfig(id: string, tenantId: string) {
   return apiClient.request<void>(`/api/v1/platform/model-api-configs/${encodeURIComponent(id)}${tenantQuery(tenantId)}`, {
     method: "DELETE"
+  });
+}
+
+export function listPanelModelRoleBindings(tenantId: string, stage: PanelEducationStage, subjectCode: string, archetypeCode: string) {
+  const query = new URLSearchParams({ tenant_id: tenantId, education_stage: stage, subject_code: subjectCode, archetype_code: archetypeCode });
+  return apiClient.request<{ bindings: PanelModelRoleBinding[] }>(`/api/v1/platform/panel-model-bindings?${query}`);
+}
+
+export function savePanelModelRoleBinding(input: PanelModelRoleBindingInput) {
+  return apiClient.request<{ binding: PanelModelRoleBinding }>("/api/v1/platform/panel-model-bindings", {
+    method: "PUT",
+    body: JSON.stringify(input)
   });
 }

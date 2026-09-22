@@ -401,7 +401,7 @@ func (h *Handler) writeManagedAPIError(w http.ResponseWriter, r *http.Request, e
 	case errors.Is(err, ErrNotFound):
 		httpx.Error(w, r, http.StatusNotFound, "managed_model_api_not_found", "第三方模型 API 配置不存在")
 	case errors.Is(err, ErrConflict):
-		httpx.Error(w, r, http.StatusConflict, "managed_model_api_conflict", "该学校已经存在相同的供应商配置")
+		httpx.Error(w, r, http.StatusConflict, "managed_model_api_conflict", "该学校已配置相同供应商和模型")
 	case errors.Is(err, ErrManagedConfigUnavailable):
 		httpx.Error(w, r, http.StatusServiceUnavailable, "managed_model_api_unavailable", "第三方模型 API 密钥服务暂不可用")
 	default:

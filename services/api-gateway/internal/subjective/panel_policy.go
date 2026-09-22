@@ -2,6 +2,8 @@ package subjective
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"sort"
 	"strings"
@@ -28,6 +30,7 @@ type PanelPolicy struct {
 	ID                 string                                 `json:"id"`
 	TenantID           string                                 `json:"tenant_id"`
 	PolicyVersion      string                                 `json:"policy_version"`
+	ModelSetReference  string                                 `json:"model_set_reference"`
 	EducationStage     assessment.EducationStage              `json:"education_stage"`
 	SubjectCode        assessment.SubjectCode                 `json:"subject_code"`
 	ArchetypeCode      string                                 `json:"archetype_code"`
@@ -46,12 +49,13 @@ type PanelPolicy struct {
 }
 
 type CreatePanelPolicyInput struct {
-	PolicyVersion   string                                 `json:"policy_version"`
-	EducationStage  string                                 `json:"education_stage"`
-	SubjectCode     string                                 `json:"subject_code"`
-	ArchetypeCode   string                                 `json:"archetype_code"`
-	DecisionConfig  PanelDecisionConfig                    `json:"decision_config"`
-	ReadinessPolicy gradingevaluation.PanelReadinessPolicy `json:"readiness_policy"`
+	PolicyVersion     string                                 `json:"policy_version"`
+	ModelSetReference string                                 `json:"model_set_reference"`
+	EducationStage    string                                 `json:"education_stage"`
+	SubjectCode       string                                 `json:"subject_code"`
+	ArchetypeCode     string                                 `json:"archetype_code"`
+	DecisionConfig    PanelDecisionConfig                    `json:"decision_config"`
+	ReadinessPolicy   gradingevaluation.PanelReadinessPolicy `json:"readiness_policy"`
 }
 
 type PanelPolicyStore interface {
@@ -109,6 +113,9 @@ func (s *PanelPolicyService) EvaluateAndApprove(ctx context.Context, tenantID, a
 	if run.Status != gradingevaluation.RunCompleted {
 		return policy, gradingevaluation.PanelSliceReadiness{}, ErrPanelPolicyNotReady
 	}
+	if policy.ModelSetReference == "" || run.ModelReference != policy.ModelSetReference {
+		return policy, gradingevaluation.PanelSliceReadiness{}, ErrPanelPolicyNotReady
+	}
 	items, err := s.evaluations.ListPanelObservations(ctx, tenantID, evaluationRunID)
 	if err != nil {
 		return PanelPolicy{}, gradingevaluation.PanelSliceReadiness{}, err
@@ -155,8 +162,9 @@ func (s *PanelPolicyService) Invalidate(ctx context.Context, tenantID, actorID, 
 
 func normalizeCreatePanelPolicy(input CreatePanelPolicyInput) (CreatePanelPolicyInput, error) {
 	input.PolicyVersion = strings.TrimSpace(input.PolicyVersion)
+	input.ModelSetReference = strings.TrimSpace(input.ModelSetReference)
 	stage, subject, archetype, err := normalizePanelPolicyScope(input.EducationStage, input.SubjectCode, input.ArchetypeCode)
-	if err != nil || !validPanelPolicyVersion(input.PolicyVersion) {
+	if err != nil || !validPanelPolicyVersion(input.PolicyVersion) || !validPanelModelSetReference(input.ModelSetReference) {
 		return CreatePanelPolicyInput{}, ErrInvalidInput
 	}
 	input.EducationStage, input.SubjectCode, input.ArchetypeCode = string(stage), string(subject), archetype
@@ -167,6 +175,14 @@ func normalizeCreatePanelPolicy(input CreatePanelPolicyInput) (CreatePanelPolicy
 		return CreatePanelPolicyInput{}, ErrInvalidInput
 	}
 	return input, nil
+}
+
+func validPanelModelSetReference(value string) bool {
+	if len(value) != len("panel:")+sha256.Size*2 || !strings.HasPrefix(value, "panel:") {
+		return false
+	}
+	_, err := hex.DecodeString(strings.TrimPrefix(value, "panel:"))
+	return err == nil && value == strings.ToLower(value)
 }
 
 func normalizePanelPolicyScope(stage, subject, archetype string) (assessment.EducationStage, assessment.SubjectCode, string, error) {

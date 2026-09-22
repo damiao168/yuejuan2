@@ -7721,7 +7721,21 @@ select {
 .platform-model-school-summary { display: flex; align-items: center; gap: 20px; color: #64748b; font-size: var(--eg-font-body); }
 .platform-model-school-summary span, .platform-model-secret { display: inline-flex; align-items: center; gap: 7px; }
 .platform-model-security-note { border-color: #bae6fd; background: #f7fcff; }
+.platform-model-section-title { margin: 2px 0 -10px; color: #0f172a; font-size: 19px; }
 .platform-model-table-shell { min-height: 260px; overflow: hidden; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.platform-panel-bindings { display: grid; gap: 16px; padding: 20px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.platform-panel-bindings-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.platform-panel-bindings-heading h2 { margin: 0 0 5px; color: #0f172a; font-size: 19px; }
+.platform-panel-bindings-heading p { margin: 0; color: #64748b; }
+.platform-panel-bindings-scope { display: grid; grid-template-columns: 150px 180px minmax(180px, 1fr) auto; align-items: end; gap: 12px; }
+.platform-panel-bindings-scope label, .platform-panel-role label { display: grid; gap: 6px; color: #334155; font-size: var(--eg-font-caption); font-weight: 600; }
+.platform-panel-bindings-hint { margin: 0; color: #64748b; font-size: var(--eg-font-caption); }
+.platform-panel-bindings-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.platform-panel-role { display: grid; align-content: start; gap: 14px; padding: 17px; border: 1px solid #e2e8f0; border-radius: 7px; background: #fbfcfd; }
+.platform-panel-role h3 { margin: 0 0 3px; color: #0f172a; font-size: 16px; }
+.platform-panel-role small { color: #64748b; }
+.platform-panel-role-footer { display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+.platform-panel-role-footer .ant-input-number { width: 100px; }
 .platform-model-table-shell .ant-table-wrapper, .platform-model-table-shell .responsive-table { border: 0; }
 .platform-model-identity { display: flex; align-items: center; gap: 11px; }
 .platform-model-identity > span { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 7px; }
@@ -7749,10 +7763,14 @@ select {
 @media (max-width: 900px) {
   .platform-model-heading, .platform-model-schoolbar { align-items: stretch; flex-direction: column; }
   .platform-model-school-summary { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .platform-panel-bindings-grid { grid-template-columns: 1fr; }
+  .platform-panel-bindings-scope { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {
   .platform-model-form-grid, .platform-model-switches { grid-template-columns: 1fr; }
+  .platform-panel-bindings-heading { flex-direction: column; }
+  .platform-panel-bindings-scope { grid-template-columns: 1fr; }
 }
 
 .paper-import-progress-indeterminate {

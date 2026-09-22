@@ -15,12 +15,15 @@ func (s *MemoryStore) SaveModelRoleBinding(_ context.Context, tenantID, actorID 
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	key := tenantID + "\x00" + input.EducationStage + "\x00" + input.SubjectCode + "\x00" + input.ArchetypeCode + "\x00" + input.AgentRole
+	previous, previouslyBound := s.roleBindings[key]
 	config, ok := s.managedConfigs[input.ManagedModelAPIConfigID]
-	if !ok || config.TenantID != tenantID || config.Status != "active" || config.LastCapabilityStatus != "success" || config.LastCapabilityVersion != ManagedCapabilityProbeVersion {
+	if (!ok && !(input.Status == "disabled" && previouslyBound && previous.ManagedModelAPIConfigID == input.ManagedModelAPIConfigID)) ||
+		(ok && config.TenantID != tenantID) ||
+		(input.Status == "active" && (config.Status != "active" || config.LastCapabilityStatus != "success" || config.LastCapabilityVersion != ManagedCapabilityProbeVersion)) {
 		return ModelRoleBinding{}, ErrManagedCapabilityRequired
 	}
 	now := time.Now().UTC()
-	key := tenantID + "\x00" + input.EducationStage + "\x00" + input.SubjectCode + "\x00" + input.ArchetypeCode + "\x00" + input.AgentRole
 	item, exists := s.roleBindings[key]
 	if !exists {
 		item.ID, item.CreatedAt, item.CreatedBy = uuid.NewString(), now, actorID
@@ -30,6 +33,23 @@ func (s *MemoryStore) SaveModelRoleBinding(_ context.Context, tenantID, actorID 
 	item.StrengthRank, item.Status, item.UpdatedAt = input.StrengthRank, input.Status, now
 	s.roleBindings[key] = item
 	return item, nil
+}
+
+func (s *MemoryStore) ListConfiguredModelRoleBindings(_ context.Context, tenantID, stage, subject, archetype string) ([]ModelRoleBinding, error) {
+	stage, subject, archetype, err := normalizeRoleScope(stage, subject, archetype)
+	if err != nil || tenantID == "" {
+		return nil, ErrInvalidManagedConfig
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	items := []ModelRoleBinding{}
+	for _, item := range s.roleBindings {
+		if item.TenantID == tenantID && item.EducationStage == stage && item.SubjectCode == subject && item.ArchetypeCode == archetype {
+			items = append(items, item)
+		}
+	}
+	sort.Slice(items, func(i, j int) bool { return items[i].AgentRole < items[j].AgentRole })
+	return items, nil
 }
 
 func (s *MemoryStore) ListModelRoleBindings(_ context.Context, tenantID, stage, subject, archetype string) ([]ModelRoleBinding, error) {

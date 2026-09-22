@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { App, Button, Form, Input, List, Popconfirm, Tag } from "antd";
-import { KeyRound, LogOut, RefreshCw, ShieldCheck, Smartphone } from "lucide-react";
+import { ChevronDown, ChevronUp, KeyRound, LogOut, RefreshCw, ShieldCheck, Smartphone } from "lucide-react";
 import { getUserErrorMessage } from "../api/client";
 import { changePassword, listSecurityEvents, listSessions, logoutAll, revokeSession, type DeviceSession, type SecurityEvent } from "../api/auth";
 import { ErrorState, LoadingState } from "../components/PageState";
@@ -49,6 +49,7 @@ export function SessionManagementPage({ onLoggedOut, accountLabel }: { onLoggedO
   const [error, setError] = useState<string>();
   const [actioning, setActioning] = useState<string>();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [activityExpanded, setActivityExpanded] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -155,7 +156,14 @@ export function SessionManagementPage({ onLoggedOut, accountLabel }: { onLoggedO
             <h2>安全活动</h2>
             <p>登录中的设备与最近安全记录集中展示；不显示完整 IP 或浏览器指纹。</p>
           </div>
+          <Button
+            aria-expanded={activityExpanded}
+            aria-controls="account-security-activity-details"
+            icon={activityExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            onClick={() => setActivityExpanded((current) => !current)}
+          >{activityExpanded ? "收起安全活动" : "展开安全活动"}</Button>
         </div>
+        <div id="account-security-activity-details" hidden={!activityExpanded}>
         <List
           dataSource={securityActivity}
           rowKey="id"
@@ -185,6 +193,7 @@ export function SessionManagementPage({ onLoggedOut, accountLabel }: { onLoggedO
         >
           <Button danger icon={<LogOut size={16} />} loading={actioning === "all"}>退出全部设备</Button>
         </Popconfirm>
+        </div>
       </section>
 
       <section className="workspace-section">

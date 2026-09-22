@@ -108,6 +108,43 @@ func TestPanelRunsPrimariesConcurrentlyAndResolvesExactConsensusWithoutArbiter(t
 	assertPanelRunRoles(t, orchestrator.store.(*MemoryStore), result.Panel.ID, AgentRolePrimaryA, AgentRolePrimaryB)
 }
 
+func TestPanelAdapterInputsDoNotShareNestedEvidenceAcrossRoles(t *testing.T) {
+	value := panelTestContext()
+	value.Question.BankContent = map[string]any{"reference": map[string]any{"text": "frozen"}}
+	value.Rubric.Points[0].EvidenceRequirements = []paper.EvidenceRequirement{{Type: "text", Children: []paper.EvidenceRequirement{{Type: "formula"}}}}
+	value.AnswerImageRef = map[string]any{"pages": []any{map[string]any{"sha": "frozen"}}}
+	value.AssessmentSnapshot.ProfileSnapshot = map[string]any{"rules": []any{"frozen"}}
+	value.MathEvidence = &MathEvidenceContext{Steps: []MathEvidenceStep{{ID: "step-1", FormulaIDs: []string{"formula-1"}}}}
+	base := newBlindPanelInput("request-1", value, ModelPolicy{ModelVersion: "model-a"}, AgentRolePrimaryA)
+	base.ActiveCrop = &ResolvedActiveCrop{Data: []byte("frozen-image")}
+	a, err := isolatePanelAdapterInput(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := isolatePanelAdapterInput(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.Question.BankContent["reference"].(map[string]any)["text"] = "changed"
+	a.Rubric.Points[0].EvidenceRequirements[0].Children[0].Type = "changed"
+	a.AnswerImageRef["pages"].([]any)[0].(map[string]any)["sha"] = "changed"
+	a.AssessmentSnapshot.ProfileSnapshot["rules"].([]any)[0] = "changed"
+	a.MathEvidence.Steps[0].FormulaIDs[0] = "changed"
+	a.ActiveCrop.Data[0] = 'X'
+	if b.Question.BankContent["reference"].(map[string]any)["text"] != "frozen" ||
+		b.Rubric.Points[0].EvidenceRequirements[0].Children[0].Type != "formula" ||
+		b.AnswerImageRef["pages"].([]any)[0].(map[string]any)["sha"] != "frozen" ||
+		b.AssessmentSnapshot.ProfileSnapshot["rules"].([]any)[0] != "frozen" ||
+		b.MathEvidence.Steps[0].FormulaIDs[0] != "formula-1" || string(b.ActiveCrop.Data) != "frozen-image" ||
+		value.Rubric.Points[0].EvidenceRequirements[0].Children[0].Type != "formula" {
+		t.Fatal("one panel role mutated another role's frozen input")
+	}
+	base.AnswerImageRef["invalid"] = func() {}
+	if _, err := isolatePanelAdapterInput(base); err == nil {
+		t.Fatal("uncloneable panel input did not fail closed")
+	}
+}
+
 func TestPanelConcurrentRetryDoesNotDuplicatePrimaryModelCalls(t *testing.T) {
 	started := make(chan struct{}, 2)
 	release := make(chan struct{})
