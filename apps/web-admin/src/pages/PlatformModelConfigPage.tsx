@@ -15,7 +15,7 @@ import {
   Tooltip,
   type TableColumnsType
 } from "antd";
-import { Building2, CheckCircle2, KeyRound, MoreHorizontal, Pencil, Plus, RefreshCw, Unplug, Zap } from "lucide-react";
+import { KeyRound, MoreHorizontal, Pencil, Plus, RefreshCw, Unplug, Zap } from "lucide-react";
 import {
   autoCreateManagedModelAPIConfig,
   deleteManagedModelAPIConfig,
@@ -24,126 +24,32 @@ import {
   managedModelDiscoveryErrorMessage,
   probeManagedModelAPIConfig,
   updateManagedModelAPIConfig,
-  type ManagedAdapterType,
   type ManagedAPIProbeMode,
   type ManagedAPIProbeResult,
   type ManagedModelAPIConfig
 } from "../api/modelApiConfig";
 import { ApiClientError, getUserErrorMessage } from "../api/client";
-import { listTenants, type Tenant } from "../api/org";
+import type { Tenant } from "../api/org";
 import { ResponsiveTable } from "../components/ResponsiveTable";
 import { StatusTag } from "../components/StatusTag";
 import { onboardingQueryKey } from "../features/onboarding/queries";
+import { SchoolModelSelector } from "../features/platform-model-config/components/SchoolModelSelector";
+import { useModelConfigDrafts } from "../features/platform-model-config/hooks/useModelConfigDrafts";
+import {
+  supplierOptions,
+  supplierDefaults,
+  formatDateTime,
+  presetForConfig,
+  modelConfigDraftKey,
+  capabilityVerified,
+  isTransientProbeError,
+  connectionStatusLabel,
+  probeFormatLabel,
+  loadAllSchoolTenants,
+  type SupplierPreset,
+  type ConfigFormValues
+} from "../features/platform-model-config/lib/modelConfig";
 import { PanelModelBindingsSection } from "./PanelModelBindingsSection";
-
-type SupplierPreset = "aliyun" | "deepseek" | "openai" | "zhipu" | "moonshot" | "anthropic" | "gemini" | "custom";
-
-interface ConfigFormValues {
-  supplier: SupplierPreset;
-  provider_key?: string;
-  display_name?: string;
-  adapter_type?: ManagedAdapterType;
-  base_url?: string;
-  api_key: string;
-  model_name: string;
-  model_version?: string;
-  region?: string;
-  enabled?: boolean;
-  is_default?: boolean;
-}
-
-interface ModelConfigDraft {
-  values: ConfigFormValues;
-  expiresAt: number;
-}
-
-const MODEL_CONFIG_DRAFT_TTL_MS = 2 * 60 * 1000;
-
-const supplierOptions = [
-  { value: "aliyun", label: "阿里云百炼" },
-  { value: "deepseek", label: "DeepSeek" },
-  { value: "openai", label: "OpenAI" },
-  { value: "zhipu", label: "智谱 AI" },
-  { value: "moonshot", label: "Moonshot / Kimi" },
-  { value: "anthropic", label: "Anthropic" },
-  { value: "gemini", label: "Google Gemini" },
-  { value: "custom", label: "其他兼容接口" }
-];
-
-const supplierDefaults: Record<SupplierPreset, Partial<ConfigFormValues>> = {
-  aliyun: { provider_key: "aliyun", display_name: "阿里云百炼", adapter_type: "openai_compatible", region: "cn" },
-  deepseek: { provider_key: "deepseek", display_name: "DeepSeek", adapter_type: "openai_compatible", region: "global" },
-  openai: { provider_key: "openai", display_name: "OpenAI", adapter_type: "openai_compatible", region: "global" },
-  zhipu: { provider_key: "zhipu", display_name: "智谱 AI", adapter_type: "openai_compatible", region: "cn" },
-  moonshot: { provider_key: "moonshot", display_name: "Moonshot / Kimi", adapter_type: "openai_compatible", region: "cn" },
-  anthropic: { provider_key: "anthropic", display_name: "Anthropic", adapter_type: "openai_compatible", region: "global" },
-  gemini: { provider_key: "gemini", display_name: "Google Gemini", adapter_type: "openai_compatible", region: "global" },
-  custom: { provider_key: "custom", display_name: "自定义供应商", adapter_type: "openai_compatible", region: "global" }
-};
-
-function formatDateTime(value?: string) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("zh-CN", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  }).format(date);
-}
-
-function presetForConfig(config: ManagedModelAPIConfig): SupplierPreset {
-  if (config.provider_key === "aliyun") return "aliyun";
-  if (config.provider_key === "deepseek") return "deepseek";
-  if (config.provider_key === "openai") return "openai";
-  if (config.provider_key === "zhipu") return "zhipu";
-  if (config.provider_key === "moonshot") return "moonshot";
-  if (config.provider_key === "anthropic") return "anthropic";
-  if (config.provider_key === "gemini") return "gemini";
-  return "custom";
-}
-
-function modelConfigDraftKey(tenantID: string, editingID?: string, credentialSourceID?: string) {
-  if (editingID) return `${tenantID}:edit:${editingID}`;
-  if (credentialSourceID) return `${tenantID}:reuse:${credentialSourceID}`;
-  return `${tenantID}:create`;
-}
-
-function capabilityVerified(config: ManagedModelAPIConfig) {
-  return config.last_capability_status === "success" && config.last_capability_probe_version === "structured-json-v3";
-}
-
-function isTransientProbeError(code?: string) {
-  return code === "provider_timeout" || code === "provider_unavailable";
-}
-
-function connectionStatusLabel(config: ManagedModelAPIConfig) {
-  if (config.last_test_status === "success") return "正常";
-  if (config.last_test_status === "temporary_unavailable") return "暂时无法验证";
-  if (config.last_test_status === "failed") return "异常";
-  return "未测试";
-}
-
-function probeFormatLabel(value?: string) {
-  if (value === "json_object") return "JSON Object 模式";
-  if (value === "json_schema") return "严格 JSON Schema";
-  if (value === "prompt_only") return "提示词约束";
-  return "—";
-}
-
-async function loadAllSchoolTenants() {
-  const schools: Tenant[] = [];
-  let cursor = "";
-  for (let page = 0; page < 20; page += 1) {
-    const response = await listTenants({ limit: 100, cursor: cursor || undefined });
-    schools.push(...response.tenants.filter((tenant) => tenant.code !== "platform"));
-    if (!response.has_more || !response.next_cursor) break;
-    cursor = response.next_cursor;
-  }
-  return schools;
-}
 
 export function PlatformModelConfigPage() {
   const queryClient = useQueryClient();
@@ -164,8 +70,7 @@ export function PlatformModelConfigPage() {
   const [filterAvailableModels, setFilterAvailableModels] = useState(false);
   const [modelsLoading, setModelsLoading] = useState(false);
   const configRequestRef = useRef(0);
-  const formDraftsRef = useRef(new Map<string, ModelConfigDraft>());
-  const formDraftTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const { clearFormDraft, saveFormDraft, restoreFormDraft } = useModelConfigDrafts(form);
   const watchedSupplier = Form.useWatch("supplier", form);
 
   const selectedSchool = useMemo(
@@ -176,34 +81,6 @@ export function PlatformModelConfigPage() {
     () => configs.find((config) => config.is_default && config.status === "active"),
     [configs]
   );
-
-  const clearFormDraft = useCallback((key: string) => {
-    formDraftsRef.current.delete(key);
-    const timer = formDraftTimersRef.current.get(key);
-    if (timer) clearTimeout(timer);
-    formDraftTimersRef.current.delete(key);
-  }, []);
-
-  const saveFormDraft = useCallback((key: string, values: ConfigFormValues) => {
-    clearFormDraft(key);
-    const draft = { values: { ...values }, expiresAt: Date.now() + MODEL_CONFIG_DRAFT_TTL_MS };
-    formDraftsRef.current.set(key, draft);
-    formDraftTimersRef.current.set(key, setTimeout(() => {
-      formDraftsRef.current.delete(key);
-      formDraftTimersRef.current.delete(key);
-    }, MODEL_CONFIG_DRAFT_TTL_MS));
-  }, [clearFormDraft]);
-
-  const restoreFormDraft = useCallback((key: string, fallback: Partial<ConfigFormValues>) => {
-    const draft = formDraftsRef.current.get(key);
-    if (!draft || draft.expiresAt <= Date.now()) {
-      clearFormDraft(key);
-      form.setFieldsValue(fallback);
-      return false;
-    }
-    form.setFieldsValue({ ...fallback, ...draft.values });
-    return true;
-  }, [clearFormDraft, form]);
 
   const loadSchools = useCallback(async () => {
     setSchoolLoading(true);
@@ -243,11 +120,6 @@ export function PlatformModelConfigPage() {
   }, [message]);
 
   useEffect(() => { void loadSchools(); }, [loadSchools]);
-  useEffect(() => () => {
-    for (const timer of formDraftTimersRef.current.values()) clearTimeout(timer);
-    formDraftTimersRef.current.clear();
-    formDraftsRef.current.clear();
-  }, []);
   useEffect(() => {
     setConfigs([]);
     void loadConfigs(selectedTenantID);
@@ -673,33 +545,22 @@ export function PlatformModelConfigPage() {
         </Space>
       </section>
 
-      <section className="platform-model-schoolbar">
-        <div className="platform-model-school-select">
-          <label htmlFor="platform-model-school">配置学校</label>
-          <Select
-            id="platform-model-school"
-            showSearch
-            optionFilterProp="label"
-            loading={schoolLoading}
-            disabled={drawerOpen || saving || Boolean(probingID)}
-            value={selectedTenantID || undefined}
-            placeholder="选择一所学校"
-            options={schools.map((school) => ({ value: school.id, label: `${school.name} · ${school.code}`, disabled: school.status !== "active" }))}
-            onChange={(tenantID) => {
-              configRequestRef.current += 1;
-              setConfigs([]);
-              setConfigLoading(true);
-              setSelectedTenantID(tenantID);
-            }}
-          />
-        </div>
-        <div className="platform-model-school-summary">
-          <span><Building2 size={15} /> 日常对话模型：{currentConfig ? `${currentConfig.display_name} · ${currentConfig.model_name} · ${connectionStatusLabel(currentConfig)}` : "本地模型"}</span>
-          <span><Zap size={15} /> {activeCount} 个可用配置</span>
-          <span><CheckCircle2 size={15} /> {healthyCount} 个连接正常</span>
-          {temporarilyUnavailableCount > 0 ? <span>{temporarilyUnavailableCount} 个暂时无法验证</span> : null}
-        </div>
-      </section>
+      <SchoolModelSelector
+        schools={schools}
+        selectedTenantID={selectedTenantID}
+        currentConfig={currentConfig}
+        loading={schoolLoading}
+        disabled={drawerOpen || saving || Boolean(probingID)}
+        activeCount={activeCount}
+        healthyCount={healthyCount}
+        temporarilyUnavailableCount={temporarilyUnavailableCount}
+        onChange={(tenantID) => {
+          configRequestRef.current += 1;
+          setConfigs([]);
+          setConfigLoading(true);
+          setSelectedTenantID(tenantID);
+        }}
+      />
 
       <Alert
         className="platform-model-security-note"

@@ -3,6 +3,10 @@
 import type { ApiTransport } from "../runtime";
 import { appendQuery, fillPath } from "../runtime";
 import type {
+  RecordSegmentAnswerInput,
+  SegmentAnswer,
+  ObjectiveGrade,
+  ScoringRule,
   PlatformSchoolListResponse,
   PlatformSchoolResponse,
   PlatformSchoolMembersResponse,
@@ -225,8 +229,14 @@ import type {
   PaperImportResponse,
   PaperImportListResponse,
   ProcessingRetryResponse,
+  ScoringSummaryResponse,
+  ScoringReadinessResponse,
   StartScoringRunRequest,
   ScoringRunResponse,
+  CreateOMRCalibrationRequest,
+  OMRCalibrationResponse,
+  ScoringRunDetailResponse,
+  ScoringRunRetryResponse,
   ScoringCommandRecovery,
   SubjectiveAIGradeRequest,
   SubjectiveAIGradeResponse,
@@ -237,6 +247,9 @@ import type {
   ReviewCommandSubmitResult,
   ReviewCommandSubmitGradeInput,
   ReviewCommandArbitrationSubmitResult,
+  ReviewCommandCreateArbitrationTaskInput,
+  ReviewCommandAssignArbitrationInput,
+  ArbitrationTaskResponse,
   ReviewCommandSubmitArbitrationInput,
   ScoreCommandSubmissionGrade,
   ScoreCommandConfirmInput,
@@ -279,6 +292,20 @@ import type {
 } from "./types";
 
 export interface operations {
+  "getExamScoringReadiness": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: ScoringReadinessResponse; };
+  "getExamScoringSummary": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: ScoringSummaryResponse; };
+  "recordSegmentAnswer": { args: { path: { "id": string; }; body: RecordSegmentAnswerInput; signal?: AbortSignal; }; response: { "answer": SegmentAnswer; }; };
+  "createRuleGrade": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: { "grade": ObjectiveGrade; }; };
+  "listSegmentAIGrades": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: { "grades": Array<ObjectiveGrade>; }; };
+  "listScoringRules": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: { "scoring_rules": Array<ScoringRule>; }; };
+  "createScoringRule": { args: { path: { "id": string; }; body: { "rule_type": string; "config": Record<string, unknown>; }; signal?: AbortSignal; }; response: { "scoring_rule": ScoringRule; }; };
+  "updateScoringRule": { args: { path: { "id": string; }; body: { "config": Record<string, unknown>; "expected_revision": number; }; signal?: AbortSignal; }; response: { "scoring_rule": ScoringRule; }; };
+  "publishScoringRule": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: { "scoring_rule": ScoringRule; }; };
+  "getScoringRun": { args: { path: { "runId": string; }; signal?: AbortSignal; }; response: ScoringRunDetailResponse; };
+  "cancelScoringRun": { args: { path: { "runId": string; }; signal?: AbortSignal; }; response: ScoringRunResponse; };
+  "retryFailedScoringRun": { args: { path: { "runId": string; }; signal?: AbortSignal; }; response: ScoringRunRetryResponse; };
+  "getOMRCalibration": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: OMRCalibrationResponse; };
+  "createOMRCalibration": { args: { path: { "id": string; }; body: CreateOMRCalibrationRequest; signal?: AbortSignal; }; response: OMRCalibrationResponse; };
   "listPlatformSchools": { args: { query?: { "q"?: string; "status"?: "active" | "disabled"; "activity"?: "today" | "7d" | "30d" | "inactive_30d" | "never"; "model_health"?: "healthy" | "warning" | "unconfigured"; "usage_window"?: "today" | "1d" | "7d" | "30d" | "90d"; "sort"?: "created_at" | "last_activity" | "token_usage" | "student_count"; "order"?: "asc" | "desc"; "limit"?: number; "cursor"?: string; }; signal?: AbortSignal; }; response: PlatformSchoolListResponse; };
   "getPlatformSchool": { args: { path: { "tenant_id": string; }; signal?: AbortSignal; }; response: PlatformSchoolResponse; };
   "listPlatformSchoolMembers": { args: { path: { "tenant_id": string; }; query?: { "q"?: string; "role"?: "school_admin" | "tenant_admin" | "teacher" | "grader" | "arbitrator" | "auditor"; "status"?: "active" | "disabled"; }; signal?: AbortSignal; }; response: PlatformSchoolMembersResponse; };
@@ -487,6 +514,9 @@ export interface operations {
   "getSubjectiveGradingBatch": { args: { path: { "batchId": string; }; signal?: AbortSignal; }; response: SubjectiveBatchResponse; };
   "recoverSubjectiveEnqueueCommand": { args: { path: { "batchId": string; }; signal?: AbortSignal; }; response: SubjectiveEnqueueCommandRecovery; };
   "submitHumanGrade": { args: { path: { "id": string; }; headers: { "Idempotency-Key": string; }; body: ReviewCommandSubmitGradeInput; signal?: AbortSignal; }; response: ReviewCommandSubmitResult; };
+  "createArbitrationTask": { args: { body: ReviewCommandCreateArbitrationTaskInput; signal?: AbortSignal; }; response: ArbitrationTaskResponse; };
+  "getArbitrationTask": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: ArbitrationTaskResponse; };
+  "assignArbitrationTask": { args: { path: { "id": string; }; body: ReviewCommandAssignArbitrationInput; signal?: AbortSignal; }; response: ArbitrationTaskResponse; };
   "submitArbitration": { args: { path: { "id": string; }; headers: { "Idempotency-Key": string; }; body: ReviewCommandSubmitArbitrationInput; signal?: AbortSignal; }; response: ReviewCommandArbitrationSubmitResult; };
   "confirmExamGrades": { args: { path: { "examId": string; }; headers: { "Idempotency-Key": string; }; body: ScoreCommandConfirmInput; signal?: AbortSignal; }; response: { "grades": Array<ScoreCommandSubmissionGrade>; }; };
   "publishExamGrades": { args: { path: { "examId": string; }; headers: { "Idempotency-Key": string; }; body: ScoreCommandPublishInput; signal?: AbortSignal; }; response: ScoreCommandPublishResult; };
@@ -530,6 +560,76 @@ export interface operations {
 
 export class EduGradeApi {
   constructor(private readonly transport: ApiTransport) {}
+
+  getExamScoringReadiness(args: operations["getExamScoringReadiness"]["args"]): Promise<operations["getExamScoringReadiness"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/scoring-readiness", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getExamScoringSummary(args: operations["getExamScoringSummary"]["args"]): Promise<operations["getExamScoringSummary"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/scoring-summary", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  recordSegmentAnswer(args: operations["recordSegmentAnswer"]["args"]): Promise<operations["recordSegmentAnswer"]["response"]> {
+    const requestPath = fillPath("/api/v1/answer-segments/{id}/answer", args.path);
+    return this.transport.request(requestPath, { method: "PUT", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  createRuleGrade(args: operations["createRuleGrade"]["args"]): Promise<operations["createRuleGrade"]["response"]> {
+    const requestPath = fillPath("/api/v1/answer-segments/{id}/rule-grade", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal });
+  }
+
+  listSegmentAIGrades(args: operations["listSegmentAIGrades"]["args"]): Promise<operations["listSegmentAIGrades"]["response"]> {
+    const requestPath = fillPath("/api/v1/answer-segments/{id}/ai-grades", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  listScoringRules(args: operations["listScoringRules"]["args"]): Promise<operations["listScoringRules"]["response"]> {
+    const requestPath = fillPath("/api/v1/questions/{id}/scoring-rules", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  createScoringRule(args: operations["createScoringRule"]["args"]): Promise<operations["createScoringRule"]["response"]> {
+    const requestPath = fillPath("/api/v1/questions/{id}/scoring-rules", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  updateScoringRule(args: operations["updateScoringRule"]["args"]): Promise<operations["updateScoringRule"]["response"]> {
+    const requestPath = fillPath("/api/v1/scoring-rules/{id}", args.path);
+    return this.transport.request(requestPath, { method: "PATCH", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  publishScoringRule(args: operations["publishScoringRule"]["args"]): Promise<operations["publishScoringRule"]["response"]> {
+    const requestPath = fillPath("/api/v1/scoring-rules/{id}/publish", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal });
+  }
+
+  getScoringRun(args: operations["getScoringRun"]["args"]): Promise<operations["getScoringRun"]["response"]> {
+    const requestPath = fillPath("/api/v1/scoring-runs/{runId}", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  cancelScoringRun(args: operations["cancelScoringRun"]["args"]): Promise<operations["cancelScoringRun"]["response"]> {
+    const requestPath = fillPath("/api/v1/scoring-runs/{runId}/cancel", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal });
+  }
+
+  retryFailedScoringRun(args: operations["retryFailedScoringRun"]["args"]): Promise<operations["retryFailedScoringRun"]["response"]> {
+    const requestPath = fillPath("/api/v1/scoring-runs/{runId}/retry-failed", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal });
+  }
+
+  getOMRCalibration(args: operations["getOMRCalibration"]["args"]): Promise<operations["getOMRCalibration"]["response"]> {
+    const requestPath = fillPath("/api/v1/omr-calibrations/{id}", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  createOMRCalibration(args: operations["createOMRCalibration"]["args"]): Promise<operations["createOMRCalibration"]["response"]> {
+    const requestPath = fillPath("/api/v1/answer-sheet-templates/{id}/omr-calibrations", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
 
   listPlatformSchools(args: operations["listPlatformSchools"]["args"] = {}): Promise<operations["listPlatformSchools"]["response"]> {
     const requestPath = appendQuery("/api/v1/platform/schools", args.query);
@@ -1569,6 +1669,21 @@ export class EduGradeApi {
   submitHumanGrade(args: operations["submitHumanGrade"]["args"]): Promise<operations["submitHumanGrade"]["response"]> {
     const requestPath = fillPath("/api/v1/review-tasks/{id}/submit", args.path);
     return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body), headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) });
+  }
+
+  createArbitrationTask(args: operations["createArbitrationTask"]["args"]): Promise<operations["createArbitrationTask"]["response"]> {
+    const requestPath = "/api/v1/arbitration-tasks";
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  getArbitrationTask(args: operations["getArbitrationTask"]["args"]): Promise<operations["getArbitrationTask"]["response"]> {
+    const requestPath = fillPath("/api/v1/arbitration-tasks/{id}", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  assignArbitrationTask(args: operations["assignArbitrationTask"]["args"]): Promise<operations["assignArbitrationTask"]["response"]> {
+    const requestPath = fillPath("/api/v1/arbitration-tasks/{id}/assign", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
   }
 
   submitArbitration(args: operations["submitArbitration"]["args"]): Promise<operations["submitArbitration"]["response"]> {

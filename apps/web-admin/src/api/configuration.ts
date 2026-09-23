@@ -1,4 +1,7 @@
+import { EduGradeApi } from "@edugrade/sdk";
 import { apiClient } from "./client";
+
+const generatedApi = new EduGradeApi(apiClient);
 
 export interface LayoutRegion {
   id: string;
@@ -82,90 +85,11 @@ export interface ExamTemplateBinding {
   updated_at: string;
 }
 
-export type OMRCalibrationStatus = "draft" | "approved" | "revoked" | "discarded";
-
-export interface OMRCalibrationSummary {
-  total_count: number;
-  labeled_count: number;
-  pending_count: number;
-  match_count: number;
-  mismatch_count: number;
-  eligible_count: number;
-  eligible_match_count: number;
-  eligible_mismatch_count: number;
-  option_coverage: Record<string, number>;
-  question_coverage: Record<string, number>;
-  stratum_coverage: Record<"selected_high" | "selected_low" | "blank" | "ambiguous", number>;
-  ready_to_approve: boolean;
-  blockers: string[];
-}
-
-export interface OMRCalibrationSession {
-  id: string;
-  tenant_id: string;
-  template_id: string;
-  template_content_hash: string;
-  scope_type: "question" | "template";
-  question_id?: string;
-  question_ids: string[];
-  question_type: "single_choice" | "true_false" | "template";
-  profile_version: string;
-  profile_hash: string;
-  reference_file_asset_id: string;
-  reference_sha256: string;
-  option_labels: string[];
-  sample_seed: string;
-  sample_count: number;
-  minimum_samples: number;
-  minimum_samples_per_option: number;
-  minimum_samples_per_stratum: number;
-  minimum_confidence: number;
-  inherited_from_session_id?: string;
-  status: OMRCalibrationStatus;
-  created_by: string;
-  created_at: string;
-  approved_by?: string;
-  approved_at?: string;
-  approval_note?: string;
-  evidence_hash?: string;
-  revoked_by?: string;
-  revoked_at?: string;
-  revoke_reason?: string;
-  discarded_by?: string;
-  discarded_at?: string;
-  discard_reason?: string;
-  updated_at: string;
-  summary: OMRCalibrationSummary;
-}
-
-export interface OMRCalibrationCase {
-  id: string;
-  calibration_id: string;
-  omr_run_id: string;
-  answer_segment_id: string;
-  question_id: string;
-  question_no: string;
-  question_type: "single_choice" | "multiple_choice" | "true_false";
-  option_labels: string[];
-  sample_stratum: "selected_high" | "selected_low" | "blank" | "ambiguous";
-  crop_sha256: string;
-  observed_decision: string;
-  observed_options: string[];
-  observed_confidence: number;
-  measurements: Array<Record<string, unknown>>;
-  expected_options?: string[];
-  matches?: boolean;
-  labeled_by?: string;
-  labeled_at?: string;
-  created_at: string;
-  overlay_file_asset_id?: string;
-  segment_image_url?: string;
-}
-
-export interface OMRCalibrationDetail {
-  session: OMRCalibrationSession;
-  cases: OMRCalibrationCase[];
-}
+export type OMRCalibrationStatus = import("@edugrade/sdk").OMRCalibrationSession["status"];
+export type OMRCalibrationSummary = import("@edugrade/sdk").OMRCalibrationSummary;
+export type OMRCalibrationSession = import("@edugrade/sdk").OMRCalibrationSession;
+export type OMRCalibrationCase = import("@edugrade/sdk").OMRCalibrationCase;
+export type OMRCalibrationDetail = import("@edugrade/sdk").OMRCalibrationDetail;
 
 export interface TemplatePayload {
   exam_paper_id: string;
@@ -243,14 +167,11 @@ export async function listOMRCalibrations(templateId: string) {
 }
 
 export async function createOMRCalibration(templateId: string) {
-  return apiClient.request<{ calibration: OMRCalibrationDetail }>(`/api/v1/answer-sheet-templates/${encodeURIComponent(templateId)}/omr-calibrations`, {
-    method: "POST",
-    body: JSON.stringify({})
-  });
+  return generatedApi.createOMRCalibration({ path: { id: templateId }, body: {} });
 }
 
 export async function getOMRCalibration(calibrationId: string) {
-  return apiClient.request<{ calibration: OMRCalibrationDetail }>(`/api/v1/omr-calibrations/${encodeURIComponent(calibrationId)}`);
+  return generatedApi.getOMRCalibration({ path: { id: calibrationId } });
 }
 
 export async function labelOMRCalibrationCase(calibrationId: string, caseId: string, expectedOptions: string[]) {

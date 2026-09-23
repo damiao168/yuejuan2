@@ -1,0 +1,26 @@
+body {
+  margin: 0;
+  min-width: 320px;
+  color: var(--text);
+  background: var(--bg);
+  font-family: Inter, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.login-screen {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background:
+    linear-gradient(90deg, rgba(22, 119, 255, 0.08), transparent 45%),
+    repeating-linear-gradient(0deg, rgba(31, 35, 41, 0.04) 0, rgba(31, 35, 41, 0.04) 1px, transparent 1px, transparent 34px),
+    var(--bg);
+}
+

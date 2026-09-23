@@ -1,0 +1,265 @@
+.arbitration-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.arbitration-filterbar,
+.arbitration-queue-panel,
+.arbitration-context-row,
+.arbitration-evidence-panel,
+.arbitration-reviewer-panel,
+.arbitration-decision-panel,
+.arbitration-audit-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.arbitration-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.arbitration-topbar h1,
+.arbitration-evidence-panel h2,
+.arbitration-reviewer-panel h2,
+.arbitration-decision-panel h2,
+.arbitration-audit-panel h2 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.arbitration-topbar h1 {
+  font-size: var(--eg-font-title);
+  line-height: 1.2;
+}
+
+.arbitration-topbar p,
+.arbitration-evidence-panel p,
+.arbitration-reviewer-panel p,
+.arbitration-decision-panel p,
+.arbitration-audit-panel p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.arbitration-filterbar {
+  display: grid;
+  grid-template-columns: minmax(160px, 180px) minmax(220px, 240px) minmax(260px, 1fr) max-content;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+}
+
+.arbitration-filterbar > .toolbar-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.arbitration-filterbar > .ant-input-affix-wrapper {
+  min-width: 0;
+}
+
+.arbitration-filter-count {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.arbitration-queue-panel {
+  min-width: 0;
+  padding: 12px;
+}
+
+.arbitration-queue-panel .ant-table-wrapper {
+  margin-top: 0;
+}
+
+.arbitration-queue-panel .ant-table-row {
+  cursor: pointer;
+}
+
+.arbitration-row-active td,
+.arbitration-queue-panel .ant-table-row:hover td {
+  background: var(--hover-bg) !important;
+}
+
+.arbitration-exam-cell {
+  display: block;
+  min-width: 0;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arbitration-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
+}
+
+.arbitration-main,
+.arbitration-main-empty {
+  min-width: 0;
+}
+
+.arbitration-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.arbitration-main-empty {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.arbitration-context-row,
+.arbitration-evidence-panel,
+.arbitration-reviewer-panel,
+.arbitration-decision-panel {
+  min-width: 0;
+  padding: 12px;
+}
+
+.arbitration-decision-panel {
+  position: sticky;
+  top: 92px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.panel-head.compact {
+  margin-bottom: 8px;
+}
+
+.arbitration-text-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.arbitration-text-grid > div,
+.arbitration-json-view {
+  min-width: 0;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.arbitration-text-grid strong {
+  display: block;
+  padding: 10px 12px 0;
+}
+
+.arbitration-text-grid pre,
+.arbitration-json-view {
+  min-height: 220px;
+  max-height: 420px;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: Consolas, "JetBrains Mono", monospace;
+  font-size: var(--eg-font-body);
+  line-height: 1.6;
+}
+
+.arbitration-rubric-item {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.arbitration-rubric-item span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arbitration-score-compare {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.arbitration-score-compare > div,
+.final-grade-result {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.arbitration-score-compare span,
+.arbitration-score-compare small,
+.arbitration-score-compare em,
+.final-grade-result span {
+  color: var(--text-muted);
+}
+
+.arbitration-score-compare strong,
+.final-grade-result strong {
+  font-size: 1.75rem;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.arbitration-score-compare small,
+.arbitration-score-compare em,
+.final-grade-result span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arbitration-score-compare em {
+  font-style: normal;
+  font-size: var(--eg-font-caption);
+}
+
+.arbitration-audit-panel {
+  padding: 12px;
+}
+
+.arbitration-audit-item {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(120px, 1.2fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.arbitration-audit-item strong,
+.arbitration-audit-item span,
+.arbitration-audit-item small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arbitration-audit-item span,
+.arbitration-audit-item small {
+  color: var(--text-muted);
+}
+

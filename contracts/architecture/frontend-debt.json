@@ -1,0 +1,8 @@
+{
+  "page_max_lines": 700,
+  "css_max_lines": 700,
+  "legacy_page_max_lines": {},
+  "legacy_css_max_lines": {
+    "apps/web-admin/src/styles.css": 29
+  }
+}

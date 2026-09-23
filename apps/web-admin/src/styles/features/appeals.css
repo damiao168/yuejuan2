@@ -1,0 +1,47 @@
+/* Appeal v2: full-width queue followed by a focused case workspace. */
+.appeal-shell-v2 { display: grid; gap: 14px; }
+.appeal-shell-v2 .appeal-summary-strip.compact { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.appeal-queue-panel, .appeal-case-panel { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.appeal-queue-panel { padding: 16px; }
+.appeal-queue-head, .appeal-case-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.appeal-queue-head { margin-bottom: 12px; }
+.appeal-queue-head h2, .appeal-case-head h2, .appeal-evidence-main h3, .appeal-decision-panel h3 { margin: 0; }
+.appeal-queue-head p, .appeal-case-head p { margin: 4px 0 0; color: var(--text-muted); }
+.appeal-queue-head .ant-input-affix-wrapper { width: min(360px, 40vw); }
+.appeal-table-primary { display: grid; gap: 3px; }
+.appeal-table-primary span { color: var(--text-muted); font-size: var(--eg-font-caption); }
+.appeal-case-panel { overflow: hidden; }
+.appeal-case-head { padding: 18px 20px; border-bottom: 1px solid var(--border); }
+.appeal-case-head h2 { font-size: 1.25rem; }
+.appeal-case-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; }
+.appeal-evidence-main { display: grid; padding: 0 20px; }
+.appeal-evidence-main > section { padding: 20px 0; border-bottom: 1px solid var(--border); }
+.appeal-evidence-main > section:last-child { border-bottom: 0; }
+.appeal-evidence-main h3 { margin-bottom: 12px; font-size: var(--eg-font-reading); }
+.appeal-reason-box { display: grid; justify-items: start; gap: 8px; }
+.appeal-reason-box p, .appeal-review-note { margin: 0; line-height: 1.75; }
+.appeal-answer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.appeal-answer-grid > div { min-height: 126px; padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: #fafbfc; }
+.appeal-answer-grid span { color: var(--text-muted); font-size: var(--eg-font-caption); }
+.appeal-answer-grid p { margin: 8px 0 0; white-space: pre-wrap; line-height: 1.7; }
+.appeal-decision-panel { display: grid; align-content: start; gap: 12px; padding: 20px; border-left: 1px solid var(--border); background: #fbfcfe; }
+.appeal-decision-panel .ant-select, .appeal-decision-panel .ant-input-number { width: 100%; }
+.appeal-routing { display: grid; gap: 5px; padding: 13px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+.appeal-routing span, .appeal-routing small { color: var(--text-muted); }
+.appeal-routing small { line-height: 1.6; }
+.appeal-reassign { padding: 10px 0; }
+.appeal-reassign summary { margin-bottom: 10px; color: var(--primary); cursor: pointer; }
+.appeal-reassign .ant-btn { width: 100%; margin-top: 8px; }
+.appeal-decision-divider { border-top: 1px solid var(--border); }
+.appeal-shell-v2.teacher .appeal-case-grid { grid-template-columns: minmax(0, 1fr) 360px; }
+@media (max-width: 1080px) {
+  .appeal-case-grid, .appeal-shell-v2.teacher .appeal-case-grid { grid-template-columns: 1fr; }
+  .appeal-decision-panel { border-top: 1px solid var(--border); border-left: 0; }
+}
+@media (max-width: 720px) {
+  .appeal-queue-head, .appeal-case-head { flex-direction: column; }
+  .appeal-queue-head .ant-input-affix-wrapper { width: 100%; }
+  .appeal-answer-grid { grid-template-columns: 1fr; }
+  .appeal-shell-v2 .appeal-summary-strip.compact { grid-template-columns: 1fr; }
+}
+

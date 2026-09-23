@@ -1,0 +1,170 @@
+.login-panel {
+  width: min(440px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px;
+}
+
+.login-brand,
+.brand-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.login-brand {
+  margin-bottom: 18px;
+}
+
+.login-brand h1 {
+  margin: 0;
+  font-size: 1.625rem;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.login-brand p,
+.section-head p,
+.page-heading p,
+.metric-tile span,
+.agent-row span,
+.muted {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.brand-mark {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: #fff;
+  font-weight: 800;
+}
+
+.brand-mark.large {
+  width: 48px;
+  height: 48px;
+  font-size: 1.375rem;
+}
+
+.login-form {
+  margin-top: 24px;
+}
+
+.login-method-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.login-method-switch button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.login-method-switch button:hover { color: var(--text); }
+.login-method-switch button.is-active {
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(23, 32, 51, .12);
+  font-weight: 600;
+}
+
+.login-method-panel { animation: login-method-enter 180ms ease-out both; }
+.login-wechat-panel .login-form { display: grid; }
+.wechat-qr-stage {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 2px 0 8px;
+  text-align: center;
+}
+.wechat-qr-stage img {
+  width: 224px;
+  height: 224px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+.wechat-qr-stage strong { font-size: 16px; }
+.wechat-qr-stage span { color: var(--text-muted); font-size: var(--eg-font-caption); }
+.wechat-security-note {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+  margin: 12px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+.wechat-security-note svg { flex: 0 0 auto; margin-top: 1px; color: #1f9d55; }
+
+@keyframes login-method-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.login-tenant-context {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 10px 12px;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.login-panel > .ant-alert,
+.login-panel form > .ant-alert {
+  margin-bottom: 18px;
+}
+
+.login-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -4px 0 20px;
+}
+
+.login-options span {
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+  white-space: nowrap;
+}
+
+.login-public-device-alert {
+  margin: -8px 0 18px;
+}
+

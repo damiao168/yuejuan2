@@ -11,62 +11,64 @@ import (
 )
 
 type routerGuards struct {
-	authenticate                 func(http.Handler) http.Handler
-	requireAuth                  func(http.Handler) http.Handler
-	requireAccount               func(http.HandlerFunc) http.Handler
-	requireMFAAccount            func(http.HandlerFunc) http.Handler
-	requireLockedAccount         func(http.HandlerFunc) http.Handler
-	requirePermission            func(string, http.HandlerFunc) http.Handler
-	requireRecentPermission      func(string, http.HandlerFunc) http.Handler
-	requireOrgManage             func(http.HandlerFunc) http.Handler
-	requireStudentImport         func(http.HandlerFunc) http.Handler
-	requireExamManage            func(http.HandlerFunc) http.Handler
-	requireAssessmentRead        func(http.HandlerFunc) http.Handler
-	requireDashboardRead         func(http.HandlerFunc) http.Handler
-	requireQuestionBank          func(string, http.HandlerFunc) http.Handler
-	requireQuestionBankAny       func(http.HandlerFunc, ...string) http.Handler
-	requireQuestionBankImport    func(bool, http.HandlerFunc) http.Handler
-	requireFileManage            func(http.HandlerFunc) http.Handler
-	requireTaskScopedFileManage  func(string, http.HandlerFunc) http.Handler
-	requireSubmissionManage      func(http.HandlerFunc) http.Handler
-	requireCaptureManage         func(http.HandlerFunc) http.Handler
-	requireOCRManage             func(http.HandlerFunc) http.Handler
-	requireSegmentManage         func(http.HandlerFunc) http.Handler
-	requireSegmentEvidenceRead   func(http.HandlerFunc) http.Handler
-	requireOrchestratorManage    func(http.HandlerFunc) http.Handler
-	requireGradingManage         func(http.HandlerFunc) http.Handler
-	requireEvidenceManage        func(http.HandlerFunc) http.Handler
-	requireReviewManage          func(http.HandlerFunc) http.Handler
-	requireReviewWork            func(http.HandlerFunc) http.Handler
-	requireOriginalReviewImage   func(http.HandlerFunc) http.Handler
-	requireArbitrationManage     func(http.HandlerFunc) http.Handler
-	requireArbitrationWork       func(http.HandlerFunc) http.Handler
-	requireScoreManage           func(http.HandlerFunc) http.Handler
-	requireRosterManage          func(http.HandlerFunc) http.Handler
-	requireStudentGradeAccess    func(http.HandlerFunc) http.Handler
-	requireAppealCreate          func(http.HandlerFunc) http.Handler
-	requireAppealRead            func(http.HandlerFunc) http.Handler
-	requireAppealManage          func(http.HandlerFunc) http.Handler
-	requireAppealWork            func(http.HandlerFunc) http.Handler
-	requireQuestionAppealRead    func(http.HandlerFunc) http.Handler
-	requireAuditRead             func(http.HandlerFunc) http.Handler
-	requireReportRead            func(http.HandlerFunc) http.Handler
-	requireSystemRead            func(http.HandlerFunc) http.Handler
-	requireOnboardingRead        func(http.HandlerFunc) http.Handler
-	requireSchoolAdmin           func(http.HandlerFunc) http.Handler
-	requireModelRead             func(http.HandlerFunc) http.Handler
-	requirePlatformModelManage   func(http.HandlerFunc) http.Handler
-	requirePlatformSchoolRead    func(http.HandlerFunc) http.Handler
-	requireModelProviderManage   func(http.HandlerFunc) http.Handler
-	requireModelPolicyManage     func(http.HandlerFunc) http.Handler
-	requireModelEvaluationManage func(http.HandlerFunc) http.Handler
-	requireOCRAvailabilityRead   func(http.HandlerFunc) http.Handler
-	requireWorkerExecute         func(http.HandlerFunc) http.Handler
-	requireWorkerRead            func(http.HandlerFunc) http.Handler
-	withScopedExam               func(http.HandlerFunc) http.HandlerFunc
-	withWorkerTaskScope          func(http.HandlerFunc) http.HandlerFunc
-	withWorkerTaskSource         func(string, string, http.HandlerFunc) http.HandlerFunc
-	withWorkerTaskPayload        func(string, string, http.HandlerFunc) http.HandlerFunc
+	authenticate                    func(http.Handler) http.Handler
+	requireAuth                     func(http.Handler) http.Handler
+	requireAccount                  func(http.HandlerFunc) http.Handler
+	requireMFAAccount               func(http.HandlerFunc) http.Handler
+	requireLockedAccount            func(http.HandlerFunc) http.Handler
+	requirePermission               func(string, http.HandlerFunc) http.Handler
+	requireRecentPermission         func(string, http.HandlerFunc) http.Handler
+	requireOrgManage                func(http.HandlerFunc) http.Handler
+	requireStudentImport            func(http.HandlerFunc) http.Handler
+	requireExamManage               func(http.HandlerFunc) http.Handler
+	requireAssessmentRead           func(http.HandlerFunc) http.Handler
+	requireDashboardRead            func(http.HandlerFunc) http.Handler
+	requireQuestionBank             func(string, http.HandlerFunc) http.Handler
+	requireQuestionBankAny          func(http.HandlerFunc, ...string) http.Handler
+	requireQuestionBankImport       func(bool, http.HandlerFunc) http.Handler
+	requireFileManage               func(http.HandlerFunc) http.Handler
+	requireTaskScopedFileManage     func(string, http.HandlerFunc) http.Handler
+	requireSubmissionManage         func(http.HandlerFunc) http.Handler
+	requireCaptureManage            func(http.HandlerFunc) http.Handler
+	requireOCRManage                func(http.HandlerFunc) http.Handler
+	requireSegmentManage            func(http.HandlerFunc) http.Handler
+	requireSegmentEvidenceRead      func(http.HandlerFunc) http.Handler
+	requireOrchestratorManage       func(http.HandlerFunc) http.Handler
+	requireGradingManage            func(http.HandlerFunc) http.Handler
+	requireEvidenceManage           func(http.HandlerFunc) http.Handler
+	requireReviewManage             func(http.HandlerFunc) http.Handler
+	requireReviewWork               func(http.HandlerFunc) http.Handler
+	requireOriginalReviewImage      func(http.HandlerFunc) http.Handler
+	requireArbitrationManage        func(http.HandlerFunc) http.Handler
+	requireArbitrationWork          func(http.HandlerFunc) http.Handler
+	requireScoreManage              func(http.HandlerFunc) http.Handler
+	requireRosterManage             func(http.HandlerFunc) http.Handler
+	requireStudentGradeAccess       func(http.HandlerFunc) http.Handler
+	requireAppealCreate             func(http.HandlerFunc) http.Handler
+	requireAppealRead               func(http.HandlerFunc) http.Handler
+	requireAppealManage             func(http.HandlerFunc) http.Handler
+	requireAppealWork               func(http.HandlerFunc) http.Handler
+	requireQuestionAppealRead       func(http.HandlerFunc) http.Handler
+	requireAuditRead                func(http.HandlerFunc) http.Handler
+	requireReportRead               func(http.HandlerFunc) http.Handler
+	requireSystemRead               func(http.HandlerFunc) http.Handler
+	requireOnboardingRead           func(http.HandlerFunc) http.Handler
+	requireSchoolAdmin              func(http.HandlerFunc) http.Handler
+	requireModelRead                func(http.HandlerFunc) http.Handler
+	requirePlatformModelRead        func(http.HandlerFunc) http.Handler
+	requirePlatformManagedAPIManage func(http.HandlerFunc) http.Handler
+	requirePlatformPanelManage      func(http.HandlerFunc) http.Handler
+	requirePlatformSchoolRead       func(http.HandlerFunc) http.Handler
+	requireModelProviderManage      func(http.HandlerFunc) http.Handler
+	requireModelPolicyManage        func(http.HandlerFunc) http.Handler
+	requireModelEvaluationManage    func(http.HandlerFunc) http.Handler
+	requireOCRAvailabilityRead      func(http.HandlerFunc) http.Handler
+	requireWorkerExecute            func(http.HandlerFunc) http.Handler
+	requireWorkerRead               func(http.HandlerFunc) http.Handler
+	withScopedExam                  func(http.HandlerFunc) http.HandlerFunc
+	withWorkerTaskScope             func(http.HandlerFunc) http.HandlerFunc
+	withWorkerTaskSource            func(string, string, http.HandlerFunc) http.HandlerFunc
+	withWorkerTaskPayload           func(string, string, http.HandlerFunc) http.HandlerFunc
 }
 
 func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuards {
@@ -238,14 +240,21 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 	requireModelRead := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequirePermission("model:read")(handler))
 	}
-	requirePlatformModelManage := func(handler http.HandlerFunc) http.Handler {
+	requirePlatformModelPermission := func(permission string, handler http.HandlerFunc) http.Handler {
 		return authenticate(auth.RequireRequestResourceBoundary(resourceResolver)(auth.RequireAnyRole("platform_admin")(
-			// A signed-in platform administrator may manage encrypted provider
-			// credentials without typing the same login password again. Current
-			// role/permission/resource checks still run on every request, and the
-			// model-governance store keeps the existing immutable audit trail.
-			auth.RequirePermission("model:provider:manage")(idempotent(handler)),
+			// Role, permission and resource checks run on every request. The
+			// model-governance store keeps the audit trail for writes.
+			auth.RequirePermission(permission)(idempotent(handler)),
 		)))
+	}
+	requirePlatformModelRead := func(handler http.HandlerFunc) http.Handler {
+		return requirePlatformModelPermission("model:read", handler)
+	}
+	requirePlatformManagedAPIManage := func(handler http.HandlerFunc) http.Handler {
+		return requirePlatformModelPermission("model:managed_api:manage", handler)
+	}
+	requirePlatformPanelManage := func(handler http.HandlerFunc) http.Handler {
+		return requirePlatformModelPermission("model:panel:manage", handler)
 	}
 	requirePlatformSchoolRead := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequirePlatformAdmin(
@@ -293,61 +302,63 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 		return workerruntime.TaskScope(workerRuntimeStore)(guarded).ServeHTTP
 	}
 	return routerGuards{
-		authenticate:                 authenticate,
-		requireAuth:                  requireAuth,
-		requireAccount:               requireAccount,
-		requireMFAAccount:            requireMFAAccount,
-		requireLockedAccount:         requireLockedAccount,
-		requirePermission:            requirePermission,
-		requireRecentPermission:      requireRecentPermission,
-		requireOrgManage:             requireOrgManage,
-		requireStudentImport:         requireStudentImport,
-		requireExamManage:            requireExamManage,
-		requireAssessmentRead:        requireAssessmentRead,
-		requireDashboardRead:         requireDashboardRead,
-		requireQuestionBank:          requireQuestionBank,
-		requireQuestionBankAny:       requireQuestionBankAny,
-		requireQuestionBankImport:    requireQuestionBankImport,
-		requireFileManage:            requireFileManage,
-		requireTaskScopedFileManage:  requireTaskScopedFileManage,
-		requireSubmissionManage:      requireSubmissionManage,
-		requireCaptureManage:         requireCaptureManage,
-		requireOCRManage:             requireOCRManage,
-		requireSegmentManage:         requireSegmentManage,
-		requireSegmentEvidenceRead:   requireSegmentEvidenceRead,
-		requireOrchestratorManage:    requireOrchestratorManage,
-		requireGradingManage:         requireGradingManage,
-		requireEvidenceManage:        requireEvidenceManage,
-		requireReviewManage:          requireReviewManage,
-		requireReviewWork:            requireReviewWork,
-		requireOriginalReviewImage:   requireOriginalReviewImage,
-		requireArbitrationManage:     requireArbitrationManage,
-		requireArbitrationWork:       requireArbitrationWork,
-		requireScoreManage:           requireScoreManage,
-		requireRosterManage:          requireRosterManage,
-		requireStudentGradeAccess:    requireStudentGradeAccess,
-		requireAppealCreate:          requireAppealCreate,
-		requireAppealRead:            requireAppealRead,
-		requireAppealManage:          requireAppealManage,
-		requireAppealWork:            requireAppealWork,
-		requireQuestionAppealRead:    requireQuestionAppealRead,
-		requireAuditRead:             requireAuditRead,
-		requireReportRead:            requireReportRead,
-		requireSystemRead:            requireSystemRead,
-		requireOnboardingRead:        requireOnboardingRead,
-		requireSchoolAdmin:           requireSchoolAdmin,
-		requireModelRead:             requireModelRead,
-		requirePlatformModelManage:   requirePlatformModelManage,
-		requirePlatformSchoolRead:    requirePlatformSchoolRead,
-		requireModelProviderManage:   requireModelProviderManage,
-		requireModelPolicyManage:     requireModelPolicyManage,
-		requireModelEvaluationManage: requireModelEvaluationManage,
-		requireOCRAvailabilityRead:   requireOCRAvailabilityRead,
-		requireWorkerExecute:         requireWorkerExecute,
-		requireWorkerRead:            requireWorkerRead,
-		withScopedExam:               withScopedExam,
-		withWorkerTaskScope:          withWorkerTaskScope,
-		withWorkerTaskSource:         withWorkerTaskSource,
-		withWorkerTaskPayload:        withWorkerTaskPayload,
+		authenticate:                    authenticate,
+		requireAuth:                     requireAuth,
+		requireAccount:                  requireAccount,
+		requireMFAAccount:               requireMFAAccount,
+		requireLockedAccount:            requireLockedAccount,
+		requirePermission:               requirePermission,
+		requireRecentPermission:         requireRecentPermission,
+		requireOrgManage:                requireOrgManage,
+		requireStudentImport:            requireStudentImport,
+		requireExamManage:               requireExamManage,
+		requireAssessmentRead:           requireAssessmentRead,
+		requireDashboardRead:            requireDashboardRead,
+		requireQuestionBank:             requireQuestionBank,
+		requireQuestionBankAny:          requireQuestionBankAny,
+		requireQuestionBankImport:       requireQuestionBankImport,
+		requireFileManage:               requireFileManage,
+		requireTaskScopedFileManage:     requireTaskScopedFileManage,
+		requireSubmissionManage:         requireSubmissionManage,
+		requireCaptureManage:            requireCaptureManage,
+		requireOCRManage:                requireOCRManage,
+		requireSegmentManage:            requireSegmentManage,
+		requireSegmentEvidenceRead:      requireSegmentEvidenceRead,
+		requireOrchestratorManage:       requireOrchestratorManage,
+		requireGradingManage:            requireGradingManage,
+		requireEvidenceManage:           requireEvidenceManage,
+		requireReviewManage:             requireReviewManage,
+		requireReviewWork:               requireReviewWork,
+		requireOriginalReviewImage:      requireOriginalReviewImage,
+		requireArbitrationManage:        requireArbitrationManage,
+		requireArbitrationWork:          requireArbitrationWork,
+		requireScoreManage:              requireScoreManage,
+		requireRosterManage:             requireRosterManage,
+		requireStudentGradeAccess:       requireStudentGradeAccess,
+		requireAppealCreate:             requireAppealCreate,
+		requireAppealRead:               requireAppealRead,
+		requireAppealManage:             requireAppealManage,
+		requireAppealWork:               requireAppealWork,
+		requireQuestionAppealRead:       requireQuestionAppealRead,
+		requireAuditRead:                requireAuditRead,
+		requireReportRead:               requireReportRead,
+		requireSystemRead:               requireSystemRead,
+		requireOnboardingRead:           requireOnboardingRead,
+		requireSchoolAdmin:              requireSchoolAdmin,
+		requireModelRead:                requireModelRead,
+		requirePlatformModelRead:        requirePlatformModelRead,
+		requirePlatformManagedAPIManage: requirePlatformManagedAPIManage,
+		requirePlatformPanelManage:      requirePlatformPanelManage,
+		requirePlatformSchoolRead:       requirePlatformSchoolRead,
+		requireModelProviderManage:      requireModelProviderManage,
+		requireModelPolicyManage:        requireModelPolicyManage,
+		requireModelEvaluationManage:    requireModelEvaluationManage,
+		requireOCRAvailabilityRead:      requireOCRAvailabilityRead,
+		requireWorkerExecute:            requireWorkerExecute,
+		requireWorkerRead:               requireWorkerRead,
+		withScopedExam:                  withScopedExam,
+		withWorkerTaskScope:             withWorkerTaskScope,
+		withWorkerTaskSource:            withWorkerTaskSource,
+		withWorkerTaskPayload:           withWorkerTaskPayload,
 	}
 }

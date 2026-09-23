@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, App, Button, Collapse, Descriptions, Empty, Input, InputNumber, List, Select, Space, Tabs, type TableColumnsType } from "antd";
+import { Alert, App, Button, Descriptions, Empty, Input, InputNumber, Select, Space, Tabs, type TableColumnsType } from "antd";
 import { CheckCircle2, ClipboardCheck, Gavel, RefreshCw, ScrollText, Search, UserCheck } from "lucide-react";
 import { ApiClientError, getSafeUserText, getUserErrorMessage } from "../api/client";
 import { listAuditLogs, type AuditLog } from "../api/audit";
 import { listExams } from "../api/exams";
-import { listQuestions, type Question, type RubricPoint } from "../api/papers";
+import { listQuestions, type Question } from "../api/papers";
 import {
   assignArbitrationTask,
   getArbitrationTask,
@@ -17,10 +17,11 @@ import type { SessionUser } from "../auth/session";
 import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
 import { ResponsiveTable } from "../components/ResponsiveTable";
 import { StatusTag } from "../components/StatusTag";
-import type { StatusTone } from "../types";
 import { hashQueryParam } from "../router/query";
 import { GoldCoverageGaps } from "../features/gold-papers";
 import { AnswerGroupingDrawer } from "../features/answer-groups";
+import { ArbitrationAiTab, ArbitrationAuditList, ArbitrationContextTab, ArbitrationRubricTab, ArbitrationScoreComparison } from "./ArbitrationPanels";
+import { activeStatusMatched, formatScore, formatTime, statusLabels, taskTone } from "./arbitrationPresentation.model";
 
 type ScopeFilter = "mine" | "all";
 type StatusFilter = "active" | "pending" | "assigned" | "submitted";
@@ -49,25 +50,6 @@ const scopeOptions: { label: string; value: ScopeFilter }[] = [
   { label: "全部任务", value: "all" }
 ];
 
-const statusLabels: Record<string, string> = {
-  pending: "待分配",
-  assigned: "已分配",
-  submitted: "已提交"
-};
-
-const auditActionLabels: Record<string, string> = {
-  "arbitration.task_created": "仲裁任务创建",
-  "arbitration.task_assigned": "仲裁任务分配",
-  "arbitration.submitted": "仲裁结果提交",
-  "final_grade.created": "最终分写入",
-  "review.double_mark_auto_finalized": "双评自动定分"
-};
-
-const auditTargetLabels: Record<string, string> = {
-  arbitration_task: "仲裁任务",
-  final_grade: "最终分"
-};
-
 const finalGradeSourceLabels: Record<string, string> = {
   ai: "AI 评分",
   human: "人工评分",
@@ -83,48 +65,12 @@ function formatError(error: unknown) {
   return getUserErrorMessage(error, "操作失败，请稍后重试");
 }
 
-function formatTime(value?: string) {
-  if (!value) {
-    return "-";
-  }
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString("zh-CN", { hour12: false });
-}
-
-function formatScore(value?: number | null) {
-  if (value === undefined || value === null || !Number.isFinite(value)) {
-    return "-";
-  }
-  return Number(value.toFixed(1)).toString();
-}
-
-function taskTone(status: string): StatusTone {
-  if (status === "submitted") {
-    return "success";
-  }
-  if (status === "pending") {
-    return "warning";
-  }
-  if (status === "assigned") {
-    return "processing";
-  }
-  return "neutral";
-}
-
-function pointLabel(point: RubricPoint) {
-  return `${point.description || point.id} (${formatScore(point.score)} 分)`;
-}
-
 function createInitialDraft(task?: ArbitrationTask): DecisionDraft {
   return {
     finalScore: task?.final_score ?? null,
     reason: task?.reason ?? "",
     studentFeedback: task?.student_feedback ?? ""
   };
-}
-
-function activeStatusMatched(task: ArbitrationTask) {
-  return task.status === "pending" || task.status === "assigned";
 }
 
 async function loadQuestion(task: ArbitrationTask) {
@@ -469,130 +415,6 @@ export function ArbitrationPage({ canAssign, canWork, canReadAudit, canReadExams
     }
   ];
 
-  const renderContextTab = () => {
-    if (!detail) {
-      return <EmptyState title="暂无详情" description="选择仲裁任务后展示作答与识别文本。" />;
-    }
-    return (
-      <div className="arbitration-text-grid">
-        <div>
-          <strong>原始答案</strong>
-          <pre>{detail.task.context?.raw_answer || "暂无原始作答内容"}</pre>
-        </div>
-        <div>
-          <strong>识别文本</strong>
-          <pre>{detail.task.context?.ocr_text || "暂无识别文本"}</pre>
-        </div>
-      </div>
-    );
-  };
-
-  const renderAiTab = () => {
-    if (!aiSuggestion || Object.keys(aiSuggestion).length === 0) {
-      return <EmptyState title="暂无 AI 建议" description="该任务没有 AI 评分建议。" />;
-    }
-    const suggestedScore = typeof aiSuggestion.suggested_score === "number" && Number.isFinite(aiSuggestion.suggested_score) ? aiSuggestion.suggested_score : undefined;
-    const confidence = typeof aiSuggestion.confidence === "number" && Number.isFinite(aiSuggestion.confidence) ? aiSuggestion.confidence : undefined;
-    const comments = typeof aiSuggestion.comments === "string" && aiSuggestion.comments.trim() ? aiSuggestion.comments : undefined;
-    const restEntries = Object.entries(aiSuggestion).filter(([key]) => !["suggested_score", "confidence", "comments"].includes(key));
-    return (
-      <div className="arbitration-ai-summary">
-        <Descriptions size="small" column={1}>
-          <Descriptions.Item label="建议分">{suggestedScore === undefined ? "暂无" : formatScore(suggestedScore)}</Descriptions.Item>
-          <Descriptions.Item label="置信度">{confidence === undefined ? "暂无" : `${Math.round(confidence * 100)}%`}</Descriptions.Item>
-          <Descriptions.Item label="评语">{comments ?? "暂无"}</Descriptions.Item>
-        </Descriptions>
-        {restEntries.length > 0 ? (
-          <Collapse
-            size="small"
-            ghost
-            items={[{
-              key: "raw",
-              label: "查看原始数据",
-              children: <pre className="arbitration-json-view">{JSON.stringify(Object.fromEntries(restEntries), null, 2)}</pre>
-            }]}
-          />
-        ) : null}
-      </div>
-    );
-  };
-
-  const renderRubricTab = () => {
-    if (!detail?.question) {
-      return <EmptyState title="未获取到评分标准" description="请刷新重试，或联系管理员核对该题设置。" />;
-    }
-    if (rubricPoints.length === 0) {
-      return <EmptyState title="该题未设置评分点" description="可按题目满分直接给出仲裁最终分。" />;
-    }
-    return (
-      <List
-        size="small"
-        dataSource={rubricPoints}
-        locale={{ emptyText: <Empty description="暂无评分点" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
-        renderItem={(point) => (
-          <List.Item>
-            <div className="arbitration-rubric-item">
-              <span>{pointLabel(point)}</span>
-              <StatusTag tone={point.required ? "processing" : "neutral"}>{point.required ? "必选" : "可选"}</StatusTag>
-            </div>
-          </List.Item>
-        )}
-      />
-    );
-  };
-
-  const renderScoreComparison = () => {
-    if (!detail) {
-      return null;
-    }
-    const task = detail.task;
-    return (
-      <div className="arbitration-score-compare">
-        <div>
-          <span>阅卷员 A</span>
-          <strong>{formatScore(task.first_score)}</strong>
-        </div>
-        <div>
-          <span>阅卷员 B</span>
-          <strong>{formatScore(task.second_score)}</strong>
-        </div>
-        <div>
-          <span>分差</span>
-          <strong>{formatScore(task.score_difference)}</strong>
-          <small>{task.difference_reason || "暂无分差说明"}</small>
-          <em>{task.allow_same_arbitrator ? "原阅卷员可参与仲裁" : "须由第三位教师仲裁"}</em>
-        </div>
-      </div>
-    );
-  };
-
-  const renderAudit = () => {
-    if (auditLoading) {
-      return <LoadingState label="正在读取审计记录" />;
-    }
-    if (auditError) {
-      return <ErrorState message={auditError} onRetry={() => detail?.task && void loadAudits(detail.task, finalGrade ?? undefined)} />;
-    }
-    if (auditLogs.length === 0) {
-      return <EmptyState title="暂无操作记录" description="该任务暂无操作记录。" />;
-    }
-    return (
-      <List
-        size="small"
-        dataSource={auditLogs}
-        renderItem={(item) => (
-          <List.Item>
-            <div className="arbitration-audit-item">
-              <strong title={item.action}>{auditActionLabels[item.action] ?? "其他操作"}</strong>
-              <span>{item.reason || (auditTargetLabels[item.target_type] ?? "操作留痕")}</span>
-              <small>{formatTime(item.created_at)}</small>
-            </div>
-          </List.Item>
-        )}
-      />
-    );
-  };
-
   return (
     <div className={tasks.length === 0 && !loadingTasks ? "arbitration-shell empty" : "arbitration-shell"}>
       <section className="arbitration-topbar">
@@ -691,9 +513,9 @@ export function ArbitrationPage({ canAssign, canWork, canReadAudit, canReadExams
               <Tabs
                 size="small"
                 items={[
-                  { key: "context", label: "作答与识别文本", children: renderContextTab() },
-                  { key: "ai", label: "AI 建议", children: renderAiTab() },
-                  { key: "rubric", label: "评分标准", children: renderRubricTab() }
+                  { key: "context", label: "作答与识别文本", children: <ArbitrationContextTab task={detail.task} /> },
+                  { key: "ai", label: "AI 建议", children: <ArbitrationAiTab suggestion={aiSuggestion} /> },
+                  { key: "rubric", label: "评分标准", children: <ArbitrationRubricTab question={detail.question} rubricPoints={rubricPoints} /> }
                 ]}
               />
             </section>
@@ -706,7 +528,7 @@ export function ArbitrationPage({ canAssign, canWork, canReadAudit, canReadExams
                 </div>
                 <Gavel size={18} />
               </div>
-              {renderScoreComparison()}
+              <ArbitrationScoreComparison task={detail.task} />
             </section>
           </main>
         )}
@@ -765,7 +587,7 @@ export function ArbitrationPage({ canAssign, canWork, canReadAudit, canReadExams
               </strong>
               <span>{finalGradeSourceLabels[finalGrade.source] ?? "仲裁定分"} · {finalGrade.locked ? "已锁定" : "未锁定"}</span>
             </div>
-          ) : detail?.task.final_score !== undefined ? (
+          ) : detail?.task.final_score != null ? (
             <div className="final-grade-result">
               <StatusTag tone="success">已提交</StatusTag>
               <strong>{formatScore(detail.task.final_score)}</strong>
@@ -781,7 +603,7 @@ export function ArbitrationPage({ canAssign, canWork, canReadAudit, canReadExams
               </div>
               <ScrollText size={18} />
             </div>
-            {renderAudit()}
+            <ArbitrationAuditList loading={auditLoading} error={auditError} logs={auditLogs} onRetry={() => detail?.task && void loadAudits(detail.task, finalGrade ?? undefined)} />
           </section>
         </aside>
       </section>

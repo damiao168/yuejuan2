@@ -98,6 +98,7 @@ const apiErrorMessages: Record<string, string> = {
   invalid_managed_model_api: "模型 API 配置不完整或接口地址不安全。",
   managed_model_api_conflict: "该学校已经配置了同一供应商。",
   managed_model_current_active_required: "当前使用的模型必须保持启用，请先切换模型或切回本地模型。",
+  managed_model_in_use: "该模型正在被评分智能体使用，请先更换 Primary A / Primary B / Arbiter 的模型绑定。",
   credential_invalid: "API Key 无效或已被禁用。",
   model_permission_denied: "API Key 没有访问该模型的权限。",
   model_not_found: "没有找到该模型，请检查模型名称。",

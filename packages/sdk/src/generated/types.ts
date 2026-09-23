@@ -1,5 +1,17 @@
 // Generated from services/api-gateway/openapi/edugrade-api.openapi.json. DO NOT EDIT.
 
+export type RecordSegmentAnswerInput = { "answer_text"?: string; "answer_payload"?: Record<string, unknown>; "source"?: "manual_entry" | "ocr_text" | "imported_answer"; "confidence"?: number; };
+
+export type SegmentAnswer = { "id": string; "tenant_id": string; "answer_segment_id": string; "answer_text": string; "answer_payload": Record<string, unknown>; "source": string; "confidence"?: number; "recorded_by": string; "created_at": string; };
+
+export type ObjectiveGrade = { "id": string; "tenant_id": string; "answer_segment_id": string; "question_id": string; "question_no": string; "question_type": string; "answer_version": string; "grader_type": string; "rule_version": string; "suggested_score": number; "max_score": number; "confidence": number; "matched_points": Array<ObjectiveGradePoint>; "missing_points": Array<ObjectiveGradePoint>; "evidence": Array<ObjectiveGradeEvidence>; "risk_flags": Array<string>; "needs_human_review": boolean; "auto_pass": boolean; "mock": boolean; "raw_output": Record<string, unknown>; "created_by": string; "created_at": string; };
+
+export type ObjectiveGradePoint = { "code": string; "label": string; "score": number; "evidence_ids"?: Array<string>; "reason"?: string; };
+
+export type ObjectiveGradeEvidence = { "type": string; "evidence_id"?: string; "rubric_point_id"?: string; "answer_segment_id"?: string; "answer_text"?: string; "standard_answer"?: string; "rule"?: string; "location"?: string; "confidence"?: number; "bbox"?: Array<number>; };
+
+export type ScoringRule = { "id": string; "tenant_id": string; "exam_id": string; "question_id": string; "version": number; "rule_type": string; "config": Record<string, unknown>; "status": "draft" | "published" | "retired"; "revision": number; "content_hash": string; "created_by": string; "published_by"?: string; "published_at"?: string; "created_at": string; "updated_at": string; };
+
 export type PlatformSchoolAdministrator = { "id"?: string; "display_name"?: string; "username"?: string; "admin_count": number; "last_login_at"?: string; };
 
 export type PlatformSchoolMemberCounts = { "accounts": number; "active_accounts": number; "administrators": number; "teachers": number; "graders": number; "students": number; "classes": number; };
@@ -916,11 +928,41 @@ export type PaperImportListResponse = { "imports": Array<PaperImportJob>; };
 
 export type ProcessingRetryResponse = { "task": ProcessingWorkerTask; };
 
+export type ScoringQuestionSummary = { "question_id": string; "question_no": string; "question_type": string; "total": number; "queued": number; "confirmed": number; "review": number; "failed": number; };
+
+export type ScoringSummary = { "run"?: ScoringRun; "questions": Array<ScoringQuestionSummary>; };
+
+export type ScoringSummaryResponse = { "scoring_summary": ScoringSummary; };
+
+export type ScoringReadinessCheck = { "code": string; "label": string; "passed": boolean; "severity": "blocker" | "warning"; "message": string; "count"?: number; };
+
+export type ScoringReadiness = { "ready": boolean; "exam_status": string; "total_questions": number; "total_segments": number; "ready_segments": number; "automatic_candidates": number; "manual_review_candidates": number; "active_run"?: ScoringRun; "checks": Array<ScoringReadinessCheck>; };
+
+export type ScoringReadinessResponse = { "scoring_readiness": ScoringReadiness; };
+
 export type ScoringRun = { "id": string; "tenant_id": string; "exam_id": string; "idempotency_key": string; "status": "queued" | "processing" | "needs_review" | "failed" | "cancelling" | "cancelled" | "completed"; "started_by": string; "created_at": string; "updated_at": string; "total_count": number; "queued_count": number; "auto_confirmed_count": number; "human_confirmed_count": number; "review_count": number; "failed_count": number; "started_at"?: string; "completed_at"?: string; };
 
 export type StartScoringRunRequest = { "idempotency_key": string; };
 
 export type ScoringRunResponse = { "scoring_run": ScoringRun; };
+
+export type ScoringRunItem = { "answer_segment_id": string; "submission_id": string; "submission_page_id": string; "page_no": number; "page_file_asset_id": string; "question_id": string; "question_no": string; "question_type": string; "assessment_snapshot_id": string; "anonymous_code": string; "normalized_bbox": (Record<string, never> & Record<string, number>); "state": string; "recognition_source"?: string; "recognized_answer"?: string; "recognition_decision"?: string; "recognition_confidence"?: number; "standard_answer"?: unknown; "rule_type"?: string; "score"?: number; "max_score"?: number; "grade_source"?: string; "omr_run_id"?: string; "runtime_task_id"?: string; "runtime_status"?: string; "review_task_id"?: string; "review_status"?: string; "reason_code"?: string; "error_code"?: string; };
+
+export type OMRCalibrationSummary = { "total_count": number; "labeled_count": number; "pending_count": number; "match_count": number; "mismatch_count": number; "eligible_count": number; "eligible_match_count": number; "eligible_mismatch_count": number; "option_coverage": (Record<string, never> & Record<string, number>); "question_coverage": (Record<string, never> & Record<string, number>); "stratum_coverage": (Record<string, never> & Record<string, number>); "ready_to_approve": boolean; "blockers": Array<string>; };
+
+export type OMRCalibrationSession = { "id": string; "tenant_id": string; "template_id": string; "template_content_hash": string; "scope_type": "question" | "template"; "question_id"?: string; "question_ids": Array<string>; "question_type": "single_choice" | "true_false" | "template"; "profile_version": string; "profile_hash": string; "reference_file_asset_id": string; "reference_sha256": string; "option_labels": Array<string>; "sample_seed": string; "sample_count": number; "minimum_samples": number; "minimum_samples_per_option": number; "minimum_samples_per_stratum": number; "minimum_confidence": number; "inherited_from_session_id"?: string; "status": "draft" | "approved" | "revoked" | "discarded"; "created_by": string; "created_at": string; "approved_by"?: string; "approved_at"?: string; "approval_note"?: string; "evidence_hash"?: string; "revoked_by"?: string; "revoked_at"?: string; "revoke_reason"?: string; "discarded_by"?: string; "discarded_at"?: string; "discard_reason"?: string; "updated_at": string; "summary": OMRCalibrationSummary; };
+
+export type OMRCalibrationCase = { "id": string; "calibration_id": string; "omr_run_id": string; "answer_segment_id": string; "question_id": string; "question_no": string; "question_type": "single_choice" | "multiple_choice" | "true_false"; "option_labels": Array<string>; "sample_stratum": "selected_high" | "selected_low" | "blank" | "ambiguous" | ""; "crop_sha256": string; "observed_decision": string; "observed_options": Array<string> | null; "observed_confidence": number; "measurements": Array<Record<string, unknown>> | null; "expected_options"?: Array<string>; "matches"?: boolean; "labeled_by"?: string; "labeled_at"?: string; "created_at": string; "overlay_file_asset_id"?: string; "segment_image_url": string; };
+
+export type OMRCalibrationDetail = { "session": OMRCalibrationSession; "cases": Array<OMRCalibrationCase>; };
+
+export type CreateOMRCalibrationRequest = { "question_id"?: string; };
+
+export type OMRCalibrationResponse = { "calibration": OMRCalibrationDetail; };
+
+export type ScoringRunDetailResponse = { "scoring_run": ScoringRun; "items": Array<ScoringRunItem>; };
+
+export type ScoringRunRetryResponse = { "scoring_run": ScoringRun; "requeued": number; "skipped": number; };
 
 export type ScoringCommandRecovery = { "command_id": string; "status": "not_accepted" | "succeeded"; "scoring_run"?: ScoringRun; };
 
@@ -966,13 +1008,19 @@ export type ReviewCommandDoubleMarkSession = { "id": string; "tenant_id": string
 
 export type ReviewCommandFinalGrade = { "id": string; "tenant_id": string; "exam_id": string; "question_id": string; "question_no": string; "answer_segment_id": string; "submission_id": string; "anonymous_code": string; "score": number; "max_score": number; "source": string; "double_mark_session_id"?: string; "arbitration_task_id"?: string; "resolution_strategy"?: string; "locked": boolean; "created_by": string; "created_at": string; "updated_at": string; };
 
-export type ReviewCommandArbitrationTask = { "id": string; "tenant_id": string; "double_mark_session_id": string; "exam_id": string; "question_id": string; "question_no": string; "answer_segment_id": string; "submission_id": string; "anonymous_code": string; "first_reviewer_id": string; "second_reviewer_id": string; "first_score": number; "second_score": number; "score_difference": number; "difference_reason": string; "status": string; "assigned_to"?: string; "final_score"?: number | null; "reason"?: string; "student_feedback"?: string; "allow_same_arbitrator": boolean; "context": ReviewCommandReviewContext; "revision": number; "created_by": string; "created_at": string; "updated_at": string; };
+export type ReviewCommandArbitrationTask = { "id": string; "tenant_id": string; "double_mark_session_id": string; "exam_id": string; "question_id": string; "question_no": string; "answer_segment_id": string; "submission_id": string; "anonymous_code": string; "first_reviewer_id": string; "second_reviewer_id": string; "first_score": number; "second_score": number; "score_difference": number; "difference_reason": string; "status": string; "assigned_to"?: string; "final_score"?: number; "reason"?: string; "student_feedback"?: string; "allow_same_arbitrator": boolean; "context": ReviewCommandReviewContext; "revision": number; "created_by": string; "created_at": string; "updated_at": string; };
 
 export type ReviewCommandReviewContext = { "raw_answer"?: string; "ocr_text"?: string; "ai_suggestion"?: Record<string, unknown>; };
 
 export type ReviewCommandSubmitGradeInput = { "score": number; "rubric_selections": Array<ReviewCommandRubricSelection> | null; "comments": string; "private_note": string; "student_feedback": string; "reason": string; "expected_revision": number; };
 
 export type ReviewCommandArbitrationSubmitResult = { "arbitration_task": ReviewCommandArbitrationTask; "final_grade": ReviewCommandFinalGrade; };
+
+export type ReviewCommandCreateArbitrationTaskInput = { "double_mark_session_id": string; "assigned_to"?: string; "difference_reason"?: string; };
+
+export type ReviewCommandAssignArbitrationInput = { "assigned_to": string; "expected_revision": number; };
+
+export type ArbitrationTaskResponse = { "arbitration_task": ReviewCommandArbitrationTask; };
 
 export type ReviewCommandSubmitArbitrationInput = { "final_score": number; "reason": string; "student_feedback": string; "expected_revision": number; };
 
@@ -1130,6 +1178,12 @@ export type QuestionBankBatchImportResult = { "items": Array<QuestionBankBatchIm
 
 export interface components {
   schemas: {
+    "RecordSegmentAnswerInput": RecordSegmentAnswerInput;
+    "SegmentAnswer": SegmentAnswer;
+    "ObjectiveGrade": ObjectiveGrade;
+    "ObjectiveGradePoint": ObjectiveGradePoint;
+    "ObjectiveGradeEvidence": ObjectiveGradeEvidence;
+    "ScoringRule": ScoringRule;
     "PlatformSchoolAdministrator": PlatformSchoolAdministrator;
     "PlatformSchoolMemberCounts": PlatformSchoolMemberCounts;
     "PlatformSchoolUsageSummary": PlatformSchoolUsageSummary;
@@ -1588,9 +1642,24 @@ export interface components {
     "PaperImportResponse": PaperImportResponse;
     "PaperImportListResponse": PaperImportListResponse;
     "ProcessingRetryResponse": ProcessingRetryResponse;
+    "ScoringQuestionSummary": ScoringQuestionSummary;
+    "ScoringSummary": ScoringSummary;
+    "ScoringSummaryResponse": ScoringSummaryResponse;
+    "ScoringReadinessCheck": ScoringReadinessCheck;
+    "ScoringReadiness": ScoringReadiness;
+    "ScoringReadinessResponse": ScoringReadinessResponse;
     "ScoringRun": ScoringRun;
     "StartScoringRunRequest": StartScoringRunRequest;
     "ScoringRunResponse": ScoringRunResponse;
+    "ScoringRunItem": ScoringRunItem;
+    "OMRCalibrationSummary": OMRCalibrationSummary;
+    "OMRCalibrationSession": OMRCalibrationSession;
+    "OMRCalibrationCase": OMRCalibrationCase;
+    "OMRCalibrationDetail": OMRCalibrationDetail;
+    "CreateOMRCalibrationRequest": CreateOMRCalibrationRequest;
+    "OMRCalibrationResponse": OMRCalibrationResponse;
+    "ScoringRunDetailResponse": ScoringRunDetailResponse;
+    "ScoringRunRetryResponse": ScoringRunRetryResponse;
     "ScoringCommandRecovery": ScoringCommandRecovery;
     "SubjectiveAIModelPolicy": SubjectiveAIModelPolicy;
     "SubjectiveAIGradeRequest": SubjectiveAIGradeRequest;
@@ -1617,6 +1686,9 @@ export interface components {
     "ReviewCommandReviewContext": ReviewCommandReviewContext;
     "ReviewCommandSubmitGradeInput": ReviewCommandSubmitGradeInput;
     "ReviewCommandArbitrationSubmitResult": ReviewCommandArbitrationSubmitResult;
+    "ReviewCommandCreateArbitrationTaskInput": ReviewCommandCreateArbitrationTaskInput;
+    "ReviewCommandAssignArbitrationInput": ReviewCommandAssignArbitrationInput;
+    "ArbitrationTaskResponse": ArbitrationTaskResponse;
     "ReviewCommandSubmitArbitrationInput": ReviewCommandSubmitArbitrationInput;
     "ScoreCommandSubmissionGrade": ScoreCommandSubmissionGrade;
     "ScoreCommandFinalGrade": ScoreCommandFinalGrade;

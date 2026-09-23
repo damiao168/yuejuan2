@@ -67,7 +67,7 @@ function PlatformDashboard({
   const quickActions = [
     ...(hasEveryPermission(user, ["tenant:manage"]) ? [{ label: "学校管理", path: "/platform/schools", icon: <Building2 size={17} /> }] : []),
     ...(hasEveryPermission(user, ["system:read"]) ? [{ label: "系统状态", path: "/system/status", icon: <ServerCog size={17} /> }] : []),
-    ...(hasEveryPermission(user, ["model:read"]) ? [{ label: "模型治理", path: "/system/models", icon: <BrainCircuit size={17} /> }] : []),
+    ...(hasEveryPermission(user, ["model:read"]) ? [{ label: "模型质量治理", path: "/system/models", icon: <BrainCircuit size={17} /> }] : []),
     ...(hasEveryPermission(user, ["audit:read"]) ? [{ label: "操作审计", path: "/audit", icon: <ScrollText size={17} /> }] : [])
   ];
 

@@ -1,0 +1,211 @@
+.setup-progress-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 42px;
+  padding: 8px 12px;
+  color: var(--text-muted);
+  background: #f1f5fa;
+  border: 1px solid #dbe4ef;
+}
+
+.setup-progress-line strong {
+  color: var(--success-text);
+}
+
+.onboarding-shell {
+  min-height: 560px;
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.onboarding-rail {
+  padding: 26px 22px;
+  background: #f7f9fc;
+  border-right: 1px solid var(--border);
+}
+
+.onboarding-panel {
+  min-width: 0;
+  padding: 30px 34px;
+}
+
+.onboarding-panel h2 {
+  margin: 0 0 6px;
+  font-size: 1.3125rem;
+}
+
+.onboarding-panel .ant-alert {
+  margin: 18px 0;
+}
+
+.compact-form-grid {
+  max-width: 820px;
+  margin-top: 20px;
+}
+
+.mapping-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0 6px;
+}
+
+.mapping-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: var(--eg-font-body);
+}
+
+.setup-preview-table {
+  margin: 6px 0 14px;
+}
+
+.step-next {
+  margin-top: 16px;
+}
+
+.exam-workspace-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.exam-embedded-module {
+  min-width: 0;
+}
+
+.exam-context-header {
+  min-height: 92px;
+  display: grid;
+  grid-template-columns: 36px minmax(260px, 1fr) minmax(180px, 280px) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 4px 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.exam-context-title {
+  min-width: 0;
+}
+
+.exam-context-title > span {
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+}
+
+.exam-context-title h1 {
+  margin: 2px 0 7px;
+  overflow: hidden;
+  font-size: var(--eg-font-title);
+  line-height: 1.25;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exam-context-title .ant-space-item > span:not(.status-tag) {
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+}
+
+.exam-context-progress {
+  min-width: 0;
+}
+
+.exam-context-progress > span {
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+}
+
+.exam-section-nav {
+  min-width: 0;
+  padding-bottom: 2px;
+  scroll-margin-top: 88px;
+}
+
+.exam-section-nav .ant-tabs-nav {
+  margin-bottom: 0;
+}
+
+.exam-section-nav .ant-tabs-content-holder {
+  display: none;
+}
+
+.exam-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.exam-facts .ant-statistic {
+  min-width: 0;
+  padding: 2px 20px;
+  border-right: 1px solid var(--border);
+}
+
+.exam-facts .ant-statistic:first-child {
+  padding-left: 0;
+}
+
+.exam-facts .ant-statistic:last-child {
+  border-right: 0;
+}
+
+.exam-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  margin-top: 20px;
+}
+
+.exam-overview .workspace-section {
+  padding: 0 0 18px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+}
+
+.readiness-list {
+  margin-top: 10px;
+}
+
+.readiness-list button {
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+}
+
+.ready-line {
+  margin-top: 18px;
+  color: var(--success-text);
+}
+
+.workspace-section-landing {
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 36px;
+  padding: 34px;
+}
+
+.workspace-section-landing > div {
+  max-width: 680px;
+}
+
+.workspace-section-landing h2 {
+  margin: 6px 0;
+  font-size: 1.4375rem;
+}
+

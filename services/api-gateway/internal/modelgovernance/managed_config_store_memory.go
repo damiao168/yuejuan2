@@ -14,7 +14,7 @@ func (s *MemoryStore) ListManagedAPIConfigs(_ context.Context, tenantID string) 
 	defer s.mu.RUnlock()
 	items := []ManagedAPIConfig{}
 	for _, item := range s.managedConfigs {
-		if item.TenantID == tenantID {
+		if item.TenantID == tenantID && item.DeletedAt == nil {
 			items = append(items, item)
 		}
 	}
@@ -36,7 +36,7 @@ func (s *MemoryStore) CreateManagedAPIConfig(_ context.Context, tenantID, _ stri
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, item := range s.managedConfigs {
-		if item.TenantID == tenantID && item.ProviderKey == normalized.ProviderKey && item.ModelName == normalized.ModelName {
+		if item.TenantID == tenantID && item.DeletedAt == nil && item.ProviderKey == normalized.ProviderKey && item.ModelName == normalized.ModelName {
 			return ManagedAPIConfig{}, ErrConflict
 		}
 	}
@@ -71,7 +71,7 @@ func (s *MemoryStore) UpdateManagedAPIConfig(_ context.Context, tenantID, id str
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	item, ok := s.managedConfigs[id]
-	if !ok || item.TenantID != tenantID {
+	if !ok || item.TenantID != tenantID || item.DeletedAt != nil {
 		return ManagedAPIConfig{}, ErrNotFound
 	}
 	for otherID, other := range s.managedConfigs {
@@ -122,17 +122,25 @@ func resetManagedProbeEvidence(item *ManagedAPIConfig) {
 	item.LastCapabilityDiagnostic = ManagedAPIProbeDiagnostic{}
 }
 
-func (s *MemoryStore) DeleteManagedAPIConfig(_ context.Context, tenantID, id string) error {
+func (s *MemoryStore) DeleteManagedAPIConfig(_ context.Context, tenantID, actorID, id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	item, ok := s.managedConfigs[id]
-	if !ok || item.TenantID != tenantID {
+	if !ok || item.TenantID != tenantID || item.DeletedAt != nil {
 		return ErrNotFound
 	}
 	if item.IsDefault {
 		return ErrManagedDefaultMutation
 	}
-	delete(s.managedConfigs, id)
+	for _, binding := range s.roleBindings {
+		if binding.TenantID == tenantID && binding.ManagedModelAPIConfigID == id && binding.Status == "active" {
+			return ErrManagedConfigInUse
+		}
+	}
+	now := time.Now().UTC()
+	item.DeletedAt, item.DeletedBy = &now, actorID
+	item.Status, item.IsDefault, item.UpdatedAt = "disabled", false, now
+	s.managedConfigs[id] = item
 	delete(s.managedSecrets, id)
 	return nil
 }
@@ -141,7 +149,7 @@ func (s *MemoryStore) GetManagedAPIConnection(_ context.Context, tenantID, id st
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	item, ok := s.managedConfigs[id]
-	if !ok || item.TenantID != tenantID {
+	if !ok || item.TenantID != tenantID || item.DeletedAt != nil {
 		return ManagedAPIConnection{}, ErrNotFound
 	}
 	secret := s.managedSecrets[id]
@@ -155,7 +163,7 @@ func (s *MemoryStore) RecordManagedAPIProbe(_ context.Context, tenantID, id stri
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	item, ok := s.managedConfigs[id]
-	if !ok || item.TenantID != tenantID {
+	if !ok || item.TenantID != tenantID || item.DeletedAt != nil {
 		return ManagedAPIConfig{}, ErrNotFound
 	}
 	if !item.UpdatedAt.Equal(expectedUpdatedAt) {

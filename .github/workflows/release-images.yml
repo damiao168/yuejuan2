@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   packages: write
   id-token: write
 
@@ -16,7 +17,43 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  verify-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - name: Verify release commit belongs to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/main; then
+            echo "::error::Release commit ${GITHUB_SHA} is not part of main."
+            exit 1
+          fi
+      - name: Verify successful main CI Gate for exact SHA
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ci_run_id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?branch=main&head_sha=${GITHUB_SHA}&event=push&status=success&per_page=100" \
+            | jq -r --arg sha "${GITHUB_SHA}" '[.workflow_runs[] | select(.head_sha == $sha and .head_branch == "main" and .event == "push" and .conclusion == "success") | .id][0] // empty')"
+          if [[ -z "${ci_run_id}" ]]; then
+            echo "::error::No successful main CI run found for release commit ${GITHUB_SHA}."
+            exit 1
+          fi
+          if ! gh api --paginate "/repos/${GITHUB_REPOSITORY}/actions/runs/${ci_run_id}/jobs?per_page=100" \
+            | jq -se 'any(.[].jobs[]; .name == "CI Gate" and .conclusion == "success")' >/dev/null; then
+            echo "::error::CI run ${ci_run_id} has no successful CI Gate job."
+            exit 1
+          fi
+          echo "Release commit ${GITHUB_SHA} passed main CI Gate in run ${ci_run_id}."
+
   build-scan-sign:
+    needs: verify-source
     name: ${{ matrix.name }} image
     runs-on: ubuntu-latest
     timeout-minutes: 60

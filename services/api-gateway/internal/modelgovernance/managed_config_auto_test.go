@@ -239,7 +239,7 @@ func TestManagedAPIConfigDeleteRequiresSwitchingAwayFromCurrent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = store.DeleteManagedAPIConfig(context.Background(), "school-a", item.ID); !errors.Is(err, ErrManagedDefaultMutation) {
+	if err = store.DeleteManagedAPIConfig(context.Background(), "school-a", "actor", item.ID); !errors.Is(err, ErrManagedDefaultMutation) {
 		t.Fatalf("deleted current model: %v", err)
 	}
 	_, err = store.UpdateManagedAPIConfig(context.Background(), "school-a", item.ID, ManagedAPIConfigUpdateInput{
@@ -250,8 +250,59 @@ func TestManagedAPIConfigDeleteRequiresSwitchingAwayFromCurrent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = store.DeleteManagedAPIConfig(context.Background(), "school-a", item.ID); err != nil {
+	if err = store.DeleteManagedAPIConfig(context.Background(), "school-a", "actor", item.ID); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestManagedAPIConfigSoftDeleteRejectsActivePanelBinding(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	const tenantID = "school-a"
+	item, err := store.CreateManagedAPIConfig(ctx, tenantID, "actor", ManagedAPIConfigInput{
+		ProviderKey: "deepseek", DisplayName: "DeepSeek", AdapterType: "openai_compatible",
+		BaseURL: "https://api.deepseek.com", APIKey: "secret-value-at-least-16", ModelName: "deepseek-grader",
+		ModelVersion: "deepseek-grader", Region: "global", Status: "active",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	item.LastCapabilityStatus = "success"
+	item.LastCapabilityVersion = ManagedCapabilityProbeVersion
+	store.managedConfigs[item.ID] = item
+	binding := SaveModelRoleBindingInput{
+		EducationStage: "senior", SubjectCode: "physics", ArchetypeCode: "*", AgentRole: ModelRolePrimaryA,
+		ManagedModelAPIConfigID: item.ID, PromptVersion: "grader-v1", StrengthRank: 1, Status: "active",
+	}
+	if _, err = store.SaveModelRoleBinding(ctx, tenantID, "actor", binding); err != nil {
+		t.Fatal(err)
+	}
+	if err = store.DeleteManagedAPIConfig(ctx, tenantID, "actor", item.ID); !errors.Is(err, ErrManagedConfigInUse) {
+		t.Fatalf("active panel binding did not block deletion: %v", err)
+	}
+	binding.Status = "disabled"
+	if _, err = store.SaveModelRoleBinding(ctx, tenantID, "actor", binding); err != nil {
+		t.Fatal(err)
+	}
+	if err = store.DeleteManagedAPIConfig(ctx, tenantID, "actor", item.ID); err != nil {
+		t.Fatal(err)
+	}
+	if store.managedConfigs[item.ID].DeletedAt == nil || store.managedConfigs[item.ID].DeletedBy != "actor" {
+		t.Fatalf("deletion audit was not retained: %#v", store.managedConfigs[item.ID])
+	}
+	items, err := store.ListManagedAPIConfigs(ctx, tenantID)
+	if err != nil || len(items) != 0 {
+		t.Fatalf("deleted model remains visible: %#v %v", items, err)
+	}
+	if _, err = store.GetManagedAPIConnection(ctx, tenantID, item.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("deleted model credential remains accessible: %v", err)
+	}
+	if _, err = store.CreateManagedAPIConfig(ctx, tenantID, "actor", ManagedAPIConfigInput{
+		ProviderKey: "deepseek", DisplayName: "Replacement", AdapterType: "openai_compatible",
+		BaseURL: "https://api.deepseek.com", APIKey: "secret-value-at-least-16", ModelName: "deepseek-grader",
+		ModelVersion: "deepseek-grader", Region: "global", Status: "active",
+	}); err != nil {
+		t.Fatalf("soft-deleted provider/model key cannot be reused: %v", err)
 	}
 }
 

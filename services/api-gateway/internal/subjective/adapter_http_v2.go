@@ -47,7 +47,13 @@ type gradingAgentV2Candidate struct {
 	ReasonCode    string   `json:"reason_code"`
 }
 
-func (a *HTTPAdapterV2) Grade(ctx context.Context, input AdapterInput) (AdapterOutput, error) {
+func (a *HTTPAdapterV2) Grade(ctx context.Context, input AdapterInput) (result AdapterOutput, gradeErr error) {
+	attempted := false
+	defer func() {
+		if attempted && a.base.requestObserver != nil {
+			a.base.requestObserver.ObserveAIGradingRequest("v2", gradeErr == nil)
+		}
+	}()
 	requestID := strings.TrimSpace(input.RequestID)
 	if requestID == "" {
 		requestID = newAdapterRequestID()
@@ -64,6 +70,7 @@ func (a *HTTPAdapterV2) Grade(ctx context.Context, input AdapterInput) (AdapterO
 	defer built.Clear()
 	var lastErr error
 	for attempt := 0; attempt <= a.base.maxRetries; attempt++ {
+		attempted = true
 		response, requestErr := a.request(ctx, requestID, built.Body)
 		if requestErr == nil {
 			output, mapErr := a.mapResponse(input, response)

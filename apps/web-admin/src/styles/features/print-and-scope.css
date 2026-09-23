@@ -1,0 +1,325 @@
+.print-package-panel {
+  gap: 12px;
+}
+
+.print-package-panel > p,
+.print-package-modal > p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+  line-height: 1.65;
+}
+
+.print-package-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--border);
+}
+
+.print-package-metrics > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px;
+  background: var(--surface-muted);
+}
+
+.print-package-metrics span,
+.print-batch-history > span,
+.print-batch-row span,
+.print-class-list small {
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+}
+
+.print-package-metrics strong {
+  color: var(--text);
+  font-size: 1.0625rem;
+}
+
+.print-batch-history {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.print-batch-history .ant-list-item {
+  padding: 8px 0;
+}
+
+.print-batch-row {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.print-package-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.print-class-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.print-class-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.print-class-list .ant-checkbox-wrapper {
+  min-width: 0;
+  align-items: flex-start;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.print-class-list .ant-checkbox-wrapper > span:last-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.class-scope-list {
+  border-top: 1px solid var(--border);
+}
+
+.class-scope-list > section {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 24px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.class-scope-list > section > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.class-scope-list > section > div:first-child span,
+.class-scope-list small {
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+}
+
+.class-scope-list .ant-checkbox-group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 20px;
+}
+
+.class-scope-list .ant-checkbox-wrapper span:last-child {
+  display: inline-flex;
+  flex-direction: column;
+}
+
+.readiness-summary {
+  display: grid;
+  grid-template-columns: 130px minmax(220px, 1fr) auto;
+  align-items: center;
+  gap: 22px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.readiness-summary > div:first-child {
+  display: flex;
+  flex-direction: column;
+  color: var(--text-muted);
+}
+
+.readiness-summary > div:first-child strong {
+  color: var(--text);
+  font-size: var(--eg-font-title);
+}
+
+.readiness-summary-state {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: var(--eg-font-body);
+}
+
+@media (max-width: 1180px) {
+  .dashboard-primary-grid,
+  .exam-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .exam-context-header {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+  }
+
+  .exam-context-progress {
+    grid-column: 2;
+  }
+
+  .template-workbench {
+    grid-template-columns: 190px minmax(500px, 1fr);
+  }
+
+  .template-inspector {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(260px, 2fr) auto;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+
+  .template-inspector .template-pane-head,
+  .template-inspector .template-summary {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .dashboard-heading,
+  .setup-progress-line,
+  .workspace-section-landing {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dashboard-heading h1 {
+    font-size: 1.4375rem;
+  }
+
+  .active-exam-row {
+    grid-template-columns: minmax(0, 1fr) 20px;
+  }
+
+  .active-exam-row > .ant-progress {
+    grid-column: 1;
+  }
+
+  .onboarding-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .onboarding-rail {
+    padding: 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    overflow: visible;
+  }
+
+  .onboarding-rail .ant-steps {
+    min-width: 0;
+    flex-direction: column;
+  }
+
+  .onboarding-panel {
+    padding: 22px 18px;
+  }
+
+  .mapping-grid,
+  .exam-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .exam-context-header {
+    grid-template-columns: 32px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .exam-context-header > .ant-space,
+  .exam-context-progress {
+    grid-column: 2;
+  }
+
+  .exam-context-title h1 {
+    white-space: normal;
+  }
+
+  .exam-facts .ant-statistic,
+  .exam-facts .ant-statistic:first-child {
+    padding: 12px 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .template-toolbar,
+  .preparation-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .template-toolbar > .ant-space,
+  .preparation-heading > .ant-space {
+    width: 100%;
+  }
+
+  .template-toolbar > .ant-space {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .template-toolbar > .ant-space > .ant-space-item,
+  .template-toolbar .ant-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .template-workbench {
+    min-height: 0;
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .template-question-pane {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .template-question-pane .ant-list {
+    max-height: 220px;
+  }
+
+  .template-canvas-column {
+    min-height: 560px;
+  }
+
+  .template-canvas-scroll {
+    padding: 16px;
+  }
+
+  .template-inspector {
+    display: flex;
+    grid-column: auto;
+    align-items: stretch;
+  }
+
+  .class-scope-list > section,
+  .readiness-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .class-scope-list .ant-checkbox-group {
+    grid-template-columns: 1fr;
+  }
+
+  .readiness-summary-state {
+    align-items: flex-start;
+  }
+}
+

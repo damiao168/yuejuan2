@@ -4,14 +4,14 @@ import { Search } from "lucide-react";
 import { listPlatformSchoolMembers, type SchoolMembersResponse } from "../../../api/platformSchools";
 import type { ManagedUser } from "../../../api/users";
 import { ResponsiveTable } from "../../../components/ResponsiveTable";
-import { fullDate, roleLabel, shortDate } from "./schoolPresentation";
+import { fullDate, numberText, roleLabel, shortDate } from "./schoolPresentation";
 
-export function SchoolMembersTab({ tenantId }: { tenantId: string }) {
+export function SchoolMembersTab({ tenantId, studentCount, focus }: { tenantId: string; studentCount: number; focus: "administrators" | null }) {
   const [data, setData] = useState<SchoolMembersResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [query, setQuery] = useState("");
-  const [role, setRole] = useState("");
+  const [role, setRole] = useState(focus ?? "");
   const [status, setStatus] = useState("");
 
   useEffect(() => {
@@ -21,9 +21,12 @@ export function SchoolMembersTab({ tenantId }: { tenantId: string }) {
     return () => { active = false; };
   }, [tenantId]);
 
+  useEffect(() => { setRole(focus ?? ""); }, [focus]);
+
   const visible = useMemo(() => (data?.members ?? []).filter((item) => {
     const matchesQuery = !query || `${item.display_name} ${item.username} ${item.employee_no ?? ""}`.toLowerCase().includes(query.toLowerCase());
-    return matchesQuery && (!role || item.roles.includes(role)) && (!status || item.status === status);
+    const matchesRole = !role || (role === "administrators" ? item.roles.some((value) => value.endsWith("_admin")) : item.roles.includes(role));
+    return matchesQuery && matchesRole && (!status || item.status === status);
   }), [data, query, role, status]);
 
   const columns: TableColumnsType<ManagedUser> = [
@@ -39,10 +42,10 @@ export function SchoolMembersTab({ tenantId }: { tenantId: string }) {
   if (loading) return <div className="platform-school-panel-loading"><Spin /></div>;
   if (error) return <Alert type="error" message="账号信息加载失败" showIcon />;
   return <div className="platform-school-tab-stack">
-    <div className="platform-school-inline-summary">共 {data?.summary.total ?? 0} 个账号 · {data?.summary.active ?? 0} 正常 · {data?.summary.disabled ?? 0} 停用 · {data?.summary.admins ?? 0} 管理员</div>
+    <div className="platform-school-inline-summary">共 {data?.summary.total ?? 0} 个账号 · {numberText(studentCount)} 名学生 · {data?.summary.active ?? 0} 正常 · {data?.summary.disabled ?? 0} 停用 · {data?.summary.admins ?? 0} 管理员</div>
     <div className="platform-school-member-filters">
       <Input prefix={<Search size={15} />} placeholder="搜索姓名或账号" allowClear value={query} onChange={(event) => setQuery(event.target.value)} />
-      <Select aria-label="账号角色" value={role || "all"} onChange={(value) => setRole(value === "all" ? "" : value)} options={[{label:"全部角色",value:"all"},{label:"学校管理员",value:"school_admin"},{label:"教师",value:"teacher"},{label:"阅卷员",value:"grader"},{label:"仲裁员",value:"arbitrator"}]} />
+      <Select aria-label="账号角色" value={role || "all"} onChange={(value) => setRole(value === "all" ? "" : value)} options={[{label:"全部角色",value:"all"},{label:"全部管理员",value:"administrators"},{label:"学校管理员",value:"school_admin"},{label:"教师",value:"teacher"},{label:"阅卷员",value:"grader"},{label:"仲裁员",value:"arbitrator"}]} />
       <Select aria-label="账号状态" value={status || "all"} onChange={(value) => setStatus(value === "all" ? "" : value)} options={[{label:"全部状态",value:"all"},{label:"正常",value:"active"},{label:"停用",value:"disabled"}]} />
     </div>
     <ResponsiveTable<ManagedUser> className="dense-data-table" rowKey="id" columns={columns} dataSource={visible} pagination={{ pageSize: 15, showSizeChanger: false }} scroll={{ x: 860 }} locale={{ emptyText: "没有符合条件的账号" }} />

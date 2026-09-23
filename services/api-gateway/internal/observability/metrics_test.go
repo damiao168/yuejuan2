@@ -87,3 +87,27 @@ func TestRegistryManagedModelProbeLabelsAreBounded(t *testing.T) {
 		t.Fatalf("unbounded provider or diagnostic leaked into metrics: %s", body)
 	}
 }
+
+func TestRegistryAIGradingVersionLabelsAreBoundedAndZeroVisible(t *testing.T) {
+	registry := NewRegistry()
+	registry.ObserveAIGradingRequest("v1", true)
+	registry.ObserveAIGradingRequest("v2", false)
+	registry.ObserveAIGradingRequest("model-with-private-id", false)
+
+	recorder := httptest.NewRecorder()
+	registry.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	body := recorder.Body.String()
+	for _, expected := range []string{
+		`edugrade_ai_grading_requests_total{ai_contract_version="v1",outcome="success"} 1`,
+		`edugrade_ai_grading_requests_total{ai_contract_version="v1",outcome="error"} 0`,
+		`edugrade_ai_grading_requests_total{ai_contract_version="v2",outcome="success"} 0`,
+		`edugrade_ai_grading_requests_total{ai_contract_version="v2",outcome="error"} 1`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("AI grading version counter missing %q: %s", expected, body)
+		}
+	}
+	if strings.Contains(body, "model-with-private-id") {
+		t.Fatal("unbounded version label leaked into metrics")
+	}
+}

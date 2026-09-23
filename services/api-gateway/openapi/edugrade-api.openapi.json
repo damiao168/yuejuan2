@@ -20,6 +20,162 @@
     }
   ],
   "paths": {
+    "/api/v1/exams/{examId}/scoring-readiness": {
+      "get": {
+        "tags": ["Grading"], "operationId": "getExamScoringReadiness", "summary": "Get scoring readiness checks for an exam",
+        "parameters": [{ "name": "examId", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1 } }],
+        "responses": {
+          "200": { "description": "Scoring readiness and actionable checks", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ScoringReadinessResponse" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "description": "Scoring readiness could not be loaded", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/v1/exams/{examId}/scoring-summary": {
+      "get": {
+        "tags": ["Grading"], "operationId": "getExamScoringSummary", "summary": "Get the latest scoring run summary for an exam",
+        "parameters": [{ "name": "examId", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1 } }],
+        "responses": {
+          "200": { "description": "Latest scoring run and per-question counts", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ScoringSummaryResponse" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "description": "Scoring summary could not be loaded", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/v1/answer-segments/{id}/answer": {
+      "put": {
+        "tags": ["Grading"], "operationId": "recordSegmentAnswer", "summary": "Record the answer used for rule grading",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1 } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RecordSegmentAnswerInput" } } } },
+        "responses": {
+          "200": { "description": "Recorded answer", "content": { "application/json": { "schema": { "type": "object", "required": ["answer"], "properties": { "answer": { "$ref": "#/components/schemas/SegmentAnswer" } } } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/answer-segments/{id}/rule-grade": {
+      "post": {
+        "tags": ["Grading"], "operationId": "createRuleGrade", "summary": "Evaluate a recorded answer using objective rules",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1 } }],
+        "responses": {
+          "201": { "description": "Rule grade", "content": { "application/json": { "schema": { "type": "object", "required": ["grade"], "properties": { "grade": { "$ref": "#/components/schemas/ObjectiveGrade" } } } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/answer-segments/{id}/ai-grades": {
+      "get": {
+        "tags": ["Grading"], "operationId": "listSegmentAIGrades", "summary": "List stored AI and rule grades for an answer segment",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1 } }],
+        "responses": {
+          "200": { "description": "Grades", "content": { "application/json": { "schema": { "type": "object", "required": ["grades"], "properties": { "grades": { "type": "array", "items": { "$ref": "#/components/schemas/ObjectiveGrade" } } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/questions/{id}/scoring-rules": {
+      "get": {
+        "tags": ["Grading"], "operationId": "listScoringRules", "summary": "List scoring rules for a question",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1 } }],
+        "responses": {
+          "200": { "description": "Scoring rules", "content": { "application/json": { "schema": { "type": "object", "required": ["scoring_rules"], "properties": { "scoring_rules": { "type": "array", "items": { "$ref": "#/components/schemas/ScoringRule" } } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "post": {
+        "tags": ["Grading"], "operationId": "createScoringRule", "summary": "Create a draft scoring rule",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1 } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "additionalProperties": false, "required": ["rule_type", "config"], "properties": { "rule_type": { "type": "string" }, "config": { "type": "object", "additionalProperties": true } } } } } },
+        "responses": {
+          "201": { "description": "Draft scoring rule", "content": { "application/json": { "schema": { "type": "object", "required": ["scoring_rule"], "properties": { "scoring_rule": { "$ref": "#/components/schemas/ScoringRule" } } } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/scoring-rules/{id}": {
+      "patch": {
+        "tags": ["Grading"], "operationId": "updateScoringRule", "summary": "Update a draft scoring rule with optimistic revision",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1 } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "additionalProperties": false, "required": ["config", "expected_revision"], "properties": { "config": { "type": "object", "additionalProperties": true }, "expected_revision": { "type": "integer" } } } } } },
+        "responses": {
+          "200": { "description": "Updated draft", "content": { "application/json": { "schema": { "type": "object", "required": ["scoring_rule"], "properties": { "scoring_rule": { "$ref": "#/components/schemas/ScoringRule" } } } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/scoring-rules/{id}/publish": {
+      "post": {
+        "tags": ["Grading"], "operationId": "publishScoringRule", "summary": "Publish an immutable scoring rule",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1 } }],
+        "responses": {
+          "200": { "description": "Published scoring rule", "content": { "application/json": { "schema": { "type": "object", "required": ["scoring_rule"], "properties": { "scoring_rule": { "$ref": "#/components/schemas/ScoringRule" } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/v1/scoring-runs/{runId}": {
+      "get": {
+        "tags": ["Grading"], "operationId": "getScoringRun", "summary": "Get a scoring run and its anonymized segment states",
+        "parameters": [{ "name": "runId", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1 } }],
+        "responses": {
+          "200": { "description": "Scoring run detail without student identity", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ScoringRunDetailResponse" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "description": "Scoring run detail could not be loaded", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "503": { "description": "Scoring recovery is unavailable", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/v1/scoring-runs/{runId}/cancel": {
+      "post": {
+        "tags": ["Grading"], "operationId": "cancelScoringRun", "summary": "Cancel a scoring run and its active worker tasks",
+        "parameters": [{ "name": "runId", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1 } }],
+        "responses": {
+          "200": { "description": "Cancelled scoring run", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ScoringRunResponse" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "description": "Scoring run cancellation could not be completed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "503": { "description": "Scoring recovery is unavailable or cancellation is pending worker state", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/v1/scoring-runs/{runId}/retry-failed": {
+      "post": {
+        "tags": ["Grading"], "operationId": "retryFailedScoringRun", "summary": "Retry failed OMR tasks for a scoring run",
+        "parameters": [{ "name": "runId", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1 } }],
+        "responses": {
+          "200": { "description": "Retry outcome and refreshed scoring run", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ScoringRunRetryResponse" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "description": "Failed OMR tasks could not be retried", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "503": { "description": "Scoring recovery is unavailable", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/v1/omr-calibrations/{id}": {
+      "get": {
+        "tags": ["Grading"], "operationId": "getOMRCalibration", "summary": "Get OMR calibration evidence with blind labels protected",
+        "description": "Returns the immutable calibration sample and manual labels. Until a case is labeled, machine output fields remain redacted; segment images are available through the protected image endpoint.",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1 } }],
+        "responses": {
+          "200": { "description": "Calibration detail", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OMRCalibrationResponse" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "description": "Calibration detail could not be loaded", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "503": { "description": "OMR calibration requires the production grading store", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/v1/answer-sheet-templates/{id}/omr-calibrations": {
+      "post": {
+        "tags": ["Grading"], "operationId": "createOMRCalibration", "summary": "Create a deterministic template OMR calibration sample",
+        "description": "Freezes the immutable answer-sheet template, reference asset, worker profile, and stratified sample used to qualify automatic confirmation. New sessions cover the complete template; question_id is accepted only for backward compatibility.",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1 } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateOMRCalibrationRequest" } } } },
+        "responses": {
+          "201": { "description": "Created deterministic calibration detail", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OMRCalibrationResponse" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "description": "Calibration sample could not be created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "503": { "description": "OMR calibration requires the production grading store", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
     "/api/v1/platform/schools": {
       "get": {
         "tags": ["Platform Schools"],
@@ -11419,6 +11575,43 @@
         }
       }
     },
+    "/api/v1/arbitration-tasks": {
+      "post": {
+        "tags": ["Review"], "operationId": "createArbitrationTask", "summary": "Create an arbitration task for a double mark session",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReviewCommandCreateArbitrationTaskInput" } } } },
+        "responses": {
+          "201": { "description": "Created arbitration task", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ArbitrationTaskResponse" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "description": "Arbitration task could not be created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/v1/arbitration-tasks/{id}": {
+      "get": {
+        "tags": ["Review"], "operationId": "getArbitrationTask", "summary": "Get an arbitration task visible to the current arbitrator",
+        "description": "Arbitration workers can read only tasks assigned to them; arbitration managers can read tenant-scoped tasks allowed by their access scope.",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string", "minLength": 1 } }],
+        "responses": {
+          "200": { "description": "Arbitration task", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ArbitrationTaskResponse" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "description": "Arbitration task could not be loaded", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/v1/arbitration-tasks/{id}/assign": {
+      "post": {
+        "tags": ["Review"], "operationId": "assignArbitrationTask", "summary": "Assign an arbitration task to an authorized arbitrator",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string", "minLength": 1 } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReviewCommandAssignArbitrationInput" } } } },
+        "responses": {
+          "200": { "description": "Assigned arbitration task", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ArbitrationTaskResponse" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "description": "Arbitration task could not be assigned", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
     "/api/v1/arbitration-tasks/{id}/submit": {
       "post": {
         "operationId": "submitArbitration",
@@ -11429,7 +11622,8 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             }
           },
           {
@@ -11437,7 +11631,10 @@
             "in": "header",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
             }
           }
         ],
@@ -15776,6 +15973,10 @@
         "description": "Resource not found",
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
       },
+      "Conflict": {
+        "description": "State or revision conflict",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+      },
       "InvalidPagination": {
         "description": "Invalid limit or cursor",
         "content": {
@@ -15808,6 +16009,67 @@
       }
     },
     "schemas": {
+      "RecordSegmentAnswerInput": {
+        "type": "object", "additionalProperties": false,
+        "properties": {
+          "answer_text": { "type": "string" }, "answer_payload": { "type": "object", "additionalProperties": true },
+          "source": { "type": "string", "enum": ["manual_entry", "ocr_text", "imported_answer"] },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      },
+      "SegmentAnswer": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "tenant_id", "answer_segment_id", "answer_text", "answer_payload", "source", "recorded_by", "created_at"],
+        "properties": {
+          "id": { "type": "string" }, "tenant_id": { "type": "string" }, "answer_segment_id": { "type": "string" },
+          "answer_text": { "type": "string" }, "answer_payload": { "type": "object", "additionalProperties": true },
+          "source": { "type": "string" }, "confidence": { "type": "number" }, "recorded_by": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ObjectiveGrade": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "tenant_id", "answer_segment_id", "question_id", "question_no", "question_type", "answer_version", "grader_type", "rule_version", "suggested_score", "max_score", "confidence", "matched_points", "missing_points", "evidence", "risk_flags", "needs_human_review", "auto_pass", "mock", "raw_output", "created_by", "created_at"],
+        "properties": {
+          "id": { "type": "string" }, "tenant_id": { "type": "string" }, "answer_segment_id": { "type": "string" }, "question_id": { "type": "string" },
+          "question_no": { "type": "string" }, "question_type": { "type": "string" }, "answer_version": { "type": "string" },
+          "grader_type": { "type": "string" }, "rule_version": { "type": "string" },
+          "suggested_score": { "type": "number" }, "max_score": { "type": "number" }, "confidence": { "type": "number" },
+          "matched_points": { "type": "array", "items": { "$ref": "#/components/schemas/ObjectiveGradePoint" } },
+          "missing_points": { "type": "array", "items": { "$ref": "#/components/schemas/ObjectiveGradePoint" } },
+          "evidence": { "type": "array", "items": { "$ref": "#/components/schemas/ObjectiveGradeEvidence" } },
+          "risk_flags": { "type": "array", "items": { "type": "string" } }, "needs_human_review": { "type": "boolean" },
+          "auto_pass": { "type": "boolean" }, "mock": { "type": "boolean" }, "raw_output": { "type": "object", "additionalProperties": true },
+          "created_by": { "type": "string" }, "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ObjectiveGradePoint": {
+        "type": "object", "additionalProperties": false, "required": ["code", "label", "score"],
+        "properties": {
+          "code": { "type": "string" }, "label": { "type": "string" }, "score": { "type": "number" },
+          "evidence_ids": { "type": "array", "items": { "type": "string" } }, "reason": { "type": "string" }
+        }
+      },
+      "ObjectiveGradeEvidence": {
+        "type": "object", "additionalProperties": false, "required": ["type"],
+        "properties": {
+          "type": { "type": "string" }, "evidence_id": { "type": "string" }, "rubric_point_id": { "type": "string" },
+          "answer_segment_id": { "type": "string" }, "answer_text": { "type": "string" }, "standard_answer": { "type": "string" },
+          "rule": { "type": "string" }, "location": { "type": "string" }, "confidence": { "type": "number" },
+          "bbox": { "type": "array", "items": { "type": "number" } }
+        }
+      },
+      "ScoringRule": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "tenant_id", "exam_id", "question_id", "version", "rule_type", "config", "status", "revision", "content_hash", "created_by", "created_at", "updated_at"],
+        "properties": {
+          "id": { "type": "string" }, "tenant_id": { "type": "string" }, "exam_id": { "type": "string" }, "question_id": { "type": "string" },
+          "version": { "type": "integer" }, "rule_type": { "type": "string" }, "config": { "type": "object", "additionalProperties": true },
+          "status": { "type": "string", "enum": ["draft", "published", "retired"] }, "revision": { "type": "integer" },
+          "content_hash": { "type": "string" }, "created_by": { "type": "string" }, "published_by": { "type": "string" },
+          "published_at": { "type": "string", "format": "date-time" }, "created_at": { "type": "string", "format": "date-time" }, "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
       "PlatformSchoolAdministrator": {
         "type": "object", "additionalProperties": false, "required": ["admin_count"],
         "properties": {
@@ -29979,6 +30241,48 @@
           }
         }
       },
+      "ScoringQuestionSummary": {
+        "type": "object",
+        "required": ["question_id", "question_no", "question_type", "total", "queued", "confirmed", "review", "failed"],
+        "properties": {
+          "question_id": { "type": "string" }, "question_no": { "type": "string" }, "question_type": { "type": "string" },
+          "total": { "type": "integer" }, "queued": { "type": "integer" }, "confirmed": { "type": "integer" }, "review": { "type": "integer" }, "failed": { "type": "integer" }
+        }
+      },
+      "ScoringSummary": {
+        "type": "object",
+        "required": ["questions"],
+        "properties": {
+          "run": { "$ref": "#/components/schemas/ScoringRun" },
+          "questions": { "type": "array", "items": { "$ref": "#/components/schemas/ScoringQuestionSummary" } }
+        }
+      },
+      "ScoringSummaryResponse": {
+        "type": "object", "required": ["scoring_summary"],
+        "properties": { "scoring_summary": { "$ref": "#/components/schemas/ScoringSummary" } }
+      },
+      "ScoringReadinessCheck": {
+        "type": "object",
+        "required": ["code", "label", "passed", "severity", "message"],
+        "properties": {
+          "code": { "type": "string" }, "label": { "type": "string" }, "passed": { "type": "boolean" },
+          "severity": { "type": "string", "enum": ["blocker", "warning"] }, "message": { "type": "string" }, "count": { "type": "integer" }
+        }
+      },
+      "ScoringReadiness": {
+        "type": "object",
+        "required": ["ready", "exam_status", "total_questions", "total_segments", "ready_segments", "automatic_candidates", "manual_review_candidates", "checks"],
+        "properties": {
+          "ready": { "type": "boolean" }, "exam_status": { "type": "string" }, "total_questions": { "type": "integer" },
+          "total_segments": { "type": "integer" }, "ready_segments": { "type": "integer" }, "automatic_candidates": { "type": "integer" },
+          "manual_review_candidates": { "type": "integer" }, "active_run": { "$ref": "#/components/schemas/ScoringRun" },
+          "checks": { "type": "array", "items": { "$ref": "#/components/schemas/ScoringReadinessCheck" } }
+        }
+      },
+      "ScoringReadinessResponse": {
+        "type": "object", "required": ["scoring_readiness"],
+        "properties": { "scoring_readiness": { "$ref": "#/components/schemas/ScoringReadiness" } }
+      },
       "ScoringRun": {
         "type": "object",
         "required": [
@@ -30080,6 +30384,167 @@
             "$ref": "#/components/schemas/ScoringRun"
           }
         }
+      },
+      "ScoringRunItem": {
+        "type": "object",
+        "properties": {
+          "answer_segment_id": { "type": "string" },
+          "submission_id": { "type": "string" },
+          "submission_page_id": { "type": "string" },
+          "page_no": { "type": "integer" },
+          "page_file_asset_id": { "type": "string" },
+          "question_id": { "type": "string" },
+          "question_no": { "type": "string" },
+          "question_type": { "type": "string" },
+          "assessment_snapshot_id": { "type": "string" },
+          "anonymous_code": { "type": "string" },
+          "normalized_bbox": { "type": "object", "additionalProperties": { "type": "number" } },
+          "state": { "type": "string" },
+          "recognition_source": { "type": "string" },
+          "recognized_answer": { "type": "string" },
+          "recognition_decision": { "type": "string" },
+          "recognition_confidence": { "type": "number" },
+          "standard_answer": {},
+          "rule_type": { "type": "string" },
+          "score": { "type": "number" },
+          "max_score": { "type": "number" },
+          "grade_source": { "type": "string" },
+          "omr_run_id": { "type": "string" },
+          "runtime_task_id": { "type": "string" },
+          "runtime_status": { "type": "string" },
+          "review_task_id": { "type": "string" },
+          "review_status": { "type": "string" },
+          "reason_code": { "type": "string" },
+          "error_code": { "type": "string" }
+        },
+        "required": [
+          "answer_segment_id", "submission_id", "submission_page_id", "page_no", "page_file_asset_id",
+          "question_id", "question_no", "question_type", "assessment_snapshot_id", "anonymous_code", "normalized_bbox", "state"
+        ]
+      },
+      "OMRCalibrationSummary": {
+        "type": "object",
+        "properties": {
+          "total_count": { "type": "integer" },
+          "labeled_count": { "type": "integer" },
+          "pending_count": { "type": "integer" },
+          "match_count": { "type": "integer" },
+          "mismatch_count": { "type": "integer" },
+          "eligible_count": { "type": "integer" },
+          "eligible_match_count": { "type": "integer" },
+          "eligible_mismatch_count": { "type": "integer" },
+          "option_coverage": { "type": "object", "additionalProperties": { "type": "integer" } },
+          "question_coverage": { "type": "object", "additionalProperties": { "type": "integer" } },
+          "stratum_coverage": { "type": "object", "additionalProperties": { "type": "integer" } },
+          "ready_to_approve": { "type": "boolean" },
+          "blockers": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["total_count", "labeled_count", "pending_count", "match_count", "mismatch_count", "eligible_count", "eligible_match_count", "eligible_mismatch_count", "option_coverage", "question_coverage", "stratum_coverage", "ready_to_approve", "blockers"]
+      },
+      "OMRCalibrationSession": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "tenant_id": { "type": "string" },
+          "template_id": { "type": "string" },
+          "template_content_hash": { "type": "string" },
+          "scope_type": { "type": "string", "enum": ["question", "template"] },
+          "question_id": { "type": "string" },
+          "question_ids": { "type": "array", "items": { "type": "string" } },
+          "question_type": { "type": "string", "enum": ["single_choice", "true_false", "template"] },
+          "profile_version": { "type": "string" },
+          "profile_hash": { "type": "string" },
+          "reference_file_asset_id": { "type": "string" },
+          "reference_sha256": { "type": "string" },
+          "option_labels": { "type": "array", "items": { "type": "string" } },
+          "sample_seed": { "type": "string" },
+          "sample_count": { "type": "integer" },
+          "minimum_samples": { "type": "integer" },
+          "minimum_samples_per_option": { "type": "integer" },
+          "minimum_samples_per_stratum": { "type": "integer" },
+          "minimum_confidence": { "type": "number" },
+          "inherited_from_session_id": { "type": "string" },
+          "status": { "type": "string", "enum": ["draft", "approved", "revoked", "discarded"] },
+          "created_by": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "approved_by": { "type": "string" },
+          "approved_at": { "type": "string", "format": "date-time" },
+          "approval_note": { "type": "string" },
+          "evidence_hash": { "type": "string" },
+          "revoked_by": { "type": "string" },
+          "revoked_at": { "type": "string", "format": "date-time" },
+          "revoke_reason": { "type": "string" },
+          "discarded_by": { "type": "string" },
+          "discarded_at": { "type": "string", "format": "date-time" },
+          "discard_reason": { "type": "string" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "summary": { "$ref": "#/components/schemas/OMRCalibrationSummary" }
+        },
+        "required": ["id", "tenant_id", "template_id", "template_content_hash", "scope_type", "question_ids", "question_type", "profile_version", "profile_hash", "reference_file_asset_id", "reference_sha256", "option_labels", "sample_seed", "sample_count", "minimum_samples", "minimum_samples_per_option", "minimum_samples_per_stratum", "minimum_confidence", "status", "created_by", "created_at", "updated_at", "summary"]
+      },
+      "OMRCalibrationCase": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "calibration_id": { "type": "string" },
+          "omr_run_id": { "type": "string" },
+          "answer_segment_id": { "type": "string" },
+          "question_id": { "type": "string" },
+          "question_no": { "type": "string" },
+          "question_type": { "type": "string", "enum": ["single_choice", "multiple_choice", "true_false"] },
+          "option_labels": { "type": "array", "items": { "type": "string" } },
+          "sample_stratum": { "type": "string", "enum": ["selected_high", "selected_low", "blank", "ambiguous", ""] },
+          "crop_sha256": { "type": "string" },
+          "observed_decision": { "type": "string" },
+          "observed_options": { "type": "array", "items": { "type": "string" }, "nullable": true },
+          "observed_confidence": { "type": "number" },
+          "measurements": { "type": "array", "items": { "type": "object", "additionalProperties": true }, "nullable": true },
+          "expected_options": { "type": "array", "items": { "type": "string" } },
+          "matches": { "type": "boolean" },
+          "labeled_by": { "type": "string" },
+          "labeled_at": { "type": "string", "format": "date-time" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "overlay_file_asset_id": { "type": "string" },
+          "segment_image_url": { "type": "string" }
+        },
+        "required": ["id", "calibration_id", "omr_run_id", "answer_segment_id", "question_id", "question_no", "question_type", "option_labels", "sample_stratum", "crop_sha256", "observed_decision", "observed_options", "observed_confidence", "measurements", "created_at", "segment_image_url"]
+      },
+      "OMRCalibrationDetail": {
+        "type": "object",
+        "properties": {
+          "session": { "$ref": "#/components/schemas/OMRCalibrationSession" },
+          "cases": { "type": "array", "items": { "$ref": "#/components/schemas/OMRCalibrationCase" } }
+        },
+        "required": ["session", "cases"]
+      },
+      "CreateOMRCalibrationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "question_id": { "type": "string", "description": "Accepted for backward compatibility; a new session still covers the complete template." }
+        }
+      },
+      "OMRCalibrationResponse": {
+        "type": "object",
+        "properties": { "calibration": { "$ref": "#/components/schemas/OMRCalibrationDetail" } },
+        "required": ["calibration"]
+      },
+      "ScoringRunDetailResponse": {
+        "type": "object",
+        "properties": {
+          "scoring_run": { "$ref": "#/components/schemas/ScoringRun" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/ScoringRunItem" } }
+        },
+        "required": ["scoring_run", "items"]
+      },
+      "ScoringRunRetryResponse": {
+        "type": "object",
+        "properties": {
+          "scoring_run": { "$ref": "#/components/schemas/ScoringRun" },
+          "requeued": { "type": "integer" },
+          "skipped": { "type": "integer" }
+        },
+        "required": ["scoring_run", "requeued", "skipped"]
       },
       "ScoringCommandRecovery": {
         "type": "object",
@@ -30867,8 +31332,7 @@
             "type": "string"
           },
           "final_score": {
-            "type": "number",
-            "nullable": true
+            "type": "number"
           },
           "reason": {
             "type": "string"
@@ -30989,6 +31453,30 @@
             "$ref": "#/components/schemas/ReviewCommandFinalGrade"
           }
         }
+      },
+      "ReviewCommandCreateArbitrationTaskInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "double_mark_session_id": { "type": "string", "minLength": 1 },
+          "assigned_to": { "type": "string" },
+          "difference_reason": { "type": "string" }
+        },
+        "required": ["double_mark_session_id"]
+      },
+      "ReviewCommandAssignArbitrationInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "assigned_to": { "type": "string", "minLength": 1 },
+          "expected_revision": { "type": "integer", "minimum": 1 }
+        },
+        "required": ["assigned_to", "expected_revision"]
+      },
+      "ArbitrationTaskResponse": {
+        "type": "object",
+        "required": ["arbitration_task"],
+        "properties": { "arbitration_task": { "$ref": "#/components/schemas/ReviewCommandArbitrationTask" } }
       },
       "ReviewCommandSubmitArbitrationInput": {
         "type": "object",

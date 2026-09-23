@@ -367,7 +367,6 @@ export function AppShell() {
       <SystemStatusPage />
     ) : route.path === "/system/models" ? (
       <ModelGovernancePage
-        canManageProviders={hasEveryPermission(user, ["model:provider:manage"])}
         canManagePolicy={hasEveryPermission(user, ["model:policy:manage"])}
         canManageEvaluations={hasEveryPermission(user, ["model:evaluation:manage"])}
         canReadEligibility={hasEveryPermission(user, ["model:read"])}

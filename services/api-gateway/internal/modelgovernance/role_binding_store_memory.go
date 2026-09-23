@@ -20,6 +20,7 @@ func (s *MemoryStore) SaveModelRoleBinding(_ context.Context, tenantID, actorID 
 	config, ok := s.managedConfigs[input.ManagedModelAPIConfigID]
 	if (!ok && !(input.Status == "disabled" && previouslyBound && previous.ManagedModelAPIConfigID == input.ManagedModelAPIConfigID)) ||
 		(ok && config.TenantID != tenantID) ||
+		(ok && config.DeletedAt != nil && input.Status == "active") ||
 		(input.Status == "active" && (config.Status != "active" || config.LastCapabilityStatus != "success" || config.LastCapabilityVersion != ManagedCapabilityProbeVersion)) {
 		return ModelRoleBinding{}, ErrManagedCapabilityRequired
 	}
@@ -63,7 +64,7 @@ func (s *MemoryStore) ListModelRoleBindings(_ context.Context, tenantID, stage, 
 	for _, item := range s.roleBindings {
 		config := s.managedConfigs[item.ManagedModelAPIConfigID]
 		if item.TenantID == tenantID && item.EducationStage == stage && item.SubjectCode == subject &&
-			(item.ArchetypeCode == archetype || item.ArchetypeCode == "*") && config.Status == "active" &&
+			(item.ArchetypeCode == archetype || item.ArchetypeCode == "*") && config.DeletedAt == nil && config.Status == "active" &&
 			config.LastCapabilityStatus == "success" && config.LastCapabilityVersion == ManagedCapabilityProbeVersion {
 			items = append(items, item)
 		}

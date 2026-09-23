@@ -79,13 +79,14 @@ type GradingQualityDependencies struct {
 	FileDownload         files.DownloadReader
 	MathUnderstanding    mathunderstanding.Store
 	MathCorrections      mathunderstanding.CorrectionStore
+	AIRequestObserver    subjective.AIGradingRequestObserver
 }
 
 func NewGradingQualityModule(cfg config.Config, stores GradingQualityStores, dependencies GradingQualityDependencies) *GradingQualityModule {
 	gradingHandler := grading.NewHandler(stores.Grading, grading.NewEngine(), dependencies.Auth)
 	gradingHandler.SetProductionDependencies(dependencies.WorkerRuntime, dependencies.Files)
 
-	subjectiveHandler := subjective.NewHandler(stores.Subjective, newSubjectiveAdapter(cfg), dependencies.Auth).
+	subjectiveHandler := subjective.NewHandler(stores.Subjective, newSubjectiveAdapter(cfg, dependencies.AIRequestObserver), dependencies.Auth).
 		WithWorkerRuntimeStore(dependencies.WorkerRuntime).
 		WithEvaluationEvidence(dependencies.EvaluationEvidence).
 		WithCalibrationEvidence(dependencies.CalibrationEvidence).
@@ -95,7 +96,7 @@ func NewGradingQualityModule(cfg config.Config, stores GradingQualityStores, dep
 	}
 	if cfg.AIService.MathGradingV2 {
 		cropEvidence, _ := dependencies.Segments.(subjective.ActiveCropEvidenceStore)
-		subjectiveHandler.WithMathGradingV2(true, newSubjectiveAdapterV2(cfg), subjective.MathEvidenceSource{
+		subjectiveHandler.WithMathGradingV2(true, newSubjectiveAdapterV2(cfg, dependencies.AIRequestObserver), subjective.MathEvidenceSource{
 			Artifacts: dependencies.MathUnderstanding, Corrections: dependencies.MathCorrections,
 		}, subjective.NewActiveCropResolver(cropEvidence, dependencies.Files, dependencies.Objects))
 	}
@@ -163,7 +164,7 @@ func newQualityDashboardService(db *sql.DB, stores GradingQualityStores, graderD
 	})
 }
 
-func newSubjectiveAdapter(cfg config.Config) subjective.LLMGradingAdapter {
+func newSubjectiveAdapter(cfg config.Config, observer subjective.AIGradingRequestObserver) subjective.LLMGradingAdapter {
 	if useRealAIService(cfg) {
 		return subjective.NewHTTPAdapter(subjective.HTTPAdapterConfig{
 			BaseURL:           cfg.AIService.URL,
@@ -178,6 +179,7 @@ func newSubjectiveAdapter(cfg config.Config) subjective.LLMGradingAdapter {
 			AdapterType:       cfg.AIService.AdapterType,
 			DeploymentRegion:  cfg.AIService.DeploymentRegion,
 			CapabilityProfile: cfg.AIService.CapabilityProfile,
+			RequestObserver:   observer,
 		})
 	}
 	if allowMockAI(cfg) {
@@ -186,7 +188,7 @@ func newSubjectiveAdapter(cfg config.Config) subjective.LLMGradingAdapter {
 	return subjective.NewDisabledAdapter("ai_grading_disabled", cfg.AIService.ModelVersion, cfg.AIService.PromptVersion)
 }
 
-func newSubjectiveAdapterV2(cfg config.Config) subjective.LLMGradingAdapter {
+func newSubjectiveAdapterV2(cfg config.Config, observer subjective.AIGradingRequestObserver) subjective.LLMGradingAdapter {
 	if !useRealAIService(cfg) {
 		return subjective.NewDisabledAdapter("math_grading_v2_not_configured", cfg.AIService.ModelVersion, cfg.AIService.PromptVersion)
 	}
@@ -195,5 +197,6 @@ func newSubjectiveAdapterV2(cfg config.Config) subjective.LLMGradingAdapter {
 		ModelVersion: cfg.AIService.ModelVersion, PromptVersion: cfg.AIService.PromptVersion, MinConfidence: cfg.AIService.MinConfidence,
 		ProviderKey: cfg.AIService.ProviderKey, DeploymentKey: cfg.AIService.DeploymentKey, AdapterType: cfg.AIService.AdapterType,
 		DeploymentRegion: cfg.AIService.DeploymentRegion, CapabilityProfile: cfg.AIService.CapabilityProfile,
+		RequestObserver: observer,
 	})
 }

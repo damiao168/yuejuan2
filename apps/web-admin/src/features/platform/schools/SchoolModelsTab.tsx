@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, Spin } from "antd";
 import { getPlatformSchoolModelHealth, type SchoolModelHealthResponse } from "../../../api/platformSchools";
+import { ResponsiveTable } from "../../../components/ResponsiveTable";
 import { fullDate } from "./schoolPresentation";
 
 const roleLabel = { primary_a: "主评 A", primary_b: "主评 B", arbiter: "仲裁" };
@@ -27,7 +28,11 @@ export function SchoolModelsTab({ tenantId }: { tenantId: string }) {
       <div><dt>最近检测</dt><dd>{fullDate(model.last_tested_at)}</dd></div>
       <div><dt>API Key</dt><dd>{model.credential_hint || "已加密保存"}</dd></div>
     </dl>{model.connection_message || model.capability_message ? <p className="platform-school-readonly-note">{model.connection_message || model.capability_message}</p> : null}</section>
-    <section><h3>三智能体模型</h3>{data.roles.length ? <div className="platform-school-model-roles">{data.roles.map((role) => <div key={role.agent_role}><span>{roleLabel[role.agent_role]}</span><strong>{role.model_name}</strong><small>{role.status === "healthy" ? "正常" : role.status === "disabled" ? "已停用" : "需检测"}</small></div>)}</div> : <p className="platform-school-readonly-note">尚未配置主评与仲裁模型。</p>}</section>
+    <section><h3>三智能体模型</h3>{data.roles.length ? <ResponsiveTable<SchoolModelHealthResponse["roles"][number]> className="dense-data-table platform-school-detail-table" rowKey="agent_role" pagination={false} dataSource={data.roles} columns={[
+      { title: "智能体", dataIndex: "agent_role", width: 120, render: (value: keyof typeof roleLabel) => roleLabel[value] },
+      { title: "模型", dataIndex: "model_name" },
+      { title: "状态", dataIndex: "status", width: 100, render: (value: string) => value === "healthy" ? "正常" : value === "disabled" ? "已停用" : "需检测" }
+    ]} /> : <p className="platform-school-readonly-note">尚未配置主评与仲裁模型。</p>}</section>
     <Button href={`#/platform/model-config?tenant_id=${encodeURIComponent(tenantId)}`}>前往模型配置</Button>
   </div>;
 }

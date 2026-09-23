@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SessionUser } from "../auth/session";
 import { acceptBatchCreateCommand, batchCreateCommandKey, loadBatchCreateCommand } from "../features/capture/batchCreateCommand";
 import { recoverCaptureBatchCommand } from "../api/capture";
@@ -9,342 +9,55 @@ import {
   Empty,
   Form,
   Input,
-  InputNumber,
   Modal,
   Progress,
   Select,
   Space,
   Tabs,
-  Tooltip,
   Upload,
-  type TableColumnsType,
   type UploadProps,
 } from "antd";
 import {
   Check,
-  Combine,
-  FileQuestion,
   FileUp,
-  FolderOpen,
   Plus,
   RefreshCw,
-  RotateCw,
   ScanLine,
-  Scissors,
   SlidersHorizontal,
-  Trash2,
   Undo2,
-  UserCheck,
   Workflow,
 } from "lucide-react";
 import { getUserErrorMessage } from "../api/client";
 import {
-  confirmPageMatch,
   confirmRegistration,
-  confirmStudentMatch,
   completeCaptureBatch,
   createCaptureBatch,
-  deleteCapturePage,
-  getCaptureBatch,
-  getMatchingQueue,
-  listCaptureBatches,
-  markStudentUnknown,
-  mergeCaptureSubmissions,
   overrideCapturePageQuality,
   processCaptureBatch,
   processSubmissionPages,
   reopenCaptureBatch,
-  registerCaptureFile,
-  restoreCapturePage,
   retryRegistration,
-  splitCaptureSubmission,
   updateCapturePage,
   type CaptureBatch,
-  type CaptureBatchDetail,
-  type CaptureFile,
   type CapturePage,
-  type MatchingQueue,
-  type ProcessingSummary,
 } from "../api/capture";
-import { downloadFileBlob, uploadFile } from "../api/files";
+import { downloadFileBlob } from "../api/files";
 import { ErrorState, LoadingState } from "../components/PageState";
 import { ResponsiveTable } from "../components/ResponsiveTable";
 import { StatusTag } from "../components/StatusTag";
 import { RegistrationCorrectionWorkspace } from "../components/RegistrationCorrectionWorkspace";
 import { ImageQualityWorkspace } from "../features/capture/ImageQualityWorkspace";
-
-const statusLabels: Record<string, string> = {
-  draft: "等待上传",
-  uploading: "正在上传",
-  matching: "等待匹配",
-  processing: "正在处理",
-  needs_review: "需要确认",
-  ready: "处理完成",
-  completed: "已完成",
-  cancelled: "已取消",
-  uploaded: "已上传",
-  queued: "等待处理",
-  duplicate: "重复文件",
-  failed: "处理失败",
-  grouped: "已归入答卷",
-  registration: "正在对齐版面",
-  deleted: "已删除",
-  quality_rejected: "质量不合格",
-  normalized: "质量已通过",
-  page_matching: "正在匹配模板",
-};
-
-const errorLabels: Record<string, string> = {
-  pdf_decode_failed: "PDF 无法解析，请重新导出后再导入",
-  unsupported_type: "文件格式不支持，请转为 PDF 或图片",
-};
-
-const contentTypeLabels: Record<string, string> = {
-  "application/pdf": "PDF",
-  "image/jpeg": "JPG 图片",
-  "image/png": "PNG 图片",
-  "image/tiff": "TIFF 图片",
-};
+import { MatchingWorkspace } from "../features/capture/MatchingWorkspace";
+import { useCaptureBatchList } from "../features/capture/useCaptureBatchList";
+import { useCaptureBatchDetail } from "../features/capture/useCaptureBatchDetail";
+import { useCaptureMatchActions } from "../features/capture/useCaptureMatchActions";
+import { captureProgressPercent, captureSummary, captureSubmissionIds, captureIssuePages } from "../features/capture/captureBatchSummary";
+import { useCaptureUpload } from "../features/capture/useCaptureUpload";
+import { statusLabels, statusTone } from "../features/capture/capturePresentation";
+import { captureFileColumns, capturePageColumns, errorLabels } from "../features/capture/captureColumns";
 
 function formatError(error: unknown) {
   return getUserErrorMessage(error, "操作失败，请重试");
-}
-
-function statusTone(
-  status: string,
-): "success" | "warning" | "danger" | "processing" | "neutral" {
-  if (status === "completed" || status === "ready" || status === "grouped")
-    return "success";
-  if (status === "failed" || status === "cancelled") return "danger";
-  if (
-    status === "needs_review" ||
-    status === "duplicate" ||
-    status === "quality_rejected"
-  )
-    return "warning";
-  if (status === "processing" || status === "queued" || status === "uploading" || status === "page_matching")
-    return "processing";
-  return "neutral";
-}
-
-function MatchingWorkspace({
-  queue,
-  canManage,
-  actioning,
-  onPreview,
-  onConfirmStudent,
-  onUnknown,
-  onConfirmPage,
-  onSplit,
-  onMerge,
-}: {
-  queue: MatchingQueue;
-  canManage: boolean;
-  actioning: boolean;
-  onPreview: (page: CapturePage) => Promise<void>;
-  onConfirmStudent: (
-    submissionId: string,
-    studentId: string,
-    revision: number,
-  ) => Promise<void>;
-  onUnknown: (submissionId: string, revision: number) => Promise<void>;
-  onConfirmPage: (page: CapturePage, pageNo: number) => Promise<void>;
-  onSplit?: (submissionId: string, pageId: string) => Promise<void>;
-  onMerge?: (targetId: string, sourceId: string) => Promise<void>;
-}) {
-  const [selectedId, setSelectedId] = useState(queue.submissions[0]?.id ?? "");
-  const [candidateId, setCandidateId] = useState("");
-  const [mergeTarget, setMergeTarget] = useState("");
-  const selected =
-    queue.submissions.find((item) => item.id === selectedId) ??
-    queue.submissions[0];
-  useEffect(() => {
-    setCandidateId(selected?.student_id ?? "");
-  }, [selected?.id, selected?.student_id]);
-  const used = new Set(
-    queue.submissions
-      .filter(
-        (item) =>
-          item.id !== selected?.id && item.identity_status === "matched",
-      )
-      .map((item) => item.student_id),
-  );
-  const candidates = queue.candidates.filter(
-    (item) => !used.has(item.id) || item.id === selected?.student_id,
-  );
-  if (!selected) return <Empty description="暂无待匹配答卷" />;
-  return (
-    <div className="matching-workspace">
-      <aside className="matching-submissions">
-        <div className="capture-pane-title">
-          <strong>答卷</strong>
-          <span>{queue.submissions.length}</span>
-        </div>
-        {queue.submissions.map((item, index) => (
-          <button
-            type="button"
-            key={item.id}
-            className={
-              item.id === selected.id
-                ? "capture-batch-row active"
-                : "capture-batch-row"
-            }
-            onClick={() => {
-              setSelectedId(item.id);
-              setCandidateId(item.student_id ?? "");
-            }}
-          >
-            <span>
-              <strong>答卷 {index + 1}</strong>
-              <small>{item.pages.length} 页</small>
-            </span>
-            <StatusTag
-              tone={
-                item.identity_status === "matched"
-                  ? "success"
-                  : item.identity_status === "unknown"
-                    ? "danger"
-                    : "warning"
-              }
-            >
-              {item.identity_status === "matched"
-                ? "已匹配"
-                : item.identity_status === "unknown"
-                  ? "未知"
-                  : "待确认"}
-            </StatusTag>
-          </button>
-        ))}
-      </aside>
-      <section className="matching-evidence">
-        <h3>答卷页面</h3>
-        {selected.pages.map((page, index) => (
-          <div className="matching-page-row" key={page.id}>
-            <Button
-              icon={<FolderOpen size={15} />}
-              onClick={() => void onPreview(page)}
-            >
-              第 {page.sequence_no} 页
-            </Button>
-            <span className="muted-text">页码</span>
-            <InputNumber
-              key={`${page.id}-${page.assigned_page_no ?? "unset"}`}
-              min={1}
-              defaultValue={page.assigned_page_no ?? undefined}
-              onBlur={(event) => {
-                const next = Number(event.target.value);
-                if (
-                  Number.isInteger(next) &&
-                  next >= 1 &&
-                  next !== page.assigned_page_no
-                )
-                  void onConfirmPage(page, next);
-              }}
-              onPressEnter={(event) => {
-                const next = Number(event.currentTarget.value);
-                if (
-                  Number.isInteger(next) &&
-                  next >= 1 &&
-                  next !== page.assigned_page_no
-                )
-                  void onConfirmPage(page, next);
-              }}
-              disabled={!canManage || actioning}
-              aria-label="确认答卷页码"
-            />
-            <Space>
-              <StatusTag tone={statusTone(page.status)}>
-                {statusLabels[page.status] ?? "未知状态"}
-              </StatusTag>
-              {selected.pages.length > 1 && index > 0 && onSplit ? (
-                <Button
-                  icon={<Scissors size={14} />}
-                  aria-label="拆分为新答卷"
-                  onClick={() => void onSplit(selected.id, page.id)}
-                />
-              ) : null}
-            </Space>
-          </div>
-        ))}
-        <div className="matching-evidence-note">
-          <ScanLine size={17} />
-          <span>
-            系统识别到的姓名、学号或条码仅供参考，最终以您在名册中确认的学生为准。
-          </span>
-        </div>
-      </section>
-      <section className="matching-candidates">
-        <h3>本次考试名册</h3>
-        <Select
-          showSearch
-          value={candidateId || undefined}
-          onChange={setCandidateId}
-          placeholder="按姓名或学号查找"
-          optionFilterProp="label"
-          options={candidates.map((item) => ({
-            value: item.id,
-            label: `${item.name} · ${item.student_no} · ${item.class_name}`,
-          }))}
-        />
-        <Space wrap>
-          <Button
-            type="primary"
-            icon={<UserCheck size={16} />}
-            loading={actioning}
-            disabled={!canManage || !candidateId}
-            onClick={() =>
-              void onConfirmStudent(
-                selected.id,
-                candidateId,
-                selected.identity_revision,
-              )
-            }
-          >
-            确认学生
-          </Button>
-          <Button
-            danger
-            icon={<FileQuestion size={16} />}
-            loading={actioning}
-            disabled={!canManage}
-            onClick={() =>
-              void onUnknown(selected.id, selected.identity_revision)
-            }
-          >
-            标记未知
-          </Button>
-        </Space>
-        {queue.submissions.length > 1 && onMerge ? (
-          <Space.Compact>
-            <Select
-              value={mergeTarget || undefined}
-              onChange={setMergeTarget}
-              placeholder="合并到其他答卷"
-              options={queue.submissions
-                .filter((item) => item.id !== selected.id)
-                .map((item, index) => ({
-                  value: item.id,
-                  label: `答卷 ${index + 1}`,
-                }))}
-            />
-            <Button
-              icon={<Combine size={15} />}
-              disabled={!mergeTarget}
-              onClick={() => void onMerge(mergeTarget, selected.id)}
-            >
-              合并
-            </Button>
-          </Space.Compact>
-        ) : null}
-        {selected.identity_status === "matched" ? (
-          <div className="matching-confirmed">
-            <Check size={17} />
-            已确认，仍可重新选择并更正
-          </div>
-        ) : null}
-      </section>
-    </div>
-  );
 }
 
 export function CaptureBatchPage({
@@ -361,15 +74,10 @@ export function CaptureBatchPage({
     name: string;
     source_type: CaptureBatch["source_type"];
   }>();
-  const [batches, setBatches] = useState<CaptureBatch[]>([]);
-  const [selectedId, setSelectedId] = useState("");
-  const [detail, setDetail] = useState<CaptureBatchDetail>();
-  const [loading, setLoading] = useState(true);
-  const [loadingMoreBatches, setLoadingMoreBatches] = useState(false);
-  const [nextBatchCursor, setNextBatchCursor] = useState("");
-  const [hasMoreBatches, setHasMoreBatches] = useState(false);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [error, setError] = useState<string>();
+  const {
+    batches, setBatches, selectedId, setSelectedId, loading, loadingMoreBatches,
+    hasMoreBatches, error, loadBatches, loadMoreBatches
+  } = useCaptureBatchList(examId);
   const [modalOpen, setModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const creationBusy = useRef(false);
@@ -377,131 +85,26 @@ export function CaptureBatchPage({
   const [pendingCreation, setPendingCreation] = useState(() => {
     try { return Boolean(loadBatchCreateCommand(localStorage, creationCommandKey)); } catch { return true; }
   });
-  const [uploading, setUploading] = useState(false);
   const [actioning, setActioning] = useState(false);
   const [preview, setPreview] = useState<{ url: string; page: CapturePage }>();
-  const [matching, setMatching] = useState<MatchingQueue>();
-  const [matchingLoading, setMatchingLoading] = useState(false);
-  const [processingSummaries, setProcessingSummaries] = useState<Record<string, ProcessingSummary>>({});
   const [correctionRunId, setCorrectionRunId] = useState<string>();
   const [activeTab, setActiveTab] = useState("files");
+  const { detail, detailLoading, matching, setMatching, matchingLoading, processingSummaries,
+    loadDetail, loadMatching, resetDetail } = useCaptureBatchDetail(setBatches, setActiveTab);
+  const { uploading, uploadSource } = useCaptureUpload(detail, examId, loadDetail);
   const [reopenOpen, setReopenOpen] = useState(false);
   const [reopenReason, setReopenReason] = useState("");
   const [qualityOverridePage, setQualityOverridePage] = useState<CapturePage>();
   const [qualityOverrideReason, setQualityOverrideReason] = useState("");
-  const batchesRequestRef = useRef(0);
-  const detailRequestRef = useRef(0);
-  const matchingRequestRef = useRef(0);
   const previewRequestRef = useRef(0);
   const batchCanManage = canManage && !["completed", "cancelled"].includes(detail?.batch.status ?? "");
 
-  const loadBatches = useCallback(async () => {
-    const requestId = ++batchesRequestRef.current;
-    setLoading(true);
-    setError(undefined);
-    try {
-      const result = await listCaptureBatches(examId, { limit: 30 });
-      if (requestId !== batchesRequestRef.current) return;
-      setBatches(result.batches);
-      setNextBatchCursor(result.next_cursor ?? "");
-      setHasMoreBatches(Boolean(result.has_more));
-      setSelectedId((current) =>
-        result.batches.some((batch) => batch.id === current) ? current : result.batches[0]?.id || ""
-      );
-    } catch (currentError) {
-      if (requestId !== batchesRequestRef.current) return;
-      setError(formatError(currentError));
-      setNextBatchCursor("");
-      setHasMoreBatches(false);
-    } finally {
-      if (requestId === batchesRequestRef.current) setLoading(false);
-    }
-  }, [examId]);
-
-  const loadMoreBatches = useCallback(async () => {
-    if (!hasMoreBatches || !nextBatchCursor || loadingMoreBatches) return;
-    const requestId = ++batchesRequestRef.current;
-    setLoadingMoreBatches(true);
-    try {
-      const result = await listCaptureBatches(examId, { limit: 30, cursor: nextBatchCursor });
-      if (requestId !== batchesRequestRef.current) return;
-      setBatches((current) => {
-        const byID = new Map(current.map((item) => [item.id, item]));
-        result.batches.forEach((item) => byID.set(item.id, item));
-        return Array.from(byID.values());
-      });
-      setNextBatchCursor(result.next_cursor ?? "");
-      setHasMoreBatches(Boolean(result.has_more));
-    } catch (currentError) {
-      if (requestId === batchesRequestRef.current) message.error(formatError(currentError));
-    } finally {
-      if (requestId === batchesRequestRef.current) setLoadingMoreBatches(false);
-    }
-  }, [examId, hasMoreBatches, loadingMoreBatches, message, nextBatchCursor]);
-
-  const loadDetail = useCallback(
-    async (batchId: string, quiet = false) => {
-      const requestId = ++detailRequestRef.current;
-      if (!batchId) {
-        setDetail(undefined);
-		setProcessingSummaries({});
-        setDetailLoading(false);
-        return;
-      }
-      if (!quiet) setDetailLoading(true);
-      try {
-        const result = await getCaptureBatch(batchId);
-        if (requestId !== detailRequestRef.current) return;
-        setDetail(result);
-		if (!quiet && (result.batch.failed_count > 0 || result.pages.some((item) => ["needs_review", "quality_rejected", "failed"].includes(item.status)))) setActiveTab("issues");
-		setProcessingSummaries(Object.fromEntries(result.processing_summaries.map((item) => [item.submission_id, item])));
-        setBatches((current) =>
-          current.map((item) =>
-            item.id === result.batch.id ? result.batch : item,
-          ),
-        );
-      } catch (currentError) {
-        if (requestId !== detailRequestRef.current) return;
-        if (!quiet) message.error(formatError(currentError));
-      } finally {
-        if (!quiet && requestId === detailRequestRef.current) setDetailLoading(false);
-      }
-    },
-    [message],
-  );
-
-  const loadMatching = useCallback(
-    async (batchId: string) => {
-      const requestId = ++matchingRequestRef.current;
-      if (!batchId) {
-        setMatching(undefined);
-        setMatchingLoading(false);
-        return;
-      }
-      setMatchingLoading(true);
-      try {
-        const result = await getMatchingQueue(batchId);
-        if (requestId === matchingRequestRef.current) setMatching(result);
-      } catch (currentError) {
-        if (requestId !== matchingRequestRef.current) return;
-        message.error(formatError(currentError));
-      } finally {
-        if (requestId === matchingRequestRef.current) setMatchingLoading(false);
-      }
-    },
-    [message],
-  );
-
   useEffect(() => {
-    detailRequestRef.current += 1;
-    matchingRequestRef.current += 1;
+    resetDetail();
     previewRequestRef.current += 1;
     setSelectedId("");
-    setDetail(undefined);
-    setMatching(undefined);
-    setProcessingSummaries({});
     setPreview(undefined);
-  }, [examId]);
+  }, [examId, resetDetail]);
   useEffect(() => {
     void loadBatches();
   }, [loadBatches]);
@@ -567,29 +170,6 @@ export function CaptureBatchPage({
       return false;
     },
   };
-
-  async function uploadSource(file: File) {
-    if (!detail) return;
-    setUploading(true);
-    try {
-      const uploaded = await uploadFile(file, {
-        owner_type: "capture_batch",
-        owner_id: detail.batch.id,
-        exam_id: examId,
-      });
-      await registerCaptureFile(
-        detail.batch.id,
-        uploaded.file.id,
-        crypto.randomUUID(),
-      );
-      await loadDetail(detail.batch.id);
-      message.success(`${file.name} 已加入批次`);
-    } catch (currentError) {
-      message.error(formatError(currentError));
-    } finally {
-      setUploading(false);
-    }
-  }
 
   async function startProcessing() {
     if (!detail) return;
@@ -710,295 +290,17 @@ export function CaptureBatchPage({
     }
   }
 
-  async function matchStudent(
-    submissionId: string,
-    studentId: string,
-    revision: number,
-  ) {
-    setActioning(true);
-    try {
-      await confirmStudentMatch(submissionId, studentId, revision);
-      await Promise.all([
-        loadMatching(selectedId),
-        loadDetail(selectedId, true),
-      ]);
-      message.success("学生匹配已确认");
-    } catch (currentError) {
-      message.error(formatError(currentError));
-    } finally {
-      setActioning(false);
-    }
-  }
+  const { matchStudent, markUnknown, matchPage, changePageLifecycle, splitSubmission, mergeSubmissions } = useCaptureMatchActions({
+    selectedId, loadMatching, loadDetail, setMatching, setActioning,
+  });
 
-  async function markUnknown(submissionId: string, revision: number) {
-    setActioning(true);
-    try {
-      await markStudentUnknown(
-        submissionId,
-        revision,
-        "答卷上无法可靠识别学生身份",
-      );
-      await Promise.all([
-        loadMatching(selectedId),
-        loadDetail(selectedId, true),
-      ]);
-      message.warning("已标记为未知答卷");
-    } catch (currentError) {
-      message.error(formatError(currentError));
-    } finally {
-      setActioning(false);
-    }
-  }
+  const fileColumns = captureFileColumns();
+  const pageColumns = capturePageColumns({ batchCanManage, showPage, rotatePage, changePageLifecycle, setQualityOverrideReason, setQualityOverridePage });
 
-  async function matchPage(page: CapturePage, pageNo: number) {
-    setActioning(true);
-    try {
-      await confirmPageMatch(page.id, pageNo, page.revision);
-      await Promise.all([
-        loadMatching(selectedId),
-        loadDetail(selectedId, true),
-      ]);
-      message.success(`第 ${pageNo} 页页码已保存`);
-    } catch (currentError) {
-      message.error(formatError(currentError));
-    } finally {
-      setActioning(false);
-    }
-  }
-
-  async function changePageLifecycle(page: CapturePage) {
-    setActioning(true);
-    try {
-      if (page.status === "deleted")
-        await restoreCapturePage(page.id, page.revision, "恢复误删页面");
-      else await deleteCapturePage(page.id, page.revision, "移除非答卷页面");
-      await Promise.all([
-        loadMatching(selectedId),
-        loadDetail(selectedId, true),
-      ]);
-      message.success(page.status === "deleted" ? "页面已恢复" : "页面已删除");
-    } catch (currentError) {
-      message.error(formatError(currentError));
-    } finally {
-      setActioning(false);
-    }
-  }
-  async function splitSubmission(submissionId: string, pageId: string) {
-    setActioning(true);
-    try {
-      setMatching(
-        await splitCaptureSubmission(
-          selectedId,
-          submissionId,
-          [pageId],
-          "人工拆分混扫答卷",
-        ),
-      );
-      await loadDetail(selectedId, true);
-      message.success("已拆分为新答卷");
-    } catch (currentError) {
-      message.error(formatError(currentError));
-    } finally {
-      setActioning(false);
-    }
-  }
-  async function mergeSubmissions(targetId: string, sourceId: string) {
-    setActioning(true);
-    try {
-      setMatching(
-        await mergeCaptureSubmissions(
-          selectedId,
-          targetId,
-          sourceId,
-          "人工合并散页答卷",
-        ),
-      );
-      await loadDetail(selectedId, true);
-      message.success("答卷已合并");
-    } catch (currentError) {
-      message.error(formatError(currentError));
-    } finally {
-      setActioning(false);
-    }
-  }
-
-  const fileColumns: TableColumnsType<CaptureFile> = [
-    { title: "文件", dataIndex: "original_name", ellipsis: true },
-    {
-      title: "类型",
-      dataIndex: "content_type",
-      width: 150,
-      render: (value: string) => (
-        <span title={value}>
-          {contentTypeLabels[value] ??
-            (value ? value.split("/").pop()!.toUpperCase() : "-")}
-        </span>
-      ),
-    },
-    { title: "页数", dataIndex: "page_count", width: 72 },
-    {
-      title: "状态",
-      width: 110,
-      render: (_, item) => (
-        <StatusTag tone={statusTone(item.status)}>
-          {statusLabels[item.status] ?? "未知状态"}
-        </StatusTag>
-      ),
-    },
-    {
-      title: "问题",
-      width: 200,
-      render: (_, item) =>
-        item.error_code ? (
-          <Tooltip title={item.error_code}>
-            <span>
-              {errorLabels[item.error_code] ?? "处理失败，请删除后重新导入"}
-            </span>
-          </Tooltip>
-        ) : item.status === "duplicate" ? (
-          "内容与批次内文件重复"
-        ) : (
-          "-"
-        ),
-    },
-  ];
-  const pageColumns: TableColumnsType<CapturePage> = [
-    { title: "扫描顺序", dataIndex: "sequence_no", width: 90 },
-    { title: "原文件页码", dataIndex: "source_index", width: 100 },
-    { title: "答卷页码", dataIndex: "assigned_page_no", width: 90 },
-    {
-      title: "旋转",
-      dataIndex: "rotation_degrees",
-      width: 72,
-      render: (value: number) => `${value}°`,
-    },
-    {
-      title: "状态",
-      width: 110,
-      render: (_, item) => (
-        <StatusTag tone={statusTone(item.status)}>
-          {statusLabels[item.status] ?? "未知状态"}
-        </StatusTag>
-      ),
-    },
-    {
-      title: "模板判断",
-      width: 220,
-      render: (_, item) => {
-        if (item.status === "page_matching") return "正在比较已锁定模板…";
-        const candidates = item.match_candidates ?? [];
-        if (!candidates.length) return "-";
-        const top = candidates[0];
-        const name = String(top.template_name || "候选模板");
-        const version = Number(top.version_no || 0);
-        const score = Math.round(Number(top.score || 0) * 100);
-        const detailText = candidates.slice(0, 3).map((candidate) => {
-          const candidateName = String(candidate.template_name || candidate.template_id || "候选模板");
-          const candidateVersion = Number(candidate.version_no || 0);
-          return `${candidateName}${candidateVersion ? ` v${candidateVersion}` : ""} · ${Math.round(Number(candidate.score || 0) * 100)}%`;
-        }).join("；");
-        return <Tooltip title={detailText}><span>{item.status === "needs_review" ? "需确认：" : "已识别："}{name}{version ? ` v${version}` : ""} · {score}%</span></Tooltip>;
-      },
-    },
-    {
-      title: "操作",
-      width: 280,
-      render: (_, item) => (
-        <Space>
-          <Button
-            size="small"
-            icon={<FolderOpen size={14} />}
-            onClick={() => void showPage(item)}
-            aria-label="查看页面"
-          />
-          <Button
-            size="small"
-            icon={<RotateCw size={14} />}
-            onClick={() => void rotatePage(item)}
-            disabled={!batchCanManage || item.status === "deleted"}
-            aria-label="顺时针旋转"
-          />
-          <Button
-            size="small"
-            danger={item.status !== "deleted"}
-            icon={
-              item.status === "deleted" ? (
-                <Undo2 size={14} />
-              ) : (
-                <Trash2 size={14} />
-              )
-            }
-            onClick={() => void changePageLifecycle(item)}
-            disabled={!batchCanManage}
-            aria-label={item.status === "deleted" ? "恢复页面" : "删除页面"}
-          />
-          {["review", "failed"].includes(String(item.page_identity.quality_status ?? "")) &&
-          item.status !== "deleted" ? (
-            <Button
-              size="small"
-              type="primary"
-              disabled={!batchCanManage || !item.submission_page_id}
-              onClick={() => {
-                setQualityOverrideReason("");
-                setQualityOverridePage(item);
-              }}
-            >
-              质量放行
-            </Button>
-          ) : null}
-        </Space>
-      ),
-    },
-  ];
-
-  const progressPercent = useMemo(() => {
-    if (!detail) return null;
-    if (detail.batch.status === "completed") return 100;
-    if (detail.batch.page_count === 0) return null;
-    return Math.min(
-      100,
-      Math.round(
-        (detail.pages.filter((item) => item.status === "ready").length /
-          detail.batch.page_count) *
-          100,
-      ),
-    );
-  }, [detail]);
-  const summary = useMemo(
-    () =>
-      detail
-        ? [
-            { label: "文件", value: detail.batch.file_count },
-            { label: "页面", value: detail.batch.page_count },
-            { label: "答卷", value: detail.batch.submission_count },
-            { label: "待确认", value: detail.batch.review_count },
-            { label: "失败", value: detail.batch.failed_count },
-          ]
-        : [],
-    [detail],
-  );
-  const submissions = useMemo(
-    () =>
-      detail
-        ? (Array.from(
-            new Set(
-              detail.pages.map((item) => item.submission_id).filter(Boolean),
-            ),
-          ) as string[])
-        : [],
-    [detail],
-  );
-  const issuePages = useMemo(
-    () =>
-      detail
-        ? detail.pages.filter((item) =>
-            ["needs_review", "quality_rejected", "failed"].includes(
-              item.status,
-            ),
-          )
-        : [],
-    [detail],
-  );
+  const progressPercent = useMemo(() => captureProgressPercent(detail), [detail]);
+  const summary = useMemo(() => captureSummary(detail), [detail]);
+  const submissions = useMemo(() => captureSubmissionIds(detail), [detail]);
+  const issuePages = useMemo(() => captureIssuePages(detail), [detail]);
   async function resolveRegistration(runId: string, action: "confirm" | "retry") { setActioning(true); try { if (action === "confirm") await confirmRegistration(runId, "人工核对版面对齐边界与题目区域正确"); else await retryRegistration(runId); await loadDetail(selectedId, true); message.success(action === "confirm" ? "版面对齐已确认" : "已重新排队对齐"); } catch (currentError) { message.error(formatError(currentError)); } finally { setActioning(false); } }
 
   if (loading) return <LoadingState label="正在加载采集批次" />;

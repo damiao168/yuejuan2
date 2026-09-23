@@ -1,0 +1,177 @@
+@media (max-width: 1180px) {
+  .subjective-batch-counts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .grading-monitor-row {
+    grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto;
+  }
+
+  .grading-monitor-counts {
+    grid-column: 1 / 3;
+  }
+
+  .grading-monitor-actions {
+    grid-column: 3;
+    grid-row: 1 / 3;
+  }
+
+  .teacher-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.topbar {
+  height: 72px;
+  padding: 0 24px;
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(12px);
+}
+
+.topbar-left {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.exam-context {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: var(--eg-font-body);
+}
+
+.exam-context span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-actions {
+  flex-shrink: 0;
+}
+
+@media (max-width: 760px) {
+  .grading-monitor-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .grading-monitor-toolbar .ant-input-affix-wrapper {
+    width: 100%;
+  }
+
+  .grading-monitor-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding: 16px 2px;
+  }
+
+  .grading-monitor-counts,
+  .grading-monitor-actions {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .grading-monitor-actions,
+  .grading-monitor-actions .ant-btn {
+    width: 100%;
+  }
+}
+
+.public-computer-banner {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 20px;
+  color: #7a3d00;
+  background: #fff7e6;
+  border-bottom: 1px solid #ffd591;
+  position: sticky;
+  top: 0;
+  z-index: 12;
+}
+
+.public-computer-banner > span {
+  min-width: 0;
+}
+
+.public-computer-banner .ant-tag {
+  margin-right: 8px;
+}
+
+.public-computer-unlock {
+  display: grid;
+  gap: 16px;
+}
+
+.public-computer-lock-modal .ant-modal-mask {
+  background: rgba(18, 24, 32, 0.96);
+  backdrop-filter: blur(10px);
+}
+
+.public-computer-unlock > p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+.public-computer-unlock-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .login-options {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .public-computer-banner {
+    align-items: flex-start;
+    padding-inline: 12px;
+  }
+
+  .public-computer-banner > span {
+    font-size: var(--eg-font-caption);
+  }
+}
+
+.global-search {
+  width: min(360px, 28vw);
+}
+
+.user-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workspace {
+  padding: var(--workspace-padding);
+  padding-bottom: max(32px, env(safe-area-inset-bottom));
+  min-width: 0;
+  min-height: 100svh;
+  overflow: visible;
+}
+
+.workspace-route-indicator {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+

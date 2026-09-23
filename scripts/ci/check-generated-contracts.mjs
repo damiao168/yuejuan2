@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { checkOpenApiRouteDebt } from "../check-openapi-route-debt.mjs";
 
 const generatedPaths = ["packages/sdk/src/generated", "services/api-gateway/openapi/route-coverage.json"];
 
@@ -34,6 +35,8 @@ export function checkGeneratedContracts(root = process.cwd()) {
   }
   const changed = changedGenerated(before, snapshotGenerated(root));
   if (changed.length) throw new Error(`Generated contracts were stale; review the regenerated files and rerun:\n${changed.join("\n")}`);
+  const { failures } = checkOpenApiRouteDebt(root);
+  if (failures.length) throw new Error(`OpenAPI route debt gate failed:\n${failures.join("\n")}`);
   console.log("Generated SDK and route coverage match their source contracts.");
 }
 

@@ -1,13 +1,13 @@
 import type { PlatformSchoolSummary } from "../../../api/platformSchools";
 import { fullDate, numberText, relativeTime, tokenText } from "./schoolPresentation";
 
-export function SchoolOverviewTab({ school }: { school: PlatformSchoolSummary }) {
+export function SchoolOverviewTab({ school, focus }: { school: PlatformSchoolSummary; focus: "created" | "status" | null }) {
   return <div className="platform-school-detail-sections">
     <section><h3>基本信息</h3><dl className="platform-school-facts">
       <div><dt>学校名称</dt><dd>{school.name}</dd></div>
       <div><dt>学校代码</dt><dd className="mono">{school.code}</dd></div>
-      <div><dt>创建时间</dt><dd>{fullDate(school.created_at)}</dd></div>
-      <div><dt>当前状态</dt><dd>{school.status === "active" ? "使用中" : "已停用"}</dd></div>
+      <div className={focus === "created" ? "platform-school-fact-focused" : undefined}><dt>创建时间</dt><dd>{fullDate(school.created_at)}</dd></div>
+      <div className={focus === "status" ? "platform-school-fact-focused" : undefined}><dt>当前状态</dt><dd>{school.status === "active" ? "使用中" : "已停用"}</dd></div>
       <div><dt>最近业务活动</dt><dd>{relativeTime(school.last_activity_at)}</dd></div>
     </dl></section>
     <section><h3>成员规模</h3><dl className="platform-school-facts">

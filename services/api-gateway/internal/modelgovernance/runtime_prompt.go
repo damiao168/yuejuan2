@@ -88,11 +88,13 @@ func (s *HTTPRuntimePromptSource) Current(ctx context.Context) (RuntimePrompt, e
 	if envelope.Prompt.ActivationMode != "deployment_manifest" || envelope.Prompt.MutableAtRuntime || len(envelope.Prompt.Components) < 3 {
 		return RuntimePrompt{}, ErrRuntimePromptUnavailable
 	}
-	allowedSubjects := map[string]bool{"chinese": true, "math": true, "english": true, "physics": true, "chemistry": true, "biology": true, "history": true, "politics": true, "geography": true, "computer_science": true}
+	allowedSubjects := map[string]bool{"chinese": true, "mathematics": true, "english": true, "physics": true, "chemistry": true, "biology": true, "history": true, "ethics_politics": true, "geography": true}
 	allowedTypes := map[string]bool{"short_answer": true, "calculation": true, "essay": true, "discussion": true}
+	allowedRoles := map[string]bool{"role.primary": true, "role.arbiter": true}
+	allowedStages := map[string]bool{"stage.junior": true, "stage.senior": true}
 	seenKeys := make(map[string]bool, len(envelope.Prompt.Components))
 	for _, component := range envelope.Prompt.Components {
-		keyAllowed := component.Key == "base" || component.Key == "structured"
+		keyAllowed := component.Key == "base" || component.Key == "structured" || allowedRoles[component.Key] || allowedStages[component.Key]
 		parts := strings.Split(component.Key, ".")
 		if len(parts) == 3 && parts[0] == "subject" && allowedSubjects[parts[1]] && allowedTypes[parts[2]] {
 			keyAllowed = true
@@ -102,7 +104,7 @@ func (s *HTTPRuntimePromptSource) Current(ctx context.Context) (RuntimePrompt, e
 		}
 		seenKeys[component.Key] = true
 	}
-	if !seenKeys["base"] || !seenKeys["structured"] {
+	if !seenKeys["base"] || !seenKeys["structured"] || !seenKeys["role.primary"] || !seenKeys["role.arbiter"] || !seenKeys["stage.junior"] || !seenKeys["stage.senior"] {
 		return RuntimePrompt{}, ErrRuntimePromptUnavailable
 	}
 	return envelope.Prompt, nil

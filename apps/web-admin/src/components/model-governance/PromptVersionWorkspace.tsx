@@ -10,20 +10,23 @@ import {
 
 const commonLabels: Record<string, string> = {
   base: "评分总规则",
-  structured: "结构化输出"
+  structured: "结构化输出",
+  "role.primary": "主评角色",
+  "role.arbiter": "仲裁角色",
+  "stage.junior": "初中学段",
+  "stage.senior": "高中学段"
 };
 
 const subjectLabels: Record<string, string> = {
   chinese: "语文",
-  math: "数学",
+  mathematics: "数学",
   english: "英语",
   physics: "物理",
   chemistry: "化学",
   biology: "生物",
   history: "历史",
-  politics: "思想政治",
-  geography: "地理",
-  computer_science: "信息技术"
+  ethics_politics: "道德与法治 / 思想政治",
+  geography: "地理"
 };
 
 const questionTypeLabels: Record<string, string> = {

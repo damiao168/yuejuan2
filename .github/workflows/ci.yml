@@ -14,6 +14,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  workflow-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - run: npm run ci:workflow-lint
+
   web-static:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -230,7 +240,25 @@ jobs:
           ./internal/review
           ./internal/subjective
           ./internal/score
+          ./internal/modelgovernance
+          ./internal/paper
+          ./internal/platformschools
           -count=1
+
+  go-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: '1.26.6'
+          cache-dependency-path: services/api-gateway/go.sum
+      - run: npm run test:go-coverage
+      - run: npm run check:go-coverage
 
   go-security:
     runs-on: ubuntu-latest
@@ -282,7 +310,12 @@ jobs:
           EDUGRADE_E2E_DATABASE_URL: postgres://edugrade:edugrade@127.0.0.1:5432/edugrade_e2e?sslmode=disable
         run: |
           test -n "${EDUGRADE_E2E_DATABASE_URL}"
-          go test ./internal/server -run 'PostgresTestDatabase|Story056.*E2E|Reliability.*Postgres' -count=1 -v
+          go test ./internal/server -run 'PostgresTestDatabase|PostgresMigrationUpgrade|PostgresManagedConfig|Story056.*E2E|Reliability.*Postgres' -count=1 -v
+
+      - name: Authorization contract against migrated PostgreSQL
+        env:
+          EDUGRADE_E2E_DATABASE_URL: postgres://edugrade:edugrade@127.0.0.1:5432/edugrade_e2e?sslmode=disable
+        run: go test ./internal/auth -run '^TestAuthorizationContractPostgres$' -count=1 -v
 
       - name: Validate actual handler responses in both clients
         env:
@@ -568,8 +601,10 @@ jobs:
         run: docker compose -f infra/docker-compose/docker-compose.story060-e2e.yml down --volumes --remove-orphans
 
   ci-gate:
+    name: CI Gate
     if: ${{ always() }}
     needs:
+      - workflow-static
       - web-static
       - web-unit
       - web-build
@@ -580,6 +615,7 @@ jobs:
       - go-static
       - go-unit
       - go-race
+      - go-coverage
       - go-security
       - go-postgres
       - go-boundary

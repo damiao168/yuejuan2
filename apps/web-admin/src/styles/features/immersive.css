@@ -1,0 +1,184 @@
+/* Immersive grading keeps the answer, scoring basis and next action in one viewport. */
+.immersive-frame {
+  height: 100svh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.immersive-frame > .ant-layout {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.immersive-topbar {
+  height: 48px;
+  min-height: 48px;
+  padding: 0 12px;
+}
+
+.immersive-workspace {
+  height: calc(100svh - 48px);
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+
+.immersive-workspace .exam-workspace-page {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.immersive-workspace .exam-context-header,
+.immersive-workspace .exam-section-nav {
+  flex: 0 0 auto;
+}
+
+.immersive-workspace .exam-embedded-module {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+
+
+/* Short desktop viewports use document flow so every grading action remains reachable. */
+@media (min-width: 1100px) and (max-height: 820px) {
+  .immersive-frame,
+  .immersive-frame > .ant-layout {
+    height: auto;
+    min-height: 100svh;
+    overflow: visible;
+  }
+
+  .immersive-workspace {
+    height: auto;
+    min-height: calc(100svh - 48px);
+    overflow: visible;
+  }
+
+}
+
+.arbitration-shell.empty .arbitration-workspace {
+  display: none;
+}
+
+.arbitration-shell.empty .arbitration-queue-panel {
+  min-height: 300px;
+  display: grid;
+  place-items: center;
+}
+
+.arbitration-shell.empty .arbitration-queue-panel .ant-table-wrapper {
+  width: min(720px, 100%);
+}
+
+.appeal-shell.empty .appeal-workspace {
+  grid-template-columns: 1fr;
+}
+
+.appeal-shell.empty .appeal-main,
+.appeal-shell.empty .appeal-action-panel {
+  display: none;
+}
+
+.appeal-shell.empty .appeal-list-panel {
+  min-height: 360px;
+}
+
+.grading-quality-report-panel {
+  display: none;
+}
+
+@media (max-width: 1099px) {
+  .immersive-frame {
+    height: auto;
+    min-height: 100svh;
+    overflow-y: auto;
+  }
+
+  .immersive-frame > .ant-layout {
+    height: auto;
+    min-height: 100svh;
+    overflow: visible;
+  }
+
+  .immersive-workspace {
+    height: auto;
+    min-height: calc(100svh - 48px);
+    overflow: visible;
+  }
+
+
+  .immersive-workspace .exam-workspace-page,
+  .immersive-workspace .exam-embedded-module {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+}
+
+@media (max-width: 760px) {
+  /* Keep the immersive shell compact instead of inheriting the ordinary
+     document header's stacked mobile layout. */
+  .immersive-frame .immersive-topbar {
+    height: 48px;
+    min-height: 48px;
+    padding: 0 12px;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .immersive-frame .immersive-topbar .topbar-actions {
+    width: auto;
+    min-width: 0;
+    max-width: calc(100vw - 68px);
+    margin-left: auto;
+  }
+
+  .immersive-frame .immersive-topbar .topbar-actions > .ant-space-item {
+    min-width: 0;
+  }
+
+  .immersive-frame .immersive-topbar .topbar-left {
+    flex: 0 0 auto;
+  }
+
+  .immersive-frame .immersive-topbar .topbar-left .ant-btn {
+    width: 36px;
+    height: 36px;
+    padding-inline: 0;
+  }
+
+  .immersive-frame .immersive-topbar .topbar-left .ant-btn > span:not(.ant-btn-icon) {
+    display: none;
+  }
+
+  .immersive-frame .immersive-topbar .user-button {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .immersive-frame .immersive-topbar .user-button > span:not(.ant-avatar) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .immersive-frame .immersive-topbar .topbar-left > .ant-space > .ant-space-item:last-child {
+    display: block;
+    min-width: 0;
+  }
+
+  .immersive-frame .immersive-topbar .topbar-left strong {
+    font-size: var(--eg-font-body);
+    font-weight: 600;
+    white-space: normal;
+  }
+
+}

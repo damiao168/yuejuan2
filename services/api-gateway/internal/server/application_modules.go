@@ -8,6 +8,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/files"
 	"edugrade-enterprise/services/api-gateway/internal/idempotency"
 	"edugrade-enterprise/services/api-gateway/internal/modelgovernance"
+	"edugrade-enterprise/services/api-gateway/internal/observability"
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 	"edugrade-enterprise/services/api-gateway/internal/platformschools"
 	"edugrade-enterprise/services/api-gateway/internal/processing"
@@ -30,6 +31,7 @@ type ApplicationDependencies struct {
 	Reconciliation files.ReconciliationReader
 	LoginGuard     auth.LoginAttemptGuard
 	DB             *sql.DB
+	Metrics        *observability.Registry
 }
 
 func NewApplicationModules(dependencies ApplicationDependencies, stores ApplicationStores) ApplicationModules {
@@ -75,6 +77,7 @@ func newApplicationModules(dependencies ApplicationDependencies, stores Applicat
 		CalibrationEvidence: aiFoundation.ModelCalibrationService, DisagreementObserver: aiFoundation.DisagreementService,
 		SegmentImage: examModule.SegmentImages, FileDownload: examModule.FileDownloads,
 		MathUnderstanding: stores.AIGovernance.MathUnderstanding, MathCorrections: stores.AIGovernance.MathCorrections,
+		AIRequestObserver: dependencies.Metrics,
 	})
 	releaseModule := NewReleaseModule(stores.Release, ReleaseDependencies{
 		Auth: identity.AuthStore, Regrade: gradingQuality.RegradeService,
@@ -101,6 +104,7 @@ func NewPostgresApplicationModules(infra *Infrastructure) (ApplicationModules, e
 	return NewTransactionalApplicationModules(ApplicationDependencies{
 		Config: infra.Config, ObjectStore: infra.ObjectStore, Reconciliation: infra.FileReconciler,
 		LoginGuard: infra.LoginGuard, DB: infra.DB,
+		Metrics: infra.Metrics,
 	}, stores)
 }
 

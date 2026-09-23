@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { basename, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -44,6 +44,32 @@ export function pageWarning(source, filename, threshold = 700) {
   return lines > threshold ? `${filename}: ${lines} lines` : null;
 }
 
+export function checkFrontendDebt(sources, debt) {
+  const failures = [];
+  const seen = new Set();
+  for (const { path, source } of sources) {
+    seen.add(path);
+    const lines = source.trimEnd().split("\n").length;
+    const isCss = path.endsWith(".css");
+    const budget = isCss ? debt.legacy_css_max_lines[path] : debt.legacy_page_max_lines[path];
+    if (budget === undefined) {
+      if (isCss && Number.isSafeInteger(debt.css_max_lines) && lines > debt.css_max_lines) {
+        failures.push(`${path}: new stylesheet has ${lines} lines; maximum is ${debt.css_max_lines}`);
+      } else if (!isCss && lines > debt.page_max_lines) {
+        failures.push(`${path}: new page has ${lines} lines; maximum is ${debt.page_max_lines}`);
+      }
+    } else if (lines > budget) {
+      failures.push(`${path}: grew to ${lines} lines; debt budget is ${budget}`);
+    } else if (!isCss && lines <= debt.page_max_lines) {
+      failures.push(`${path}: now has ${lines} lines; remove its obsolete frontend debt entry`);
+    }
+  }
+  for (const path of [...Object.keys(debt.legacy_page_max_lines), ...Object.keys(debt.legacy_css_max_lines)]) {
+    if (!seen.has(path)) failures.push(`${path}: frontend debt entry has no matching file`);
+  }
+  return failures;
+}
+
 export function hookWarnings(source, filename, lineThreshold = 350, stateThreshold = 15) {
   const warnings = [];
   const lines = source.trimEnd().split("\n").length;
@@ -72,16 +98,17 @@ function main() {
   }
 
   const warnings = [];
-  const pageDirectories = [join(root, "apps", "web-admin", "src", "pages")];
-  for (const directory of pageDirectories) {
-    for (const path of walk(directory, ".tsx")) {
-      const warning = pageWarning(readFileSync(path, "utf8"), relative(root, path));
-      if (warning) warnings.push(warning);
-    }
-  }
+  const webSource = join(root, "apps", "web-admin", "src");
+  const frontendPaths = walk(webSource, ".tsx")
+    .filter((path) => path.endsWith("Page.tsx") || basename(path) === "GradingWorkbench.tsx");
   const desktopApp = join(root, "apps", "desktop-client", "src", "App.tsx");
-  const desktopWarning = pageWarning(readFileSync(desktopApp, "utf8"), relative(root, desktopApp));
-  if (desktopWarning) warnings.push(desktopWarning);
+  frontendPaths.push(desktopApp, join(webSource, "styles.css"), ...walk(join(webSource, "styles"), ".css"));
+  const frontendSources = frontendPaths.map((path) => ({
+    path: relative(root, path).split(sep).join("/"),
+    source: readFileSync(path, "utf8"),
+  }));
+  const frontendDebt = JSON.parse(readFileSync(join(root, "contracts", "architecture", "frontend-debt.json"), "utf8"));
+  failures.push(...checkFrontendDebt(frontendSources, frontendDebt));
   for (const app of ["web-admin", "desktop-client"]) {
     const features = join(root, "apps", app, "src", "features");
     for (const extension of [".ts", ".tsx"]) {

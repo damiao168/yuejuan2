@@ -5,8 +5,8 @@
   "policy": "Every registered route is covered by OpenAPI or an exact, reviewed exception-ledger entry; generation never invents approvals.",
   "counts": {
     "registered": 506,
-    "openapi": 237,
-    "registered_gaps": 269
+    "openapi": 254,
+    "registered_gaps": 252
   },
   "routes": [
     {
@@ -229,27 +229,15 @@
       "method": "GET",
       "path": "/api/v1/answer-segments/{id}/ai-grades",
       "source": "services/api-gateway/internal/server/routes_grading.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-read",
-      "contract_carrier": "Go handler tests and existing consumer behavior tests",
-      "exception_scope": "Frozen existing read routes only; any newly registered route must be reviewed explicitly.",
-      "exception_policy": "legacy-public-read-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy read surface predates the OpenAPI migration and remains tracked as bounded debt."
+      "coverage": "openapi",
+      "operation_id": "listSegmentAIGrades"
     },
     {
       "method": "PUT",
       "path": "/api/v1/answer-segments/{id}/answer",
       "source": "services/api-gateway/internal/server/routes_grading.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "recordSegmentAnswer"
     },
     {
       "method": "GET",
@@ -307,14 +295,8 @@
       "method": "POST",
       "path": "/api/v1/answer-segments/{id}/rule-grade",
       "source": "services/api-gateway/internal/server/routes_grading.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "createRuleGrade"
     },
     {
       "method": "POST",
@@ -418,14 +400,8 @@
       "method": "POST",
       "path": "/api/v1/answer-sheet-templates/{id}/omr-calibrations",
       "source": "services/api-gateway/internal/server/routes_grading.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "createOMRCalibration"
     },
     {
       "method": "POST",
@@ -581,40 +557,22 @@
       "method": "POST",
       "path": "/api/v1/arbitration-tasks",
       "source": "services/api-gateway/internal/server/routes_grading.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "createArbitrationTask"
     },
     {
       "method": "GET",
       "path": "/api/v1/arbitration-tasks/{id}",
       "source": "services/api-gateway/internal/server/routes_grading.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-read",
-      "contract_carrier": "Go handler tests and existing consumer behavior tests",
-      "exception_scope": "Frozen existing read routes only; any newly registered route must be reviewed explicitly.",
-      "exception_policy": "legacy-public-read-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy read surface predates the OpenAPI migration and remains tracked as bounded debt."
+      "coverage": "openapi",
+      "operation_id": "getArbitrationTask"
     },
     {
       "method": "POST",
       "path": "/api/v1/arbitration-tasks/{id}/assign",
       "source": "services/api-gateway/internal/server/routes_grading.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "assignArbitrationTask"
     },
     {
       "method": "POST",
@@ -1918,14 +1876,8 @@
       "method": "GET",
       "path": "/api/v1/exams/{examId}/scoring-readiness",
       "source": "services/api-gateway/internal/server/routes_grading.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-read",
-      "contract_carrier": "Go handler tests and existing consumer behavior tests",
-      "exception_scope": "Frozen existing read routes only; any newly registered route must be reviewed explicitly.",
-      "exception_policy": "legacy-public-read-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy read surface predates the OpenAPI migration and remains tracked as bounded debt."
+      "coverage": "openapi",
+      "operation_id": "getExamScoringReadiness"
     },
     {
       "method": "POST",
@@ -1945,14 +1897,8 @@
       "method": "GET",
       "path": "/api/v1/exams/{examId}/scoring-summary",
       "source": "services/api-gateway/internal/server/routes_grading.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-read",
-      "contract_carrier": "Go handler tests and existing consumer behavior tests",
-      "exception_scope": "Frozen existing read routes only; any newly registered route must be reviewed explicitly.",
-      "exception_policy": "legacy-public-read-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy read surface predates the OpenAPI migration and remains tracked as bounded debt."
+      "coverage": "openapi",
+      "operation_id": "getExamScoringSummary"
     },
     {
       "method": "POST",
@@ -3191,14 +3137,8 @@
       "method": "GET",
       "path": "/api/v1/omr-calibrations/{id}",
       "source": "services/api-gateway/internal/server/routes_grading.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-read",
-      "contract_carrier": "Go handler tests and existing consumer behavior tests",
-      "exception_scope": "Frozen existing read routes only; any newly registered route must be reviewed explicitly.",
-      "exception_policy": "legacy-public-read-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy read surface predates the OpenAPI migration and remains tracked as bounded debt."
+      "coverage": "openapi",
+      "operation_id": "getOMRCalibration"
     },
     {
       "method": "POST",
@@ -3987,27 +3927,15 @@
       "method": "GET",
       "path": "/api/v1/questions/{id}/scoring-rules",
       "source": "services/api-gateway/internal/server/routes_grading.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-read",
-      "contract_carrier": "Go handler tests and existing consumer behavior tests",
-      "exception_scope": "Frozen existing read routes only; any newly registered route must be reviewed explicitly.",
-      "exception_policy": "legacy-public-read-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy read surface predates the OpenAPI migration and remains tracked as bounded debt."
+      "coverage": "openapi",
+      "operation_id": "listScoringRules"
     },
     {
       "method": "POST",
       "path": "/api/v1/questions/{id}/scoring-rules",
       "source": "services/api-gateway/internal/server/routes_grading.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "createScoringRule"
     },
     {
       "method": "POST",
@@ -4498,66 +4426,36 @@
       "method": "PATCH",
       "path": "/api/v1/scoring-rules/{id}",
       "source": "services/api-gateway/internal/server/routes_grading.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "updateScoringRule"
     },
     {
       "method": "POST",
       "path": "/api/v1/scoring-rules/{id}/publish",
       "source": "services/api-gateway/internal/server/routes_grading.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "publishScoringRule"
     },
     {
       "method": "GET",
       "path": "/api/v1/scoring-runs/{runId}",
       "source": "services/api-gateway/internal/server/routes_grading.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-read",
-      "contract_carrier": "Go handler tests and existing consumer behavior tests",
-      "exception_scope": "Frozen existing read routes only; any newly registered route must be reviewed explicitly.",
-      "exception_policy": "legacy-public-read-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy read surface predates the OpenAPI migration and remains tracked as bounded debt."
+      "coverage": "openapi",
+      "operation_id": "getScoringRun"
     },
     {
       "method": "POST",
       "path": "/api/v1/scoring-runs/{runId}/cancel",
       "source": "services/api-gateway/internal/server/routes_grading.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "cancelScoringRun"
     },
     {
       "method": "POST",
       "path": "/api/v1/scoring-runs/{runId}/retry-failed",
       "source": "services/api-gateway/internal/server/routes_grading.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "retryFailedScoringRun"
     },
     {
       "method": "GET",

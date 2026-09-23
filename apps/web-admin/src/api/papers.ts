@@ -335,23 +335,17 @@ export async function validatePaperConfig(examId: string) {
 }
 
 export async function listScoringRules(questionId: string) {
-  return apiClient.request<{ scoring_rules: ScoringRule[] }>(`/api/v1/questions/${encodeURIComponent(questionId)}/scoring-rules`);
+  return generatedApi.listScoringRules({ path: { id: questionId } });
 }
 
 export async function createScoringRule(questionId: string, ruleType: string, config: Record<string, unknown>) {
-  return apiClient.request<{ scoring_rule: ScoringRule }>(`/api/v1/questions/${encodeURIComponent(questionId)}/scoring-rules`, {
-    method: "POST",
-    body: JSON.stringify({ rule_type: ruleType, config })
-  });
+  return generatedApi.createScoringRule({ path: { id: questionId }, body: { rule_type: ruleType, config } });
 }
 
 export async function updateScoringRule(ruleId: string, config: Record<string, unknown>, expectedRevision: number) {
-  return apiClient.request<{ scoring_rule: ScoringRule }>(`/api/v1/scoring-rules/${encodeURIComponent(ruleId)}`, {
-    method: "PATCH",
-    body: JSON.stringify({ config, expected_revision: expectedRevision })
-  });
+  return generatedApi.updateScoringRule({ path: { id: ruleId }, body: { config, expected_revision: expectedRevision } });
 }
 
 export async function publishScoringRule(ruleId: string) {
-  return apiClient.request<{ scoring_rule: ScoringRule }>(`/api/v1/scoring-rules/${encodeURIComponent(ruleId)}/publish`, { method: "POST" });
+  return generatedApi.publishScoringRule({ path: { id: ruleId } });
 }

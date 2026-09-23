@@ -90,3 +90,40 @@ test("平台学校总表提供运营摘要、搜索与五个详情入口", async
   await expect(drawer.getByText("发布期中考试成绩", { exact: true })).toBeVisible();
   await expect(drawer.getByText("1 / 2", { exact: true })).toBeVisible();
 });
+
+test("学校列表各字段打开对应详情，并显示所点的创建时间或状态", async ({ page }) => {
+  await installApiMocks(page, { role: "platform_admin", initiallyAuthenticated: true });
+  await installSchoolMocks(page);
+  await page.goto("/#/platform/schools");
+
+  const drawer = page.locator(".platform-school-drawer");
+  await expect(page.getByRole("button", { name: "北京第一中学", exact: true })).toBeVisible();
+  const schoolRow = page.getByRole("row", { name: /北京第一中学/ });
+  await schoolRow.getByRole("cell").nth(1).click({ position: { x: 2, y: 2 } });
+  await expect(drawer.getByRole("tab", { name: "成员与账号" })).toHaveAttribute("aria-selected", "true");
+  await drawer.locator(".ant-drawer-close").click();
+  await expect(drawer).not.toBeVisible();
+
+  const openField = async (label: string, tab: string) => {
+    await page.getByRole("button", { name: `北京第一中学 · ${label}` }).click();
+    await expect(drawer.getByRole("tab", { name: tab })).toHaveAttribute("aria-selected", "true");
+    if (label === "管理员") await expect(drawer.getByText("全部管理员", { exact: true })).toBeVisible();
+    if (label === "账号 / 学生") await expect(drawer.locator(".platform-school-inline-summary")).toContainText("1,426 名学生");
+    await drawer.locator(".ant-drawer-close").click();
+    await expect(drawer).not.toBeVisible();
+  };
+
+  await openField("管理员", "成员与账号");
+  await openField("账号 / 学生", "成员与账号");
+  await openField("AI 用量", "AI 用量");
+  await openField("模型", "模型服务");
+  await openField("最近活跃", "活动与安全");
+
+  await page.getByRole("button", { name: "北京第一中学 · 创建时间" }).click();
+  await expect(drawer.getByRole("tab", { name: "概览" })).toHaveAttribute("aria-selected", "true");
+  await expect(drawer.locator(".platform-school-fact-focused")).toContainText("创建时间");
+  await drawer.locator(".ant-drawer-close").click();
+  await page.getByRole("button", { name: "北京第一中学 · 状态" }).click();
+  await expect(drawer.locator(".platform-school-fact-focused")).toContainText("当前状态");
+  await expect(drawer.locator(".platform-school-fact-focused")).toContainText("使用中");
+});

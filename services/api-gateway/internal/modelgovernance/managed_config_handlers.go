@@ -338,7 +338,8 @@ func (h *Handler) DeleteManagedAPIConfig(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	id := r.PathValue("id")
-	if err := store.DeleteManagedAPIConfig(r.Context(), tenantID, id); err != nil {
+	user, _ := auth.UserFromContext(r.Context())
+	if err := store.DeleteManagedAPIConfig(r.Context(), tenantID, user.ID, id); err != nil {
 		h.writeManagedAPIError(w, r, err)
 		return
 	}
@@ -494,6 +495,8 @@ func (h *Handler) writeManagedAPIError(w http.ResponseWriter, r *http.Request, e
 		httpx.Error(w, r, http.StatusUnprocessableEntity, "provider_unknown", "暂时无法识别模型供应商")
 	case errors.Is(err, ErrManagedDefaultMutation):
 		httpx.Error(w, r, http.StatusConflict, "managed_model_current_active_required", "当前使用的模型必须保持启用，请先切换模型或切回本地模型")
+	case errors.Is(err, ErrManagedConfigInUse):
+		httpx.Error(w, r, http.StatusConflict, "managed_model_in_use", "该模型正在被评分智能体使用，请先更换 Primary A / Primary B / Arbiter 的模型绑定")
 	case errors.Is(err, ErrManagedCapabilityRequired):
 		httpx.Error(w, r, http.StatusConflict, "managed_model_capability_required", "请先通过完整能力检测，再设为当前使用")
 	case errors.Is(err, ErrManagedProbeStale):

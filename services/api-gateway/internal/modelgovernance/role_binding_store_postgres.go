@@ -27,6 +27,7 @@ SELECT $1::uuid,$2::uuid,$3,$4,$5,$6,config.id,$8,$9,$10,$11::uuid
 FROM managed_model_api_config config
 WHERE config.tenant_id=$2::uuid AND config.id=$7::uuid
   AND ($10='disabled' OR (config.deleted_at IS NULL AND config.status='active' AND config.last_capability_status='success' AND config.last_capability_probe_version=$12))
+FOR SHARE OF config
 ON CONFLICT(tenant_id,education_stage,subject_code,archetype_code,agent_role)
 DO UPDATE SET managed_model_api_config_id=EXCLUDED.managed_model_api_config_id,prompt_version=EXCLUDED.prompt_version,
   strength_rank=EXCLUDED.strength_rank,status=EXCLUDED.status,updated_at=now()

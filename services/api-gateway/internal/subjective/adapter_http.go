@@ -34,6 +34,11 @@ type HTTPAdapterConfig struct {
 	DeploymentRegion  string
 	CapabilityProfile string
 	Client            *http.Client
+	RequestObserver   AIGradingRequestObserver
+}
+
+type AIGradingRequestObserver interface {
+	ObserveAIGradingRequest(version string, success bool)
 }
 
 type HTTPAdapter struct {
@@ -47,6 +52,7 @@ type HTTPAdapter struct {
 	deploymentRegion  string
 	capabilityProfile string
 	client            *http.Client
+	requestObserver   AIGradingRequestObserver
 }
 
 type GradingAgentError struct {
@@ -95,7 +101,8 @@ func NewHTTPAdapter(cfg HTTPAdapterConfig) *HTTPAdapter {
 			PromptVersion: strings.TrimSpace(cfg.PromptVersion),
 			MinConfidence: minConfidence,
 		},
-		client: client,
+		client:          client,
+		requestObserver: cfg.RequestObserver,
 	}
 }
 
@@ -123,7 +130,13 @@ func (a *HTTPAdapter) RuntimeStatus() RuntimeStatus {
 	}
 }
 
-func (a *HTTPAdapter) Grade(ctx context.Context, input AdapterInput) (AdapterOutput, error) {
+func (a *HTTPAdapter) Grade(ctx context.Context, input AdapterInput) (result AdapterOutput, gradeErr error) {
+	attempted := false
+	defer func() {
+		if attempted && a.requestObserver != nil {
+			a.requestObserver.ObserveAIGradingRequest("v1", gradeErr == nil)
+		}
+	}()
 	requestID := strings.TrimSpace(input.RequestID)
 	if requestID == "" {
 		requestID = newAdapterRequestID()
@@ -141,6 +154,7 @@ func (a *HTTPAdapter) Grade(ctx context.Context, input AdapterInput) (AdapterOut
 
 	var lastErr error
 	for attempt := 0; attempt <= a.maxRetries; attempt++ {
+		attempted = true
 		response, requestErr := a.request(ctx, requestID, body)
 		if requestErr == nil {
 			output, mapErr := a.mapResponse(input, response)

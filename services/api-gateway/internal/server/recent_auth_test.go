@@ -191,7 +191,7 @@ func TestRoutineAdministrativeRoutesDoNotRequireRecentAuth(t *testing.T) {
 
 func TestPlatformModelConfigDoesNotRepeatPasswordChallenge(t *testing.T) {
 	store := &recentAuthTestStore{
-		MemoryStore:  testAuthStoreWithPermissions(t, []string{"model:provider:manage"}),
+		MemoryStore:  testAuthStoreWithPermissions(t, []string{"model:managed_api:manage"}),
 		stale:        true,
 		platformRole: true,
 	}
@@ -213,6 +213,46 @@ func TestPlatformModelConfigDoesNotRepeatPasswordChallenge(t *testing.T) {
 			router.ServeHTTP(rec, req)
 			if rec.Code == http.StatusPreconditionRequired || strings.Contains(rec.Body.String(), "recent_auth_required") {
 				t.Fatalf("platform model config unexpectedly requested the login password again: %d %s", rec.Code, rec.Body.String())
+			}
+		})
+	}
+}
+
+func TestPlatformModelRoutesUseSeparatePermissions(t *testing.T) {
+	for _, target := range []struct {
+		name       string
+		permission string
+		method     string
+		path       string
+		allowed    bool
+	}{
+		{"read configs", "model:read", http.MethodGet, "/api/v1/platform/model-api-configs", true},
+		{"read panel", "model:read", http.MethodGet, "/api/v1/platform/panel-model-bindings", true},
+		{"read cannot write config", "model:read", http.MethodPost, "/api/v1/platform/model-api-configs", false},
+		{"read cannot write panel", "model:read", http.MethodPut, "/api/v1/platform/panel-model-bindings", false},
+		{"managed API can write config", "model:managed_api:manage", http.MethodPost, "/api/v1/platform/model-api-configs", true},
+		{"managed API cannot write panel", "model:managed_api:manage", http.MethodPut, "/api/v1/platform/panel-model-bindings", false},
+		{"panel can write panel", "model:panel:manage", http.MethodPut, "/api/v1/platform/panel-model-bindings", true},
+		{"panel cannot write config", "model:panel:manage", http.MethodPost, "/api/v1/platform/model-api-configs", false},
+	} {
+		t.Run(target.name, func(t *testing.T) {
+			store := &recentAuthTestStore{
+				MemoryStore:  testAuthStoreWithPermissions(t, []string{target.permission}),
+				platformRole: true,
+			}
+			stores := NewMemoryApplicationStores()
+			stores.Identity.Auth = store
+			router := NewRouterWithApplicationStores(testConfig(), logger.New(io.Discard, "error"), nil, files.NewMemoryObjectStorage(), stores)
+			token := serverLogin(t, router)
+			req := httptest.NewRequest(target.method, target.path, strings.NewReader(`{}`))
+			req.Header.Set("Authorization", "Bearer "+token)
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+			if target.allowed && rec.Code == http.StatusForbidden {
+				t.Fatalf("permission %q was denied: %s", target.permission, rec.Body.String())
+			}
+			if !target.allowed && rec.Code != http.StatusForbidden {
+				t.Fatalf("permission %q unexpectedly allowed route: %d %s", target.permission, rec.Code, rec.Body.String())
 			}
 		})
 	}

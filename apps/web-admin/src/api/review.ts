@@ -140,7 +140,7 @@ export interface SubmitHumanGradeResult {
 export interface SegmentAnswerPayload {
   answer_text: string;
   answer_payload: Record<string, unknown>;
-  source: string;
+  source: "manual_entry" | "ocr_text" | "imported_answer";
   confidence?: number;
 }
 
@@ -240,42 +240,10 @@ export interface ReviewTaskFilter {
 
 export type ScoringRun = import("@edugrade/sdk").ScoringRun;
 
-export interface ScoringQuestionSummary {
-  question_id: string;
-  question_no: string;
-  question_type: string;
-  total: number;
-  queued: number;
-  confirmed: number;
-  review: number;
-  failed: number;
-}
-
-export interface ScoringSummary {
-  run?: ScoringRun;
-  questions: ScoringQuestionSummary[];
-}
-
-export interface ScoringReadinessCheck {
-  code: string;
-  label: string;
-  passed: boolean;
-  severity: "blocker" | "warning";
-  message: string;
-  count?: number;
-}
-
-export interface ScoringReadiness {
-  ready: boolean;
-  exam_status: string;
-  total_questions: number;
-  total_segments: number;
-  ready_segments: number;
-  automatic_candidates: number;
-  manual_review_candidates: number;
-  active_run?: ScoringRun;
-  checks: ScoringReadinessCheck[];
-}
+export type ScoringQuestionSummary = import("@edugrade/sdk").ScoringQuestionSummary;
+export type ScoringSummary = import("@edugrade/sdk").ScoringSummary;
+export type ScoringReadinessCheck = import("@edugrade/sdk").ScoringReadinessCheck;
+export type ScoringReadiness = import("@edugrade/sdk").ScoringReadiness;
 
 export interface ScoringRunItem {
   answer_segment_id: string;
@@ -321,40 +289,9 @@ export interface ExamAutomationResults {
   items: ScoringRunItem[];
 }
 
-export interface ArbitrationContext {
-  raw_answer?: string;
-  ocr_text?: string;
-  ai_suggestion?: Record<string, unknown>;
-}
-
-export interface ArbitrationTask {
-  id: string;
-  tenant_id: string;
-  double_mark_session_id: string;
-  exam_id: string;
-  question_id: string;
-  question_no: string;
-  answer_segment_id: string;
-  submission_id: string;
-  anonymous_code: string;
-  first_reviewer_id: string;
-  second_reviewer_id: string;
-  first_score: number;
-  second_score: number;
-  score_difference: number;
-  difference_reason: string;
-  status: string;
-  assigned_to?: string;
-  final_score?: number;
-  reason?: string;
-  student_feedback?: string;
-  allow_same_arbitrator: boolean;
-  context: ArbitrationContext;
-  revision: number;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-}
+export type ArbitrationContext = import("@edugrade/sdk").ReviewCommandReviewContext;
+export type ArbitrationTask = import("@edugrade/sdk").ReviewCommandArbitrationTask;
+export type CreateArbitrationTaskPayload = import("@edugrade/sdk").ReviewCommandCreateArbitrationTaskInput;
 
 export interface ArbitrationTaskFilter {
   status?: string;
@@ -364,22 +301,10 @@ export interface ArbitrationTaskFilter {
   cursor?: string;
 }
 
-export interface AssignArbitrationPayload {
-  assigned_to: string;
-  expected_revision: number;
-}
+export type AssignArbitrationPayload = import("@edugrade/sdk").ReviewCommandAssignArbitrationInput;
 
-export interface SubmitArbitrationPayload {
-  final_score: number;
-  reason: string;
-  student_feedback: string;
-  expected_revision: number;
-}
-
-export interface SubmitArbitrationResult {
-  arbitration_task: ArbitrationTask;
-  final_grade: FinalGrade;
-}
+export type SubmitArbitrationPayload = import("@edugrade/sdk").ReviewCommandSubmitArbitrationInput;
+export type SubmitArbitrationResult = import("@edugrade/sdk").ReviewCommandArbitrationSubmitResult;
 
 function queryString(filter: ReviewTaskFilter) {
   const params = new URLSearchParams();
@@ -486,36 +411,33 @@ export async function listArbitrationTasks(filter: ArbitrationTaskFilter = {}) {
   return apiClient.request<{ arbitration_tasks: ArbitrationTask[]; next_cursor: string; has_more: boolean }>(`/api/v1/arbitration-tasks${queryString(filter)}`);
 }
 
+export async function createArbitrationTask(payload: CreateArbitrationTaskPayload) {
+  return generatedApi.createArbitrationTask({ body: payload });
+}
+
 export async function getArbitrationTask(id: string) {
-  return apiClient.request<{ arbitration_task: ArbitrationTask }>(`/api/v1/arbitration-tasks/${encodeURIComponent(id)}`);
+  return generatedApi.getArbitrationTask({ path: { id } });
 }
 
 export async function assignArbitrationTask(id: string, payload: AssignArbitrationPayload) {
-  return apiClient.request<{ arbitration_task: ArbitrationTask }>(`/api/v1/arbitration-tasks/${encodeURIComponent(id)}/assign`, {
-    method: "POST",
-    body: JSON.stringify(payload)
-  });
+  return generatedApi.assignArbitrationTask({ path: { id }, body: payload });
 }
 
 export async function submitArbitration(id: string, payload: SubmitArbitrationPayload) {
-  return executeBusinessCommand("review.arbitrate", id, payload, (commandId, original) => apiClient.request<SubmitArbitrationResult>(`/api/v1/arbitration-tasks/${encodeURIComponent(id)}/submit`, {
-    method: "POST",
+  if (!id) throw new Error("仲裁任务 ID 不能为空");
+  return executeBusinessCommand("review.arbitrate", id, payload, (commandId, original) => generatedApi.submitArbitration({
+    path: { id },
     headers: { "Idempotency-Key": commandId },
-    body: JSON.stringify(original)
-  }), result => result as { arbitration_task: ArbitrationTask; final_grade: FinalGrade });
+    body: original as SubmitArbitrationPayload
+  }), result => result as SubmitArbitrationResult);
 }
 
 export async function recordSegmentAnswer(segmentId: string, payload: SegmentAnswerPayload) {
-  return apiClient.request<{ answer: SegmentAnswer }>(`/api/v1/answer-segments/${encodeURIComponent(segmentId)}/answer`, {
-    method: "PUT",
-    body: JSON.stringify(payload)
-  });
+  return generatedApi.recordSegmentAnswer({ path: { id: segmentId }, body: payload });
 }
 
 export async function createRuleGrade(segmentId: string) {
-  return apiClient.request<{ grade: AiGrade }>(`/api/v1/answer-segments/${encodeURIComponent(segmentId)}/rule-grade`, {
-    method: "POST"
-  });
+  return generatedApi.createRuleGrade({ path: { id: segmentId } });
 }
 
 export async function createSubjectiveAiGrade(segmentId: string): Promise<{ grade: AiGrade }> {
@@ -528,7 +450,7 @@ export async function createSubjectiveAiGrade(segmentId: string): Promise<{ grad
 }
 
 export async function listAiGrades(segmentId: string) {
-  return apiClient.request<{ grades: AiGrade[] }>(`/api/v1/answer-segments/${encodeURIComponent(segmentId)}/ai-grades`);
+  return generatedApi.listSegmentAIGrades({ path: { id: segmentId } });
 }
 
 export async function verifyEvidence(gradeId: string) {
@@ -551,11 +473,11 @@ export async function startScoringRun(examId: string, idempotencyKey: string) {
 }
 
 export async function getScoringReadiness(examId: string) {
-  return apiClient.request<{ scoring_readiness: ScoringReadiness }>(`/api/v1/exams/${encodeURIComponent(examId)}/scoring-readiness`);
+  return generatedApi.getExamScoringReadiness({ path: { examId } });
 }
 
 export async function getScoringSummary(examId: string) {
-  return apiClient.request<{ scoring_summary: ScoringSummary }>(`/api/v1/exams/${encodeURIComponent(examId)}/scoring-summary`);
+  return generatedApi.getExamScoringSummary({ path: { examId } });
 }
 
 export async function getExamAutomationResults(examId: string) {
@@ -563,7 +485,7 @@ export async function getExamAutomationResults(examId: string) {
 }
 
 export async function getScoringRun(runId: string) {
-  return apiClient.request<ScoringRunDetail>(`/api/v1/scoring-runs/${encodeURIComponent(runId)}`);
+  return generatedApi.getScoringRun({ path: { runId } });
 }
 
 export async function downloadScoringResultImage(segmentId: string) {
@@ -571,11 +493,11 @@ export async function downloadScoringResultImage(segmentId: string) {
 }
 
 export async function cancelScoringRun(runId: string) {
-  return apiClient.request<{ scoring_run: ScoringRun }>(`/api/v1/scoring-runs/${encodeURIComponent(runId)}/cancel`, { method: "POST" });
+  return generatedApi.cancelScoringRun({ path: { runId } });
 }
 
 export async function retryFailedScoringRun(runId: string) {
-  return apiClient.request<{ scoring_run: ScoringRun; requeued: number; skipped: number }>(`/api/v1/scoring-runs/${encodeURIComponent(runId)}/retry-failed`, { method: "POST" });
+  return generatedApi.retryFailedScoringRun({ path: { runId } });
 }
 
 export async function reprocessSegmentScore(segmentId: string, idempotencyKey: string) {

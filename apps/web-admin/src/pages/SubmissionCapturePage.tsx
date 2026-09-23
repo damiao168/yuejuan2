@@ -4,7 +4,6 @@ import {
   App,
   Button,
   Descriptions,
-  Dropdown,
   Drawer,
   Input,
   InputNumber,
@@ -14,36 +13,27 @@ import {
   Space,
   Tooltip,
   Upload,
-  type TableColumnsType,
   type UploadProps
 } from "antd";
 import {
   Eye,
-  FileSearch,
   FileUp,
-  Image as ImageIcon,
-  MoreHorizontal,
   RefreshCw,
-  RotateCcw,
   Search,
 } from "lucide-react";
-import { ApiClientError, getSafeUserText, getUserErrorMessage } from "../api/client";
+import { getUserErrorMessage } from "../api/client";
 import { runImageQualityCheck } from "../api/capture";
 import { downloadFileBlob, uploadFile, uploadFileWithProgress } from "../api/files";
 import { listExams, type Exam } from "../api/exams";
 import type { Student } from "../api/org";
 import {
   addSubmissionPage,
-  createOcrTask,
   createSubmission,
-  generateAnswerSegments,
   getSubmission,
   listOcrTasks,
   replaceSubmissionPage,
   runQualityCheck,
-  updateSubmissionStatus,
   type OcrTask,
-  type QualityIssue,
   type Submission,
   type SubmissionPage
 } from "../api/submissions";
@@ -51,11 +41,25 @@ import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
 import { OcrWorkerAlert } from "../components/OcrWorkerAlert";
 import { ProcessingOperationsPanel } from "../components/ProcessingOperationsPanel";
 import { ResponsiveTable } from "../components/ResponsiveTable";
-import { StatusTag } from "../components/StatusTag";
 import { DataTableShell, FilterBar, PageHeader } from "@edugrade/ui";
-import type { StatusTone } from "../types";
 import { hashQueryParam } from "../router/query";
 import { ExclusiveCommandGate, LatestRequestGate, runCaptureCommand } from "../features/capture/captureWorkflow";
+import { captureSubmissionColumns, capturePageColumns, captureOcrTaskColumns } from "../features/capture/submissionColumns";
+import { SubmissionCaptureSummary } from "../features/capture/SubmissionCaptureSummary";
+import {
+  qualityFilterOptions,
+  submissionStatusLabels,
+  qualityStatusLabels,
+  formatError,
+  formatTime,
+  compactFileName,
+  sourceTypeFor,
+  processingState,
+  ocrLabel,
+  derivedIssues,
+  matchesQualityFilter,
+  type Filters
+} from "../features/capture/submissionPresentation";
 import {
   buildSubmissionView,
   loadCapturePage,
@@ -64,8 +68,6 @@ import {
 } from "../features/capture/captureQueries";
 
 type UploadRequest = Parameters<NonNullable<UploadProps["customRequest"]>>[0];
-type QualityFilter = "all" | "blurry" | "missing_page" | "duplicate_page" | "ocr_failed" | "needs_manual_handling";
-
 interface UploadQueueItem {
   id: string;
   fileName: string;
@@ -79,205 +81,6 @@ interface PreviewState {
   url: string;
   contentType: string;
   filename?: string;
-}
-
-interface Filters {
-  search: string;
-  quality: QualityFilter;
-  issue: "all" | "failed" | "unmatched" | "quality";
-}
-
-const qualityFilterOptions: { label: string; value: QualityFilter }[] = [
-  { label: "全部问题类型", value: "all" },
-  { label: "模糊", value: "blurry" },
-  { label: "缺页", value: "missing_page" },
-  { label: "重复页", value: "duplicate_page" },
-  { label: "识别失败", value: "ocr_failed" },
-  { label: "需要人工处理", value: "needs_manual_handling" }
-];
-
-const submissionStatusLabels: Record<string, string> = {
-  created: "已创建",
-  pages_uploaded: "已上传",
-  quality_checked: "质量通过",
-  ready_for_ocr: "待识别",
-  rejected: "已拒绝"
-};
-
-const pageStatusLabels: Record<string, string> = {
-  uploaded: "已上传",
-  quality_checked: "质量通过",
-  quality_failed: "质量未通过",
-  replaced: "已替换"
-};
-
-function pageStatusTone(status: string): StatusTone {
-  if (status === "quality_checked") {
-    return "success";
-  }
-  if (status === "quality_failed" || status === "failed" || status === "rejected") {
-    return "danger";
-  }
-  return "neutral";
-}
-
-const qualityStatusLabels: Record<string, string> = {
-  unchecked: "未检查",
-  passed: "通过",
-  failed: "未通过"
-};
-
-const ocrStatusLabels: Record<string, string> = {
-  queued: "排队中",
-  processing: "处理中",
-  completed: "已完成",
-  failed: "失败"
-};
-
-function formatError(error: unknown) {
-  if (error instanceof ApiClientError) {
-    console.warn(`API 请求失败 ${error.status} ${error.code}`, error);
-    return getUserErrorMessage(error, "操作失败，请稍后重试");
-  }
-  return getUserErrorMessage(error, "操作失败，请稍后重试");
-}
-
-function formatTime(value?: string) {
-  if (!value) {
-    return "-";
-  }
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString("zh-CN", { hour12: false });
-}
-
-function compactFileName(name: string) {
-  return name.replace(/\.[^.]+$/, "").trim().slice(0, 64) || name.slice(0, 64);
-}
-
-function sourceTypeFor(file: File) {
-  const name = file.name.toLowerCase();
-  return file.type === "application/pdf" || name.endsWith(".pdf") ? "pdf_upload" : "image_upload";
-}
-
-function statusTone(status: string): StatusTone {
-  if (status === "ready_for_ocr" || status === "quality_checked") {
-    return "success";
-  }
-  if (status === "rejected") {
-    return "danger";
-  }
-  if (status === "created") {
-    return "neutral";
-  }
-  return "processing";
-}
-
-function ocrTone(task?: OcrTask): StatusTone {
-  if (!task) {
-    return "neutral";
-  }
-  if (task.status === "completed" && !task.requires_human_review) {
-    return "success";
-  }
-  if (task.status === "failed") {
-    return "danger";
-  }
-  if (task.requires_human_review) {
-    return "warning";
-  }
-  return "processing";
-}
-
-function latestTask(tasks: OcrTask[]) {
-  return [...tasks].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-}
-
-function summaryString(row: SubmissionView, key: string) {
-  const value = row.submission.summary?.[key];
-  return typeof value === "string" ? value : "";
-}
-
-function summaryNumber(row: SubmissionView, key: string) {
-  const value = row.submission.summary?.[key];
-  return typeof value === "number" && Number.isFinite(value) ? value : 0;
-}
-
-function summaryBoolean(row: SubmissionView, key: string) {
-  return row.submission.summary?.[key] === true;
-}
-
-type SubmissionProcessingState = "pending" | "processing" | "completed" | "failed";
-
-function processingState(row: SubmissionView): SubmissionProcessingState {
-  const task = latestTask(row.ocrTasks);
-  const taskStatus = task?.status ?? summaryString(row, "latest_ocr_status");
-  const segmentCount = row.segments.length || summaryNumber(row, "segment_count");
-  if (row.submission.quality_status === "failed" || taskStatus === "failed") {
-    return "failed";
-  }
-  if (taskStatus === "completed" && segmentCount > 0) {
-    return "completed";
-  }
-  if (taskStatus === "queued" || taskStatus === "processing") {
-    return "processing";
-  }
-  return "pending";
-}
-
-function ocrLabel(tasks: OcrTask[]) {
-  const task = latestTask(tasks);
-  if (!task) {
-    return "未触发";
-  }
-  const suffix = task.requires_human_review ? " / 需人工" : "";
-  return `${ocrStatusLabels[task.status] ?? "未知状态"}${suffix}`;
-}
-
-function derivedIssues(row: SubmissionView): QualityIssue[] {
-  const issues = [...(row.submission.quality_issues ?? [])];
-  for (const page of row.pages) {
-    issues.push(...(page.quality_issues ?? []).map((issue) => ({ code: issue.code, message: `第 ${page.page_no} 页：${getSafeUserText(issue.message, "图片质量检查未通过")}` })));
-  }
-  if (row.ocrTasks.some((task) => task.status === "failed")) {
-    issues.push({ code: "ocr_failed", message: "文字识别失败" });
-  }
-  if (summaryNumber(row, "ocr_failed_count") > 0 && !issues.some((issue) => issue.code === "ocr_failed")) {
-    issues.push({ code: "ocr_failed", message: "文字识别失败" });
-  }
-  if (row.ocrTasks.some((task) => task.requires_human_review) || summaryBoolean(row, "latest_ocr_requires_human_review")) {
-    issues.push({ code: "needs_manual_handling", message: "识别结果需要人工处理" });
-  }
-  if (row.segments.some((segment) => segment.status === "needs_manual_review" || segment.status === "rejected") || summaryNumber(row, "manual_segment_count") > 0) {
-    issues.push({ code: "needs_manual_handling", message: "切分结果需要人工处理" });
-  }
-  return issues;
-}
-
-function matchesQualityFilter(row: SubmissionView, filter: QualityFilter) {
-  if (filter === "all") {
-    return true;
-  }
-  const issues = derivedIssues(row);
-  if (filter === "missing_page") {
-    return issues.some((issue) => issue.code === "missing_page" || issue.code === "page_count_mismatch" || issue.code === "no_pages");
-  }
-  if (filter === "ocr_failed") {
-    return issues.some((issue) => issue.code === "ocr_failed") || row.ocrTasks.some((task) => task.status === "failed");
-  }
-  if (filter === "needs_manual_handling") {
-    return issues.some((issue) => issue.code === "needs_manual_handling");
-  }
-  return issues.some((issue) => issue.code === filter);
-}
-
-function issueTone(code: string): StatusTone {
-  if (code === "missing_page" || code === "page_count_mismatch" || code === "no_pages" || code === "ocr_failed") {
-    return "danger";
-  }
-  if (code === "needs_manual_handling" || code === "blurry" || code === "duplicate_page") {
-    return "warning";
-  }
-  return "neutral";
 }
 
 export function SubmissionCapturePage({
@@ -642,198 +445,9 @@ export function SubmissionCapturePage({
     }
   };
 
-  const columns: TableColumnsType<SubmissionView> = [
-    {
-      title: (
-        <Tooltip title="上传时取自文件名，关联学生后显示准考证号">
-          <span>答题卡编号</span>
-        </Tooltip>
-      ),
-      fixed: "left",
-      width: 210,
-      render: (_, row) => (
-        <div className="capture-identity-cell">
-          <strong>{row.submission.candidate_no || "暂未生成"}</strong>
-        </div>
-      )
-    },
-    { title: "学生姓名", width: 130, render: (_, row) => studentName(row.submission) },
-    {
-      title: "页数",
-      width: 92,
-      render: (_, row) => `${row.pages.length || row.submission.actual_page_count}/${row.submission.expected_page_count || "未设"}`
-    },
-    {
-      title: "当前状态",
-      width: 190,
-      render: (_, row) => {
-        const task = latestTask(row.ocrTasks);
-        const taskStatus = task?.status ?? summaryString(row, "latest_ocr_status");
-        const state = processingState(row);
-        if (state === "failed") return <StatusTag tone="danger">{taskStatus === "failed" ? "文字识别失败" : "图片质量未通过"}</StatusTag>;
-        if (state === "completed") return <StatusTag tone="success">处理完成</StatusTag>;
-        if (state === "processing") return <StatusTag tone="processing">{taskStatus === "processing" ? "正在识别" : "识别排队中"}</StatusTag>;
-        if (taskStatus === "completed") return <StatusTag tone="warning">等待生成题目区域</StatusTag>;
-        return <StatusTag tone={statusTone(row.submission.status)}>等待自动处理</StatusTag>;
-      }
-    },
-    {
-      title: "问题说明",
-      width: 300,
-      render: (_, row) => {
-        const issues = derivedIssues(row);
-        return issues.length > 0 ? (
-          <Space wrap size={[0, 4]}>
-            {issues.slice(0, 3).map((issue, index) => (
-              <StatusTag key={`${issue.code}-${index}`} tone={issueTone(issue.code)}>
-                {getSafeUserText(issue.message, "处理检查未通过")}
-              </StatusTag>
-            ))}
-            {issues.length > 3 ? <StatusTag tone="neutral">{`+${issues.length - 3}`}</StatusTag> : null}
-          </Space>
-        ) : (
-          <span className="muted-text">暂无问题</span>
-        );
-      }
-    },
-    {
-      title: "下一步",
-      fixed: "right",
-      width: 220,
-      render: (_, row) => {
-        const id = row.submission.id;
-        const task = latestTask(row.ocrTasks);
-        const taskStatus = task?.status ?? summaryString(row, "latest_ocr_status");
-        const segmentCount = row.segments.length || summaryNumber(row, "segment_count");
-        const qualityPending = row.submission.quality_status !== "passed";
-        const needsReady = !qualityPending && row.submission.status !== "ready_for_ocr";
-        const ocrFailed = taskStatus === "failed";
-        const needsOcr = !qualityPending && !needsReady && (!taskStatus || ocrFailed);
-        const needsSegments = taskStatus === "completed" && segmentCount === 0;
-
-        const runNext = () => {
-          if (qualityPending) {
-            return runAction(`quality-${id}`, async () => {
-              const integrity = await runQualityCheck(id);
-              if (!integrity.result.valid) {
-                throw new Error("答卷完整性未通过，请先补齐或更正页面");
-              }
-              await runImageQualityCheck(id);
-            }, "图像质量检测已进入队列", () => refreshSingle(id));
-          }
-          if (needsReady) {
-            return runAction(`ready-${id}`, async () => {
-              await updateSubmissionStatus(id, "ready_for_ocr", row.submission.revision);
-            }, "答题卡已转入待识别，可点击『开始识别』继续", () => refreshSingle(id));
-          }
-          if (needsOcr) {
-            return runAction(`ocr-${id}`, async () => {
-              await createOcrTask(id);
-            }, "文字识别已开始", () => refreshSingle(id));
-          }
-          if (needsSegments) {
-            return runAction(`segment-${id}`, async () => {
-              await generateAnswerSegments(id);
-            }, "题目区域已生成", () => refreshSingle(id));
-          }
-          void openPages(row);
-          return Promise.resolve();
-        };
-
-        const primaryLabel = qualityPending
-          ? "检查图片质量"
-          : needsReady
-            ? "转入待识别"
-            : needsOcr
-              ? ocrFailed ? "重试识别" : "开始识别"
-              : needsSegments
-                ? "生成题目区域"
-                : "查看答题卡";
-        return (
-          <Space className="table-actions" size={6}>
-            <Button
-              type="primary"
-              disabled={!canWrite && primaryLabel !== "查看答题卡"}
-              loading={Boolean(actioning?.endsWith(id))}
-              onClick={() => void runNext()}
-            >
-              {primaryLabel}
-            </Button>
-            <Dropdown
-              menu={{
-                items: [
-                  { key: "pages", label: "查看原始页面", icon: <ImageIcon size={14} />, onClick: () => openPages(row) },
-                  { key: "ocr", label: "查看识别详情", icon: <FileSearch size={14} />, onClick: () => void openOcrDrawer(row) }
-                ]
-              }}
-              trigger={["click"]}
-            >
-              <Button aria-label="更多操作" icon={<MoreHorizontal size={16} />} />
-            </Dropdown>
-          </Space>
-        );
-      }
-    }
-  ];
-
-  const pageColumns: TableColumnsType<SubmissionPage> = [
-    { title: "页码", dataIndex: "page_no", width: 72 },
-    { title: "状态", dataIndex: "status", width: 110, render: (value: string) => <StatusTag tone={pageStatusTone(value)}>{pageStatusLabels[value] ?? "未知状态"}</StatusTag> },
-    {
-      title: "质量问题",
-      width: 180,
-      render: (_, page) =>
-        page.quality_issues.length > 0 ? (
-          <Space wrap>
-            {page.quality_issues.map((issue, index) => (
-              <StatusTag key={`${issue.code}-${index}`} tone={issueTone(issue.code)}>
-                {getSafeUserText(issue.message, "图片质量检查未通过")}
-              </StatusTag>
-            ))}
-          </Space>
-        ) : (
-          <StatusTag tone="success">无</StatusTag>
-        )
-    },
-    {
-      title: "操作",
-      width: 190,
-      render: (_, page) => (
-        <Space>
-          <Button size="small" icon={<Eye size={14} />} loading={previewLoading} onClick={() => void previewPage(page)}>
-            查看
-          </Button>
-          <Upload
-            showUploadList={false}
-            beforeUpload={(file) => {
-              void replacePage(page, file);
-              return false;
-            }}
-          >
-            <Button size="small" icon={<RotateCcw size={14} />} disabled={!canWrite || Boolean(actioning)}>
-              重传
-            </Button>
-          </Upload>
-        </Space>
-      )
-    }
-  ];
-
-  const ocrTaskColumns: TableColumnsType<OcrTask> = [
-    {
-      title: "任务",
-      dataIndex: "id",
-      width: 130,
-      render: (value: string, _task, index) => (
-        <Tooltip title={value}>
-          <span>识别任务 {index + 1}</span>
-        </Tooltip>
-      )
-    },
-    { title: "状态", width: 110, render: (_, task) => <StatusTag tone={ocrTone(task)}>{ocrLabel([task])}</StatusTag> },
-    { title: "结果数", dataIndex: "result_count", width: 90 },
-    { title: "创建时间", dataIndex: "created_at", width: 170, render: formatTime }
-  ];
+  const columns = captureSubmissionColumns({ studentName, canWrite, actioning, runAction, refreshSingle, openPages, openOcrDrawer });
+  const pageColumns = capturePageColumns({ previewLoading, previewPage, replacePage, canWrite, actioning });
+  const ocrTaskColumns = captureOcrTaskColumns();
 
   return (
     <div className="page-stack">
@@ -917,33 +531,7 @@ export function SubmissionCapturePage({
         </section>
       ) : null}
 
-      <section className="capture-summary-grid">
-        <div className="metric-tile">
-          <span>答题卡总数</span>
-          <strong>{summary.total}</strong>
-          <small>当前考试</small>
-        </div>
-        <div className="metric-tile">
-          <span>待处理</span>
-          <strong>{summary.pending}</strong>
-          <small>等待检查或切题</small>
-        </div>
-        <div className="metric-tile">
-          <span>处理中</span>
-          <strong>{summary.processing}</strong>
-          <small>识别排队或执行中</small>
-        </div>
-        <div className="metric-tile">
-          <span>已完成</span>
-          <strong>{summary.completed}</strong>
-          <small>已识别并生成题目区域</small>
-        </div>
-        <div className="metric-tile">
-          <span>失败</span>
-          <strong>{summary.failed}</strong>
-          <small>可在列表直接重试</small>
-        </div>
-      </section>
+      <SubmissionCaptureSummary summary={summary} />
 
       {loading ? (
         <section className="workspace-section">

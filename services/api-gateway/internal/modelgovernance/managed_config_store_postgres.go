@@ -63,7 +63,7 @@ INSERT INTO managed_model_api_config(
   last_capability_tested_at,last_capability_probe_version,last_capability_usage,last_capability_diagnostic,
   config_source,provider_registry_version,created_by
 )
-VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,CASE WHEN $15='success' THEN $18 ELSE NULL END,$19,$20,$21,$22,$23,$24::jsonb,$25::jsonb,$26,$27,NULLIF($28,'')::uuid)
+VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18::timestamptz,CASE WHEN $15='success' THEN $18::timestamptz ELSE NULL END,$19,$20,$21,$22,$23,$24::jsonb,$25::jsonb,$26,$27,NULLIF($28,'')::uuid)
 RETURNING id::text,tenant_id::text,provider_key,display_name,adapter_type,base_url,model_name,model_version,region,
           true,credential_hint,status,is_default,last_test_status,last_test_message,last_test_latency_ms,last_tested_at,last_successful_tested_at,
           last_probe_mode,last_capability_status,last_capability_message,last_capability_tested_at,last_capability_probe_version,last_capability_usage,last_capability_diagnostic,
@@ -151,7 +151,7 @@ RETURNING id::text,tenant_id::text,provider_key,display_name,adapter_type,base_u
 	return item, nil
 }
 
-func (s *PostgresStore) DeleteManagedAPIConfig(ctx context.Context, tenantID, id string) error {
+func (s *PostgresStore) DeleteManagedAPIConfig(ctx context.Context, tenantID, actorID, id string) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -164,7 +164,20 @@ func (s *PostgresStore) DeleteManagedAPIConfig(ctx context.Context, tenantID, id
 	if isDefault {
 		return ErrManagedDefaultMutation
 	}
-	if _, err = tx.ExecContext(ctx, `DELETE FROM managed_model_api_config WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL`, tenantID, id); err != nil {
+	var inUse bool
+	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(
+  SELECT 1 FROM model_role_binding
+  WHERE tenant_id=$1::uuid AND managed_model_api_config_id=$2::uuid AND status='active'
+)`, tenantID, id).Scan(&inUse); err != nil {
+		return mapStoreError(err)
+	}
+	if inUse {
+		return ErrManagedConfigInUse
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE managed_model_api_config
+SET deleted_at=now(),deleted_by=$3::uuid,deletion_reason='removed_by_platform_admin',
+    status='disabled',is_default=false,updated_at=now()
+WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL`, tenantID, id, actorID); err != nil {
 		return mapStoreError(err)
 	}
 	return tx.Commit()

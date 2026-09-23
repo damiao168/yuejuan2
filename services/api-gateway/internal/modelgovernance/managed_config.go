@@ -21,6 +21,7 @@ var (
 	ErrManagedDefaultMutation    = errors.New("current managed model API must remain active")
 	ErrManagedCapabilityRequired = errors.New("managed model API capability verification is required")
 	ErrManagedProbeStale         = errors.New("managed model API configuration changed during probe")
+	ErrManagedConfigInUse        = errors.New("managed model API configuration is used by an active panel binding")
 )
 
 type ManagedAPIConfig struct {
@@ -53,6 +54,8 @@ type ManagedAPIConfig struct {
 	ProviderRegistryVersion  string                    `json:"provider_registry_version,omitempty"`
 	CreatedAt                time.Time                 `json:"created_at"`
 	UpdatedAt                time.Time                 `json:"updated_at"`
+	DeletedAt                *time.Time                `json:"-"`
+	DeletedBy                string                    `json:"-"`
 }
 
 type ManagedAPIConfigInput struct {
@@ -155,7 +158,7 @@ type ManagedAPIConfigStore interface {
 	ListManagedAPIConfigs(ctx context.Context, tenantID string) ([]ManagedAPIConfig, error)
 	CreateManagedAPIConfig(ctx context.Context, tenantID, actorID string, input ManagedAPIConfigInput) (ManagedAPIConfig, error)
 	UpdateManagedAPIConfig(ctx context.Context, tenantID, id string, input ManagedAPIConfigUpdateInput) (ManagedAPIConfig, error)
-	DeleteManagedAPIConfig(ctx context.Context, tenantID, id string) error
+	DeleteManagedAPIConfig(ctx context.Context, tenantID, actorID, id string) error
 	GetManagedAPIConnection(ctx context.Context, tenantID, id string) (ManagedAPIConnection, error)
 	RecordManagedAPIProbe(ctx context.Context, tenantID, id string, expectedUpdatedAt time.Time, result ManagedAPIProbeResult) (ManagedAPIConfig, error)
 }

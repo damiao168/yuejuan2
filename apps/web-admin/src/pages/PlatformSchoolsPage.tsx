@@ -5,7 +5,7 @@ import { listPlatformSchools, type PlatformSchoolListFilter, type PlatformSchool
 import { updateTenantStatus } from "../api/org";
 import { CreateSchoolForm } from "../features/platform/schools/CreateSchoolForm";
 import { SchoolManagementToolbar } from "../features/platform/schools/SchoolManagementToolbar";
-import { SchoolSummaryTable, type SchoolDetailTab } from "../features/platform/schools/SchoolSummaryTable";
+import { SchoolSummaryTable, type SchoolDetailTab, type SchoolDetailTarget } from "../features/platform/schools/SchoolSummaryTable";
 import { SchoolDetailDrawer } from "../features/platform/schools/SchoolDetailDrawer";
 import { isStepUpCancelledError, useStepUp } from "../auth/stepUpContext";
 
@@ -22,6 +22,8 @@ export function PlatformSchoolsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<SchoolDetailTab>("overview");
+  const [overviewFocus, setOverviewFocus] = useState<"created" | "status" | null>(null);
+  const [membersFocus, setMembersFocus] = useState<"administrators" | null>(null);
   const listRequestRef = useRef(0);
 
   const query = useMemo(() => ({ ...filter, cursor: undefined }), [filter]);
@@ -56,9 +58,11 @@ export function PlatformSchoolsPage() {
     finally { setLoadingMore(false); }
   }, [hasMore, nextCursor, loadingMore, query, message]);
 
-  const openSchool = useCallback((school: PlatformSchoolSummary, tab: SchoolDetailTab) => {
+  const openSchool = useCallback((school: PlatformSchoolSummary, target: SchoolDetailTarget) => {
     setSelectedId(school.tenant_id);
-    setActiveTab(tab);
+    setActiveTab(target === "created" || target === "status" ? "overview" : target === "administrator" ? "members" : target);
+    setOverviewFocus(target === "created" || target === "status" ? target : null);
+    setMembersFocus(target === "administrator" ? "administrators" : null);
   }, []);
 
   const changeStatus = useCallback(async (school: PlatformSchoolSummary) => {
@@ -81,7 +85,7 @@ export function PlatformSchoolsPage() {
     <SchoolManagementToolbar filter={filter} onChange={setFilter} onRefresh={refresh} onCreate={() => setCreateOpen(true)} loading={loading} summary={summary} />
     <SchoolSummaryTable schools={schools} loading={loading} usageWindow={filter.usage_window ?? "30d"} onOpen={openSchool} onChangeStatus={(school) => void changeStatus(school)} />
     {hasMore ? <div className="load-more-row"><Button loading={loadingMore} onClick={() => void loadMore()}>加载更多学校</Button></div> : null}
-    <SchoolDetailDrawer school={selected} activeTab={activeTab} onTabChange={setActiveTab} onClose={() => setSelectedId(null)} />
+    <SchoolDetailDrawer school={selected} activeTab={activeTab} overviewFocus={overviewFocus} membersFocus={membersFocus} onTabChange={(tab) => { setActiveTab(tab); setOverviewFocus(null); setMembersFocus(null); }} onClose={() => setSelectedId(null)} />
     <Modal title={<span className="platform-school-create-title"><Building2 size={18} /> 新建学校</span>} open={createOpen} footer={null} onCancel={() => setCreateOpen(false)} destroyOnHidden>
       <CreateSchoolForm onCancel={() => setCreateOpen(false)} onCreated={() => { setCreateOpen(false); refresh(); }} />
     </Modal>

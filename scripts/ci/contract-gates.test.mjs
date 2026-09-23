@@ -3,8 +3,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import { findBreakingChanges } from "../check-openapi-breaking.mjs";
+import { findRouteDebtFailures } from "../check-openapi-route-debt.mjs";
 import { buildRouteCoverage } from "../update-api-route-coverage.mjs";
 import { changedGenerated } from "./check-generated-contracts.mjs";
 
@@ -60,4 +62,25 @@ test("route gate rejects a newly registered route until its exact exception is r
   fs.writeFileSync(exceptionsPath, JSON.stringify(invalidDate));
   assert.throws(() => buildRouteCoverage({ root, gatewayRoot, openapiPath, exceptionsPath }), /invalid review_after/);
   fs.rmSync(root, { recursive: true, force: true });
+});
+
+test("OpenAPI debt ratchet rejects growth and new public commands even when totals stay flat", () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  const budget = JSON.parse(fs.readFileSync(path.join(root, "contracts/openapi/route-debt-budget.json"), "utf8"));
+  const current = JSON.parse(fs.readFileSync(path.join(root, "services/api-gateway/openapi/route-coverage.json"), "utf8"));
+  assert.deepEqual(findRouteDebtFailures(budget, current), []);
+
+  const increased = structuredClone(current);
+  increased.routes.push({ method: "GET", path: "/api/v1/new-read", coverage: "registered-gap", interface_category: "legacy-public-read" });
+  assert.ok(findRouteDebtFailures(budget, increased).some((failure) => failure.includes("registered gaps increased")));
+  assert.ok(findRouteDebtFailures(budget, increased).some((failure) => failure.includes("legacy public read gaps increased")));
+
+  const swapped = structuredClone(current);
+  const oldCommand = swapped.routes.findIndex((route) => route.coverage === "registered-gap" && route.interface_category === "legacy-public-command");
+  swapped.routes.splice(oldCommand, 1);
+  swapped.routes.push({ method: "POST", path: "/api/v1/new-command", coverage: "registered-gap", interface_category: "legacy-public-command" });
+  assert.deepEqual(findRouteDebtFailures(budget, swapped), ["new public command exception requires OpenAPI coverage: POST /api/v1/new-command"]);
+
+  swapped.routes.at(-1).interface_category = "public-feature";
+  assert.ok(findRouteDebtFailures(budget, swapped).some((failure) => failure.includes("new public command exception")));
 });

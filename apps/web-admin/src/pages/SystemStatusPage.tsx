@@ -143,7 +143,7 @@ export function SystemStatusPage() {
 
   return (
     <div className="system-status-shell">
-      <section className="system-status-topbar">
+      <section className="page-heading system-status-topbar">
         <div>
           <h1>系统状态</h1>
           <p>查看平台服务运行状态、各项依赖是否连通，以及日志记录说明。</p>

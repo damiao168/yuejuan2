@@ -1,0 +1,82 @@
+.platform-model-page { display: flex; flex-direction: column; gap: 18px; max-width: 1480px; margin: 0 auto; }
+.platform-model-heading { align-items: flex-end; }
+.platform-model-schoolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 18px 20px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.platform-model-school-select { display: grid; gap: 7px; min-width: min(420px, 100%); }
+.platform-model-school-select label { color: #334155; font-size: var(--eg-font-body); font-weight: 650; }
+.platform-model-school-summary { display: flex; align-items: center; gap: 20px; color: #64748b; font-size: var(--eg-font-body); }
+.platform-model-school-summary span, .platform-model-secret { display: inline-flex; align-items: center; gap: 7px; }
+.platform-model-security-note { border-color: #bae6fd; background: #f7fcff; }
+.platform-model-section-title { margin: 2px 0 -10px; color: #0f172a; font-size: 19px; }
+.platform-model-table-shell { min-height: 260px; overflow: hidden; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.platform-panel-bindings { display: grid; gap: 16px; padding: 20px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+.platform-panel-bindings-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.platform-panel-bindings-heading h2 { margin: 0 0 5px; color: #0f172a; font-size: 19px; }
+.platform-panel-bindings-heading p { margin: 0; color: #64748b; }
+.platform-panel-bindings-scope { display: grid; grid-template-columns: 150px 180px minmax(180px, 1fr) auto; align-items: end; gap: 12px; }
+.platform-panel-bindings-scope label, .platform-panel-role label { display: grid; gap: 6px; color: #334155; font-size: var(--eg-font-caption); font-weight: 600; }
+.platform-panel-bindings-hint { margin: 0; color: #64748b; font-size: var(--eg-font-caption); }
+.platform-panel-bindings-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.platform-panel-role { display: grid; align-content: start; gap: 14px; padding: 17px; border: 1px solid #e2e8f0; border-radius: 7px; background: #fbfcfd; }
+.platform-panel-role h3 { margin: 0 0 3px; color: #0f172a; font-size: 16px; }
+.platform-panel-role small { color: #64748b; }
+.platform-panel-role-footer { display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+.platform-panel-role-footer .ant-input-number { width: 100px; }
+.platform-model-table-shell .ant-table-wrapper, .platform-model-table-shell .responsive-table { border: 0; }
+.platform-model-identity { display: flex; align-items: center; gap: 11px; }
+.platform-model-identity > span { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 7px; }
+.platform-model-identity > span.active { color: #0f766e; background: #ecfdf5; }
+.platform-model-identity > span.disabled { color: #64748b; background: #f1f5f9; }
+.platform-model-identity div, .platform-model-endpoint, .platform-model-probe { display: grid; gap: 3px; }
+.platform-model-identity strong { color: #0f172a; font-weight: 650; }
+.platform-model-identity small, .platform-model-endpoint small, .platform-model-probe small { color: var(--eg-color-muted); font-size: var(--eg-font-caption); }
+.platform-model-endpoint span { max-width: 360px; overflow: hidden; color: #334155; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: var(--eg-font-caption); text-overflow: ellipsis; white-space: nowrap; }
+.platform-model-secret { color: #475569; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: var(--eg-font-caption); }
+.platform-model-form-grid, .platform-model-switches { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.platform-model-switches { padding: 14px 16px 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 7px; }
+.platform-model-field-help { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.platform-model-readonly-details { display: grid; gap: 6px; margin-top: 8px; padding: 14px 16px; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 7px; font-size: var(--eg-font-caption); overflow-wrap: anywhere; }
+.platform-model-detail-link { width: fit-content; height: auto; padding: 0; font-size: var(--eg-font-caption); }
+.platform-model-diagnostic { display: grid; gap: 14px; padding-top: 6px; color: #475569; }
+.platform-model-diagnostic p { margin: 0; color: #334155; }
+.platform-model-diagnostic dl { display: grid; gap: 8px; margin: 0; }
+.platform-model-diagnostic dl > div { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; }
+.platform-model-diagnostic dt { color: var(--eg-color-muted); }
+.platform-model-diagnostic dd { margin: 0; color: #334155; overflow-wrap: anywhere; }
+.platform-model-diagnostic small { color: var(--eg-color-muted); }
+.platform-model-diagnostic pre { max-height: 180px; margin: -6px 0 0; padding: 12px; overflow: auto; color: #334155; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+@media (max-width: 900px) {
+  .platform-model-heading, .platform-model-schoolbar { align-items: stretch; flex-direction: column; }
+  .platform-model-school-summary { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .platform-panel-bindings-grid { grid-template-columns: 1fr; }
+  .platform-panel-bindings-scope { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .platform-model-form-grid, .platform-model-switches { grid-template-columns: 1fr; }
+  .platform-panel-bindings-heading { flex-direction: column; }
+  .platform-panel-bindings-scope { grid-template-columns: 1fr; }
+}
+
+.paper-import-progress-indeterminate {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e5e7eb;
+}
+
+.paper-import-progress-indeterminate span {
+  position: absolute;
+  inset-block: 0;
+  width: 34%;
+  border-radius: inherit;
+  background: #13c2c2;
+  animation: paper-import-progress-scan 1.2s ease-in-out infinite;
+}
+
+@keyframes paper-import-progress-scan {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(395%); }
+}
+

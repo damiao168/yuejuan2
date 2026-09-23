@@ -86,7 +86,7 @@ const productionRouteDefinitions: AppRoute[] = [
     workspaces: ["platform"], experiences: { admin: { title: "学校管理", group: "平台管理" } }
   },
   {
-    key: "platformModelConfig", path: "/platform/model-config", title: "模型配置", group: "平台管理", icon: <Cable size={18} />, permissions: ["model:provider:manage"], allowedRoles: ["platform_admin"], mock: false, productionReady: true,
+    key: "platformModelConfig", path: "/platform/model-config", title: "模型配置", group: "平台管理", icon: <Cable size={18} />, permissions: ["model:read"], allowedRoles: ["platform_admin"], mock: false, productionReady: true,
     workspaces: ["platform"], experiences: { admin: { title: "模型配置", group: "平台管理" } }
   },
   {
@@ -175,9 +175,9 @@ const productionRouteDefinitions: AppRoute[] = [
     workspaces: ["tenant_admin", "school_admin"], experiences: { admin: { title: "学校初始化", group: "学校管理" } }
   },
   {
-    key: "modelGovernance", path: "/system/models", title: "模型治理", group: "系统管理", icon: <BrainCircuit size={18} />, permissions: ["model:read"], mock: false, productionReady: true,
+    key: "modelGovernance", path: "/system/models", title: "模型质量治理", group: "系统管理", icon: <BrainCircuit size={18} />, permissions: ["model:read"], mock: false, productionReady: true,
     allowedRoles: ["platform_admin"],
-    workspaces: ["platform"], experiences: { admin: { title: "模型治理", group: "系统管理" } }
+    workspaces: ["platform"], experiences: { admin: { title: "模型质量治理", group: "系统管理" } }
   },
   {
     key: "subjectiveGradingBatches", path: "/grading/subjective-batches", title: "主观题批次", group: "阅卷与质量", icon: <Sparkles size={18} />, permissions: ["grading:manage"], mock: false, productionReady: true,

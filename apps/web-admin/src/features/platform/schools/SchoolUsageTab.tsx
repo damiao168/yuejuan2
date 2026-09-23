@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Alert, DatePicker, Segmented, Spin, Table } from "antd";
+import { Alert, DatePicker, Segmented, Spin } from "antd";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { getPlatformSchoolUsage, type SchoolUsageResponse, type UsageWindow } from "../../../api/platformSchools";
+import { getPlatformSchoolUsage, type SchoolUsageResponse, type UsageBreakdown, type UsageWindow } from "../../../api/platformSchools";
+import { ResponsiveTable } from "../../../components/ResponsiveTable";
 import { numberText, tokenText } from "./schoolPresentation";
 
 const { RangePicker } = DatePicker;
@@ -35,10 +36,10 @@ export function SchoolUsageTab({ tenantId }: { tenantId: string }) {
       </div>
       <section className="platform-school-usage-trend"><h3>Token 趋势</h3><div className="platform-school-chart">
         <ResponsiveContainer width="100%" height="100%"><LineChart data={data.trend} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
-          <CartesianGrid stroke="#e9edf2" vertical={false} /><XAxis dataKey="date" tickFormatter={(value: string) => value.slice(5)} tickLine={false} axisLine={false} fontSize={11} /><YAxis tickFormatter={(value: number) => tokenText(value)} tickLine={false} axisLine={false} fontSize={11} width={54} /><Tooltip formatter={(value) => numberText(Number(value))} /><Line type="monotone" dataKey="total_tokens" name="Token" stroke="#1769aa" strokeWidth={2} dot={false} activeDot={{ r: 4 }} /></LineChart></ResponsiveContainer>
+          <CartesianGrid stroke="#e9edf2" vertical={false} /><XAxis dataKey="date" tickFormatter={(value: string) => value.slice(5)} tickLine={false} axisLine={false} fontSize={14} /><YAxis tickFormatter={(value: number) => tokenText(value)} tickLine={false} axisLine={false} fontSize={14} width={62} /><Tooltip formatter={(value) => numberText(Number(value))} /><Line type="monotone" dataKey="total_tokens" name="Token" stroke="#1769aa" strokeWidth={2} dot={false} activeDot={{ r: 4 }} /></LineChart></ResponsiveContainer>
       </div></section>
-      <section><h3>按功能</h3><Table rowKey="key" size="small" pagination={false} dataSource={data.by_feature} columns={[{title:"功能",dataIndex:"label"},{title:"Token",dataIndex:"total_tokens",align:"right",render:tokenText},{title:"请求",dataIndex:"requests",align:"right",render:numberText},{title:"占比",dataIndex:"share",align:"right",render:(value:number)=>`${(value*100).toFixed(1)}%`}]}/></section>
-      <section><h3>按模型</h3><Table rowKey="key" size="small" pagination={false} dataSource={data.by_model} columns={[{title:"模型",dataIndex:"label"},{title:"Token",dataIndex:"total_tokens",align:"right",render:tokenText},{title:"请求",dataIndex:"requests",align:"right",render:numberText}]}/></section>
+      <section><h3>按功能</h3><ResponsiveTable<UsageBreakdown> className="dense-data-table platform-school-detail-table" rowKey="key" pagination={false} dataSource={data.by_feature} columns={[{title:"功能",dataIndex:"label"},{title:"Token",dataIndex:"total_tokens",align:"right",render:tokenText},{title:"请求",dataIndex:"requests",align:"right",render:numberText},{title:"占比",dataIndex:"share",align:"right",render:(value:number)=>`${(value*100).toFixed(1)}%`}]}/></section>
+      <section><h3>按模型</h3><ResponsiveTable<UsageBreakdown> className="dense-data-table platform-school-detail-table" rowKey="key" pagination={false} dataSource={data.by_model} columns={[{title:"模型",dataIndex:"label"},{title:"Token",dataIndex:"total_tokens",align:"right",render:tokenText},{title:"请求",dataIndex:"requests",align:"right",render:numberText}]}/></section>
       <p className="platform-school-readonly-note">用量来自平台调用账本；预估成本不等于供应商最终账单。</p>
     </> : <p>请选择时间范围。</p>}
   </div>;
