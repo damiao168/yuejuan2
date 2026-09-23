@@ -9,6 +9,7 @@ type LogEvent = (level: LocalLogEntry["level"], message: string, context?: strin
 export function useRuntimeDiagnostics(
   client: DesktopApiClient,
   serverUrl: string,
+  durableScopeKey: string,
   setServerUrl: Dispatch<SetStateAction<string>>,
   logEvent: LogEvent
 ) {
@@ -20,11 +21,11 @@ export function useRuntimeDiagnostics(
   const [diagnosticError, setDiagnosticError] = useState<string | null>(null);
 
   const refreshCapabilities = useCallback(async () => {
-    const [nextCapabilities, nextDiagnostics] = await Promise.all([getCapabilityStatuses(), getRuntimeDiagnostics()]);
+    const [nextCapabilities, nextDiagnostics] = await Promise.all([getCapabilityStatuses(durableScopeKey), getRuntimeDiagnostics()]);
     setCapabilities(nextCapabilities);
     setDiagnostics(nextDiagnostics);
     setLocalCacheSecurity(scanLocalCacheSecurity());
-  }, []);
+  }, [durableScopeKey]);
 
   useEffect(() => {
     void refreshCapabilities();

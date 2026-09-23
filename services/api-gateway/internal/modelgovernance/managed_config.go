@@ -20,6 +20,7 @@ var (
 	ErrManagedProviderUnknown    = errors.New("managed model API provider is unknown")
 	ErrManagedDefaultMutation    = errors.New("current managed model API must remain active")
 	ErrManagedCapabilityRequired = errors.New("managed model API capability verification is required")
+	ErrManagedProbeStale         = errors.New("managed model API configuration changed during probe")
 )
 
 type ManagedAPIConfig struct {
@@ -40,6 +41,7 @@ type ManagedAPIConfig struct {
 	LastTestMessage          string                    `json:"last_test_message,omitempty"`
 	LastTestLatencyMS        int64                     `json:"last_test_latency_ms,omitempty"`
 	LastTestedAt             *time.Time                `json:"last_tested_at,omitempty"`
+	LastSuccessfulTestedAt   *time.Time                `json:"last_successful_tested_at,omitempty"`
 	LastProbeMode            string                    `json:"last_probe_mode,omitempty"`
 	LastCapabilityStatus     string                    `json:"last_capability_status"`
 	LastCapabilityMessage    string                    `json:"last_capability_message,omitempty"`
@@ -95,22 +97,33 @@ type ManagedAPICheckResult struct {
 }
 
 type ManagedAPIProbeResult struct {
-	OK               bool                      `json:"ok"`
-	ProbeMode        string                    `json:"probe_mode"`
-	GeneratedRequest bool                      `json:"generated_request"`
-	Reused           bool                      `json:"reused,omitempty"`
-	Coalesced        bool                      `json:"coalesced,omitempty"`
-	Provider         string                    `json:"provider,omitempty"`
-	Model            string                    `json:"model,omitempty"`
-	StatusCode       int                       `json:"status_code,omitempty"`
-	LatencyMS        int64                     `json:"latency_ms"`
-	Message          string                    `json:"message"`
-	ErrorCode        string                    `json:"error_code,omitempty"`
-	CredentialCheck  ManagedAPICheckResult     `json:"credential_check"`
-	ModelCheck       ManagedAPICheckResult     `json:"model_check"`
-	CapabilityCheck  ManagedAPICheckResult     `json:"capability_check"`
-	Usage            ManagedAPIProbeUsage      `json:"usage"`
-	Diagnostic       ManagedAPIProbeDiagnostic `json:"diagnostic"`
+	OK                   bool                           `json:"ok"`
+	ProbeMode            string                         `json:"probe_mode"`
+	GeneratedRequest     bool                           `json:"generated_request"`
+	Reused               bool                           `json:"reused,omitempty"`
+	Coalesced            bool                           `json:"coalesced,omitempty"`
+	Provider             string                         `json:"provider,omitempty"`
+	Model                string                         `json:"model,omitempty"`
+	StatusCode           int                            `json:"status_code,omitempty"`
+	LatencyMS            int64                          `json:"latency_ms"`
+	Message              string                         `json:"message"`
+	ErrorCode            string                         `json:"error_code,omitempty"`
+	CredentialCheck      ManagedAPICheckResult          `json:"credential_check"`
+	ModelCheck           ManagedAPICheckResult          `json:"model_check"`
+	CapabilityCheck      ManagedAPICheckResult          `json:"capability_check"`
+	Usage                ManagedAPIProbeUsage           `json:"usage"`
+	Diagnostic           ManagedAPIProbeDiagnostic      `json:"diagnostic"`
+	ConnectionDiagnostic ManagedAPIConnectionDiagnostic `json:"connection_diagnostic"`
+}
+
+// Connection diagnostics contain timing only; never record endpoint URLs or credentials.
+type ManagedAPIConnectionDiagnostic struct {
+	Attempts     int    `json:"attempts,omitempty"`
+	DNSMS        int64  `json:"dns_ms,omitempty"`
+	ConnectMS    int64  `json:"connect_ms,omitempty"`
+	TLSMS        int64  `json:"tls_ms,omitempty"`
+	TTFBMS       int64  `json:"ttfb_ms,omitempty"`
+	FailureStage string `json:"failure_stage,omitempty"`
 }
 
 type ManagedAPIProbeUsage struct {
@@ -144,7 +157,7 @@ type ManagedAPIConfigStore interface {
 	UpdateManagedAPIConfig(ctx context.Context, tenantID, id string, input ManagedAPIConfigUpdateInput) (ManagedAPIConfig, error)
 	DeleteManagedAPIConfig(ctx context.Context, tenantID, id string) error
 	GetManagedAPIConnection(ctx context.Context, tenantID, id string) (ManagedAPIConnection, error)
-	RecordManagedAPIProbe(ctx context.Context, tenantID, id string, result ManagedAPIProbeResult) (ManagedAPIConfig, error)
+	RecordManagedAPIProbe(ctx context.Context, tenantID, id string, expectedUpdatedAt time.Time, result ManagedAPIProbeResult) (ManagedAPIConfig, error)
 }
 
 type ManagedAPIProber interface {

@@ -135,6 +135,7 @@ func NewRouterComplete(dependencies RouterDependencies) http.Handler {
 	registerAuthRoutes(mux, ctx)
 	registerOnboardingRoutes(mux, ctx)
 	registerGovernanceRoutes(mux, ctx)
+	registerPlatformSchoolRoutes(mux, ctx)
 	registerOrganizationRoutes(mux, ctx)
 	registerExamRoutes(mux, ctx)
 	registerPaperRoutes(mux, ctx)
@@ -164,6 +165,7 @@ func NewRouterComplete(dependencies RouterDependencies) http.Handler {
 		middleware.CORS(ctx.cfg.Security.CORSAllowedOrigins, ctx.cfg.Security.CORSAllowedMethods, ctx.cfg.Security.CORSAllowedHeaders),
 		middleware.BrowserCSRF(ctx.cfg.Auth.SessionCookieName),
 		middleware.BodyLimit(ctx.cfg.Security.MaxRequestBodyBytes, skipGlobalBodyLimit),
+		middleware.BodyLimit(fileRequestBodyLimit(ctx.cfg.Files.MaxUploadBytes), skipNonFileUpload),
 	)
 }
 
@@ -209,4 +211,13 @@ func localModelBaseline(cfg config.Config) modelgovernance.LocalBaseline {
 
 func skipGlobalBodyLimit(r *http.Request) bool {
 	return r.Method == http.MethodPost && r.URL.Path == "/api/v1/files"
+}
+
+func skipNonFileUpload(r *http.Request) bool { return !skipGlobalBodyLimit(r) }
+
+func fileRequestBodyLimit(fileLimit int64) int64 {
+	if fileLimit <= 0 {
+		fileLimit = 100 * 1024 * 1024
+	}
+	return fileLimit + 1024*1024
 }

@@ -6,6 +6,43 @@ import (
 	"testing"
 )
 
+func TestGroupingPreservesMeaningfulNumericNotation(t *testing.T) {
+	provider := DeterministicTextProvider{}
+	for _, pair := range [][2]string{{"1.5", "15"}, {"1%", "1"}, {"(1+2)", "1+2"}, {"1kg", "1"}} {
+		left, right := provider.Represent(pair[0]), provider.Represent(pair[1])
+		if left.Hash == right.Hash || provider.Similarity(left, right) == 1 {
+			t.Fatalf("distinct answers %q and %q collided", pair[0], pair[1])
+		}
+	}
+	if provider.Represent("ＡＴＰ。").Hash != provider.Represent("atp").Hash {
+		t.Fatal("equivalent full-width and case variants should normalize")
+	}
+}
+
+func TestLegacyGroupingCannotConfirmWithoutRebuilding(t *testing.T) {
+	store := NewMemoryStore(nil, DefaultPolicy())
+	store.SetSourceAnswers("tenant", "exam", "question", []SourceAnswer{
+		{SubmissionID: "submission-1", SegmentID: "segment-1", SnapshotID: "snapshot", ArchetypeCode: ArchetypeExactText, AnswerText: "1.5", Source: "manual_entry"},
+	})
+	groups, err := store.Build(context.Background(), "tenant", "exam", "question", "teacher", BuildInput{})
+	if err != nil || len(groups) != 1 {
+		t.Fatalf("build: %v %#v", err, groups)
+	}
+	group, err := store.PutDecision(context.Background(), "tenant", groups[0].ID, "teacher", DecisionInput{
+		ScoreCandidate: map[string]any{"score": 1}, RubricSelection: map[string]any{"point": true}, ExpectedRevision: 0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	key := itemKey("tenant", group.ID)
+	legacy := store.groups[key]
+	legacy.RepresentationVersion = "normalized-char-bigram-v1"
+	store.groups[key] = legacy
+	if _, _, err := store.Confirm(context.Background(), "tenant", group.ID, "teacher", ConfirmInput{ExpectedRevision: group.Decision.Revision}); !errors.Is(err, ErrStateConflict) {
+		t.Fatalf("legacy group must be rebuilt before confirmation: %v", err)
+	}
+}
+
 func TestAnswerGroupingRequiresSamplingAndNeverProducesFinalGrade(t *testing.T) {
 	store := NewMemoryStore(nil, DefaultPolicy())
 	store.SetSourceAnswers("tenant", "exam", "question", []SourceAnswer{

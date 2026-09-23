@@ -159,6 +159,24 @@ func RequireAnyRole(roles ...string) func(http.Handler) http.Handler {
 	}
 }
 
+// RequirePlatformAdmin rejects role strings that are not anchored to the
+// reserved platform tenant. This keeps cross-tenant administration from
+// depending solely on assignment-time validation.
+func RequirePlatformAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, ok := UserFromContext(r.Context())
+		if !ok {
+			httpx.Error(w, r, http.StatusUnauthorized, "unauthenticated", "authentication required")
+			return
+		}
+		if user.TenantID != PlatformTenantID || !HasRole(user, "platform_admin") {
+			httpx.Error(w, r, http.StatusForbidden, "forbidden", "platform administrator required")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func HasPermission(user User, permission string) bool {
 	for _, current := range user.Permissions {
 		if current == permission {

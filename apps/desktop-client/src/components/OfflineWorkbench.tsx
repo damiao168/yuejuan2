@@ -31,6 +31,7 @@ import type {
 } from "../types";
 
 interface OfflineWorkbenchProps {
+  durableScopeKey: string;
   client: DesktopApiClient;
   token: string | null;
   user: AuthUser | null;
@@ -38,7 +39,7 @@ interface OfflineWorkbenchProps {
   onLog: (level: LocalLogEntry["level"], message: string, context?: string) => Promise<void>;
 }
 
-export function OfflineWorkbench({ client, token, user, isOnline, onLog }: OfflineWorkbenchProps) {
+export function OfflineWorkbench({ durableScopeKey, client, token, user, isOnline, onLog }: OfflineWorkbenchProps) {
   const [offlineKey, setOfflineKey] = useState("");
   const [tasks, setTasks] = useState<ReviewTask[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState("");
@@ -60,11 +61,11 @@ export function OfflineWorkbench({ client, token, user, isOnline, onLog }: Offli
   const hasKey = hasDurableDesktopStore() || offlineKey.trim().length >= 8;
   const currentEnvelope = envelopes.find((item) => item.taskId === (pkg?.task.id ?? selectedTaskId));
 
-  const refreshEnvelopes = async () => setEnvelopes(await listOfflineDraftEnvelopes());
+  const refreshEnvelopes = async () => setEnvelopes(await listOfflineDraftEnvelopes(durableScopeKey));
 
   useEffect(() => {
-    void refreshEnvelopes();
-  }, []);
+    if (durableScopeKey || !hasDurableDesktopStore()) void refreshEnvelopes();
+  }, [durableScopeKey]);
 
   useEffect(() => () => {
     if (imagePreview?.url) URL.revokeObjectURL(imagePreview.url);
@@ -161,7 +162,7 @@ export function OfflineWorkbench({ client, token, user, isOnline, onLog }: Offli
       packageSnapshot: pkg,
       draft
     };
-    await saveOfflineDraft(record, offlineKey);
+    await saveOfflineDraft(record, offlineKey, durableScopeKey);
     await refreshEnvelopes();
     setSyncStatus("draft");
     setSyncMessage("草稿已加密保存到本地。");
@@ -174,7 +175,7 @@ export function OfflineWorkbench({ client, token, user, isOnline, onLog }: Offli
       return;
     }
     try {
-      const record = await loadOfflineDraft(taskId, offlineKey);
+      const record = await loadOfflineDraft(taskId, offlineKey, durableScopeKey);
       if (!record) {
         setSyncMessage("未找到本地草稿。");
         return;
@@ -211,7 +212,7 @@ export function OfflineWorkbench({ client, token, user, isOnline, onLog }: Offli
     }
     if (!token || !isOnline) {
       setSyncMessage("当前未登录或离线，无法同步；草稿可稍后重试。");
-      await updateOfflineDraftStatus(pkg.task.id, { syncStatus: "failed", syncMessage: "未登录或离线" });
+      await updateOfflineDraftStatus(pkg.task.id, { syncStatus: "failed", syncMessage: "未登录或离线" }, durableScopeKey);
       await refreshEnvelopes();
       return;
     }
@@ -222,7 +223,7 @@ export function OfflineWorkbench({ client, token, user, isOnline, onLog }: Offli
       if (conflict) {
         setSyncStatus("conflict");
         setSyncMessage(conflict);
-        await updateOfflineDraftStatus(pkg.task.id, { syncStatus: "conflict", syncMessage: conflict });
+        await updateOfflineDraftStatus(pkg.task.id, { syncStatus: "conflict", syncMessage: conflict }, durableScopeKey);
         await refreshEnvelopes();
         await onLog("warning", "offline draft sync conflict", conflict);
         return;
@@ -241,14 +242,14 @@ export function OfflineWorkbench({ client, token, user, isOnline, onLog }: Offli
       });
       setSyncStatus("synced");
       setSyncMessage("同步成功，服务端已接收人工评分。");
-      await updateOfflineDraftStatus(pkg.task.id, { syncStatus: "synced", syncMessage: "同步成功" });
+      await updateOfflineDraftStatus(pkg.task.id, { syncStatus: "synced", syncMessage: "同步成功" }, durableScopeKey);
       await refreshEnvelopes();
       await onLog("info", "offline draft synced", pkg.task.id);
     } catch (error) {
       const message = formatError(error);
       setSyncStatus("failed");
       setSyncMessage(message);
-      await updateOfflineDraftStatus(pkg.task.id, { syncStatus: "failed", syncMessage: message });
+      await updateOfflineDraftStatus(pkg.task.id, { syncStatus: "failed", syncMessage: message }, durableScopeKey);
       await refreshEnvelopes();
       await onLog("error", "offline draft sync failed", message);
     } finally {
@@ -257,7 +258,7 @@ export function OfflineWorkbench({ client, token, user, isOnline, onLog }: Offli
   };
 
   const purgeExpired = async () => {
-    const count = await purgeExpiredOfflineDrafts();
+    const count = await purgeExpiredOfflineDrafts(new Date(), durableScopeKey);
     await refreshEnvelopes();
     await onLog("info", "expired offline drafts purged", `${count} drafts`);
     setSyncMessage(`已清理 ${count} 条过期本地缓存。`);

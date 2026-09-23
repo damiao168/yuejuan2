@@ -281,7 +281,6 @@
         "POST /api/v1/model-providers",
         "POST /api/v1/model-sandbox-approvals",
         "POST /api/v1/model-sandbox-approvals/{id}/revoke",
-        "POST /api/v1/model-secrets/probe",
         "POST /api/v1/ocr-tasks/{id}/fail",
         "POST /api/v1/ocr-tasks/{id}/results",
         "POST /api/v1/ocr-tasks/{id}/start",

@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { createAdapter } from "../adapters/index.js";
+import { createHash } from "node:crypto";
 import { applyEvidenceVerification, verifyEvidence } from "../evidenceVerifier.js";
 import { validateGradingInput, validateGradingOutput } from "../schemas/gradingSchema.js";
 import { computeMetrics } from "./metrics.js";
@@ -75,6 +76,8 @@ export function runEvaluation({ datasetPath, adapterName = "mock", filters = {} 
   return {
     generated_at: new Date().toISOString(),
     dataset_path: datasetPath,
+    dataset_sha256: createHash("sha256").update(readFileSync(datasetPath)).digest("hex"),
+    dataset_kind: records.every((record) => record.sample.synthetic === true) ? "synthetic" : records.every((record) => record.sample.synthetic === false) ? "real" : "mixed",
     adapter: adapterName,
     model_info: adapter.get_model_info(),
     prompt_version: "prompt-base-v1",
@@ -82,6 +85,7 @@ export function runEvaluation({ datasetPath, adapterName = "mock", filters = {} 
     metrics,
     results: records.map((record) => ({
       sample_id: record.sample.sample_id,
+      synthetic: record.sample.synthetic === true,
       subject: record.sample.subject,
       question_type: record.sample.question_type,
       expected_score: record.sample.expected_score,
@@ -118,6 +122,8 @@ export async function runEvaluationAsync({ datasetPath, adapterName = "mock", ad
   return {
     generated_at: new Date().toISOString(),
     dataset_path: datasetPath,
+    dataset_sha256: createHash("sha256").update(readFileSync(datasetPath)).digest("hex"),
+    dataset_kind: records.every((record) => record.sample.synthetic === true) ? "synthetic" : records.every((record) => record.sample.synthetic === false) ? "real" : "mixed",
     adapter: adapterName,
     model_info: adapter.get_model_info(),
     prompt_version: "prompt-base-v1",
@@ -125,6 +131,7 @@ export async function runEvaluationAsync({ datasetPath, adapterName = "mock", ad
     metrics,
     results: records.map((record) => ({
       sample_id: record.sample.sample_id,
+      synthetic: record.sample.synthetic === true,
       subject: record.sample.subject,
       question_type: record.sample.question_type,
       expected_score: record.sample.expected_score,
@@ -154,7 +161,7 @@ export function writeEvaluationReport(report, jsonPath, markdownPath, failedCase
     "",
     "## Metrics",
     "",
-    ...Object.entries(report.metrics).map(([key, value]) => `- ${key}: ${value}`),
+    ...Object.entries(report.metrics).map(([key, value]) => `- ${key}: ${typeof value === "object" ? JSON.stringify(value) : value}`),
     ""
   ];
   writeFileSync(markdownPath, `${lines.join("\n")}\n`, "utf8");

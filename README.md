@@ -168,18 +168,22 @@ Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
 
 ```powershell
 Set-Location $HOME
-git clone --branch main --single-branch https://github.com/damiao168/yuejuan.git
-Set-Location $HOME\yuejuan
+git clone --branch main --single-branch https://github.com/damiao168/yuejuan2.git
+Set-Location $HOME\yuejuan2
 git status --short --branch
+git remote get-url origin
+git rev-parse HEAD
 git log -1 --oneline
 ```
 
-以上命令默认把仓库下载到当前用户目录下的 `yuejuan`。如果改用其他目录，后文的 `Set-Location $HOME\yuejuan` 也要替换成实际路径。已有仓库应使用 `git pull --ff-only origin main` 更新，不要再次 clone 到同名目录。
+以上命令默认把仓库下载到当前用户目录下的 `yuejuan2`。如果改用其他目录，后文的 `Set-Location $HOME\yuejuan2` 也要替换成实际路径。已有仓库应使用 `git pull --ff-only origin main` 更新，不要再次 clone 到同名目录。
+
+本安装说明对应 `damiao168/yuejuan2`；`damiao168/yuejuan` 是另一个仓库，不能用它替代本项目代码。部署时记录 `git rev-parse HEAD` 输出并与发布记录中的提交号核对；若使用指定版本，先切换到经验证的发布标签或提交再执行后续命令。
 
 为部署创建独立配置：
 
 ```powershell
-Set-Location $HOME\yuejuan\infra\docker-compose
+Set-Location $HOME\yuejuan2\infra\docker-compose
 Copy-Item .env.example .env
 notepad .env
 ```
@@ -242,7 +246,7 @@ Worker 密码包括 `EDUGRADE_OCR_WORKER_PASSWORD`、`EDUGRADE_IMAGE_QUALITY_PAS
 保存后可确认 Git 不会跟踪密钥文件：
 
 ```powershell
-Set-Location $HOME\yuejuan
+Set-Location $HOME\yuejuan2
 git check-ignore -v infra/docker-compose/.env
 git status --short
 ```
@@ -254,7 +258,7 @@ git status --short
 仓库不提交模型权重或 llama.cpp 二进制。首次部署在仓库根目录执行准备脚本；它会下载固定版本、核对文件大小和 SHA-256，然后解压到已忽略的 `lab/.runtime` 和 `lab/.models`：
 
 ```powershell
-Set-Location $HOME\yuejuan
+Set-Location $HOME\yuejuan2
 powershell -ExecutionPolicy Bypass -File lab\scripts\prepare-local-runtime.ps1
 ```
 
@@ -270,7 +274,7 @@ Invoke-RestMethod http://127.0.0.1:8087/health
 把脚本生成的 API Key 同步到 Compose 配置：
 
 ```powershell
-Set-Location $HOME\yuejuan\infra\docker-compose
+Set-Location $HOME\yuejuan2\infra\docker-compose
 .\scripts\sync-local-grading-model-key.ps1
 $modelKeySetting = Get-Content .env | Where-Object { $_ -match '^EDUGRADE_GRADING_MODEL_API_KEY=' } | Select-Object -First 1
 if ($modelKeySetting -notmatch '^EDUGRADE_GRADING_MODEL_API_KEY=.+$') { throw 'Model API key was not synchronized.' }
@@ -280,7 +284,7 @@ Write-Host 'EDUGRADE_GRADING_MODEL_API_KEY is configured.'
 最后三行只确认该项非空，不会打印实际密钥。不要把 `.env` 截图、粘贴到 Issue 或提交到 Git。模型日志位于 `lab/.runtime/llama-server.stdout.log` 和 `lab/.runtime/llama-server.stderr.log`。需要停止模型时执行：
 
 ```powershell
-Set-Location $HOME\yuejuan
+Set-Location $HOME\yuejuan2
 powershell -ExecutionPolicy Bypass -File lab\scripts\stop-local-server.ps1
 ```
 
@@ -291,7 +295,7 @@ powershell -ExecutionPolicy Bypass -File lab\scripts\stop-local-server.ps1
 先运行只读预检：
 
 ```powershell
-Set-Location $HOME\yuejuan\infra\docker-compose
+Set-Location $HOME\yuejuan2\infra\docker-compose
 .\scripts\preflight.ps1
 ```
 
@@ -322,7 +326,7 @@ try {
 先确保 `.env` 中对应 Worker 的 tenant、username、password 与平台里的服务账号一致，再运行：
 
 ```powershell
-Set-Location $HOME\yuejuan\infra\docker-compose
+Set-Location $HOME\yuejuan2\infra\docker-compose
 .\scripts\init.ps1 -EnableOcr -EnableQuality -EnableProcessing
 ```
 
@@ -357,7 +361,7 @@ docker compose --env-file .env -f docker-compose.yml --profile subjective-gradin
 ### 5. 检查服务状态
 
 ```powershell
-Set-Location $HOME\yuejuan\infra\docker-compose
+Set-Location $HOME\yuejuan2\infra\docker-compose
 docker compose --env-file .env -f docker-compose.yml ps
 .\scripts\smoke-test.ps1
 ```
@@ -417,7 +421,7 @@ try {
 推荐直接使用与首次安装相同的一键命令；它会启动模型、应用和健康检查：
 
 ```powershell
-Set-Location $HOME\yuejuan
+Set-Location $HOME\yuejuan2
 .\start-edugrade.cmd
 ```
 
@@ -430,14 +434,14 @@ powershell -ExecutionPolicy Bypass -File lab\scripts\start-local-server.ps1 -Can
 若只完成了核心配置，使用下面的核心启动命令：
 
 ```powershell
-Set-Location $HOME\yuejuan\infra\docker-compose
+Set-Location $HOME\yuejuan2\infra\docker-compose
 docker compose --env-file .env -f docker-compose.yml up -d postgres redis minio qdrant grading-agent api-gateway web-admin nginx
 ```
 
 只有源码、依赖或 Dockerfile 发生变化时才重建：
 
 ```powershell
-Set-Location $HOME\yuejuan
+Set-Location $HOME\yuejuan2
 # 以下 start-local 命令要求所有 profile 已完成配置
 powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1 -Build
 
@@ -453,7 +457,7 @@ powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1 -Build -BuildSe
 查看状态和实时日志：
 
 ```powershell
-Set-Location $HOME\yuejuan\infra\docker-compose
+Set-Location $HOME\yuejuan2\infra\docker-compose
 docker compose --env-file .env -f docker-compose.yml ps
 docker compose --env-file .env -f docker-compose.yml logs --tail 200 api-gateway nginx grading-agent
 docker compose --env-file .env -f docker-compose.yml logs -f ocr-worker image-quality-worker page-processing-worker
@@ -463,7 +467,7 @@ docker compose --env-file .env -f docker-compose.yml logs -f ocr-worker image-qu
 
 ```powershell
 docker compose --env-file .env -f docker-compose.yml --profile '*' down
-Set-Location $HOME\yuejuan
+Set-Location $HOME\yuejuan2
 powershell -ExecutionPolicy Bypass -File lab\scripts\stop-local-server.ps1
 ```
 
@@ -475,9 +479,9 @@ powershell -ExecutionPolicy Bypass -File lab\scripts\stop-local-server.ps1
 更新前先备份并确认没有未提交的本地代码改动：
 
 ```powershell
-Set-Location $HOME\yuejuan\infra\docker-compose
+Set-Location $HOME\yuejuan2\infra\docker-compose
 .\scripts\backup.ps1
-Set-Location $HOME\yuejuan
+Set-Location $HOME\yuejuan2
 git status --short
 git fetch origin main
 git pull --ff-only origin main
@@ -486,7 +490,7 @@ git pull --ff-only origin main
 `.env` 不会随 Git 更新。拉取后应查看 `infra/docker-compose/.env.example` 是否增加了配置，把新增项手工补入自己的 `.env`，然后重新预检、迁移和构建：
 
 ```powershell
-Set-Location $HOME\yuejuan\infra\docker-compose
+Set-Location $HOME\yuejuan2\infra\docker-compose
 .\scripts\preflight.ps1
 .\scripts\init.ps1
 ```

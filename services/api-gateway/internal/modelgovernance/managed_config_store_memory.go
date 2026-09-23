@@ -97,23 +97,29 @@ func (s *MemoryStore) UpdateManagedAPIConfig(_ context.Context, tenantID, id str
 		s.managedSecrets[id] = normalized.APIKey
 		item.CredentialHint = credentialHint(normalized.APIKey)
 	}
+	if connectionChanged {
+		resetManagedProbeEvidence(&item)
+	}
 	if normalized.InitialProbe != nil {
 		applyManagedProbe(&item, *normalized.InitialProbe, item.UpdatedAt)
-	} else if connectionChanged {
-		item.LastTestStatus = "untested"
-		item.LastTestMessage = ""
-		item.LastTestLatencyMS = 0
-		item.LastTestedAt = nil
-		item.LastProbeMode = ""
-		item.LastCapabilityStatus = "untested"
-		item.LastCapabilityMessage = ""
-		item.LastCapabilityTestedAt = nil
-		item.LastCapabilityVersion = ""
-		item.LastCapabilityUsage = ManagedAPIProbeUsage{}
-		item.LastCapabilityDiagnostic = ManagedAPIProbeDiagnostic{}
 	}
 	s.managedConfigs[id] = item
 	return item, nil
+}
+
+func resetManagedProbeEvidence(item *ManagedAPIConfig) {
+	item.LastTestStatus = "untested"
+	item.LastTestMessage = ""
+	item.LastTestLatencyMS = 0
+	item.LastTestedAt = nil
+	item.LastSuccessfulTestedAt = nil
+	item.LastProbeMode = ""
+	item.LastCapabilityStatus = "untested"
+	item.LastCapabilityMessage = ""
+	item.LastCapabilityTestedAt = nil
+	item.LastCapabilityVersion = ""
+	item.LastCapabilityUsage = ManagedAPIProbeUsage{}
+	item.LastCapabilityDiagnostic = ManagedAPIProbeDiagnostic{}
 }
 
 func (s *MemoryStore) DeleteManagedAPIConfig(_ context.Context, tenantID, id string) error {
@@ -145,16 +151,18 @@ func (s *MemoryStore) GetManagedAPIConnection(_ context.Context, tenantID, id st
 	return ManagedAPIConnection{Config: item, APIKey: secret}, nil
 }
 
-func (s *MemoryStore) RecordManagedAPIProbe(_ context.Context, tenantID, id string, result ManagedAPIProbeResult) (ManagedAPIConfig, error) {
+func (s *MemoryStore) RecordManagedAPIProbe(_ context.Context, tenantID, id string, expectedUpdatedAt time.Time, result ManagedAPIProbeResult) (ManagedAPIConfig, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	item, ok := s.managedConfigs[id]
 	if !ok || item.TenantID != tenantID {
 		return ManagedAPIConfig{}, ErrNotFound
 	}
+	if !item.UpdatedAt.Equal(expectedUpdatedAt) {
+		return ManagedAPIConfig{}, ErrManagedProbeStale
+	}
 	now := time.Now().UTC()
 	applyManagedProbe(&item, result, now)
-	item.UpdatedAt = now
 	s.managedConfigs[id] = item
 	return item, nil
 }
@@ -162,10 +170,14 @@ func (s *MemoryStore) RecordManagedAPIProbe(_ context.Context, tenantID, id stri
 func applyManagedProbe(item *ManagedAPIConfig, result ManagedAPIProbeResult, testedAt time.Time) {
 	item.LastTestStatus = "failed"
 	connectionOK := result.OK || (result.ProbeMode == "capability" && result.CredentialCheck.OK && result.ModelCheck.OK)
-	if connectionOK {
+	transientFailure := !result.OK && transientManagedProbeFailure(result)
+	if transientFailure {
+		item.LastTestStatus = "temporary_unavailable"
+	} else if connectionOK {
 		item.LastTestStatus = "success"
+		item.LastSuccessfulTestedAt = &testedAt
 	}
-	if connectionOK && !result.OK {
+	if connectionOK && !result.OK && !transientFailure {
 		item.LastTestMessage = "连接正常，结构化能力检测未通过"
 	} else {
 		item.LastTestMessage = strings.TrimSpace(result.Message)
@@ -176,7 +188,7 @@ func applyManagedProbe(item *ManagedAPIConfig, result ManagedAPIProbeResult, tes
 	if item.LastProbeMode == "" {
 		item.LastProbeMode = "capability"
 	}
-	if item.LastProbeMode == "capability" && !result.Reused &&
+	if item.LastProbeMode == "capability" && !result.Reused && !transientFailure &&
 		(result.GeneratedRequest || result.CapabilityCheck.OK || result.CapabilityCheck.Code != "") {
 		item.LastCapabilityStatus = "failed"
 		if result.CapabilityCheck.OK {
@@ -192,6 +204,10 @@ func applyManagedProbe(item *ManagedAPIConfig, result ManagedAPIProbeResult, tes
 		item.LastCapabilityDiagnostic = result.Diagnostic
 		item.LastCapabilityDiagnostic.ContentPreview = ""
 	}
+}
+
+func transientManagedProbeFailure(result ManagedAPIProbeResult) bool {
+	return result.ErrorCode == "provider_timeout" || result.ErrorCode == "provider_unavailable"
 }
 
 func (s *MemoryStore) clearManagedDefault(tenantID, exceptID string) {

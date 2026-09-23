@@ -9,3 +9,28 @@ groups:
         annotations:
           summary: Distributed authentication rate limiting is degraded
           description: Production login and MFA verification fail closed until Redis-backed rate limiting recovers.
+
+  - name: edugrade-managed-models
+    rules:
+      - alert: EduGradeManagedModelProbeNetworkDegraded
+        expr: |
+          sum by (provider) (
+            increase(edugrade_managed_model_probes_total{error_code=~"provider_timeout|provider_unavailable"}[10m])
+          ) >= 3
+          and
+          (
+            sum by (provider) (
+              increase(edugrade_managed_model_probes_total{error_code=~"provider_timeout|provider_unavailable"}[10m])
+            )
+            /
+            clamp_min(
+              sum by (provider) (increase(edugrade_managed_model_probes_total[10m])),
+              1
+            )
+          ) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Managed model connectivity is degraded for {{ $labels.provider }}
+          description: More than half of managed model probes failed with network errors in the last 10 minutes (at least three failures). Check provider health and outbound DNS/TCP/TLS connectivity.

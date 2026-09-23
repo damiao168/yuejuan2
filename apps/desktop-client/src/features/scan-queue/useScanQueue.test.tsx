@@ -69,9 +69,10 @@ describe("scan queue controller", () => {
     await act(async () => { root.unmount(); });
     container.remove();
   });
-  async function mount() {
-    function Probe() {
+  async function mount(scope = "test-server|test-tenant|test-user") {
+    function Probe({ durableScopeKey }: { durableScopeKey: string }) {
       current = useScanQueue({
+        durableScopeKey,
         exams: [{ id: "exam-a", name: "Exam A" } as never],
         selectedExamId: "exam-a", captureBatchId: "batch-a",
         scanSubmissionId: "submission-a", scanStartPage: 1,
@@ -79,7 +80,10 @@ describe("scan queue controller", () => {
       });
       return null;
     }
-    await act(async () => { root.render(<Probe />); });
+    await act(async () => { root.render(<Probe durableScopeKey={scope} />); });
+    return async (nextScope: string) => {
+      await act(async () => { root.render(<Probe durableScopeKey={nextScope} />); });
+    };
   }
 
   it("restores the durable queue and archives only confirmed items", async () => {
@@ -87,10 +91,10 @@ describe("scan queue controller", () => {
     await mount();
     expect(current.queue.map((entry) => entry.id)).toEqual(["scan-1", "pending"]);
     await act(async () => { await current.clearSucceededQueueItems(); });
-    expect(mocks.archiveDurableScanQueueItems).toHaveBeenCalledWith(["asset-1"]);
+    expect(mocks.archiveDurableScanQueueItems).toHaveBeenCalledWith(["asset-1"], "test-server|test-tenant|test-user");
     expect(current.queue.map((entry) => entry.id)).toEqual(["pending"]);
     await current.durablePersistenceRef.current;
-    expect(mocks.persistDurableScanQueueItem).toHaveBeenCalledWith(expect.objectContaining({ id: "pending" }));
+    expect(mocks.persistDurableScanQueueItem).toHaveBeenCalledWith(expect.objectContaining({ id: "pending" }), "test-server|test-tenant|test-user");
   });
 
   it("keeps a failed-quality original in durable storage without uploading it", async () => {
@@ -103,7 +107,7 @@ describe("scan queue controller", () => {
       id: "scan-1", status: "failed", localAssetId: "asset-1"
     });
     await current.durablePersistenceRef.current;
-    expect(mocks.persistDurableScanQueueItem).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
+    expect(mocks.persistDurableScanQueueItem).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }), "test-server|test-tenant|test-user");
   });
 
   it("does not discard a newly spooled file when durable restoration finishes late", async () => {
@@ -116,6 +120,30 @@ describe("scan queue controller", () => {
     expect(current.queue.map((entry) => entry.id)).toEqual(["new"]);
     await act(async () => { finishRestore([item({ id: "old", status: "pending" })]); });
     expect(current.queue.map((entry) => entry.id)).toEqual(["new", "old"]);
+  });
+
+  it("clears A's queue before showing B's records and ignores A's late restoration", async () => {
+    let finishA!: (items: SyncQueueItem[]) => void;
+    mocks.listDurableScanQueue.mockImplementationOnce(() => new Promise((resolve) => { finishA = resolve; }));
+    mocks.listDurableScanQueue.mockResolvedValueOnce([item({ id: "b-item", localAssetId: "b-asset" })]);
+    const switchScope = await mount("server|tenant|A");
+    await switchScope("server|tenant|B");
+    expect(current.queue.map((entry) => entry.id)).toEqual(["b-item"]);
+    await act(async () => { finishA([item({ id: "a-item", localAssetId: "a-asset" })]); });
+    expect(current.queue.map((entry) => entry.id)).toEqual(["b-item"]);
+  });
+
+  it("stops A's file selection if the account changes during inspection", async () => {
+    let finishInspection!: (checks: []) => void;
+    mocks.inspectScanFile.mockImplementationOnce(() => new Promise((resolve) => { finishInspection = resolve; }));
+    const switchScope = await mount("server|tenant|A");
+    const file = new File(["scan"], "scan.pdf", { type: "application/pdf" });
+    let selection!: Promise<void>;
+    await act(async () => { selection = current.handleFileSelection([file] as unknown as FileList); });
+    await switchScope("server|tenant|B");
+    await act(async () => { finishInspection([]); await selection; });
+    expect(mocks.spoolScanAsset).not.toHaveBeenCalled();
+    expect(current.queue).toEqual([]);
   });
 
   it("recovers a non-durable item after the user reselects its file", async () => {

@@ -2,7 +2,7 @@ import { ApiClientError, apiClient, getUserErrorMessage } from "./client";
 
 export type ManagedAdapterType = "openai_compatible" | "dashscope_native";
 export type ManagedAPIConfigStatus = "active" | "disabled";
-export type ManagedAPIProbeStatus = "untested" | "success" | "failed";
+export type ManagedAPIProbeStatus = "untested" | "success" | "failed" | "temporary_unavailable";
 
 export interface ManagedModelAPIConfig {
   id: string;
@@ -22,6 +22,7 @@ export interface ManagedModelAPIConfig {
   last_test_message?: string;
   last_test_latency_ms?: number;
   last_tested_at?: string;
+  last_successful_tested_at?: string;
   last_probe_mode?: ManagedAPIProbeMode;
   last_capability_status?: ManagedAPIProbeStatus;
   last_capability_message?: string;
@@ -109,6 +110,16 @@ export interface ManagedAPIProbeResult {
   capability_check: ManagedAPICheckResult;
   usage: ManagedAPIProbeUsage;
   diagnostic: ManagedAPIProbeDiagnostic;
+  connection_diagnostic: ManagedAPIConnectionDiagnostic;
+}
+
+export interface ManagedAPIConnectionDiagnostic {
+  attempts?: number;
+  dns_ms?: number;
+  connect_ms?: number;
+  tls_ms?: number;
+  ttfb_ms?: number;
+  failure_stage?: "dns" | "connect" | "tls" | "ttfb" | "response" | "body" | "request";
 }
 
 export interface ManagedAPICheckResult {

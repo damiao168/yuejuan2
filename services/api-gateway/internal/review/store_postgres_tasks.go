@@ -6,6 +6,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/commandreceipt"
 	"encoding/json"
 	"errors"
+	"sort"
 	"strings"
 )
 
@@ -86,6 +87,79 @@ LIMIT NULLIF($8, 0)
 		out = append(out, task)
 	}
 	return out, rows.Err()
+}
+
+func (s *PostgresStore) AggregateTasks(ctx context.Context, tenantID string, filter ListFilter) (TaskAggregate, error) {
+	scopeMode := filter.ScopeMode
+	if scopeMode == "" {
+		scopeMode = "tenant"
+	}
+	rows, err := s.db.QueryContext(ctx, `
+SELECT status, COALESCE(assigned_to::text, ''), count(*)::int
+FROM review_task
+WHERE tenant_id = $1
+  AND deleted_at IS NULL
+  AND ($2 = '' OR status = $2)
+  AND ($3 = '' OR assigned_to::text = $3)
+  AND ($4 = '' OR exam_id::text = $4)
+  AND (
+    $5 IN ('platform', 'tenant')
+    OR ($5 = 'school' AND EXISTS (SELECT 1 FROM exam e WHERE e.tenant_id = review_task.tenant_id AND e.id = review_task.exam_id AND e.school_id::text = ANY(string_to_array(NULLIF($6, ''), ','))))
+    OR ($5 = 'class' AND exam_id::text = ANY(string_to_array(NULLIF($7, ''), ',')))
+    OR ($5 = 'assigned' AND (assigned_to::text = $8 OR id::text = ANY(string_to_array(NULLIF($9, ''), ','))))
+  )
+GROUP BY status, assigned_to
+`, tenantID, filter.Status, filter.AssignedTo, filter.ExamID,
+		scopeMode, strings.Join(filter.ScopeSchoolIDs, ","), strings.Join(filter.ScopeExamIDs, ","),
+		filter.ScopeActorID, strings.Join(filter.ScopeTaskIDs, ","))
+	if err != nil {
+		return TaskAggregate{}, err
+	}
+	defer rows.Close()
+
+	aggregate := TaskAggregate{StatusCounts: map[string]int{}, Reviewers: []ReviewerTaskAggregate{}}
+	reviewers := map[string]*ReviewerTaskAggregate{}
+	for rows.Next() {
+		var status, reviewerID string
+		var count int
+		if err := rows.Scan(&status, &reviewerID, &count); err != nil {
+			return TaskAggregate{}, err
+		}
+		aggregate.TotalCount += count
+		aggregate.StatusCounts[status] += count
+		completed := status == "submitted" || status == "completed"
+		if completed {
+			aggregate.CompletedCount += count
+		} else {
+			aggregate.RemainingCount += count
+		}
+		if reviewerID == "" {
+			continue
+		}
+		reviewer := reviewers[reviewerID]
+		if reviewer == nil {
+			reviewer = &ReviewerTaskAggregate{ReviewerID: reviewerID}
+			reviewers[reviewerID] = reviewer
+		}
+		reviewer.TotalCount += count
+		if completed {
+			reviewer.CompletedCount += count
+		} else {
+			reviewer.RemainingCount += count
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return TaskAggregate{}, err
+	}
+	ids := make([]string, 0, len(reviewers))
+	for id := range reviewers {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		aggregate.Reviewers = append(aggregate.Reviewers, *reviewers[id])
+	}
+	return aggregate, nil
 }
 
 func (s *PostgresStore) HasActiveAssignment(ctx context.Context, tenantID string, reviewerID string, answerSegmentID string) (bool, error) {

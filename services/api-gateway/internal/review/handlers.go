@@ -136,6 +136,11 @@ func (h *Handler) ListTasks(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
+	aggregate, err := h.store.AggregateTasks(r.Context(), user.TenantID, filter)
+	if err != nil {
+		writeStoreError(w, r, err)
+		return
+	}
 	hasMore := len(tasks) > limit
 	if hasMore {
 		tasks = tasks[:limit]
@@ -145,7 +150,7 @@ func (h *Handler) ListTasks(w http.ResponseWriter, r *http.Request) {
 		last := tasks[len(tasks)-1]
 		nextCursor = pagination.EncodeParts(strconv.Itoa(last.Priority), last.CreatedAt.UTC().Format(time.RFC3339Nano), last.ID)
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"tasks": tasks, "next_cursor": nextCursor, "has_more": hasMore})
+	httpx.JSON(w, http.StatusOK, map[string]any{"tasks": tasks, "next_cursor": nextCursor, "has_more": hasMore, "aggregate": aggregate})
 }
 
 func (h *Handler) GetTask(w http.ResponseWriter, r *http.Request) {

@@ -294,6 +294,54 @@ func TestStudentPaperPageImageRequiresPublishedQuestionAndStudentScope(t *testin
 	}
 }
 
+func TestLegacyHighScorePolicyNeverSharesPeerPaper(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	service := NewService(store)
+	first := fixtureFact(4)
+	second := fixtureFact(5)
+	second.StudentID, second.SubmissionID = "student-2", "submission-2"
+	store.SeedFacts(exam, []SubmissionFact{first, second})
+	policy := VisibilityPolicy{ShowQuestionScores: true, ShowHighScorePaper: true}
+	newRelease, err := service.Create(ctx, tenant, exam, actor, CreateInput{Reason: "anonymous share requires assets", IdempotencyKey: "unsafe-release-1", VisibilityPolicy: policy})
+	if err != nil {
+		t.Fatalf("new high-score draft: %v", err)
+	}
+	if _, err := service.Publish(ctx, tenant, newRelease.ID, actor); !errors.Is(err, ErrAnonymousPaperUnavailable) {
+		t.Fatalf("publish without anonymous page assets: %v", err)
+	}
+	legacy, err := store.Create(ctx, tenant, exam, actor, CreateInput{Source: SourceInitial, Reason: "historical policy", IdempotencyKey: "legacy-release-1", VisibilityPolicy: policy})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Publish(ctx, tenant, legacy.ID, actor); err != nil {
+		t.Fatal(err)
+	}
+	store.SeedStudentQuestionImage(tenant, exam, "student-1", "question-1", "segment-1")
+	store.SeedStudentQuestionImage(tenant, exam, "student-2", "question-1", "segment-2")
+	result, err := service.StudentResult(ctx, tenant, exam, "student-1")
+	if err != nil || result.HighScorePaper != nil {
+		t.Fatalf("legacy student result exposed peer paper: %+v %v", result, err)
+	}
+	if _, err := service.StudentPaperPageImage(ctx, tenant, exam, "student-1", "question-1", true); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("peer paper image: %v", err)
+	}
+	if own, err := service.StudentPaperPageImage(ctx, tenant, exam, "student-1", "question-1", false); err != nil || own.AnswerSegmentID != "segment-1" {
+		t.Fatalf("own paper image: %+v %v", own, err)
+	}
+	rollback, err := service.CreateRollback(ctx, tenant, exam, actor, RollbackInput{SourceReleaseID: legacy.ID, Reason: "copy historical release", IdempotencyKey: "legacy-rollback-1"})
+	if err != nil || rollback.VisibilityPolicy.ShowHighScorePaper {
+		t.Fatalf("rollback propagated unsafe setting: %+v %v", rollback, err)
+	}
+	regrade, err := service.CreateFromRegrade(ctx, tenant, exam, actor, CreateRegradeInput{
+		SourceReleaseID: legacy.ID, QuestionID: "question-1", Reason: "reviewed correction", IdempotencyKey: "legacy-regrade-1",
+		Changes: []RegradeChange{{SubmissionID: "submission-1", QuestionID: "question-1", Score: 3, MaxScore: 5, ReviewedGradeID: "reviewed-grade-1"}},
+	})
+	if err != nil || regrade.VisibilityPolicy.ShowHighScorePaper {
+		t.Fatalf("regrade propagated unsafe setting: %+v %v", regrade, err)
+	}
+}
+
 func fixtureFact(score float64) SubmissionFact {
 	return SubmissionFact{StudentID: "student-1", SubmissionID: "submission-1", TotalScore: score, MaxScore: 5, Status: "confirmed", Questions: []QuestionFact{{QuestionID: "question-1", QuestionNo: "Q1", FinalGradeID: "final-1", Score: score, MaxScore: 5, SourceType: "single_review", SourceID: "human-grade-1", Explanation: StudentExplanation{Feedback: "Teacher feedback", RubricSummary: []string{"Shows the required method"}}}}}
 }

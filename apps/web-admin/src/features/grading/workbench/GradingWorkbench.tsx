@@ -35,6 +35,7 @@ import {
   fallbackSnapshot,
   formatError,
   latestGrade,
+  serverDraftSnapshot,
   sourceDescriptions,
   sourceLabels
 } from "./gradingWorkbench.model";
@@ -46,9 +47,10 @@ import type {
   ScoreDraft,
   ScoreDraftChange,
   TaskFilter,
-  ViewerMode,
   WorkbenchContext
 } from "./gradingWorkbench.types";
+import type { DraftConflictResolution } from "./draftConflict";
+import { DraftConflictModal } from "./components/DraftConflictModal";
 import { AnswerEvidencePane } from "./components/AnswerEvidencePane";
 import { EvidenceInspector } from "./components/EvidenceInspector";
 import { ScoreEditor } from "./components/ScoreEditor";
@@ -61,6 +63,9 @@ import { useGradingPrefetch } from "./hooks/useGradingPrefetch";
 import { useExamScoring } from "./hooks/useExamScoring";
 import { useAnswerViewer } from "./hooks/useAnswerViewer";
 import { useMathWorkbenchEvidence } from "./hooks/useMathWorkbenchEvidence";
+import { TaskDraftSaveQueue } from "./hooks/taskDraftSaveQueue";
+import { appendTaskPage, followingVisibleActionableTask, visibleTasks } from "./taskPaging";
+import type { ReviewTaskAggregate } from "@edugrade/sdk";
 import { mathEvidenceBinding, mathSuggestionState, selectMathStep, type MathStepSelection } from "./mathWorkbenchEvidence";
 import { requiresExplicitSecondOpinion } from "./reviewContext";
 
@@ -84,6 +89,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   const [queueScope, setQueueScope] = useState<"mine" | "all">(canManageTasks ? "all" : "mine");
   const [keyword, setKeyword] = useState("");
   const [tasks, setTasks] = useState<ReviewTask[]>([]);
+  const [taskAggregate, setTaskAggregate] = useState<ReviewTaskAggregate | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState("");
   const requestedTaskRef = useRef(hashQueryParam("task"));
   const actionLock = useRef(false);
@@ -91,6 +97,9 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   const [loadingMoreTasks, setLoadingMoreTasks] = useState(false);
   const [nextTaskCursor, setNextTaskCursor] = useState("");
   const [hasMoreTasks, setHasMoreTasks] = useState(false);
+  const [pageError, setPageError] = useState<string | null>(null);
+  const pendingPageRef = useRef<Promise<ReviewTask[]> | null>(null);
+  const pendingNextRef = useRef<string | null>(null);
   const [taskError, setTaskError] = useState<string | null>(null);
   const [graders, setGraders] = useState<ManagedUser[]>([]);
   const [gradersError, setGradersError] = useState<string | null>(null);
@@ -108,6 +117,8 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   const mathActionLock = useRef(false);
   const activeTask = useRef(selectedTaskId);
   activeTask.current = selectedTaskId;
+  const activeUserId = useRef(currentUserId);
+  activeUserId.current = currentUserId;
   const liveDraft = useRef(draft);
   liveDraft.current = draft;
   const [goldPaperManagerOpen, setGoldPaperManagerOpen] = useState(false);
@@ -121,24 +132,16 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   const [draftSaveStatus, setDraftSaveStatus] = useState<DraftSaveStatus>("idle");
   const [draftHydrated, setDraftHydrated] = useState(false);
   const lastSavedDraft = useRef("");
+  const draftSaves = useRef(new TaskDraftSaveQueue());
+  const conflictedDrafts = useRef(new Set<string>());
+  const [draftConflict, setDraftConflict] = useState<DraftConflictResolution | null>(null);
+  const [resolvingConflict, setResolvingConflict] = useState(false);
+  const conflictServerContext = useRef<WorkbenchContext | null>(null);
   const lastScoreDraftChange = useRef<ScoreDraftChange | null>(null);
   const [hasLastScoreDraftChange, setHasLastScoreDraftChange] = useState(false);
 
-  const filteredTasks = useMemo(() => {
-    const text = keyword.trim().toLowerCase();
-    return tasks.filter((task) => {
-      const activeStatuses = canManageTasks ? ["pending", "assigned", "in_progress", "returned"] : ["assigned", "in_progress", "returned"];
-      const statusMatched = taskFilter === "all" || (taskFilter === "active" ? activeStatuses.includes(task.status) : task.status === taskFilter);
-      const examMatched = !initialExamId || task.exam_id === initialExamId;
-      const keywordMatched =
-        !text ||
-        task.id.toLowerCase().includes(text) ||
-        task.anonymous_code.toLowerCase().includes(text) ||
-        task.question_no.toLowerCase().includes(text) ||
-        task.source.toLowerCase().includes(text);
-      return examMatched && statusMatched && keywordMatched;
-    });
-  }, [canManageTasks, initialExamId, keyword, taskFilter, tasks]);
+  const filteredTasks = useMemo(() => visibleTasks(tasks, { canManageTasks, initialExamId, keyword, taskFilter }),
+    [canManageTasks, initialExamId, keyword, taskFilter, tasks]);
 
   const assignableTasks = useMemo(
     () => filteredTasks.filter((task) => !["submitted", "completed", "in_progress"].includes(task.status)),
@@ -172,18 +175,10 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     names.forEach((_name, id) => {
       totals.set(id, { total: 0, completed: 0, active: 0 });
     });
-    tasks.forEach((task) => {
-      const reviewerId = task.assigned_to;
-      if (!reviewerId) return;
+    (taskAggregate?.reviewers ?? []).forEach((item) => {
+      const reviewerId = item.reviewer_id;
       if (!names.has(reviewerId)) names.set(reviewerId, "未知阅卷员");
-      const current = totals.get(reviewerId) ?? { total: 0, completed: 0, active: 0 };
-      current.total += 1;
-      if (["submitted", "completed"].includes(task.status)) {
-        current.completed += 1;
-      } else {
-        current.active += 1;
-      }
-      totals.set(reviewerId, current);
+      totals.set(reviewerId, { total: item.total_count, completed: item.completed_count, active: item.remaining_count });
     });
 
     return Array.from(totals.entries())
@@ -194,26 +189,26 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         percent: counts.total > 0 ? Math.round((counts.completed / counts.total) * 100) : 0
       }))
       .sort((left, right) => right.total - left.total || left.name.localeCompare(right.name));
-  }, [canManageTasks, currentUserId, graders, tasks]);
+  }, [canManageTasks, currentUserId, graders, taskAggregate]);
 
   const myProgress = useMemo(
     () => reviewerProgress.find((reviewer) => reviewer.id === currentUserId),
     [currentUserId, reviewerProgress]
   );
-  const remainingCount = useMemo(
-    () => filteredTasks.filter((task) => !["submitted", "completed"].includes(task.status)).length,
-    [filteredTasks]
-  );
+  const remainingCount = taskAggregate?.remaining_count ?? 0;
 
   useEffect(() => {
     if (loadingTasks || filteredTasks.some((task) => task.id === selectedTaskId)) {
+      return;
+    }
+    if (selectedTaskId && hasMoreTasks && !tasks.some((task) => task.id === selectedTaskId)) {
       return;
     }
     if (!selectedTaskId && suppressAutoSelectRef.current) {
       return;
     }
     setSelectedTaskId(filteredTasks[0]?.id ?? "");
-  }, [filteredTasks, loadingTasks, selectedTaskId]);
+  }, [filteredTasks, hasMoreTasks, loadingTasks, selectedTaskId, tasks]);
 
   useEffect(() => {
     const available = new Set(assignableTasks.map((task) => task.id));
@@ -260,10 +255,9 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     onPointerUp,
     onImageLoad
   } = useAnswerViewer({ context: ctx, canViewOriginalImage, prefetchedPreviewRef, contentRevision: math.state.understanding?.artifact.input_hash });
-  const nextTask = useMemo(() => {
-    const actionable = (task: ReviewTask) => task.id !== selectedTaskId && !["submitted", "completed"].includes(task.status);
-    return filteredTasks.slice(selectedIndex + 1).find(actionable) ?? filteredTasks.find(actionable);
-  }, [filteredTasks, selectedIndex, selectedTaskId]);
+  const nextTask = useMemo(() => followingVisibleActionableTask(tasks, selectedTaskId,
+    { canManageTasks, initialExamId, keyword, taskFilter }, !hasMoreTasks),
+    [canManageTasks, hasMoreTasks, initialExamId, keyword, selectedTaskId, taskFilter, tasks]);
   const selectedGrade = useMemo(() => (subjectCode === "mathematics" ? latestGrade((ctx?.aiGrades ?? []).filter((grade) => mathSuggestionState(grade, math.state, math.dirty).current)) : undefined)
     ?? latestGrade(ctx?.aiGrades ?? []), [ctx?.aiGrades, math.dirty, math.state, subjectCode]);
   const canAdoptAiScore = Boolean(selectedGrade && selectedGrade.delivery_mode !== "shadow_only" && !mathRequesting
@@ -274,13 +268,18 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   const maxScore = ctx?.question?.score ?? selectedGrade?.max_score ?? 0;
   const rubricPoints = ctx?.question?.rubric?.points ?? [];
   const ownsSelectedTask = Boolean(ctx?.task.assigned_to && ctx.task.assigned_to === currentUserId);
-  const canEditDraft = canWork && hasSession && ownsSelectedTask && Boolean(ctx && ["assigned", "in_progress", "returned"].includes(ctx.task.status));
-  const canSubmit = canEditDraft && !actioning && draft.score !== null;
+  const canEditDraft = canWork && hasSession && ownsSelectedTask && !resolvingConflict && !draftConflict && Boolean(ctx && ["assigned", "in_progress", "returned"].includes(ctx.task.status));
+  const canSubmit = canEditDraft && draftSaveStatus !== "conflict" && !actioning && draft.score !== null;
   const canUndoScoreChange = hasLastScoreDraftChange;
   const loadTasks = useCallback(async () => {
     const requestId = ++taskListRequestRef.current;
+    pendingNextRef.current = null;
+    pendingPageRef.current = null;
     setLoadingTasks(true);
+    setTaskAggregate(null);
+    setLoadingMoreTasks(false);
     setTaskError(null);
+    setPageError(null);
     try {
       const teacherScope = personalScope ? { assigned_to: currentUserId } : {};
       const personalQueue = personalScope || (canManageTasks && canWork && queueScope === "mine");
@@ -300,14 +299,16 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
       }
       if (requestedId) { setSelectedTaskId(requestedId); setTaskFilter("all"); requestedTaskRef.current = ""; }
       setTasks(scopedTasks);
+      setTaskAggregate(result.aggregate ?? null);
       setNextTaskCursor(result.next_cursor ?? "");
       setHasMoreTasks(Boolean(result.has_more));
-      setSelectedTaskId((current) => requestedId || (scopedTasks.some((task) => task.id === current)
+      setSelectedTaskId((current) => requestedId || ((scopedTasks.some((task) => task.id === current) || (result.has_more && Boolean(current)))
         ? current
         : scopedTasks.find((task) => ["assigned", "in_progress", "returned"].includes(task.status))?.id || ""));
     } catch (currentError) {
       if (requestId !== taskListRequestRef.current) return;
       setTasks([]);
+      setTaskAggregate(null);
       setNextTaskCursor("");
       setHasMoreTasks(false);
       setSelectedTaskId("");
@@ -319,29 +320,84 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
 
   const examScoring = useExamScoring({ initialExamId, currentUserId, currentTenantId, canGrade, onTasksChanged: loadTasks });
 
-  const loadMoreTasks = useCallback(async () => {
-    if (!hasMoreTasks || !nextTaskCursor || loadingMoreTasks) return;
+  const loadMoreTasks = useCallback((): Promise<ReviewTask[]> => {
+    if (pendingPageRef.current) return pendingPageRef.current;
+    if (!hasMoreTasks) return Promise.resolve([]);
+    if (!nextTaskCursor) {
+      setPageError("后续任务缺少分页位置，请刷新任务列表");
+      return Promise.resolve([]);
+    }
+    const requestId = taskListRequestRef.current;
+    const cursor = nextTaskCursor;
+    setPageError(null);
     setLoadingMoreTasks(true);
-    try {
+    const pending = (async () => {
+      try {
       const personalQueue = personalScope || (canManageTasks && canWork && queueScope === "mine");
       const result = await listReviewTasks({
         ...(personalQueue ? { assigned_to: currentUserId } : {}),
         ...(initialExamId ? { exam_id: initialExamId } : {}),
         limit: 50,
-        cursor: nextTaskCursor
+        cursor
       });
-      setTasks((current) => {
-        const known = new Set(current.map((task) => task.id));
-        return [...current, ...result.tasks.filter((task) => !known.has(task.id))];
-      });
+      if (requestId !== taskListRequestRef.current) return [];
+      const scopedTasks = initialExamId ? result.tasks.filter((task) => task.exam_id === initialExamId) : result.tasks;
+      setTasks((current) => appendTaskPage(current, scopedTasks));
+      if (result.aggregate) setTaskAggregate(result.aggregate);
       setNextTaskCursor(result.next_cursor ?? "");
       setHasMoreTasks(Boolean(result.has_more));
+      if (result.has_more && (!result.next_cursor || result.next_cursor === cursor)) {
+        setPageError("任务分页位置未推进，请刷新任务列表");
+      }
+      return scopedTasks;
     } catch (currentError) {
-      message.error(formatError(currentError));
+      if (requestId === taskListRequestRef.current) setPageError(formatError(currentError));
+      return [];
     } finally {
-      setLoadingMoreTasks(false);
+      if (requestId === taskListRequestRef.current) setLoadingMoreTasks(false);
     }
-  }, [canManageTasks, canWork, currentUserId, hasMoreTasks, initialExamId, loadingMoreTasks, message, nextTaskCursor, personalScope, queueScope]);
+    })();
+    pendingPageRef.current = pending;
+    void pending.finally(() => { if (pendingPageRef.current === pending) pendingPageRef.current = null; });
+    return pending;
+  }, [canManageTasks, canWork, currentUserId, hasMoreTasks, initialExamId, nextTaskCursor, personalScope, queueScope]);
+
+  const refreshTaskAggregate = useCallback(async () => {
+    const requestId = taskListRequestRef.current;
+    const personalQueue = personalScope || (canManageTasks && canWork && queueScope === "mine");
+    try {
+      const result = await listReviewTasks({
+        ...(personalQueue ? { assigned_to: currentUserId } : {}),
+        ...(initialExamId ? { exam_id: initialExamId } : {}),
+        limit: 1
+      });
+      if (requestId === taskListRequestRef.current && result.aggregate) setTaskAggregate(result.aggregate);
+    } catch {
+      // A later full refresh will retry. Keep the last confirmed aggregate
+      // rather than replacing it with a count of currently loaded tasks.
+    }
+  }, [canManageTasks, canWork, currentUserId, initialExamId, personalScope, queueScope]);
+
+  // Continue collecting pages so progress describes the complete queue. Until
+  // the last page arrives, the header explicitly labels counts as partial.
+  useEffect(() => {
+    if (hasMoreTasks && !loadingTasks && !loadingMoreTasks && !pageError) void loadMoreTasks();
+  }, [hasMoreTasks, loadingTasks, loadingMoreTasks, pageError, loadMoreTasks]);
+
+  useEffect(() => {
+    const fromTaskId = pendingNextRef.current;
+    if (!fromTaskId || loadingTasks || loadingMoreTasks) return;
+    const following = followingVisibleActionableTask(tasks, fromTaskId,
+      { canManageTasks, initialExamId, keyword, taskFilter }, !hasMoreTasks);
+    if (following) {
+      pendingNextRef.current = null;
+      suppressAutoSelectRef.current = false;
+      setSelectedTaskId(following.id);
+    } else if (!hasMoreTasks && !pageError) {
+      pendingNextRef.current = null;
+      if (!canManageTasks) message.info("当前没有更多已分配给你的阅卷任务");
+    }
+  }, [canManageTasks, hasMoreTasks, initialExamId, keyword, loadingMoreTasks, loadingTasks, message, pageError, taskFilter, tasks]);
 
   const loadGraders = useCallback(async () => {
     if (!canManageTasks) {
@@ -362,8 +418,11 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     }
   }, [canManageTasks]);
 
-  const loadContext = useCallback(async (taskId: string) => {
+  const loadContext = useCallback(async (taskId: string, discardConflictingDraft = false) => {
     const requestId = ++contextRequestRef.current;
+    setDraftConflict(null);
+    conflictServerContext.current = null;
+    setResolvingConflict(false);
     if (!taskId || !hasSession) {
       invalidateViewerContent();
       setCtx(null);
@@ -382,11 +441,22 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     setDraftHydrated(false);
     prepareViewerContext();
     try {
+      // A return to the same task must observe its last in-flight save before
+      // hydrating the server revision and local fallback.
+      const draftKey = JSON.stringify([currentUserId, taskId]);
+      const hadPendingSave = draftSaves.current.hasPending(draftKey);
+      await draftSaves.current.whenIdle(draftKey);
+      if (requestId !== contextRequestRef.current) return;
+      if (hadPendingSave || discardConflictingDraft) {
+        appQueryClient.removeQueries({ queryKey: reviewTaskContextKeys.detail(taskId) });
+        prefetchedTaskRef.current.delete(taskId);
+      }
       const prefetched = prefetchedTaskRef.current.get(taskId);
       prefetchedTaskRef.current.delete(taskId);
       const next = prefetched
         ? (await prefetched).context
         : await loadTaskContext(taskId, canViewOriginalImage);
+      if (requestId !== contextRequestRef.current) return;
       if (initialExamId && next.task.exam_id !== initialExamId) {
         setSelectedTaskId("");
         setContextError("该阅卷任务不属于当前考试，已停止加载。");
@@ -396,50 +466,36 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
       // Blind quality samples use the ordinary workbench but deliberately do
       // not participate in the review task's draft or lease endpoints.
       const mayPersistDraft = reviewerOwnsTask && next.reviewContext.claim.can_renew;
-      const draftResult = { draft: reviewerOwnsTask ? next.reviewContext.draft : null };
-      if (requestId !== contextRequestRef.current) return;
       const initial = createInitialDraft(next);
-      let restored = initial;
-      let revision = 0;
-      let restoredViewer: DraftFallbackSnapshot["viewer"] = { mode: "segment", scale: 1, rotation: 0, offset: { x: 0, y: 0 }, fit: true };
-      let serverUpdatedAt = 0;
-      if (draftResult.draft) {
-        restored = {
-          ...initial,
-          score: draftResult.draft.score ?? null,
-          comments: draftResult.draft.comments,
-          privateNote: draftResult.draft.private_note,
-          studentFeedback: draftResult.draft.student_feedback,
-          rubricSelections: Object.fromEntries(draftResult.draft.rubric_selections.map((item) => [item.point_id, item.score]))
-        };
-        revision = draftResult.draft.revision;
-        const viewer = draftResult.draft.viewer_state;
-        const savedMode = ["segment", "original", "ocr"].includes(String(viewer.mode)) ? viewer.mode as ViewerMode : "segment";
-        const mode = savedMode === "original" && !canViewOriginalImage ? "segment" : savedMode;
-        const scale = Number(viewer.scale ?? 1);
-        const rotation = Number(viewer.rotation ?? 0);
-        const savedOffset = viewer.offset as { x?: number; y?: number } | undefined;
-        restoredViewer = { mode, scale, rotation, offset: { x: Number(savedOffset?.x ?? 0), y: Number(savedOffset?.y ?? 0) }, fit: viewer.fit !== false };
-        serverUpdatedAt = Date.parse(draftResult.draft.updated_at) || 0;
-      }
-      const serverSnapshot = createDraftSnapshot(restored, restoredViewer.mode, restoredViewer.scale, restoredViewer.rotation, restoredViewer.offset, restoredViewer.fit);
+      const draftResult = { draft: reviewerOwnsTask ? next.reviewContext.draft : null };
+      const server = serverDraftSnapshot(initial, draftResult.draft, canViewOriginalImage);
+      let restored = server.snapshot.draft;
+      let restoredViewer = server.snapshot.viewer;
+      const revision = server.revision;
+      const serverSnapshot = server.snapshot;
       const localDraft = mayPersistDraft ? loadReviewDraftFallback<unknown>(currentUserId, taskId) : null;
       const localSnapshot = localDraft ? fallbackSnapshot(localDraft.snapshot, initial) : null;
-      const useLocalDraft = Boolean(localDraft && localSnapshot && localDraft.updatedAt > serverUpdatedAt);
+      const isConflicted = conflictedDrafts.current.has(draftKey) && !discardConflictingDraft;
+      const useLocalDraft = Boolean(localDraft && localSnapshot && (isConflicted || localDraft.updatedAt > server.updatedAt));
       if (useLocalDraft && localSnapshot) {
         restored = localSnapshot.draft;
         restoredViewer = localSnapshot.viewer.mode === "original" && !canViewOriginalImage
           ? { ...localSnapshot.viewer, mode: "segment" }
           : localSnapshot.viewer;
-        setDraftSaveStatus("offline");
+        setDraftSaveStatus(isConflicted ? "conflict" : "offline");
       } else {
         if (localDraft) removeReviewDraftFallback(currentUserId, taskId);
-        setDraftSaveStatus(mayPersistDraft ? (draftResult.draft ? "saved" : "idle") : "readonly");
+        setDraftSaveStatus(isConflicted ? "conflict" : mayPersistDraft ? (draftResult.draft ? "saved" : "idle") : "readonly");
+      }
+      if (discardConflictingDraft) {
+        removeReviewDraftFallback(currentUserId, taskId);
+        conflictedDrafts.current.delete(draftKey);
       }
       setDraft(restored);
       lastScoreDraftChange.current = null;
       setHasLastScoreDraftChange(false);
       setDraftRevision(revision);
+      draftSaves.current.observeRevision(draftKey, revision);
       restoreViewer(restoredViewer);
       setCtx(next);
       lastSavedDraft.current = JSON.stringify(serverSnapshot);
@@ -468,44 +524,75 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     if (snapshot === lastSavedDraft.current) return;
     saveReviewDraftFallback(currentUserId, ctx.task.id, snapshotValue);
     if (draftSaveStatus === "conflict") return;
-    const timer = window.setTimeout(async () => {
+    const taskId = ctx.task.id;
+    const draftKey = JSON.stringify([currentUserId, taskId]);
+    const generation = contextRequestRef.current;
+    const commit = async (leavingTask = false) => {
+      if ((!leavingTask && activeTask.current !== taskId) || conflictedDrafts.current.has(draftKey)) return;
       if (!online) {
-        setDraftSaveStatus("offline");
+        if (!leavingTask) setDraftSaveStatus("offline");
         return;
       }
-      setDraftSaveStatus("saving");
+      if (!leavingTask) setDraftSaveStatus("saving");
       try {
-        const selections = Object.entries(draft.rubricSelections).filter(([, value]) => Number(value) > 0).map(([point_id, value]) => ({ point_id, score: Number(value) }));
-        const result = await saveReviewDraft(ctx.task.id, {
-          score: draft.score,
-          rubric_selections: selections,
-          comments: draft.comments,
-          private_note: draft.privateNote,
-          student_feedback: draft.studentFeedback,
-          viewer_state: { mode: viewerMode, scale, rotation, offset, fit: autoFit },
-          expected_revision: draftRevision,
-          client_updated_at: new Date().toISOString()
+        const savedRevision = await draftSaves.current.enqueue(draftKey, async (expectedRevision) => {
+          // A queued intermediate edit is superseded by the newest local copy.
+          const pending = loadReviewDraftFallback<unknown>(currentUserId, taskId);
+          if (!pending || JSON.stringify(pending.snapshot) !== snapshot || conflictedDrafts.current.has(draftKey)) return null;
+          const selections = Object.entries(draft.rubricSelections).filter(([, value]) => Number(value) > 0).map(([point_id, value]) => ({ point_id, score: Number(value) }));
+          const result = await saveReviewDraft(taskId, {
+            score: draft.score,
+            rubric_selections: selections,
+            comments: draft.comments,
+            private_note: draft.privateNote,
+            student_feedback: draft.studentFeedback,
+            viewer_state: { mode: viewerMode, scale, rotation, offset, fit: autoFit },
+            expected_revision: expectedRevision,
+            client_updated_at: new Date().toISOString()
+          });
+          appQueryClient.removeQueries({ queryKey: reviewTaskContextKeys.detail(taskId) });
+          prefetchedTaskRef.current.delete(taskId);
+          const latest = loadReviewDraftFallback<unknown>(currentUserId, taskId);
+          const stillCurrent = Boolean(latest && JSON.stringify(latest.snapshot) === snapshot);
+          if (stillCurrent) removeReviewDraftFallback(currentUserId, taskId);
+          return result.draft.revision;
         });
-        setDraftRevision(result.draft.revision);
-        lastSavedDraft.current = snapshot;
-        removeReviewDraftFallback(currentUserId, ctx.task.id);
-        setDraftSaveStatus("saved");
+        if (savedRevision === null) return;
+        const latest = loadReviewDraftFallback<unknown>(currentUserId, taskId);
+        const stillCurrent = !latest || JSON.stringify(latest.snapshot) === snapshot;
+        if (generation === contextRequestRef.current && activeTask.current === taskId) {
+          lastSavedDraft.current = snapshot;
+          setDraftRevision(savedRevision);
+          setDraftSaveStatus(stillCurrent ? "saved" : "saving");
+        }
       } catch (currentError) {
-        setDraftSaveStatus(currentError instanceof ApiClientError && currentError.status === 409 ? "conflict" : (!navigator.onLine ? "offline" : "error"));
+        if (currentError instanceof ApiClientError && currentError.status === 409) conflictedDrafts.current.add(draftKey);
+        if (generation === contextRequestRef.current && activeTask.current === taskId) {
+          setDraftSaveStatus(currentError instanceof ApiClientError && currentError.status === 409 ? "conflict" : (!navigator.onLine ? "offline" : "error"));
+        }
       }
-    }, 1200);
-    return () => window.clearTimeout(timer);
+    };
+    const timer = window.setTimeout(() => { void commit(); }, 1200);
+    return () => {
+      window.clearTimeout(timer);
+      if (activeUserId.current === currentUserId && activeTask.current !== taskId) void commit(true);
+    };
   }, [autoFit, ctx, currentUserId, draft, draftHydrated, draftRevision, offset, online, rotation, scale, viewerMode]);
 
   useEffect(() => {
     suppressAutoSelectRef.current = false;
     taskListRequestRef.current += 1;
+    pendingPageRef.current = null;
     contextRequestRef.current += 1;
     prefetchedTaskRef.current.clear();
     prefetchedPreviewRef.current.clear();
     setTasks([]);
+    setTaskAggregate(null);
     setNextTaskCursor("");
     setHasMoreTasks(false);
+    setLoadingMoreTasks(false);
+    setPageError(null);
+    pendingNextRef.current = null;
     setSelectedTaskId("");
     setAssignmentTaskIds([]);
     setCtx(null);
@@ -590,6 +677,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         ? { ...current, task: updatedById.get(current.task.id)! }
         : current);
       setAssignmentTaskIds([]);
+      await loadTasks();
       message.success(`已将 ${updated.length} 份任务分配给 ${graderNames[assignmentUserId] ?? "阅卷员"}`);
     } catch (currentError) {
       message.error(formatError(currentError));
@@ -607,6 +695,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         ? current.map((task) => task.id === result.task.id ? result.task : task)
         : [result.task, ...current]);
       setSelectedTaskId(result.task.id);
+      await refreshTaskAggregate();
     } catch (currentError) {
       if (currentError instanceof ApiClientError && currentError.code === "grader_qualification_required" && target?.question_id) {
         setCalibrationQuestionId(target.question_id);
@@ -622,6 +711,16 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   const goNext = async () => {
     if (nextTask) {
       setSelectedTaskId(nextTask.id);
+      return;
+    }
+    if (hasMoreTasks) {
+      if (pageError) {
+        message.info("后续任务加载失败，请在任务列表重试");
+      } else {
+        pendingNextRef.current = selectedTaskId;
+        void loadMoreTasks();
+        message.info("正在加载后续任务，请稍后继续");
+      }
       return;
     }
     if (!canManageTasks) {
@@ -696,6 +795,11 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         invalidateViewerContent();
         setTasks((current) => current.map((task) => task.id === submittedTaskId ? { ...task, status: "submitted" } : task));
         setCtx(null);
+        if (!nextTaskId && hasMoreTasks) {
+          pendingNextRef.current = submittedTaskId;
+          suppressAutoSelectRef.current = true;
+          void loadMoreTasks();
+        }
         setSelectedTaskId(nextTaskId);
         setDraft(createInitialDraft(null));
         lastScoreDraftChange.current = null;
@@ -703,8 +807,9 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         setDraftHydrated(false);
         setDraftSaveStatus("idle");
         lastSavedDraft.current = "";
-        await Promise.all([loadTasks(), examScoring.loadSummary()]);
-        if (!nextTaskId && !canManageTasks) {
+        await refreshTaskAggregate();
+        await examScoring.loadSummary();
+        if (!nextTaskId && !canManageTasks && !hasMoreTasks) {
           message.info("当前没有更多已分配给你的阅卷任务");
         }
       },
@@ -773,6 +878,58 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
       studentFeedback: current.studentFeedback || selectedGrade.student_feedback || "",
       privateNote: current.privateNote || selectedGrade.teacher_note || ""
     }));
+  };
+
+  const openDraftConflict = async () => {
+    if (!ctx || activeTask.current !== ctx.task.id) return;
+    const taskId = ctx.task.id;
+    const userId = currentUserId;
+    const initial = createInitialDraft(ctx);
+    const fallback = loadReviewDraftFallback<unknown>(userId, taskId);
+    const local = (fallback && fallbackSnapshot(fallback.snapshot, initial))
+      ?? createDraftSnapshot(draft, viewerMode, scale, rotation, offset, autoFit);
+    setResolvingConflict(true);
+    try {
+      appQueryClient.removeQueries({ queryKey: reviewTaskContextKeys.detail(taskId) });
+      prefetchedTaskRef.current.delete(taskId);
+      const latestContext = await loadTaskContext(taskId, canViewOriginalImage);
+      if (activeTask.current !== taskId || activeUserId.current !== userId) return;
+      const server = serverDraftSnapshot(
+        createInitialDraft(latestContext),
+        latestContext.task.assigned_to === userId ? latestContext.reviewContext.draft : null,
+        canViewOriginalImage
+      );
+      conflictServerContext.current = latestContext;
+      setDraftConflict({ taskId, serverRevision: server.revision, local, server: server.snapshot });
+    } catch (currentError) {
+      if (activeTask.current === taskId && activeUserId.current === userId) {
+        message.error(formatError(currentError));
+      }
+    } finally {
+      if (activeTask.current === taskId && activeUserId.current === userId) setResolvingConflict(false);
+    }
+  };
+
+  const applyDraftConflict = (merged: DraftFallbackSnapshot) => {
+    const conflict = draftConflict;
+    const latestContext = conflictServerContext.current;
+    if (!conflict || !latestContext || conflict.taskId !== activeTask.current || latestContext.task.id !== conflict.taskId) return;
+    const draftKey = JSON.stringify([currentUserId, conflict.taskId]);
+    const serverSnapshot = JSON.stringify(conflict.server);
+    const mergedSnapshot = JSON.stringify(merged);
+    conflictedDrafts.current.delete(draftKey);
+    draftSaves.current.observeRevision(draftKey, conflict.serverRevision);
+    if (mergedSnapshot === serverSnapshot) removeReviewDraftFallback(currentUserId, conflict.taskId);
+    else saveReviewDraftFallback(currentUserId, conflict.taskId, merged);
+    setCtx(latestContext);
+    setDraftRevision(conflict.serverRevision);
+    lastSavedDraft.current = serverSnapshot;
+    setDraft(merged.draft);
+    restoreViewer(merged.viewer);
+    setDraftConflict(null);
+    conflictServerContext.current = null;
+    setDraftSaveStatus(mergedSnapshot === serverSnapshot ? "saved" : "saving");
+    setResolvingConflict(false);
   };
 
   const refreshMath = () => {
@@ -906,6 +1063,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         myProgress={myProgress}
         reviewerProgress={reviewerProgress}
         remainingCount={remainingCount}
+        progressComplete={Boolean(taskAggregate) && !loadingTasks && !taskError}
         draftSaveStatus={draftSaveStatus}
         loading={loadingTasks || contextLoading}
         actioning={actioning}
@@ -913,7 +1071,8 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         onNext={goNext}
         onClaim={claimTask}
         onRelease={releaseCurrentTask}
-        onReloadConflict={() => loadContext(selectedTaskId)}
+        onResolveConflict={openDraftConflict}
+        onReloadConflict={() => loadContext(selectedTaskId, true)}
       />
 
       <section className="grading-workspace">
@@ -935,6 +1094,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
           loadingTasks={loadingTasks}
           taskError={taskError}
           hasMoreTasks={hasMoreTasks}
+          pageError={pageError}
           loadingMoreTasks={loadingMoreTasks}
           actioning={actioning}
           onQueueScopeChange={setQueueScope}
@@ -945,6 +1105,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
           onToggleAssignment={(taskId, selected) => setAssignmentTaskIds((current) => selected ? [...new Set([...current, taskId])] : current.filter((id) => id !== taskId))}
           onAssignSelected={assignSelectedTasks}
           onSelectTask={(taskId) => {
+            pendingNextRef.current = null;
             suppressAutoSelectRef.current = false;
             setSelectedTaskId(taskId);
           }}
@@ -1062,6 +1223,12 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         onQualified={() => { message.success("校准已通过，可以重新领取本题任务"); void loadTasks(); }}
       />
       <GoldPaperNominationDrawer candidate={goldPaperCandidate} onClose={() => setGoldPaperCandidate(null)} onCreated={() => setGoldPaperManagerOpen(true)} />
+      <DraftConflictModal
+        conflict={draftConflict}
+        loading={resolvingConflict}
+        onCancel={() => setDraftConflict(null)}
+        onApply={applyDraftConflict}
+      />
     </div>
   );
 }

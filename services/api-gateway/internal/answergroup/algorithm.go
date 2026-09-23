@@ -11,11 +11,11 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-const DefaultAlgorithmVersion = "deterministic-complete-link-v1"
+const DefaultAlgorithmVersion = "deterministic-complete-link-v2"
 
 type DeterministicTextProvider struct{}
 
-func (DeterministicTextProvider) Version() string { return "normalized-char-bigram-v1" }
+func (DeterministicTextProvider) Version() string { return "normalized-char-bigram-v2" }
 
 func (DeterministicTextProvider) Represent(text string) Representation {
 	normalized := normalizeText(text)
@@ -60,7 +60,9 @@ func normalizeText(value string) string {
 			space = builder.Len() > 0
 			continue
 		}
-		if unicode.IsPunct(current) && current != '+' && current != '-' && current != '=' && current != '/' {
+		// Only the sentence terminator is ignored. Numeric punctuation, units,
+		// operators and brackets all distinguish potentially different answers.
+		if current == '。' {
 			continue
 		}
 		if space {

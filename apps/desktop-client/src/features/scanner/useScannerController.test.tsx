@@ -38,14 +38,17 @@ describe("scanner controller", () => {
     await act(async () => { root.unmount(); });
     container.remove();
   });
-  async function mount() {
-    function Probe() {
+  async function mount(initialScope = "lease-A") {
+    let rerender!: (scope: string) => Promise<void>;
+    function Probe({ durableScopeKey }: { durableScopeKey: string }) {
       current = useScannerController({
-        workspace: "scan", isOnline: true, logEvent: vi.fn().mockResolvedValue(undefined)
+        workspace: "scan", isOnline: true, durableScopeKey, logEvent: vi.fn().mockResolvedValue(undefined)
       });
       return null;
     }
-    await act(async () => { root.render(<Probe />); });
+    rerender = async (scope) => { await act(async () => { root.render(<Probe durableScopeKey={scope} />); }); };
+    await rerender(initialScope);
+    return rerender;
   }
 
   it("loads profiles but blocks save when no device is available", async () => {
@@ -67,12 +70,24 @@ describe("scanner controller", () => {
     await act(async () => { await current.handleSaveScannerProfile(); });
     expect(api.saveScannerProfile).toHaveBeenCalledWith(expect.objectContaining({
       deviceFingerprint: "device-1", templatePreset: "locked-template"
-    }));
+    }), "lease-A");
     expect(current.selectedScannerProfileId).toBe("profile-2");
     await act(async () => { await current.handleScannerPreflight(); });
     expect(current.scannerPreflight?.readyToScan).toBe(true);
     api.runScannerPreflight.mockRejectedValueOnce(new Error("device disconnected"));
     await act(async () => { await current.handleScannerPreflight(); });
     expect(current.scannerPreflightError).toBeTruthy();
+  });
+
+  it("clears A profiles and ignores A's late response after switching to B", async () => {
+    let finishA!: (profiles: Array<{ id: string; name: string }>) => void;
+    api.listScannerProfiles.mockImplementationOnce(() => new Promise((resolve) => { finishA = resolve; }));
+    api.listScannerProfiles.mockResolvedValueOnce([]);
+    const switchScope = await mount();
+    await switchScope("lease-B");
+    await act(async () => { finishA([{ id: "A-secret-profile", name: "A" }]); });
+    expect(current.scannerProfiles).toEqual([]);
+    expect(current.selectedScannerProfileId).toBe("");
+    expect(api.listScannerProfiles).toHaveBeenCalledWith("lease-B");
   });
 });

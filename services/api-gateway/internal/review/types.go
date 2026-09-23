@@ -212,6 +212,24 @@ type ListFilter struct {
 	ScopeTaskIDs   []string
 }
 
+// TaskAggregate describes the complete filtered queue. It is calculated with
+// the same tenant, authorization and query filters as ListTasks, but ignores
+// pagination so a client never mistakes the current page for the whole queue.
+type TaskAggregate struct {
+	TotalCount     int                     `json:"total_count"`
+	CompletedCount int                     `json:"completed_count"`
+	RemainingCount int                     `json:"remaining_count"`
+	StatusCounts   map[string]int          `json:"status_counts"`
+	Reviewers      []ReviewerTaskAggregate `json:"reviewers"`
+}
+
+type ReviewerTaskAggregate struct {
+	ReviewerID     string `json:"reviewer_id"`
+	TotalCount     int    `json:"total_count"`
+	CompletedCount int    `json:"completed_count"`
+	RemainingCount int    `json:"remaining_count"`
+}
+
 type DoubleMarkPolicy struct {
 	ID                  string    `json:"id"`
 	TenantID            string    `json:"tenant_id"`
@@ -371,6 +389,7 @@ type Store interface {
 	RecoverCommand(context.Context, string, string, string) (commandreceipt.Receipt, error)
 	CreateTask(ctx context.Context, tenantID string, actorID string, input CreateTaskInput) (ReviewTask, error)
 	ListTasks(ctx context.Context, tenantID string, filter ListFilter) ([]ReviewTask, error)
+	AggregateTasks(ctx context.Context, tenantID string, filter ListFilter) (TaskAggregate, error)
 	HasActiveAssignment(ctx context.Context, tenantID string, reviewerID string, answerSegmentID string) (bool, error)
 	GetTask(ctx context.Context, tenantID string, id string) (ReviewTask, error)
 	AssignTask(ctx context.Context, tenantID string, id string, actorID string, input AssignTaskInput) (ReviewTask, error)

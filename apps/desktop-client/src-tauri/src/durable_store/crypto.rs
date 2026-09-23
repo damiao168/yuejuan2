@@ -11,7 +11,94 @@ use zeroize::Zeroize;
 use super::paths::durable_data_exists;
 
 const DURABLE_CREDENTIAL_SERVICE: &str = "com.edugrade.enterprise.desktop";
-const DURABLE_CREDENTIAL_ACCOUNT: &str = "desktop-offline-master-key-v1";
+const LEGACY_DURABLE_CREDENTIAL_ACCOUNT: &str = "desktop-offline-master-key-v1";
+
+pub(crate) fn durable_credential_account(root: &Path) -> Result<String, String> {
+    let scope = root
+        .file_name()
+        .and_then(|value| value.to_str())
+        .ok_or("durable account path is invalid")?;
+    let is_v2_account = root
+        .parent()
+        .and_then(Path::file_name)
+        .and_then(|value| value.to_str())
+        == Some("accounts")
+        && scope.len() == 64
+        && scope.bytes().all(|value| value.is_ascii_hexdigit());
+    if is_v2_account {
+        Ok(format!("desktop-offline-master-key-v2-{scope}"))
+    } else {
+        Ok(LEGACY_DURABLE_CREDENTIAL_ACCOUNT.into())
+    }
+}
+
+#[cfg(windows)]
+fn read_key_for_account(account: &str) -> Result<Option<[u8; 32]>, String> {
+    let entry = keyring::Entry::new(DURABLE_CREDENTIAL_SERVICE, account)
+        .map_err(|error| error.to_string())?;
+    let mut stored = match entry.get_password() {
+        Ok(stored) => stored,
+        Err(keyring::Error::NoEntry) => return Ok(None),
+        Err(error) => {
+            return Err(format!(
+                "cannot access Windows Credential Manager for the durable local key: {error}"
+            ))
+        }
+    };
+    let decoded = BASE64.decode(&stored);
+    stored.zeroize();
+    let decoded = decoded.map_err(|_| "durable master key is corrupt")?;
+    decoded
+        .try_into()
+        .map(Some)
+        .map_err(|_| "durable master key has an invalid length".to_string())
+}
+
+#[cfg(windows)]
+fn write_key_for_account(account: &str, key: &[u8; 32]) -> Result<(), String> {
+    let entry = keyring::Entry::new(DURABLE_CREDENTIAL_SERVICE, account)
+        .map_err(|error| error.to_string())?;
+    let mut encoded = BASE64.encode(key);
+    let result = entry
+        .set_password(&encoded)
+        .map_err(|error| error.to_string());
+    encoded.zeroize();
+    result
+}
+
+#[cfg(windows)]
+pub(crate) fn legacy_master_key() -> Result<[u8; 32], String> {
+    read_key_for_account(LEGACY_DURABLE_CREDENTIAL_ACCOUNT)?.ok_or_else(|| {
+        "legacy durable data exists but its Windows Credential Manager key is missing; claim was stopped without moving data".into()
+    })
+}
+
+#[cfg(windows)]
+pub(crate) fn existing_scoped_master_key(root: &Path) -> Result<Option<[u8; 32]>, String> {
+    read_key_for_account(&durable_credential_account(root)?)
+}
+
+#[cfg(windows)]
+pub(crate) fn install_scoped_master_key(root: &Path, key: &[u8; 32]) -> Result<(), String> {
+    write_key_for_account(&durable_credential_account(root)?, key)
+}
+
+#[cfg(windows)]
+pub(crate) fn restore_scoped_master_key(
+    root: &Path,
+    previous: Option<&[u8; 32]>,
+) -> Result<(), String> {
+    let account = durable_credential_account(root)?;
+    if let Some(key) = previous {
+        return write_key_for_account(&account, key);
+    }
+    let entry = keyring::Entry::new(DURABLE_CREDENTIAL_SERVICE, &account)
+        .map_err(|error| error.to_string())?;
+    match entry.delete_credential() {
+        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+        Err(error) => Err(error.to_string()),
+    }
+}
 
 pub(crate) fn encrypt_json<T: Serialize>(
     key: &[u8; 32],
@@ -67,19 +154,13 @@ pub(crate) fn decrypt_bytes(
 
 #[cfg(windows)]
 pub(crate) fn master_key(root: &Path) -> Result<[u8; 32], String> {
-    let entry = keyring::Entry::new(DURABLE_CREDENTIAL_SERVICE, DURABLE_CREDENTIAL_ACCOUNT)
-        .map_err(|error| error.to_string())?;
-    match entry.get_password() {
-        Ok(mut stored) => {
-            let decoded = BASE64
-                .decode(&stored)
-                .map_err(|_| "durable master key is corrupt")?;
-            stored.zeroize();
-            decoded
-                .try_into()
-                .map_err(|_| "durable master key has an invalid length".to_string())
-        }
-        Err(keyring::Error::NoEntry) => {
+    // Each v2 account scope has its own Credential Manager secret. This keeps
+    // account ciphertext cryptographically separated and never overwrites the
+    // legacy v1 credential needed to recover quarantined data.
+    let account = durable_credential_account(root)?;
+    match read_key_for_account(&account)? {
+        Some(key) => Ok(key),
+        None => {
             // Never replace a missing credential with a fresh key when a
             // previous station store exists.  Doing so would make queued
             // scans look recoverable until a later decrypt fails, and could
@@ -89,16 +170,9 @@ pub(crate) fn master_key(root: &Path) -> Result<[u8; 32], String> {
             }
             let mut key = [0_u8; 32];
             OsRng.fill_bytes(&mut key);
-            let mut encoded = BASE64.encode(key);
-            let result = entry
-                .set_password(&encoded)
-                .map_err(|error| error.to_string());
-            encoded.zeroize();
-            result.map(|()| key)
+            write_key_for_account(&account, &key)?;
+            Ok(key)
         }
-        Err(error) => Err(format!(
-            "cannot access Windows Credential Manager for the durable local key: {error}"
-        )),
     }
 }
 

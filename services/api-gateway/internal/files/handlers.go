@@ -52,6 +52,11 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	r.Body = http.MaxBytesReader(w, r.Body, h.cfg.MaxUploadBytes+1024*1024)
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			httpx.Error(w, r, http.StatusRequestEntityTooLarge, "request_body_too_large", "request body is too large")
+			return
+		}
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_multipart", "multipart form is invalid or too large")
 		return
 	}
@@ -142,6 +147,7 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		Visibility: "private", UploadedBy: user.ID,
 	}
 	lifecycle, hasLifecycle := h.store.(LifecycleStore)
+	var accessScope auth.AccessScope
 	if hasLifecycle {
 		scope, ok := auth.AccessScopeFromContext(r.Context())
 		if !ok {
@@ -152,12 +158,23 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 			writeStoreError(w, r, err)
 			return
 		}
+		accessScope = scope
 	}
 
 	existing, duplicate, err := h.store.FindDuplicate(r.Context(), user.TenantID, ownerType, ownerID, hashSHA256)
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
+	}
+	if duplicate && hasLifecycle {
+		// Duplicate lookup is tenant-wide. Authorize the persisted asset itself
+		// before returning it or writing to its storage key; request metadata is
+		// not proof that an existing object belongs to the caller's data scope.
+		existing, err = lifecycle.GetScoped(r.Context(), accessScope, existing.ID)
+		if err != nil {
+			writeStoreError(w, r, err)
+			return
+		}
 	}
 	if duplicate && (!hasLifecycle || existing.Lifecycle == LifecycleActive) {
 		// Exam-material imports are retryable workflows. Re-uploading identical
@@ -180,9 +197,15 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	if duplicate && hasLifecycle && existing.Lifecycle == LifecycleMissingObject {
+		if _, ok := h.store.(MissingObjectRecovery); !ok {
+			httpx.Error(w, r, http.StatusServiceUnavailable, "missing_object_recovery_unavailable", "missing object recovery is unavailable")
+			return
+		}
+	}
 	var asset FileAsset
 	if hasLifecycle {
-		if duplicate && (existing.Lifecycle == LifecyclePendingUpload || existing.Lifecycle == LifecycleUploadFailed) {
+		if duplicate && (existing.Lifecycle == LifecyclePendingUpload || existing.Lifecycle == LifecycleUploadFailed || existing.Lifecycle == LifecycleMissingObject) {
 			asset = existing
 		} else {
 			asset, err = lifecycle.CreatePending(r.Context(), input)
@@ -191,16 +214,32 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+		// A retry must write to the path recorded by the pending asset. BuildStorageKey
+		// contains a random suffix, so the key generated for this request is different.
+		storageKey = asset.StorageKey
+		input.StorageKey = asset.StorageKey
+		input.StorageBucket = asset.StorageBucket
 	}
-	if err := h.objects.Put(r.Context(), h.cfg.Bucket, storageKey, file, header.Size, contentType); err != nil {
-		if hasLifecycle {
+	if err := h.objects.Put(r.Context(), input.StorageBucket, storageKey, file, header.Size, contentType); err != nil {
+		if hasLifecycle && asset.Lifecycle == LifecyclePendingUpload {
 			_, _ = lifecycle.MarkUploadFailed(r.Context(), user.TenantID, asset.ID, asset.Revision, "object_put_failed")
 		}
 		httpx.Error(w, r, http.StatusBadGateway, "object_storage_failed", "failed to write object storage")
 		return
 	}
+	if err := h.verifyStoredObject(r, input.StorageBucket, storageKey, header.Size, hashSHA256); err != nil {
+		if hasLifecycle && asset.Lifecycle == LifecyclePendingUpload {
+			_, _ = lifecycle.MarkUploadFailed(r.Context(), user.TenantID, asset.ID, asset.Revision, "object_verification_failed")
+		}
+		httpx.Error(w, r, http.StatusBadGateway, "object_verification_failed", "uploaded object could not be verified")
+		return
+	}
 	if hasLifecycle {
-		asset, err = lifecycle.Activate(r.Context(), user.TenantID, asset.ID, asset.Revision)
+		if asset.Lifecycle == LifecycleMissingObject {
+			asset, err = h.store.(MissingObjectRecovery).RecoverMissing(r.Context(), user.TenantID, asset.ID, asset.Revision)
+		} else {
+			asset, err = lifecycle.Activate(r.Context(), user.TenantID, asset.ID, asset.Revision)
+		}
 		if err != nil {
 			// Keep the object and pending metadata: a retry can safely reconcile
 			// the deterministic storage key instead of creating an orphan.
@@ -217,6 +256,20 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 	h.auditAction(r, "file.uploaded", "file_asset", asset.ID, "upload private file")
 	httpx.JSON(w, http.StatusCreated, map[string]any{"file": asset.Response()})
+}
+
+func (h *Handler) verifyStoredObject(r *http.Request, bucket, key string, expectedSize int64, expectedHash string) error {
+	stored, err := h.objects.Get(r.Context(), bucket, key)
+	if err != nil {
+		return err
+	}
+	defer stored.Close()
+	hash := sha256.New()
+	size, err := io.Copy(hash, stored)
+	if err != nil || size != expectedSize || hex.EncodeToString(hash.Sum(nil)) != expectedHash {
+		return ErrStorageFailure
+	}
+	return nil
 }
 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {

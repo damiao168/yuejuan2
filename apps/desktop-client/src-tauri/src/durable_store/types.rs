@@ -69,6 +69,7 @@ pub struct DurableStoreStatus {
     pub ready: bool,
     pub database_path: String,
     pub spool_path: String,
+    pub legacy_data_present: bool,
 }
 
 #[derive(Debug, Serialize)]

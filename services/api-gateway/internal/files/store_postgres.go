@@ -161,6 +161,14 @@ func (s *PostgresStore) Activate(ctx context.Context, tenantID, id string, expec
 	return s.transition(ctx, tenantID, id, expectedRevision, []string{LifecyclePendingUpload, LifecycleUploadFailed}, LifecycleActive, "", false)
 }
 
+func (s *PostgresStore) RecoverMissing(ctx context.Context, tenantID, id string, expectedRevision int64) (FileAsset, error) {
+	return s.transition(ctx, tenantID, id, expectedRevision, []string{LifecycleMissingObject}, LifecycleActive, "", false)
+}
+
+func (s *PostgresStore) MarkMissing(ctx context.Context, tenantID, id string, expectedRevision int64) (FileAsset, error) {
+	return s.transition(ctx, tenantID, id, expectedRevision, []string{LifecycleActive}, LifecycleMissingObject, "object_missing", false)
+}
+
 func (s *PostgresStore) MarkUploadFailed(ctx context.Context, tenantID, id string, expectedRevision int64, detail string) (FileAsset, error) {
 	return s.transition(ctx, tenantID, id, expectedRevision, []string{LifecyclePendingUpload}, LifecycleUploadFailed, detail, false)
 }

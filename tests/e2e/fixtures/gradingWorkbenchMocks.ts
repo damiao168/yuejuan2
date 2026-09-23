@@ -56,6 +56,7 @@ export interface GradingWorkbenchMockState {
   submissions: string[];
   draftWrites: string[];
   contextsRead: string[];
+  listCursors: string[];
 }
 
 export function createGradingWorkbenchMockState(count = 20): GradingWorkbenchMockState {
@@ -83,7 +84,7 @@ export function createGradingWorkbenchMockState(count = 20): GradingWorkbenchMoc
       subject
     } satisfies FixtureTask;
   });
-  return { tasks, drafts: new Map(), claims: [], submissions: [], draftWrites: [], contextsRead: [] };
+  return { tasks, drafts: new Map(), claims: [], submissions: [], draftWrites: [], contextsRead: [], listCursors: [] };
 }
 
 function json(route: Route, body: unknown, status = 200) {
@@ -202,10 +203,31 @@ export async function installGradingWorkbenchMocks(page: Page, state = createGra
     if (path === "/api/v1/review-tasks" && method === "GET") {
       const assignedTo = url.searchParams.get("assigned_to");
       const examID = url.searchParams.get("exam_id");
+      const status = url.searchParams.get("status");
+      const cursor = url.searchParams.get("cursor") ?? "";
+      const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") ?? 50), 200));
+      state.listCursors.push(cursor);
       const tasks = state.tasks.filter((task) =>
-        (!assignedTo || task.assigned_to === assignedTo) && (!examID || task.exam_id === examID)
+        (!assignedTo || task.assigned_to === assignedTo) && (!examID || task.exam_id === examID) && (!status || task.status === status)
       );
-      return json(route, { tasks, next_cursor: "", has_more: false });
+      const aggregate = {
+        total_count: tasks.length,
+        completed_count: tasks.filter((task) => ["submitted", "completed"].includes(task.status)).length,
+        remaining_count: tasks.filter((task) => !["submitted", "completed"].includes(task.status)).length,
+        status_counts: Object.fromEntries([...new Set(tasks.map((task) => task.status))].map((value) => [value, tasks.filter((task) => task.status === value).length])),
+        reviewers: [...new Set(tasks.map((task) => task.assigned_to).filter(Boolean))].map((reviewerId) => {
+          const assigned = tasks.filter((task) => task.assigned_to === reviewerId);
+          const completed = assigned.filter((task) => ["submitted", "completed"].includes(task.status)).length;
+          return { reviewer_id: reviewerId, total_count: assigned.length, completed_count: completed, remaining_count: assigned.length - completed };
+        })
+      };
+      const anchor = cursor ? state.tasks.findIndex((task) => task.id === cursor) : -1;
+      const remaining = state.tasks.slice(anchor + 1).filter((task) =>
+        (!assignedTo || task.assigned_to === assignedTo) && (!examID || task.exam_id === examID) && (!status || task.status === status)
+      );
+      const page = remaining.slice(0, limit);
+      const hasMore = remaining.length > page.length;
+      return json(route, { tasks: page, aggregate, next_cursor: hasMore ? page[page.length - 1]?.id ?? "" : "", has_more: hasMore });
     }
 
     if (path === "/api/v1/review-tasks/next" && method === "POST") {

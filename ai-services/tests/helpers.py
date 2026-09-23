@@ -63,8 +63,10 @@ def valid_raw_output():
 
 
 class FakeModel:
-    def __init__(self, outputs=None, ready=True):
+    def __init__(self, outputs=None, ready=True, usages=None):
         self.outputs = list(outputs or [valid_raw_output()])
+        self.usages = list(usages or [])
+        self._last_usage = {}
         self.calls = []
         self.ready_value = ready
         self.ready_calls = 0
@@ -79,9 +81,13 @@ class FakeModel:
         if not self.outputs:
             raise AssertionError("fake model received more calls than configured")
         output = self.outputs.pop(0)
+        self._last_usage = copy.deepcopy(self.usages.pop(0)) if self.usages else {}
         if isinstance(output, Exception):
             raise output
         return copy.deepcopy(output)
+
+    def last_usage(self):
+        return copy.deepcopy(self._last_usage)
 
     def ready(self):
         self.ready_calls += 1

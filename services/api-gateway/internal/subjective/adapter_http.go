@@ -389,6 +389,7 @@ func (a *HTTPAdapter) mapResponse(input AdapterInput, response gradingAgentRespo
 		RepairAttempted: response.Telemetry.RepairAttempted,
 		PriorErrorCodes: nonNilStrings(response.Telemetry.PriorErrorCodes),
 		ElapsedMS:       response.Telemetry.ElapsedMS,
+		Usage:           response.Telemetry.Usage,
 	}
 	return AdapterOutput{
 		RequestID:         response.RequestID,
@@ -599,14 +600,15 @@ type gradingAgentEvidence struct {
 }
 
 type gradingAgentTelemetry struct {
-	Adapter         string   `json:"adapter"`
-	Provider        string   `json:"provider"`
-	Deployment      string   `json:"deployment"`
-	Region          string   `json:"region"`
-	Attempts        int      `json:"attempts"`
-	RepairAttempted bool     `json:"repair_attempted"`
-	PriorErrorCodes []string `json:"prior_error_codes"`
-	ElapsedMS       int64    `json:"elapsed_ms"`
+	Adapter         string          `json:"adapter"`
+	Provider        string          `json:"provider"`
+	Deployment      string          `json:"deployment"`
+	Region          string          `json:"region"`
+	Attempts        int             `json:"attempts"`
+	RepairAttempted bool            `json:"repair_attempted"`
+	PriorErrorCodes []string        `json:"prior_error_codes"`
+	ElapsedMS       int64           `json:"elapsed_ms"`
+	Usage           ModelTokenUsage `json:"usage"`
 }
 
 func firstConfigured(value string, fallback string) string {

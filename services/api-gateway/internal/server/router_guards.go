@@ -56,6 +56,7 @@ type routerGuards struct {
 	requireSchoolAdmin           func(http.HandlerFunc) http.Handler
 	requireModelRead             func(http.HandlerFunc) http.Handler
 	requirePlatformModelManage   func(http.HandlerFunc) http.Handler
+	requirePlatformSchoolRead    func(http.HandlerFunc) http.Handler
 	requireModelProviderManage   func(http.HandlerFunc) http.Handler
 	requireModelPolicyManage     func(http.HandlerFunc) http.Handler
 	requireModelEvaluationManage func(http.HandlerFunc) http.Handler
@@ -246,6 +247,11 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 			auth.RequirePermission("model:provider:manage")(idempotent(handler)),
 		)))
 	}
+	requirePlatformSchoolRead := func(handler http.HandlerFunc) http.Handler {
+		return requireAuth(auth.RequirePlatformAdmin(
+			auth.RequirePermission("tenant:manage")(handler),
+		))
+	}
 	requireModelProviderManage := func(handler http.HandlerFunc) http.Handler {
 		return requirePermission("model:provider:manage", handler)
 	}
@@ -332,6 +338,7 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 		requireSchoolAdmin:           requireSchoolAdmin,
 		requireModelRead:             requireModelRead,
 		requirePlatformModelManage:   requirePlatformModelManage,
+		requirePlatformSchoolRead:    requirePlatformSchoolRead,
 		requireModelProviderManage:   requireModelProviderManage,
 		requireModelPolicyManage:     requireModelPolicyManage,
 		requireModelEvaluationManage: requireModelEvaluationManage,

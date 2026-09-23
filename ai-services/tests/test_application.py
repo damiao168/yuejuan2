@@ -44,7 +44,13 @@ class ApplicationTests(unittest.TestCase):
     def test_invalid_evidence_is_repaired_once(self):
         invalid = valid_raw_output()
         invalid["evidence"][0]["text_excerpt"] = "invented"
-        model = FakeModel([invalid, valid_raw_output()])
+        model = FakeModel(
+            [invalid, valid_raw_output()],
+            usages=[
+                {"input_tokens": 100, "cached_input_tokens": 20, "output_tokens": 30, "reasoning_tokens": 4, "total_tokens": 130},
+                {"input_tokens": 110, "cached_input_tokens": 50, "output_tokens": 40, "reasoning_tokens": 6, "total_tokens": 150},
+            ],
+        )
         app = GradingAgentApplication(settings(), model=model)
         request = valid_request()
         suggestion, replayed = app.grade(request, request["request_id"])
@@ -52,6 +58,10 @@ class ApplicationTests(unittest.TestCase):
         self.assertEqual(suggestion["telemetry"]["attempts"], 2)
         self.assertTrue(suggestion["telemetry"]["repair_attempted"])
         self.assertEqual(suggestion["telemetry"]["prior_error_codes"], ["evidence_verification_failed"])
+        self.assertEqual(
+            suggestion["telemetry"]["usage"],
+            {"input_tokens": 210, "cached_input_tokens": 70, "output_tokens": 70, "reasoning_tokens": 10, "total_tokens": 280},
+        )
         self.assertIn("schema_repaired", suggestion["risk_flags"])
 
     def test_local_injection_detector_does_not_trust_gateway_flag(self):

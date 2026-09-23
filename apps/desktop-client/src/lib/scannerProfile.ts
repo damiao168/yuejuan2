@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { isTauriRuntime } from "./localRuntime";
+import { invokeScoped } from "./durableStore";
 
 /**
  * Product-facing scanner contract.  It deliberately describes driver/profile
@@ -81,24 +82,24 @@ export async function scannerIntegrationStatus(): Promise<ScannerIntegrationStat
   return invoke<ScannerIntegrationStatus>("scanner_integration_status");
 }
 
-export async function listScannerProfiles(): Promise<ScannerProfile[]> {
+export async function listScannerProfiles(sessionId: string): Promise<ScannerProfile[]> {
   requireDesktopRuntime();
-  return invoke<ScannerProfile[]>("list_scanner_profiles");
+  return invokeScoped<ScannerProfile[]>("list_scanner_profiles", {}, sessionId);
 }
 
-export async function saveScannerProfile(input: SaveScannerProfileInput): Promise<ScannerProfile> {
+export async function saveScannerProfile(input: SaveScannerProfileInput, sessionId: string): Promise<ScannerProfile> {
   requireDesktopRuntime();
-  return invoke<ScannerProfile>("save_scanner_profile", { input });
+  return invokeScoped<ScannerProfile>("save_scanner_profile", { input }, sessionId);
 }
 
-export async function deleteScannerProfile(profileId: string): Promise<void> {
+export async function deleteScannerProfile(profileId: string, sessionId: string): Promise<void> {
   requireDesktopRuntime();
-  await invoke("delete_scanner_profile", { profileId });
+  await invokeScoped("delete_scanner_profile", { profileId }, sessionId);
 }
 
-export async function runScannerPreflight(input: ScannerPreflightRequest): Promise<ScannerPreflightResult> {
+export async function runScannerPreflight(input: ScannerPreflightRequest, sessionId: string): Promise<ScannerPreflightResult> {
   requireDesktopRuntime();
-  return invoke<ScannerPreflightResult>("run_scanner_preflight", { request: input });
+  return invokeScoped<ScannerPreflightResult>("run_scanner_preflight", { request: input }, sessionId);
 }
 
 export type ScannerSampleQualityStatus = "passed" | "warning" | "failed" | "not_configured";

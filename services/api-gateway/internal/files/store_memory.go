@@ -110,6 +110,14 @@ func (s *MemoryStore) Activate(_ context.Context, tenantID, id string, expectedR
 	return s.transition(tenantID, id, expectedRevision, []string{LifecyclePendingUpload, LifecycleUploadFailed}, LifecycleActive, "", false)
 }
 
+func (s *MemoryStore) RecoverMissing(_ context.Context, tenantID, id string, expectedRevision int64) (FileAsset, error) {
+	return s.transition(tenantID, id, expectedRevision, []string{LifecycleMissingObject}, LifecycleActive, "", false)
+}
+
+func (s *MemoryStore) MarkMissing(_ context.Context, tenantID, id string, expectedRevision int64) (FileAsset, error) {
+	return s.transition(tenantID, id, expectedRevision, []string{LifecycleActive}, LifecycleMissingObject, "object_missing", false)
+}
+
 func (s *MemoryStore) MarkUploadFailed(_ context.Context, tenantID, id string, expectedRevision int64, detail string) (FileAsset, error) {
 	return s.transition(tenantID, id, expectedRevision, []string{LifecyclePendingUpload}, LifecycleUploadFailed, detail, false)
 }

@@ -88,7 +88,8 @@ def paper_model(application, payload):
             raise ValueError("invalid native endpoint")
         settings = replace(application.settings, model_base_url=config["base_url"].rstrip("/"),
                            model_api_key=config["api_key"], model_name=config["model_name"],
-                           model_version=config["model_version"], adapter_type=adapter)
+                           model_version=config["model_version"], adapter_type=adapter,
+                           provider_key=str(config.get("provider_key") or adapter).strip())
         if adapter == "dashscope_native":
             return ManagedNativePaperAdapter(settings, transport=public_json_transport)
         def compatible_transport(url, body, headers, timeout):

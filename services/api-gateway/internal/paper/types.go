@@ -211,11 +211,14 @@ type PaperImportRuntimeProgress struct {
 }
 
 type PaperImportModelUsage struct {
-	InputTokens       int64 `json:"input_tokens,omitempty"`
-	CachedInputTokens int64 `json:"cached_input_tokens,omitempty"`
-	OutputTokens      int64 `json:"output_tokens,omitempty"`
-	ReasoningTokens   int64 `json:"reasoning_tokens,omitempty"`
-	TotalTokens       int64 `json:"total_tokens,omitempty"`
+	ProviderKey       string `json:"provider_key,omitempty"`
+	ModelName         string `json:"model_name,omitempty"`
+	RequestCount      int64  `json:"request_count,omitempty"`
+	InputTokens       int64  `json:"input_tokens,omitempty"`
+	CachedInputTokens int64  `json:"cached_input_tokens,omitempty"`
+	OutputTokens      int64  `json:"output_tokens,omitempty"`
+	ReasoningTokens   int64  `json:"reasoning_tokens,omitempty"`
+	TotalTokens       int64  `json:"total_tokens,omitempty"`
 }
 
 type PaperImportJob struct {

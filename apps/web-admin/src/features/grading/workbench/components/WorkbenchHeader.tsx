@@ -23,6 +23,7 @@ export interface WorkbenchHeaderProps {
   myProgress?: ReviewerProgress;
   reviewerProgress: ReviewerProgress[];
   remainingCount: number;
+  progressComplete: boolean;
   draftSaveStatus: DraftSaveStatus;
   loading: boolean;
   actioning: string | null;
@@ -31,6 +32,7 @@ export interface WorkbenchHeaderProps {
   onClaim: () => Promise<void>;
   onRelease: () => Promise<void>;
   onReloadConflict: () => Promise<void>;
+  onResolveConflict: () => Promise<void>;
 }
 
 export function WorkbenchHeader({
@@ -42,6 +44,7 @@ export function WorkbenchHeader({
   myProgress,
   reviewerProgress,
   remainingCount,
+  progressComplete,
   draftSaveStatus,
   loading,
   actioning,
@@ -49,7 +52,8 @@ export function WorkbenchHeader({
   onNext,
   onClaim,
   onRelease,
-  onReloadConflict
+  onReloadConflict,
+  onResolveConflict
 }: WorkbenchHeaderProps) {
   const showReviewerActions = !canManageTasks || queueScope === "mine";
   return (
@@ -59,8 +63,8 @@ export function WorkbenchHeader({
           <h1>{canManageTasks ? "阅卷管理" : "阅卷"}</h1>
           <span>
             {!canManageTasks
-              ? `已完成 ${myProgress?.completed ?? 0} / 共 ${myProgress?.total ?? 0}`
-              : hasContext ? `剩余 ${remainingCount} 份` : "分配任务、查看进度和处理异常"}
+              ? `已完成 ${myProgress?.completed ?? 0} / ${progressComplete ? "共" : "已加载"} ${myProgress?.total ?? 0}${progressComplete ? "" : " · 数据未完整"}`
+              : hasContext ? `${progressComplete ? "剩余" : "已加载待处理"} ${remainingCount} 份${progressComplete ? "" : " · 数据未完整"}` : "分配任务、查看进度和处理异常"}
           </span>
         </div>
         <Space wrap>
@@ -78,11 +82,11 @@ export function WorkbenchHeader({
         </Space>
       </section>
 
-      {draftSaveStatus === "conflict" ? <Alert type="error" showIcon message="草稿已被其他会话更新" description="为防止覆盖他人修改，自动保存已暂停。重新载入任务后再应用本地修改。" action={<Button onClick={() => void onReloadConflict()}>重新载入</Button>} /> : draftSaveStatus === "offline" ? <Alert type="warning" showIcon message="当前离线，草稿已保存在本机" description="恢复网络后会按版本号同步；提交或退出后会清理本机草稿。" /> : draftSaveStatus === "error" ? <Alert type="warning" showIcon message="草稿暂未保存到服务端" description="本机保留了短期草稿；检查网络后系统会再次尝试保存。" /> : draftSaveStatus === "readonly" ? <Alert type="info" showIcon message="管理员只读检查" description="管理员可查看材料、分配和管理任务；评分草稿与最终提交只能由被分配的阅卷员完成。" /> : null}
+      {draftSaveStatus === "conflict" ? <Alert type="error" showIcon message="草稿已被其他会话更新" description="为防止覆盖其他会话的修改，自动保存已暂停。可逐项选择本机或服务端内容，再按服务端新版本重新保存。" action={<Space wrap><Button type="primary" onClick={() => void onResolveConflict()}>逐项合并</Button><Button onClick={() => void onReloadConflict()}>放弃本机修改</Button></Space>} /> : draftSaveStatus === "offline" ? <Alert type="warning" showIcon message="当前离线，草稿已保存在本机" description="恢复网络后会按版本号同步；提交或退出后会清理本机草稿。" /> : draftSaveStatus === "error" ? <Alert type="warning" showIcon message="草稿暂未保存到服务端" description="本机保留了短期草稿；检查网络后系统会再次尝试保存。" /> : draftSaveStatus === "readonly" ? <Alert type="info" showIcon message="管理员只读检查" description="管理员可查看材料、分配和管理任务；评分草稿与最终提交只能由被分配的阅卷员完成。" /> : null}
 
       {canManageTasks && queueScope === "all" ? (
         <section className="reviewer-progress-panel" aria-label="阅卷员进度">
-          <div className="reviewer-progress-head"><div><h2>阅卷员进度</h2></div><span className="muted">{`${reviewerProgress.length} 名阅卷员`}</span></div>
+          <div className="reviewer-progress-head"><div><h2>阅卷员进度</h2></div><span className="muted">{`${progressComplete ? "共" : "已加载"} ${reviewerProgress.length} 名阅卷员${progressComplete ? "" : " · 数据未完整"}`}</span></div>
           <div className="reviewer-progress-list">
             {reviewerProgress.length ? reviewerProgress.map((reviewer) => (
               <div className="reviewer-progress-row" key={reviewer.id}>

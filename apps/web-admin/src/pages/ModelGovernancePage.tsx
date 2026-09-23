@@ -7,7 +7,6 @@ import {
   Form,
   Input,
   InputNumber,
-  Modal,
   Segmented,
   Select,
   Space,
@@ -26,7 +25,6 @@ import {
   RefreshCw,
   Route,
   Server,
-  ShieldCheck,
   TriangleAlert
 } from "lucide-react";
 import { ApiClientError, getUserErrorMessage } from "../api/client";
@@ -39,7 +37,6 @@ import {
   listModelEvaluationRuns,
   listModelApprovals,
   listModelProviders,
-  probeModelSecret,
   updateModelPolicy,
   type CreateDeploymentInput,
   type CreateProviderInput,
@@ -48,7 +45,6 @@ import {
   type ModelDeployment,
   type ModelProvider,
   type PolicyMode,
-  type SecretProbe,
   type TenantModelPolicy,
   type UpdatePolicyInput
 } from "../api/modelGovernance";
@@ -134,14 +130,11 @@ export function ModelGovernancePage({
   const [providerDrawerOpen, setProviderDrawerOpen] = useState(false);
   const [deploymentDrawerOpen, setDeploymentDrawerOpen] = useState(false);
   const [policyDrawerOpen, setPolicyDrawerOpen] = useState(false);
-  const [secretModalOpen, setSecretModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [secretProbe, setSecretProbe] = useState<SecretProbe>();
   const [aiStatus, setAIStatus] = useState<AIGradingRuntimeStatus>();
   const [providerForm] = Form.useForm<CreateProviderInput>();
   const [deploymentForm] = Form.useForm<CreateDeploymentInput & { meter: string; input_micros?: number; output_micros?: number }>();
   const [policyForm] = Form.useForm<UpdatePolicyInput>();
-  const [secretForm] = Form.useForm<{ credential_ref: string }>();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -411,20 +404,6 @@ export function ModelGovernancePage({
     }
   };
 
-  const submitSecretProbe = async () => {
-    const values = await secretForm.validateFields();
-    setSaving(true);
-    try {
-      const response = await probeModelSecret(values.credential_ref);
-      setSecretProbe(response.probe);
-    } catch (nextError) {
-      message.error(errorMessage(nextError));
-      setSecretProbe(undefined);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const policyFacts = useMemo(() => {
     if (!policy) return [];
     return [
@@ -438,18 +417,16 @@ export function ModelGovernancePage({
   return (
     <div className="model-governance-shell">
       <motion.section
-        className="model-governance-heading"
+        className="page-heading model-governance-heading"
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.22 }}
       >
         <div>
-          <span className="model-governance-kicker"><ShieldCheck size={15} /> STORY-061 · 治理地基</span>
           <h1>模型治理</h1>
           <p>登记本地与外部部署，控制数据外发范围；未验收模型不会进入评分路由。</p>
         </div>
         <Space wrap>
-          {canManageProviders ? <Button icon={<KeyRound size={16} />} onClick={() => { setSecretProbe(undefined); setSecretModalOpen(true); }}>探测 Secret</Button> : null}
           <Button icon={<RefreshCw size={16} />} loading={loading} onClick={() => void load()}>刷新</Button>
         </Space>
       </motion.section>
@@ -764,30 +741,6 @@ export function ModelGovernancePage({
         </Form>
       </Drawer>
 
-      <Modal
-        title="探测 Secret 引用"
-        open={secretModalOpen}
-        okText="执行探测"
-        cancelText="关闭"
-        confirmLoading={saving}
-        onOk={() => void submitSecretProbe()}
-        onCancel={() => setSecretModalOpen(false)}
-      >
-        <p className="model-secret-copy">系统只检查引用类型、是否配置及最小强度，不返回 Secret 值。</p>
-        <Form form={secretForm} layout="vertical">
-          <Form.Item name="credential_ref" label="Secret 引用" rules={[{ required: true }]}>
-            <Input.Password visibilityToggle={false} placeholder="env://VENDOR_A_KEY" />
-          </Form.Item>
-        </Form>
-        {secretProbe ? (
-          <div className="model-secret-result">
-            <span><strong>{secretProbe.scheme}</strong> 引用</span>
-            <Tag color={secretProbe.resolver_supported ? "success" : "warning"}>{secretProbe.resolver_supported ? "解析器可用" : "解析器未安装"}</Tag>
-            <Tag color={secretProbe.configured ? "success" : "error"}>{secretProbe.configured ? "已配置" : "未配置"}</Tag>
-            <Tag color={secretProbe.meets_minimum_strength ? "success" : "warning"}>{secretProbe.meets_minimum_strength ? "强度合格" : "强度未确认"}</Tag>
-          </div>
-        ) : null}
-      </Modal>
     </div>
   );
 }

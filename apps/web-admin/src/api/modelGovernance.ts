@@ -103,13 +103,6 @@ export interface UpdatePolicyInput {
   reason: string;
 }
 
-export interface SecretProbe {
-  scheme: string;
-  resolver_supported: boolean;
-  configured: boolean;
-  meets_minimum_strength: boolean;
-}
-
 export interface RuntimePromptComponent {
   key: string;
   filename: string;
@@ -278,13 +271,6 @@ export function updateModelPolicy(input: UpdatePolicyInput) {
   return apiClient.request<{ policy: TenantModelPolicy }>("/api/v1/model-policy", {
     method: "PUT",
     body: JSON.stringify(input)
-  });
-}
-
-export function probeModelSecret(credentialRef: string) {
-  return apiClient.request<{ probe: SecretProbe }>("/api/v1/model-secrets/probe", {
-    method: "POST",
-    body: JSON.stringify({ credential_ref: credentialRef })
   });
 }
 

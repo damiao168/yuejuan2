@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
+	"edugrade-enterprise/services/api-gateway/internal/logger"
 )
 
 func TestProviderRegistryResolvesOfficialModelsWithoutUsingCredential(t *testing.T) {
@@ -294,6 +295,49 @@ func TestManagedAPIModelDiscoveryHandlerReusesSavedKeyWithoutEchoingIt(t *testin
 	}
 }
 
+func TestManagedAPIModelDiscoveryFailureAuditContainsOnlySafeDiagnostics(t *testing.T) {
+	store := NewMemoryStore()
+	audits := auth.NewMemoryStore()
+	handler := NewHandler(store, audits, NewEnvironmentSecretResolver(t.TempDir()), testBaseline()).
+		WithManagedAPIProber(failingListingManagedProber{})
+	user := auth.User{ID: "actor", TenantID: auth.PlatformTenantID, Permissions: []string{"model:provider:manage"}}
+	const tenantID = "00000000-0000-0000-0000-000000000020"
+	const requestID = "request-safe-probe-audit"
+	const credential = "deepseek-secret-at-least-16"
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/platform/model-api-configs/models", strings.NewReader(`{
+		"tenant_id":"`+tenantID+`","api_key":"`+credential+`","provider":"deepseek"
+	}`))
+	request = request.WithContext(logger.WithRequestID(auth.WithUser(request.Context(), user), requestID))
+	response := httptest.NewRecorder()
+	handler.ListAvailableManagedAPIModels(response, request)
+	if response.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("model discovery returned %d: %s", response.Code, response.Body.String())
+	}
+	records, err := audits.ListAudits(context.Background(), auth.PlatformTenantID, auth.AuditFilter{Limit: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, record := range records {
+		if record.Action != "model.managed_api_model_discovery_failed" {
+			continue
+		}
+		raw, _ := json.Marshal(record.AfterValue)
+		text := string(raw)
+		for _, forbidden := range []string{credential, "api.deepseek.com", "203.0.113.9", "upstream response body"} {
+			if strings.Contains(text, forbidden) {
+				t.Fatalf("probe audit leaked %q: %s", forbidden, text)
+			}
+		}
+		if record.RequestID != requestID || record.AfterValue["provider_key"] != "deepseek" ||
+			record.AfterValue["error_code"] != "provider_timeout" || record.AfterValue["failure_stage"] != "connect" ||
+			record.AfterValue["attempts"] != 2 {
+			t.Fatalf("probe audit omitted safe diagnostics: %#v", record)
+		}
+		return
+	}
+	t.Fatal("model discovery failure audit was not recorded")
+}
+
 func TestManagedAPIModelDiscoveryRequiresProviderWhenModelNameIsEmpty(t *testing.T) {
 	providerSeen := ""
 	service := NewAutoManagedAPIConfigService(NewMemoryStore(), listingManagedProber{providerSeen: &providerSeen})
@@ -529,6 +573,22 @@ type listingManagedProber struct {
 	models       []string
 	providerSeen *string
 	keySeen      *string
+}
+
+type failingListingManagedProber struct{}
+
+func (failingListingManagedProber) Probe(_ context.Context, _ ManagedAPIConnection) ManagedAPIProbeResult {
+	return successfulManagedProbe()
+}
+
+func (failingListingManagedProber) ListModels(_ context.Context, connection ManagedAPIConnection) (ManagedAPIModelListResult, ManagedAPIProbeResult) {
+	return ManagedAPIModelListResult{}, ManagedAPIProbeResult{
+		Provider: connection.Config.ProviderKey, ProbeMode: "quick", ErrorCode: "provider_timeout",
+		Message: "upstream response body", ConnectionDiagnostic: ManagedAPIConnectionDiagnostic{
+			Attempts: 2, DNSMS: 3, ConnectMS: 6, TLSMS: 0, TTFBMS: 0, FailureStage: "connect",
+		},
+		Diagnostic: ManagedAPIProbeDiagnostic{ContentPreview: "upstream response body", ContentSHA256: "203.0.113.9"},
+	}
 }
 
 func (p listingManagedProber) Probe(_ context.Context, _ ManagedAPIConnection) ManagedAPIProbeResult {

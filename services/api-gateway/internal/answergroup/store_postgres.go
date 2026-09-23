@@ -317,6 +317,9 @@ func (s *PostgresStore) Confirm(ctx context.Context, tenantID, groupID, actorID 
 	if err != nil {
 		return Group{}, nil, err
 	}
+	if group.RepresentationVersion != s.provider.Version() || group.AlgorithmVersion != DefaultAlgorithmVersion {
+		return Group{}, nil, ErrStateConflict
+	}
 	refreshReadiness(&group)
 	if group.Decision == nil || group.Decision.Revision != input.ExpectedRevision {
 		return Group{}, nil, ErrRevisionConflict

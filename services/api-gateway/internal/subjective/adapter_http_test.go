@@ -56,6 +56,9 @@ func TestHTTPAdapterSendsGovernedIdentityFreeContract(t *testing.T) {
 	if output.ModelVersion != adapter.Policy().ModelVersion || output.PromptVersion != adapter.Policy().PromptVersion || output.RubricVersion != "rubric-v3" {
 		t.Fatalf("version mapping failed: %#v", output)
 	}
+	if output.Telemetry.Usage.InputTokens != 101 || output.Telemetry.Usage.CachedInputTokens != 40 || output.Telemetry.Usage.OutputTokens != 23 || output.Telemetry.Usage.ReasoningTokens != 7 || output.Telemetry.Usage.TotalTokens != 124 {
+		t.Fatalf("provider token usage was not mapped from the grading response: %#v", output.Telemetry.Usage)
+	}
 	if len(output.Evidence) != 2 || output.Evidence[0].EvidenceID != "e1" || output.Evidence[0].AnswerText == "" {
 		t.Fatalf("evidence mapping failed: %#v", output.Evidence)
 	}
@@ -280,6 +283,7 @@ func writeAgentSuccess(t *testing.T, w http.ResponseWriter, requestID string) {
 			"adapter": "local_llama_cpp", "provider": "local",
 			"deployment": "local-qwen3-4b-q4-k-m", "region": "on_premise",
 			"attempts": 1, "repair_attempted": false, "prior_error_codes": []string{}, "elapsed_ms": 100,
+			"usage": map[string]any{"input_tokens": 101, "cached_input_tokens": 40, "output_tokens": 23, "reasoning_tokens": 7, "total_tokens": 124},
 		},
 	}
 	if err := json.NewEncoder(w).Encode(payload); err != nil {

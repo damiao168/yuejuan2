@@ -30,6 +30,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/orchestrator"
 	"edugrade-enterprise/services/api-gateway/internal/org"
 	"edugrade-enterprise/services/api-gateway/internal/paper"
+	"edugrade-enterprise/services/api-gateway/internal/platformschools"
 	"edugrade-enterprise/services/api-gateway/internal/processing"
 	"edugrade-enterprise/services/api-gateway/internal/qualitydashboard"
 	"edugrade-enterprise/services/api-gateway/internal/questionbank"
@@ -59,6 +60,7 @@ type ApplicationStores struct {
 	Grading      GradingQualityStores
 	Release      ReleaseStores
 	AIGovernance AIGovernanceStores
+	PlatformSchools platformschools.Store
 	Idempotency  idempotency.Store
 }
 
@@ -96,6 +98,7 @@ func NewMemoryApplicationStores() ApplicationStores {
 			ModelGovernance: modelgovernance.NewMemoryStore(), MathUnderstanding: mathStore,
 			MathCorrections: mathunderstanding.NewMemoryCorrectionStore(mathStore), MathPilotGates: mathunderstanding.NewMemoryPilotGateStore(),
 		},
+		PlatformSchools: platformschools.NewMemoryStore(),
 		Idempotency: idempotency.NewMemoryStore(),
 	}
 	return stores
@@ -168,6 +171,7 @@ func NewPostgresApplicationStores(infra *Infrastructure) (ApplicationStores, err
 			ModelGovernance: governanceStore, MathUnderstanding: mathStore,
 			MathCorrections: mathunderstanding.NewPostgresCorrectionStore(infra.DB, mathStore), MathPilotGates: mathunderstanding.NewPostgresPilotGateStore(infra.DB),
 		},
+		PlatformSchools: platformschools.NewPostgresStore(infra.DB),
 		Idempotency: idempotency.NewPostgresStore(infra.DB),
 	}
 	if err := validatePostgresStoreGraph(stores); err != nil {

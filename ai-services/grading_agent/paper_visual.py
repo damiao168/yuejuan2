@@ -5,6 +5,7 @@ import re
 from difflib import SequenceMatcher
 
 from .errors import AgentError
+from .model import describe_model_usage
 from .paper_compact import anchored_paper_result
 from .paper_schema import visual_model_output_schema
 
@@ -119,8 +120,7 @@ class PaperVisualParser:
         usage_reader = getattr(self.model, "last_usage", None)
         if callable(usage_reader):
             usage = usage_reader()
-            if usage:
-                result["model_usage"] = usage
+            result["model_usage"] = describe_model_usage(self.model, usage)
         return result
 
     @staticmethod

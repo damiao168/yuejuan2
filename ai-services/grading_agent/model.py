@@ -132,6 +132,31 @@ def _openai_usage(response):
     }
 
 
+def sum_model_usage(accumulated, latest):
+    """Count every provider attempt, including attempts repaired before success."""
+    fields = ("input_tokens", "cached_input_tokens", "output_tokens", "reasoning_tokens", "total_tokens")
+    latest = latest if isinstance(latest, dict) else {}
+    normalized = {}
+    for field in fields:
+        value = latest.get(field, 0)
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            value = 0
+        normalized[field] = value
+    if not normalized["total_tokens"]:
+        normalized["total_tokens"] = normalized["input_tokens"] + normalized["output_tokens"]
+    return {field: accumulated.get(field, 0) + normalized[field] for field in fields}
+
+
+def describe_model_usage(model, usage, request_count=1):
+    """Add the non-secret model identity needed by the platform usage ledger."""
+    normalized = sum_model_usage({}, usage)
+    settings = getattr(model, "settings", None)
+    normalized["provider_key"] = str(getattr(settings, "provider_key", "") or "")
+    normalized["model_name"] = str(getattr(settings, "model_name", "") or "")
+    normalized["request_count"] = max(int(request_count or 0), 0)
+    return normalized
+
+
 def _map_model_http_error(exc, request_id, provider="local model"):
     if exc.code in {400, 422}:
         return AgentError(
@@ -469,6 +494,7 @@ class LocalLlamaCppAdapter:
 
     def request(self, grading_request, repair_reason=None):
         request_id = grading_request["request_id"]
+        self._usage.value = {}
         payload = {
             "model": self.settings.model_name,
             "messages": self.prompt_registry.messages(grading_request, repair_reason),
@@ -496,6 +522,7 @@ class LocalLlamaCppAdapter:
                 headers,
                 self.settings.model_timeout_seconds,
             )
+            self._usage.value = _openai_usage(response)
         except TimeoutError as exc:
             raise AgentError(
                 "model_timeout",
@@ -587,6 +614,10 @@ class DashScopeNativeAdapter:
             settings.prompt_root, settings.prompt_version
         )
         self.transport = transport or self._http_transport
+        self._usage = threading.local()
+
+    def last_usage(self):
+        return dict(getattr(self._usage, "value", {}))
 
     @contextmanager
     def session(self, _request_id):
@@ -594,6 +625,7 @@ class DashScopeNativeAdapter:
 
     def request(self, grading_request, repair_reason=None):
         request_id = grading_request["request_id"]
+        self._usage.value = {}
         try:
             payload = build_dashscope_grading_payload(
                 grading_request=grading_request,
@@ -615,7 +647,9 @@ class DashScopeNativeAdapter:
                 },
                 self.settings.model_timeout_seconds,
             )
-            output = parse_dashscope_text_response(response).output
+            native = parse_dashscope_text_response(response)
+            self._usage.value = {"input_tokens": native.input_tokens, "cached_input_tokens": 0, "output_tokens": native.output_tokens, "reasoning_tokens": 0, "total_tokens": native.total_tokens}
+            output = native.output
             return _validate_structured_output(
                 output, grading_output_schema(grading_request), request_id
             )
@@ -644,6 +678,7 @@ class DashScopeNativeAdapter:
             ) from exc
 
     def request_structured(self, request_id, messages, schema, _name):
+        self._usage.value = {}
         payload = {
             "model": self.settings.model_name,
             "input": {"messages": messages},
@@ -660,6 +695,7 @@ class DashScopeNativeAdapter:
                 {"Accept": "application/json", "Authorization": f"Bearer {self.settings.model_api_key}", "Content-Type": "application/json", "X-DashScope-SSE": "disable"},
                 self.settings.model_timeout_seconds,
             )
+            self._usage.value = _openai_usage(response)
             content = response["output"]["choices"][0]["message"]["content"]
             if isinstance(content, list):
                 content = "".join(part.get("text", "") for part in content if isinstance(part, dict))

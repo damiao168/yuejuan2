@@ -12,7 +12,8 @@ from helpers import settings
 
 def config(name="school-a"):
     return {"adapter_type": "openai_compatible", "base_url": "https://models.example.test/v1",
-            "api_key": f"synthetic-secret-for-{name}", "model_name": name, "model_version": "v1"}
+            "api_key": f"synthetic-secret-for-{name}", "provider_key": "school-provider",
+            "model_name": name, "model_version": "v1"}
 
 
 class ManagedPaperModelTests(unittest.TestCase):
@@ -26,6 +27,7 @@ class ManagedPaperModelTests(unittest.TestCase):
         b = paper_model(self.app, payload_b)
         self.assertNotIn("managed_model", payload_a)
         self.assertEqual(a.settings.model_name, "school-a")
+        self.assertEqual(a.settings.provider_key, "school-provider")
         self.assertEqual(b.settings.model_name, "school-b")
         self.assertNotEqual(a.settings.model_api_key, b.settings.model_api_key)
         self.assertIs(paper_model(self.app, {}), self.app.model)

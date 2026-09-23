@@ -1,3 +1,4 @@
+mod claim;
 mod connection;
 mod crypto;
 mod drafts;
@@ -8,12 +9,14 @@ mod spool;
 mod types;
 
 use tauri::AppHandle;
+use tauri::Manager;
 
-use connection::open_connection;
+use connection::open_connection_at;
 use crypto::master_key;
-use paths::{db_path, spool_path, store_root};
+use paths::{db_path, legacy_store_exists, spool_path, store_root};
 use schema::initialize_schema;
 
+pub use claim::claim_legacy_store;
 pub use drafts::{
     list_durable_drafts, load_durable_draft, purge_expired_durable_drafts, save_durable_draft,
     update_durable_draft_status,
@@ -30,27 +33,69 @@ pub use types::{
     SpoolAssetSession,
 };
 
-pub fn status(app: AppHandle) -> Result<DurableStoreStatus, String> {
+pub fn bind_session(server: &str, tenant_id: &str, actor_id: &str) -> Result<String, String> {
+    paths::bind_scope(server, tenant_id, actor_id)
+}
+
+pub fn clear_session() -> Result<(), String> {
+    paths::clear_scope()
+}
+
+pub fn with_session<T>(
+    session_id: &str,
+    operation: impl FnOnce() -> Result<T, String>,
+) -> Result<T, String> {
+    paths::with_session(session_id, operation)
+}
+
+pub fn status(app: AppHandle, session_id: &str) -> Result<DurableStoreStatus, String> {
+    paths::with_session(session_id, || status_for_active_session(app))
+}
+
+pub(crate) fn scoped_status(app: AppHandle) -> Result<DurableStoreStatus, String> {
+    status_for_active_session(app)
+}
+
+pub(crate) fn scoped_root(app: &AppHandle) -> Result<std::path::PathBuf, String> {
+    store_root(app)
+}
+
+fn status_for_active_session(app: AppHandle) -> Result<DurableStoreStatus, String> {
+    let data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?;
+    let legacy_data_present = legacy_store_exists(&data_dir)?;
     let root = store_root(&app)?;
     let _ = master_key(&root)?;
-    let conn = open_connection(&app)?;
+    let conn = open_connection_at(&root)?;
     initialize_schema(&conn)?;
     Ok(DurableStoreStatus {
         ready: true,
         database_path: db_path(&root).to_string_lossy().into_owned(),
         spool_path: spool_path(&root).to_string_lossy().into_owned(),
+        legacy_data_present,
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        crypto::{decrypt_json, encrypt_bytes, encrypt_json, sha256_hex},
+        crypto::{
+            decrypt_json, durable_credential_account, encrypt_bytes, encrypt_json, sha256_hex,
+        },
         drafts::draft_metadata,
-        paths::{db_path, durable_data_exists, spool_path, write_new_private_file},
+        paths::{
+            account_root, bind_scope, clear_scope, db_path, durable_data_exists,
+            legacy_store_exists, scope_path_component, spool_path, with_session,
+            write_new_private_file,
+        },
         queue::{recover_interrupted_uploads, validate_transition},
         schema::initialize_schema,
-        spool::{verify_chunked_asset, CHUNKED_FILE_NONCE, SPOOL_CHUNK_BYTES},
+        spool::{
+            read_durable_local_asset_at, verify_chunked_asset, CHUNKED_FILE_NONCE,
+            SPOOL_CHUNK_BYTES,
+        },
         DurableQueueItem,
     };
     use rusqlite::{params, Connection};
@@ -372,5 +417,119 @@ mod tests {
         fs::write(db_path(&root), b"SQLite format 3\0").expect("write station database marker");
         assert!(durable_data_exists(&root).expect("database counts as existing data"));
         fs::remove_dir_all(root).expect("remove fixture root");
+    }
+
+    #[test]
+    fn account_b_cannot_read_account_a_asset_and_v1_remains_quarantined() {
+        let data_dir =
+            std::env::temp_dir().join(format!("edugrade-account-test-{}", Uuid::new_v4()));
+        let legacy = data_dir.join("durable-store-v1");
+        fs::create_dir_all(&legacy).expect("legacy directory");
+        let legacy_marker = legacy.join("offline.sqlite3");
+        fs::write(&legacy_marker, b"legacy encrypted data").expect("legacy marker");
+        assert!(legacy_store_exists(&data_dir).expect("detect legacy data"));
+
+        let tenant = Uuid::new_v4().to_string();
+        let actor_a = Uuid::new_v4().to_string();
+        let actor_b = Uuid::new_v4().to_string();
+        let scope_a =
+            scope_path_component("https://example.test/api", &tenant, &actor_a).expect("A scope");
+        let scope_b =
+            scope_path_component("https://example.test/api", &tenant, &actor_b).expect("B scope");
+        assert_ne!(scope_a, scope_b);
+        assert_ne!(
+            scope_a,
+            scope_path_component("https://example.test/other", &tenant, &actor_a)
+                .expect("other API path")
+        );
+        let root_a = account_root(&data_dir, &scope_a);
+        let root_b = account_root(&data_dir, &scope_b);
+        assert_ne!(
+            durable_credential_account(&root_a).expect("A credential account"),
+            durable_credential_account(&root_b).expect("B credential account")
+        );
+        assert_eq!(
+            durable_credential_account(&legacy).expect("legacy credential account"),
+            "desktop-offline-master-key-v1"
+        );
+        fs::create_dir_all(spool_path(&root_a)).expect("A spool");
+        fs::create_dir_all(spool_path(&root_b)).expect("B spool");
+        let conn_a = Connection::open(db_path(&root_a)).expect("A database");
+        let conn_b = Connection::open(db_path(&root_b)).expect("B database");
+        initialize_schema(&conn_a).expect("A schema");
+        initialize_schema(&conn_b).expect("B schema");
+        let key = [43_u8; 32];
+        let asset_id = "account-a-asset";
+        let record: DurableQueueItem = serde_json::from_value(serde_json::json!({
+            "id": asset_id, "title": "a.pdf", "kind": "scan_upload", "status": "pending",
+            "progress": 0, "detail": "", "updatedAt": "2026-09-22T00:00:00Z",
+            "fileName": "a.pdf", "localAssetId": asset_id
+        }))
+        .expect("queue record");
+        let (payload, nonce) = encrypt_json(&key, &record).expect("encrypted queue");
+        conn_a.execute(
+            "INSERT INTO local_asset (id, sha256, size_bytes, mime, local_path, file_nonce, state, created_at, updated_at)
+             VALUES (?1, 'sha', 3, 'application/pdf', '', 'nonce', 'queued', ?2, ?2)",
+            params![asset_id, "2026-09-22T00:00:00Z"],
+        ).expect("A asset");
+        conn_a.execute(
+            "INSERT INTO sync_event (id, operation, entity_id, idempotency_key, state, retry_count, last_error, payload_ciphertext, payload_nonce, created_at, updated_at)
+             VALUES (?1, 'scan_upload', ?1, 'key-a', 'pending', 0, NULL, ?2, ?3, ?4, ?4)",
+            params![asset_id, payload, nonce, "2026-09-22T00:00:00Z"],
+        ).expect("A queue");
+        assert_eq!(
+            read_durable_local_asset_at(&root_a, &key, asset_id)
+                .expect("A reads own asset")
+                .filename,
+            "a.pdf"
+        );
+        assert!(
+            read_durable_local_asset_at(&root_b, &key, asset_id).is_err(),
+            "B cannot read A's asset ID"
+        );
+
+        let lease_a = bind_scope("https://example.test/api", &tenant, &actor_a).expect("bind A");
+        assert!(with_session(&lease_a, || Ok(())).is_ok());
+        let lease_b = bind_scope("https://example.test/api", &tenant, &actor_b).expect("bind B");
+        assert!(
+            with_session(&lease_a, || Ok(())).is_err(),
+            "A's pending command must be rejected after B logs in"
+        );
+        assert!(with_session(&lease_b, || Ok(())).is_ok());
+        clear_scope().expect("clear session");
+        assert!(
+            with_session(&lease_b, || Ok(())).is_err(),
+            "logout revokes B lease"
+        );
+        let lease_other_server =
+            bind_scope("https://other.example.test/api", &tenant, &actor_a).expect("server switch");
+        assert!(with_session(&lease_other_server, || Ok(())).is_ok());
+        assert_ne!(
+            scope_a,
+            scope_path_component("https://other.example.test/api", &tenant, &actor_a)
+                .expect("other server scope")
+        );
+        clear_scope().expect("restart clears in-memory lease");
+        assert!(with_session(&lease_other_server, || Ok(())).is_err());
+        let lease_a_after_restart =
+            bind_scope("https://example.test/api", &tenant, &actor_a).expect("return A");
+        assert_ne!(lease_a, lease_a_after_restart);
+        assert!(with_session(&lease_a, || Ok(())).is_err());
+        assert!(with_session(&lease_a_after_restart, || Ok(())).is_ok());
+        assert_eq!(
+            read_durable_local_asset_at(&root_a, &key, asset_id)
+                .expect("A recovers own asset")
+                .filename,
+            "a.pdf"
+        );
+        clear_scope().expect("clear A");
+        assert!(
+            legacy_marker.exists(),
+            "the unscoped v1 data must remain untouched"
+        );
+        assert!(!root_a.starts_with(&legacy) && !root_b.starts_with(&legacy));
+        drop(conn_a);
+        drop(conn_b);
+        fs::remove_dir_all(data_dir).expect("remove account fixture");
     }
 }

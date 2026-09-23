@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
@@ -214,6 +215,202 @@ func TestFailedCapabilityProbeKeepsConfigAndPersistsOnlySafeDiagnostic(t *testin
 	items, _ := store.ListManagedAPIConfigs(context.Background(), tenantID)
 	if len(items) != 1 {
 		t.Fatalf("failed capability probe removed configuration: %#v", items)
+	}
+}
+
+func TestManagedProbeTransientFailureRetainsLastSuccessAndCapabilityEvidence(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	const tenantID = "school-a"
+	verified := successfulManagedProbe()
+	verified.ProbeMode = "capability"
+	verified.GeneratedRequest = true
+	verified.Usage = ManagedAPIProbeUsage{TotalTokens: 14}
+	item, err := store.CreateManagedAPIConfig(ctx, tenantID, "actor", ManagedAPIConfigInput{
+		ProviderKey: "deepseek", DisplayName: "DeepSeek", AdapterType: "openai_compatible",
+		BaseURL: "https://api.deepseek.com", APIKey: "secret-value-at-least-16", ModelName: "deepseek-chat",
+		ModelVersion: "deepseek-chat", Region: "global", Status: "active", InitialProbe: &verified,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if item.LastSuccessfulTestedAt == nil || item.LastCapabilityStatus != "success" {
+		t.Fatalf("initial success was not recorded: %#v", item)
+	}
+	lastSuccess := *item.LastSuccessfulTestedAt
+	capabilityAt := *item.LastCapabilityTestedAt
+
+	for _, code := range []string{"provider_timeout", "provider_unavailable"} {
+		item, err = store.RecordManagedAPIProbe(ctx, tenantID, item.ID, item.UpdatedAt, ManagedAPIProbeResult{
+			ProbeMode: "quick", ErrorCode: code, Message: "temporarily unreachable",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if item.LastTestStatus != "temporary_unavailable" || item.LastTestedAt == nil ||
+			item.LastSuccessfulTestedAt == nil || !item.LastSuccessfulTestedAt.Equal(lastSuccess) ||
+			item.LastCapabilityStatus != "success" || item.LastCapabilityTestedAt == nil ||
+			!item.LastCapabilityTestedAt.Equal(capabilityAt) || item.LastCapabilityUsage.TotalTokens != 14 {
+			t.Fatalf("%s overwrote prior success or capability evidence: %#v", code, item)
+		}
+	}
+	item, err = store.RecordManagedAPIProbe(ctx, tenantID, item.ID, item.UpdatedAt, ManagedAPIProbeResult{
+		ProbeMode: "capability", GeneratedRequest: true, ErrorCode: "provider_timeout",
+		Message:         "generation timed out",
+		CredentialCheck: ManagedAPICheckResult{OK: true}, ModelCheck: ManagedAPICheckResult{OK: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if item.LastTestStatus != "temporary_unavailable" || item.LastTestMessage != "generation timed out" ||
+		item.LastSuccessfulTestedAt == nil || !item.LastSuccessfulTestedAt.Equal(lastSuccess) ||
+		item.LastCapabilityStatus != "success" || item.LastCapabilityTestedAt == nil ||
+		!item.LastCapabilityTestedAt.Equal(capabilityAt) || item.LastCapabilityUsage.TotalTokens != 14 {
+		t.Fatalf("capability timeout overwrote last successful evidence: %#v", item)
+	}
+
+	item, err = store.RecordManagedAPIProbe(ctx, tenantID, item.ID, item.UpdatedAt, ManagedAPIProbeResult{
+		ProbeMode: "quick", ErrorCode: "credential_invalid", Message: "invalid credential",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if item.LastTestStatus != "failed" || item.LastSuccessfulTestedAt == nil ||
+		!item.LastSuccessfulTestedAt.Equal(lastSuccess) {
+		t.Fatalf("deterministic failure was not distinguished from network interruption: %#v", item)
+	}
+
+	recovered := successfulManagedProbe()
+	recovered.ProbeMode = "quick"
+	item, err = store.RecordManagedAPIProbe(ctx, tenantID, item.ID, item.UpdatedAt, recovered)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if item.LastTestStatus != "success" || item.LastSuccessfulTestedAt == nil ||
+		!item.LastSuccessfulTestedAt.Equal(*item.LastTestedAt) ||
+		item.LastSuccessfulTestedAt.Before(lastSuccess) {
+		t.Fatalf("recovery did not update last successful check: %#v", item)
+	}
+}
+
+func TestManagedConfigConnectionChangeClearsOldProbeEvidence(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	verified := successfulManagedProbe()
+	verified.ProbeMode = "capability"
+	verified.GeneratedRequest = true
+	item, err := store.CreateManagedAPIConfig(ctx, "school-a", "actor", ManagedAPIConfigInput{
+		ProviderKey: "deepseek", DisplayName: "DeepSeek", AdapterType: "openai_compatible",
+		BaseURL: "https://api.deepseek.com", APIKey: "secret-value-at-least-16", ModelName: "deepseek-chat",
+		ModelVersion: "deepseek-chat", Region: "global", Status: "active", InitialProbe: &verified,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	update := ManagedAPIConfigUpdateInput{
+		DisplayName: item.DisplayName, AdapterType: item.AdapterType, BaseURL: item.BaseURL,
+		ModelName: item.ModelName, ModelVersion: item.ModelVersion, Region: item.Region, Status: item.Status,
+	}
+
+	// Cosmetic edits keep observations attached to the same connection.
+	update.DisplayName = "Updated DeepSeek"
+	item, err = store.UpdateManagedAPIConfig(ctx, "school-a", item.ID, update)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if item.LastTestStatus != "success" || item.LastSuccessfulTestedAt == nil || item.LastCapabilityStatus != "success" {
+		t.Fatalf("cosmetic edit erased valid evidence: %#v", item)
+	}
+
+	// A changed model with a failed initial quick check must not inherit old success.
+	update.ModelName = "deepseek-reasoner"
+	update.ModelVersion = "deepseek-reasoner"
+	transient := ManagedAPIProbeResult{ProbeMode: "quick", ErrorCode: "provider_timeout", Message: "timed out"}
+	update.InitialProbe = &transient
+	item, err = store.UpdateManagedAPIConfig(ctx, "school-a", item.ID, update)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if item.LastTestStatus != "temporary_unavailable" || item.LastTestedAt == nil ||
+		item.LastSuccessfulTestedAt != nil || item.LastCapabilityStatus != "untested" ||
+		item.LastCapabilityTestedAt != nil || item.LastCapabilityVersion != "" {
+		t.Fatalf("changed connection inherited old verification: %#v", item)
+	}
+
+	// Replacing the key without a new check leaves the connection unverified.
+	update.APIKey = "rotated-secret-at-least-16"
+	update.InitialProbe = nil
+	item, err = store.UpdateManagedAPIConfig(ctx, "school-a", item.ID, update)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if item.LastTestStatus != "untested" || item.LastTestedAt != nil || item.LastSuccessfulTestedAt != nil {
+		t.Fatalf("key rotation retained old probe status: %#v", item)
+	}
+}
+
+func TestManagedProbePersistenceClassifiesTransientAndDeterministicErrors(t *testing.T) {
+	for _, tc := range []struct {
+		code   string
+		status string
+	}{
+		{"provider_timeout", "temporary_unavailable"},
+		{"provider_unavailable", "temporary_unavailable"},
+		{"credential_invalid", "failed"},
+		{"model_not_found", "failed"},
+	} {
+		t.Run(tc.code, func(t *testing.T) {
+			values := managedProbePersistence(&ManagedAPIProbeResult{ProbeMode: "quick", ErrorCode: tc.code})
+			if values.Status != tc.status || values.TestedAt == nil || values.UpdateCapability {
+				t.Fatalf("unexpected persistence for %s: %#v", tc.code, values)
+			}
+		})
+	}
+	capabilityTimeout := managedProbePersistence(&ManagedAPIProbeResult{
+		ProbeMode: "capability", GeneratedRequest: true, ErrorCode: "provider_timeout",
+		CredentialCheck: ManagedAPICheckResult{OK: true}, ModelCheck: ManagedAPICheckResult{OK: true},
+	})
+	if capabilityTimeout.Status != "temporary_unavailable" || capabilityTimeout.UpdateCapability {
+		t.Fatalf("capability timeout must preserve previous verification: %#v", capabilityTimeout)
+	}
+}
+
+func TestManagedProbeRejectsResultForConfigurationChangedDuringRequest(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	item, err := store.CreateManagedAPIConfig(ctx, "school-a", "actor", ManagedAPIConfigInput{
+		ProviderKey: "deepseek", DisplayName: "DeepSeek", AdapterType: "openai_compatible",
+		BaseURL: "https://api.deepseek.com", APIKey: "secret-value-at-least-16", ModelName: "deepseek-chat",
+		ModelVersion: "deepseek-chat", Region: "global", Status: "active",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	probeStartedAtRevision := item.UpdatedAt
+	updated, err := store.UpdateManagedAPIConfig(ctx, "school-a", item.ID, ManagedAPIConfigUpdateInput{
+		DisplayName: item.DisplayName, AdapterType: item.AdapterType, BaseURL: item.BaseURL,
+		ModelName: "deepseek-reasoner", ModelVersion: "deepseek-reasoner", Region: item.Region, Status: item.Status,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.UpdatedAt.Equal(probeStartedAtRevision) {
+		// Some platforms expose a coarse wall clock. The CAS contract still rejects
+		// any revision other than the one currently stored.
+		probeStartedAtRevision = probeStartedAtRevision.Add(-time.Second)
+	}
+	result := successfulManagedProbe()
+	result.ProbeMode = "quick"
+	if _, err = store.RecordManagedAPIProbe(ctx, "school-a", item.ID, probeStartedAtRevision, result); !errors.Is(err, ErrManagedProbeStale) {
+		t.Fatalf("stale probe result was accepted: %v", err)
+	}
+	stored, err := store.ListManagedAPIConfigs(ctx, "school-a")
+	if err != nil || len(stored) != 1 || stored[0].ModelName != "deepseek-reasoner" || stored[0].LastTestStatus != "untested" {
+		t.Fatalf("stale result changed the new configuration: %#v %v", stored, err)
+	}
+	verified, err := store.RecordManagedAPIProbe(ctx, "school-a", item.ID, updated.UpdatedAt, result)
+	if err != nil || verified.LastTestStatus != "success" || !verified.UpdatedAt.Equal(updated.UpdatedAt) {
+		t.Fatalf("current probe result was not recorded without changing config revision: %#v %v", verified, err)
 	}
 }
 

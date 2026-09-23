@@ -71,7 +71,10 @@ const expectedCommands = new Set([
   "archive_durable_scan_queue_items",
   "append_local_log",
   "begin_spool_local_asset",
+  "bind_durable_session",
   "capability_statuses",
+  "claim_legacy_durable_store",
+  "clear_durable_session",
   "clear_local_logs",
   "complete_spool_local_asset",
   "delete_desktop_credentials",
@@ -106,7 +109,7 @@ async function inspectSources(directory) {
     }
     if (!/\.(?:ts|tsx)$/.test(entry.name)) continue;
     const source = await readFile(path, "utf8");
-    for (const match of source.matchAll(/\b(?:invoke|invokeOptional)(?:<[^>]+>)?\(\s*["']([^"']+)["']/g)) {
+    for (const match of source.matchAll(/\b(?:invoke|invokeOptional|invokeScoped)(?:<[^>]+>)?\(\s*["']([^"']+)["']/g)) {
       invokedCommands.add(match[1]);
     }
     if (source.includes("@tauri-apps/plugin-")) {

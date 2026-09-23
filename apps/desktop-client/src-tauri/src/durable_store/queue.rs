@@ -2,7 +2,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 use tauri::AppHandle;
 
 use super::{
-    connection::{now_rfc3339, open_connection, sql_error},
+    connection::{now_rfc3339, open_connection, open_connection_at, sql_error},
     crypto::{decrypt_json, encrypt_json, master_key},
     paths::store_root,
     schema::initialize_schema,
@@ -12,7 +12,7 @@ use super::{
 pub fn list_durable_scan_queue(app: AppHandle) -> Result<Vec<DurableQueueItem>, String> {
     let root = store_root(&app)?;
     let key = master_key(&root)?;
-    let conn = open_connection(&app)?;
+    let conn = open_connection_at(&root)?;
     initialize_schema(&conn)?;
     // A process can stop after the server has confirmed one or more chunks but
     // before the next UI update.  Treat only the local, transient `uploading`
@@ -64,7 +64,7 @@ pub fn persist_durable_scan_queue_item(
     }
     let root = store_root(&app)?;
     let key = master_key(&root)?;
-    let conn = open_connection(&app)?;
+    let conn = open_connection_at(&root)?;
     initialize_schema(&conn)?;
     let id = item
         .local_asset_id

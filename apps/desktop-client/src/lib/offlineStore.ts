@@ -31,9 +31,9 @@ export interface OfflineDraftEnvelope {
 }
 
 /** Loads durable Tauri metadata, or the explicit encrypted browser-dev fallback. */
-export async function listOfflineDraftEnvelopes(): Promise<OfflineDraftEnvelope[]> {
+export async function listOfflineDraftEnvelopes(expectedSessionId?: string): Promise<OfflineDraftEnvelope[]> {
   if (hasDurableDesktopStore()) {
-    return listDurableDraftEnvelopes();
+    return listDurableDraftEnvelopes(expectedSessionId);
   }
   return readOfflineDraftEnvelopes();
 }
@@ -51,9 +51,9 @@ export function readOfflineDraftEnvelopes(): OfflineDraftEnvelope[] {
   }
 }
 
-export async function saveOfflineDraft(record: OfflineDraftRecord, passphrase?: string) {
+export async function saveOfflineDraft(record: OfflineDraftRecord, passphrase?: string, expectedSessionId?: string) {
   if (hasDurableDesktopStore()) {
-    await saveDurableDraft(record);
+    await saveDurableDraft(record, expectedSessionId);
     return;
   }
   requireBrowserPassphrase(passphrase);
@@ -71,9 +71,9 @@ export async function saveOfflineDraft(record: OfflineDraftRecord, passphrase?: 
   writeOfflineDraftEnvelopes([next, ...envelopes].slice(0, 200));
 }
 
-export async function loadOfflineDraft(taskId: string, passphrase?: string) {
+export async function loadOfflineDraft(taskId: string, passphrase?: string, expectedSessionId?: string) {
   if (hasDurableDesktopStore()) {
-    return loadDurableDraft(taskId);
+    return loadDurableDraft(taskId, expectedSessionId);
   }
   requireBrowserPassphrase(passphrase);
   const envelope = readOfflineDraftEnvelopes().find((item) => item.taskId === taskId);
@@ -83,9 +83,9 @@ export async function loadOfflineDraft(taskId: string, passphrase?: string) {
   return decryptJson<OfflineDraftRecord>(envelope.encrypted, passphrase);
 }
 
-export async function updateOfflineDraftStatus(taskId: string, patch: { syncStatus: OfflineSyncStatus; syncMessage?: string }) {
+export async function updateOfflineDraftStatus(taskId: string, patch: { syncStatus: OfflineSyncStatus; syncMessage?: string }, expectedSessionId?: string) {
   if (hasDurableDesktopStore()) {
-    await updateDurableDraftStatus(taskId, patch);
+    await updateDurableDraftStatus(taskId, patch, expectedSessionId);
     return;
   }
   const envelopes = readOfflineDraftEnvelopes().map((item) =>
@@ -101,9 +101,9 @@ export async function updateOfflineDraftStatus(taskId: string, patch: { syncStat
   writeOfflineDraftEnvelopes(envelopes);
 }
 
-export async function purgeExpiredOfflineDrafts(now = new Date()) {
+export async function purgeExpiredOfflineDrafts(now = new Date(), expectedSessionId?: string) {
   if (hasDurableDesktopStore()) {
-    return purgeExpiredDurableDrafts(now);
+    return purgeExpiredDurableDrafts(now, expectedSessionId);
   }
   const before = readOfflineDraftEnvelopes();
   const after = before.filter((item) => {

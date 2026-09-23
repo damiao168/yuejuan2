@@ -10,7 +10,7 @@ from .capabilities import CapabilityMatrix
 from .contract import normalize_model_output, validate_request
 from .errors import AgentError
 from .guardrails import detect_prompt_injection
-from .model import PromptRegistry
+from .model import PromptRegistry, sum_model_usage
 from .provider_adapter import build_provider_adapter
 
 
@@ -166,14 +166,18 @@ class GradingAgentApplication:
     def _grade_uncached(self, request, route):
         started = time.monotonic()
         prior_error_codes = []
+        usage = {}
         request_id = request["request_id"]
         with self.model.session(request_id):
             for attempt in range(self.settings.model_max_retries + 1):
                 try:
-                    raw = self.model.request(
-                        request,
-                        repair_reason=prior_error_codes[-1] if prior_error_codes else None,
-                    )
+                    try:
+                        raw = self.model.request(
+                            request,
+                            repair_reason=prior_error_codes[-1] if prior_error_codes else None,
+                        )
+                    finally:
+                        usage = sum_model_usage(usage, getattr(self.model, "last_usage", lambda: {})())
                     telemetry = {
                         "adapter": self.settings.adapter_type,
                         "provider": self.settings.provider_key,
@@ -183,6 +187,7 @@ class GradingAgentApplication:
                         "repair_attempted": attempt > 0,
                         "prior_error_codes": list(prior_error_codes),
                         "elapsed_ms": round((time.monotonic() - started) * 1000),
+                        "usage": usage,
                     }
                     suggestion = normalize_model_output(
                         raw,

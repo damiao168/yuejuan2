@@ -2,6 +2,7 @@ import base64
 import hashlib
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from grading_agent.errors import AgentError
@@ -22,13 +23,18 @@ class FakeStructuredModel:
         def __enter__(self): return None
         def __exit__(self, *_args): return False
 
-    def __init__(self, output):
+    def __init__(self, output, usages=None):
         self.output = output
         self.calls = []
+        self.usages = list(usages or [])
+        self._last_usage = {}
+        self.settings = SimpleNamespace(provider_key="local", model_name="qwen-paper")
     def session(self, _request_id): return self._Session()
     def request_structured(self, *args):
         self.calls.append(args)
+        self._last_usage = self.usages.pop(0) if self.usages else {}
         return self.output
+    def last_usage(self): return dict(self._last_usage)
 
 
 def output(role, questions=None, answers=None, solutions=None, rubrics=None):
@@ -247,6 +253,27 @@ def test_full_model_progress_reports_real_route_and_completed_request():
         ("full_model", 0, 1),
         ("full_model", 1, 1),
     ]
+
+
+def test_full_model_result_includes_provider_usage_and_identity():
+    answer = {"candidate_id": "a1", "question_no_hint": "1", "question_no_normalized": "1", "subquestion_no_hint": None, "standard_answer": "A", "equivalent_answers": [], "tolerance": None, "confidence": .95, "source_refs": [ref()], "issues": []}
+    model = FakeStructuredModel(
+        output("answer", answers=[answer]),
+        usages=[{"input_tokens": 700, "cached_input_tokens": 500, "output_tokens": 80, "reasoning_tokens": 12, "total_tokens": 780}],
+    )
+
+    result = PaperParser(model).parse(payload())
+
+    assert result["model_usage"] == {
+        "input_tokens": 700,
+        "cached_input_tokens": 500,
+        "output_tokens": 80,
+        "reasoning_tokens": 12,
+        "total_tokens": 780,
+        "provider_key": "local",
+        "model_name": "qwen-paper",
+        "request_count": 1,
+    }
 
 
 def test_question_only_allows_unknown_score_answer_and_rubric():

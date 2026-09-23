@@ -4,9 +4,9 @@
   "exception_ledger": "contracts/openapi/registered-route-exceptions.json",
   "policy": "Every registered route is covered by OpenAPI or an exact, reviewed exception-ledger entry; generation never invents approvals.",
   "counts": {
-    "registered": 500,
-    "openapi": 230,
-    "registered_gaps": 270
+    "registered": 506,
+    "openapi": 237,
+    "registered_gaps": 269
   },
   "routes": [
     {
@@ -3097,19 +3097,6 @@
       "operation_id": "recordModelScoreCandidate"
     },
     {
-      "method": "POST",
-      "path": "/api/v1/model-secrets/probe",
-      "source": "services/api-gateway/internal/server/routes_governance.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
-    },
-    {
       "method": "GET",
       "path": "/api/v1/ocr-tasks/{id}",
       "source": "services/api-gateway/internal/server/routes_processing.go",
@@ -3607,6 +3594,48 @@
       "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "openapi",
       "operation_id": "savePlatformPanelModelBinding"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/platform/schools",
+      "source": "services/api-gateway/internal/server/routes_platform_schools.go",
+      "coverage": "openapi",
+      "operation_id": "listPlatformSchools"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/platform/schools/{tenant_id}",
+      "source": "services/api-gateway/internal/server/routes_platform_schools.go",
+      "coverage": "openapi",
+      "operation_id": "getPlatformSchool"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/platform/schools/{tenant_id}/activity",
+      "source": "services/api-gateway/internal/server/routes_platform_schools.go",
+      "coverage": "openapi",
+      "operation_id": "getPlatformSchoolActivity"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/platform/schools/{tenant_id}/members",
+      "source": "services/api-gateway/internal/server/routes_platform_schools.go",
+      "coverage": "openapi",
+      "operation_id": "listPlatformSchoolMembers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/platform/schools/{tenant_id}/model-health",
+      "source": "services/api-gateway/internal/server/routes_platform_schools.go",
+      "coverage": "openapi",
+      "operation_id": "getPlatformSchoolModelHealth"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/platform/schools/{tenant_id}/usage",
+      "source": "services/api-gateway/internal/server/routes_platform_schools.go",
+      "coverage": "openapi",
+      "operation_id": "getPlatformSchoolUsage"
     },
     {
       "method": "GET",
@@ -4450,6 +4479,13 @@
       "source": "services/api-gateway/internal/scorerelease/handlers.go",
       "coverage": "openapi",
       "operation_id": "getScoreReleaseDiff"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/score-releases/{id}/high-score-paper/revoke",
+      "source": "services/api-gateway/internal/scorerelease/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "revokeHighScorePaper"
     },
     {
       "method": "POST",

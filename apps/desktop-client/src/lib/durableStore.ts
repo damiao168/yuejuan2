@@ -14,6 +14,7 @@ export interface DurableStoreStatus {
   ready: boolean;
   databasePath: string;
   spoolPath: string;
+  legacyDataPresent: boolean;
 }
 
 export interface SpoolAssetInput {
@@ -44,10 +45,55 @@ export function hasDurableDesktopStore() {
   return isTauriRuntime();
 }
 
-export async function spoolScanAsset(input: SpoolAssetInput): Promise<SyncQueueItem> {
+let activeSessionId: string | null = null;
+let transitionVersion = 0;
+let sessionTransition: Promise<void> = Promise.resolve();
+
+function requireSessionId(): string {
+  if (!activeSessionId) throw new Error("请先登录，再访问当前账号的本地耐久数据。");
+  return activeSessionId;
+}
+
+export function invokeScoped<T>(command: string, args: Record<string, unknown> = {}, sessionId = requireSessionId()): Promise<T> {
+  if (activeSessionId !== sessionId) return Promise.reject(new Error("登录账号已切换，本地操作已停止。"));
+  return invoke<T>(command, { ...args, sessionId });
+}
+
+export async function bindDurableSession(server: string, tenantId: string, actorId: string): Promise<string> {
+  if (!isTauriRuntime()) return crypto.randomUUID();
+  const version = ++transitionVersion;
+  activeSessionId = null;
+  let boundSessionId: string | null = null;
+  sessionTransition = sessionTransition.catch(() => undefined).then(async () => {
+    const sessionId = await invoke<string>("bind_durable_session", { server, tenantId, actorId });
+    if (version === transitionVersion) {
+      activeSessionId = sessionId;
+      boundSessionId = sessionId;
+    }
+  });
+  await sessionTransition;
+  if (!boundSessionId) throw new Error("登录账号已切换，本地绑定已停止。");
+  return boundSessionId;
+}
+
+export async function clearDurableSession(): Promise<void> {
+  if (!isTauriRuntime()) return;
+  ++transitionVersion;
+  activeSessionId = null;
+  sessionTransition = sessionTransition.catch(() => undefined).then(() => invoke<void>("clear_durable_session"));
+  await sessionTransition;
+}
+
+export async function claimLegacyDurableStore(expectedSessionId: string): Promise<void> {
   requireDurableRuntime();
+  await invokeScoped("claim_legacy_durable_store", {}, expectedSessionId);
+}
+
+export async function spoolScanAsset(input: SpoolAssetInput, expectedSessionId?: string): Promise<SyncQueueItem> {
+  requireDurableRuntime();
+  const sessionId = expectedSessionId ?? requireSessionId();
   const sha256 = await sha256ForFile(input.file);
-  const session = await invoke<SpoolAssetSession>("begin_spool_local_asset", {
+  const session = await invokeScoped<SpoolAssetSession>("begin_spool_local_asset", {
     input: {
       filename: input.file.name,
       mime: input.file.type || inferContentType(input.file.name),
@@ -59,39 +105,40 @@ export async function spoolScanAsset(input: SpoolAssetInput): Promise<SyncQueueI
       pageNo: input.pageNo,
       qualityChecks: input.qualityChecks
     }
-  });
+  }, sessionId);
   if (session.item) return session.item;
   let offset = session.confirmedOffset;
   while (offset < input.file.size) {
     const end = Math.min(offset + session.chunkSize, input.file.size);
     const bytes = Array.from(new Uint8Array(await input.file.slice(offset, end).arrayBuffer()));
-    offset = await invoke<number>("write_spool_local_asset_chunk", {
+    offset = await invokeScoped<number>("write_spool_local_asset_chunk", {
       localAssetId: session.localAssetId,
       offset,
       bytes
-    });
+    }, sessionId);
   }
-  return invoke<SyncQueueItem>("complete_spool_local_asset", { localAssetId: session.localAssetId });
+  return invokeScoped<SyncQueueItem>("complete_spool_local_asset", { localAssetId: session.localAssetId }, sessionId);
 }
 
-export async function listDurableScanQueue(): Promise<SyncQueueItem[]> {
+export async function listDurableScanQueue(expectedSessionId?: string): Promise<SyncQueueItem[]> {
   requireDurableRuntime();
-  return invoke<SyncQueueItem[]>("list_durable_scan_queue");
+  return invokeScoped<SyncQueueItem[]>("list_durable_scan_queue", {}, expectedSessionId);
 }
 
-export async function persistDurableScanQueueItem(item: SyncQueueItem): Promise<void> {
+export async function persistDurableScanQueueItem(item: SyncQueueItem, expectedSessionId?: string): Promise<void> {
   requireDurableRuntime();
-  await invoke("persist_durable_scan_queue_item", { item: withoutPreview(item) });
+  await invokeScoped("persist_durable_scan_queue_item", { item: withoutPreview(item) }, expectedSessionId);
 }
 
-export async function archiveDurableScanQueueItems(ids: string[]): Promise<void> {
+export async function archiveDurableScanQueueItems(ids: string[], expectedSessionId?: string): Promise<void> {
   requireDurableRuntime();
-  await invoke("archive_durable_scan_queue_items", { ids });
+  await invokeScoped("archive_durable_scan_queue_items", { ids }, expectedSessionId);
 }
 
-export async function loadDurableSpoolFile(localAssetId: string): Promise<CaptureUploadSource> {
+export async function loadDurableSpoolFile(localAssetId: string, expectedSessionId?: string): Promise<CaptureUploadSource> {
   requireDurableRuntime();
-  const stored = await invoke<DurableSpoolFile>("read_durable_local_asset", { localAssetId });
+  const sessionId = expectedSessionId ?? requireSessionId();
+  const stored = await invokeScoped<DurableSpoolFile>("read_durable_local_asset", { localAssetId }, sessionId);
   return {
     name: stored.filename,
     type: stored.mime,
@@ -103,7 +150,7 @@ export async function loadDurableSpoolFile(localAssetId: string): Promise<Captur
       let offset = start;
       while (offset < end) {
         const length = Math.min(stored.chunkSize, end - offset);
-        const bytes = await invoke<number[]>("read_durable_local_asset_chunk", { localAssetId, offset, length });
+        const bytes = await invokeScoped<number[]>("read_durable_local_asset_chunk", { localAssetId, offset, length }, sessionId);
         if (bytes.length !== length) throw new Error("本地扫描原件分块不完整");
         parts.push(new Uint8Array(bytes));
         offset += bytes.length;
@@ -113,29 +160,29 @@ export async function loadDurableSpoolFile(localAssetId: string): Promise<Captur
   };
 }
 
-export async function saveDurableDraft(record: OfflineDraftRecord): Promise<void> {
+export async function saveDurableDraft(record: OfflineDraftRecord, expectedSessionId?: string): Promise<void> {
   requireDurableRuntime();
-  await invoke("save_durable_draft", { record });
+  await invokeScoped("save_durable_draft", { record }, expectedSessionId);
 }
 
-export async function listDurableDraftEnvelopes(): Promise<DurableDraftEnvelope[]> {
+export async function listDurableDraftEnvelopes(expectedSessionId?: string): Promise<DurableDraftEnvelope[]> {
   requireDurableRuntime();
-  return invoke<DurableDraftEnvelope[]>("list_durable_drafts");
+  return invokeScoped<DurableDraftEnvelope[]>("list_durable_drafts", {}, expectedSessionId);
 }
 
-export async function loadDurableDraft(taskId: string): Promise<OfflineDraftRecord | null> {
+export async function loadDurableDraft(taskId: string, expectedSessionId?: string): Promise<OfflineDraftRecord | null> {
   requireDurableRuntime();
-  return invoke<OfflineDraftRecord | null>("load_durable_draft", { taskId });
+  return invokeScoped<OfflineDraftRecord | null>("load_durable_draft", { taskId }, expectedSessionId);
 }
 
-export async function updateDurableDraftStatus(taskId: string, patch: { syncStatus: OfflineSyncStatus; syncMessage?: string }): Promise<void> {
+export async function updateDurableDraftStatus(taskId: string, patch: { syncStatus: OfflineSyncStatus; syncMessage?: string }, expectedSessionId?: string): Promise<void> {
   requireDurableRuntime();
-  await invoke("update_durable_draft_status", { taskId, syncStatus: patch.syncStatus, syncMessage: patch.syncMessage });
+  await invokeScoped("update_durable_draft_status", { taskId, syncStatus: patch.syncStatus, syncMessage: patch.syncMessage }, expectedSessionId);
 }
 
-export async function purgeExpiredDurableDrafts(now = new Date()): Promise<number> {
+export async function purgeExpiredDurableDrafts(now = new Date(), expectedSessionId?: string): Promise<number> {
   requireDurableRuntime();
-  return invoke<number>("purge_expired_durable_drafts", { now: now.toISOString() });
+  return invokeScoped<number>("purge_expired_durable_drafts", { now: now.toISOString() }, expectedSessionId);
 }
 
 export interface DurableDraftEnvelope {

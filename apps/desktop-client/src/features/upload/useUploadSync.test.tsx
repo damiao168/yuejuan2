@@ -38,6 +38,7 @@ describe("upload sync controller", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.hasDurableDesktopStore.mockReturnValue(false);
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     mocks.resumeCaptureUpload.mockResolvedValue({
       status: "completed", remote_upload_id: "remote-a",
@@ -55,17 +56,20 @@ describe("upload sync controller", () => {
     await act(async () => { root.unmount(); });
     container.remove();
   });
-  async function mount(isOnline: boolean) {
-    function Probe() {
+  async function mount(isOnline: boolean, scope = "test-scope") {
+    function Probe({ durableScopeKey }: { durableScopeKey: string }) {
       current = useUploadSync({
-        client: {} as never, token: "token", isOnline, setIsOnline,
+        client: {} as never, token: "token", durableScopeKey, isOnline, setIsOnline,
         queueRef, fileBufferRef, uploadInFlightRef, durablePersistenceRef,
         updateQueue: (update) => { queueRef.current = update(queueRef.current); },
         logEvent
       });
       return null;
     }
-    await act(async () => { root.render(<Probe />); });
+    await act(async () => { root.render(<Probe durableScopeKey={scope} />); });
+    return async (nextScope: string) => {
+      await act(async () => { root.render(<Probe durableScopeKey={nextScope} />); });
+    };
   }
 
   it("pauses while offline and resumes when the browser reports online", async () => {
@@ -90,16 +94,16 @@ describe("upload sync controller", () => {
 
   it("recovers the encrypted local original before resuming a durable upload", async () => {
     const restored = new File(["scan"], "scan.pdf");
-    mocks.hasDurableDesktopStore.mockReturnValueOnce(true);
+    mocks.hasDurableDesktopStore.mockReturnValue(true);
     mocks.loadDurableSpoolFile.mockResolvedValueOnce(restored);
     queueRef.current = [item({ localAssetId: "local-asset" })];
     fileBufferRef.current.clear();
     await mount(true);
     await act(async () => { await current.uploadQueueItem("item-a"); });
-    expect(mocks.loadDurableSpoolFile).toHaveBeenCalledWith("local-asset");
+    expect(mocks.loadDurableSpoolFile).toHaveBeenCalledWith("local-asset", "test-scope");
     expect(mocks.resumeCaptureUpload).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       file: restored, idempotency_key: "key-a"
-    }), expect.any(Function));
+    }), expect.any(Function), expect.any(AbortSignal));
   });
 
   it("resumes from the stored server upload id and guards a duplicate in-flight call", async () => {
@@ -147,5 +151,25 @@ describe("upload sync controller", () => {
     });
     expect(queueRef.current).toHaveLength(1);
     expect(queueRef.current[0]).toMatchObject({ id: "item-b", examId: "exam-b", status: "pending" });
+  });
+
+  it("aborts A's upload and ignores its late completion after B logs in", async () => {
+    let finish!: (value: unknown) => void;
+    let oldSignal!: AbortSignal;
+    mocks.resumeCaptureUpload.mockImplementationOnce((_client, _options, _progress, signal: AbortSignal) => {
+      oldSignal = signal;
+      return new Promise((resolve) => { finish = resolve; });
+    });
+    const switchScope = await mount(true, "server|tenant|A");
+    let oldUpload!: Promise<void>;
+    await act(async () => { oldUpload = current.uploadQueueItem("item-a"); await Promise.resolve(); });
+    queueRef.current = [item({ id: "item-b", examId: "exam-b", captureBatchId: "batch-b" })];
+    await switchScope("server|tenant|B");
+    expect(oldSignal.aborted).toBe(true);
+    await act(async () => {
+      finish({ status: "completed", remote_upload_id: "remote-a", confirmed_offset: 100, capture_file_id: "capture-a" });
+      await oldUpload;
+    });
+    expect(queueRef.current).toEqual([expect.objectContaining({ id: "item-b", status: "pending" })]);
   });
 });

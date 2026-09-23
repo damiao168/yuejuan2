@@ -14,6 +14,7 @@ type UpdateQueue = (updater: (current: SyncQueueItem[]) => SyncQueueItem[]) => v
 export function useUploadSync({
   client,
   token,
+  durableScopeKey,
   isOnline,
   setIsOnline,
   queueRef,
@@ -25,6 +26,7 @@ export function useUploadSync({
 }: {
   client: DesktopApiClient;
   token: string | null;
+  durableScopeKey: string;
   isOnline: boolean;
   setIsOnline: (online: boolean) => void;
   queueRef: MutableRefObject<SyncQueueItem[]>;
@@ -36,7 +38,16 @@ export function useUploadSync({
 }) {
   const onlineRef = useRef(isOnline);
   onlineRef.current = isOnline;
+  const scopeRef = useRef(durableScopeKey);
+  const activeUploads = useRef(new Set<AbortController>());
+  if (scopeRef.current !== durableScopeKey) {
+    for (const controller of activeUploads.current) controller.abort();
+    activeUploads.current.clear();
+    scopeRef.current = durableScopeKey;
+  }
   const uploadQueueItem = useCallback(async (id: string) => {
+    const scope = durableScopeKey;
+    if (hasDurableDesktopStore() && (!scope || scopeRef.current !== scope)) return;
     const item = queueRef.current.find((candidate) => candidate.id === id);
     const uploadState = item ? uploadStateFromQueueItem(item) : undefined;
     if (!item || item.kind !== "scan_upload" || uploadState?.status === "succeeded"
@@ -66,9 +77,11 @@ export function useUploadSync({
     let file = fileBufferRef.current.get(id);
     if (!file && item.localAssetId && hasDurableDesktopStore()) {
       try {
-        file = await loadDurableSpoolFile(item.localAssetId);
+        file = await loadDurableSpoolFile(item.localAssetId, scope);
+        if (scopeRef.current !== scope) return;
         fileBufferRef.current.set(id, file);
       } catch (error) {
+        if (scopeRef.current !== scope) return;
         const message = getUserErrorMessage(error, "本地加密扫描原件无法恢复");
         updateQueue((current) => updateScanQueueItem(current, id, { status: "failed", detail: message }));
         await logEvent("error", "durable spool recovery failed", message);
@@ -83,7 +96,10 @@ export function useUploadSync({
       }));
       return;
     }
+    if (scopeRef.current !== scope) return;
     uploadInFlightRef.current.add(id);
+    const controller = new AbortController();
+    activeUploads.current.add(controller);
     updateQueue((current) => updateScanQueueItem(current, id, {
       status: "uploading",
       progress: Math.max(item.progress, 1),
@@ -97,6 +113,7 @@ export function useUploadSync({
         remoteUploadId: item.remoteUploadId,
         idempotency_key: item.idempotencyKey
       }, async (progress) => {
+        if (controller.signal.aborted || scopeRef.current !== scope) throw new Error("登录账号已切换，上传已停止");
         const currentItem = queueRef.current.find((candidate) => candidate.id === id);
         if (!currentItem) throw new Error("本地耐久队列记录已丢失，已停止继续上传");
         const nextItem = transitionScanQueueItem(currentItem, {
@@ -112,11 +129,12 @@ export function useUploadSync({
         if (hasDurableDesktopStore()) {
           const persisted = durablePersistenceRef.current
             .catch(() => undefined)
-            .then(() => persistDurableScanQueueItem(nextItem));
+            .then(() => persistDurableScanQueueItem(nextItem, scope));
           durablePersistenceRef.current = persisted.catch((error) => console.warn("durable scan progress persistence failed", error));
           await persisted;
         }
-      });
+      }, controller.signal);
+      if (controller.signal.aborted || scopeRef.current !== scope) return;
       if (completed.status !== "completed") {
         updateQueue((current) => updateScanQueueItem(current, id, {
           status: "pending",
@@ -136,13 +154,15 @@ export function useUploadSync({
       fileBufferRef.current.delete(id);
       await logEvent("info", "scan queue item uploaded", `${item.fileName ?? item.title} -> ${completed.capture_file_id ?? completed.remote_upload_id}`);
     } catch (error) {
+      if (controller.signal.aborted || scopeRef.current !== scope) return;
       const message = getUserErrorMessage(error, "上传失败");
       updateQueue((current) => updateScanQueueItem(current, id, { status: "failed", detail: message }));
       await logEvent("error", "scan queue item failed", `${item.fileName ?? item.title}: ${message}`);
     } finally {
+      activeUploads.current.delete(controller);
       uploadInFlightRef.current.delete(id);
     }
-  }, [client, logEvent, token, updateQueue]);
+  }, [client, durableScopeKey, logEvent, token, updateQueue]);
 
   const uploadQueueItems = useCallback(async (mode: "pending" | "failed" | "all") => {
     const candidates = queueRef.current.filter((item) => item.kind === "scan_upload"
@@ -155,7 +175,7 @@ export function useUploadSync({
       onlineRef.current = true;
       setIsOnline(true);
       void logEvent("info", "network online", "scan queue auto resume");
-      void uploadQueueItems("all");
+      if (scopeRef.current) void uploadQueueItems("all");
     };
     const handleOffline = () => {
       onlineRef.current = false;

@@ -11,10 +11,9 @@ use chrono::Utc;
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::fs;
 #[cfg(windows)]
 use std::process::Command;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use uuid::Uuid;
 
 const DEFAULT_REQUIRED_FREE_BYTES: u64 = 2 * 1024 * 1024 * 1024;
@@ -143,7 +142,14 @@ pub fn scanner_integration_status() -> ScannerIntegrationStatus {
 }
 
 #[tauri::command]
-pub fn list_scanner_profiles(app: AppHandle) -> Result<Vec<ScannerProfile>, String> {
+pub fn list_scanner_profiles(
+    app: AppHandle,
+    session_id: String,
+) -> Result<Vec<ScannerProfile>, String> {
+    crate::durable_store::with_session(&session_id, || list_scanner_profiles_scoped(app))
+}
+
+fn list_scanner_profiles_scoped(app: AppHandle) -> Result<Vec<ScannerProfile>, String> {
     let conn = open_profile_store(&app)?;
     let mut statement = conn
         .prepare(
@@ -177,6 +183,14 @@ pub fn list_scanner_profiles(app: AppHandle) -> Result<Vec<ScannerProfile>, Stri
 
 #[tauri::command]
 pub fn save_scanner_profile(
+    app: AppHandle,
+    session_id: String,
+    input: SaveScannerProfileInput,
+) -> Result<ScannerProfile, String> {
+    crate::durable_store::with_session(&session_id, || save_scanner_profile_scoped(app, input))
+}
+
+fn save_scanner_profile_scoped(
     app: AppHandle,
     input: SaveScannerProfileInput,
 ) -> Result<ScannerProfile, String> {
@@ -228,7 +242,17 @@ pub fn save_scanner_profile(
 }
 
 #[tauri::command]
-pub fn delete_scanner_profile(app: AppHandle, profile_id: String) -> Result<(), String> {
+pub fn delete_scanner_profile(
+    app: AppHandle,
+    session_id: String,
+    profile_id: String,
+) -> Result<(), String> {
+    crate::durable_store::with_session(&session_id, || {
+        delete_scanner_profile_scoped(app, profile_id)
+    })
+}
+
+fn delete_scanner_profile_scoped(app: AppHandle, profile_id: String) -> Result<(), String> {
     if profile_id.trim().is_empty() || profile_id.len() > 128 {
         return Err("scanner profile ID is invalid".into());
     }
@@ -249,13 +273,23 @@ pub fn delete_scanner_profile(app: AppHandle, profile_id: String) -> Result<(), 
 #[tauri::command]
 pub fn run_scanner_preflight(
     app: AppHandle,
+    session_id: String,
+    request: ScannerPreflightRequest,
+) -> Result<ScannerPreflightResult, String> {
+    crate::durable_store::with_session(&session_id, || run_scanner_preflight_scoped(app, request))
+}
+
+fn run_scanner_preflight_scoped(
+    app: AppHandle,
     request: ScannerPreflightRequest,
 ) -> Result<ScannerPreflightResult, String> {
     validate_preflight_request(&request)?;
     let conn = open_profile_store(&app)?;
     let profile = read_profile(&conn, &request.profile_id)?;
     let inventory = SystemWiaInventoryBridge.inventory();
-    let durable_status = crate::durable_store::status(app.clone());
+    // The outer lease guard holds the operation lock while preflight runs.
+    // A scoped store root proves that a logged-in account is selected.
+    let durable_status = crate::durable_store::scoped_status(app.clone());
     let free_bytes = available_disk_bytes();
     Ok(evaluate_preflight(
         profile,
@@ -531,12 +565,7 @@ fn required(name: &str, value: &str, limit: usize) -> Result<(), String> {
 }
 
 fn open_profile_store(app: &AppHandle) -> Result<Connection, String> {
-    let root = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| error.to_string())?
-        .join("scanner-profiles-v1");
-    fs::create_dir_all(&root).map_err(|error| error.to_string())?;
+    let root = crate::durable_store::scoped_root(app)?;
     let conn = Connection::open(root.join("scanner-profiles.sqlite3")).map_err(sql_error)?;
     conn.execute_batch(
         "PRAGMA journal_mode = WAL;

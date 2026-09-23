@@ -46,6 +46,10 @@ export function publishScoreRelease(id: string) {
   return releaseApi.publishScoreRelease({ path: { id } });
 }
 
+export function revokeHighScorePaper(id: string) {
+  return releaseApi.revokeHighScorePaper({ path: { id } });
+}
+
 export function previewRegrade(examId: string, questionId: string, body: CreateRegradePreviewRequest) {
   return releaseApi.previewRegrade({ path: { examId, questionId }, body });
 }

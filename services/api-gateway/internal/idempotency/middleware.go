@@ -113,6 +113,11 @@ func Middleware(store Store, options Options) func(http.Handler) http.Handler {
 			}
 			hash, requestBody, cleanup, err := prepareRequestHash(r, route, recoverableRoutes[route])
 			if err != nil {
+				var tooLarge *http.MaxBytesError
+				if errors.As(err, &tooLarge) {
+					httpx.Error(w, r, http.StatusRequestEntityTooLarge, "request_body_too_large", "request body is too large")
+					return
+				}
 				httpx.Error(w, r, http.StatusBadRequest, "request_body_invalid", "request body could not be read")
 				return
 			}

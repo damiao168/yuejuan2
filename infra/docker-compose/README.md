@@ -27,7 +27,7 @@ Copy-Item .env.example .env
 
 ### 从既有部署升级
 
-`.env` 不随仓库更新，升级后需要手工补齐以下新增项，否则 `preflight.ps1` 会直接拒绝启动：
+`.env` 不随仓库更新，升级后需要手工补齐以下新增项，否则 `preflight.ps1` 会直接拒绝启动。预检还会核对 `EDUGRADE_AI_PROMPT_VERSION` 与受治理提示词清单的版本，避免旧配置让评分服务反复重启：
 
 - `EDUGRADE_QDRANT_API_KEY`：**必填**。Qdrant 此前无鉴权，现在容器会读取该值；网关侧用同一个值发送 `api-key` 头，两端必须一致。
 - `EDUGRADE_REDIS_USERNAME` / `EDUGRADE_REDIS_PASSWORD`：API 使用独立 ACL 用户；容器关闭 Redis 默认用户，并拒绝空用户名或空密码启动。应用 ACL 禁止管理类和危险命令。

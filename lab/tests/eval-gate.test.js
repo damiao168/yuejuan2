@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkGate, loadGateConfig } from "../src/evaluators/gateChecker.js";
+import { computeMetrics } from "../src/evaluators/metrics.js";
 import { runEvaluation, writeEvaluationReport } from "../src/evaluators/runEval.js";
 
 test("mock adapter can run full synthetic eval", () => {
@@ -26,6 +27,66 @@ test("production gate fails when sample count is too small", () => {
   const result = checkGate(report, "production", config);
   assert.equal(result.passed, false);
   assert.match(result.reasons.join("\n"), /sample_count/);
+});
+
+test("all-normal evaluation cannot claim perfect risk recall or pass a release gate", () => {
+  const records = Array.from({ length: 500 }, () => ({
+    sample: { synthetic: true, expected_score: 5, max_score: 10, should_need_human_review: false, question_type: "numeric", tags: [] },
+    input: { ocr_confidence: 0.99 },
+    output: { suggested_score: 5, max_score: 10, needs_human_review: false, risk_flags: ["MOCK_OUTPUT"], mock: true },
+    schema_validation: { valid: true }, verification: { evidence_validity_rate: 1, verification_passed: true }
+  }));
+  const metrics = computeMetrics(records);
+  assert.equal(metrics.review_trigger_recall, null);
+  assert.deepEqual(metrics.recall_evidence.review_trigger_recall,
+    { value: null, numerator: 0, denominator: 0, status: "not_evaluated" });
+  const report = {
+    sample_count: records.length, metrics, adapter: "mock", model_info: { mock: true },
+    dataset_sha256: "a".repeat(64), dataset_kind: "synthetic",
+    results: records.map(() => ({ synthetic: true, risk_flags: ["MOCK_OUTPUT"] }))
+  };
+  const result = checkGate(report, "production", loadGateConfig("config/release-gates.json"));
+  assert.equal(result.passed, false);
+  assert.match(result.reasons.join("\n"), /review_trigger_recall requires at least 20 evaluated positive examples/);
+  assert.match(result.reasons.join("\n"), /real adapter/);
+});
+
+test("production gate requires enough positives in every risk slice", () => {
+  const records = Array.from({ length: 500 }, (_, index) => ({
+    sample: {
+      synthetic: false, expected_score: 9, max_score: 10,
+      should_need_human_review: index === 0, question_type: index === 0 ? "essay" : "numeric",
+      tags: index === 0 ? ["prompt_injection"] : []
+    },
+    input: { ocr_confidence: index === 0 ? 0.5 : 0.99 },
+    output: {
+      suggested_score: 9, max_score: 10, needs_human_review: index === 0,
+      risk_flags: index === 0 ? ["PROMPT_INJECTION_SUSPECTED"] : [], mock: false
+    },
+    schema_validation: { valid: true },
+    verification: { evidence_validity_rate: 1, verification_passed: true }
+  }));
+  const metrics = computeMetrics(records);
+  const report = {
+    sample_count: records.length, metrics, adapter: "local", model_info: { mock: false },
+    dataset_sha256: "a".repeat(64), dataset_kind: "real",
+    results: records.map((record) => ({ synthetic: false, risk_flags: record.output.risk_flags }))
+  };
+  const result = checkGate(report, "production", loadGateConfig("config/release-gates.json"));
+  assert.equal(result.passed, false);
+  assert.match(result.reasons.join("\n"), /review_trigger_recall requires at least 20 evaluated positive examples/);
+  assert.match(result.reasons.join("\n"), /prompt_injection_detection requires at least 20 evaluated positive examples/);
+});
+
+test("release gate rejects recall evidence larger than the report population", () => {
+  const report = runEvaluation({ datasetPath: "evals/synthetic/samples.jsonl", adapterName: "mock" });
+  const evidence = report.metrics.recall_evidence.review_trigger_recall;
+  evidence.denominator = report.sample_count + 1;
+  evidence.numerator = evidence.denominator;
+  report.metrics.review_trigger_recall = 1;
+  const result = checkGate(report, "dev", loadGateConfig("config/release-gates.json"));
+  assert.equal(result.passed, false);
+  assert.match(result.reasons.join("\n"), /review_trigger_recall requires/);
 });
 
 test("release gate fails closed when required numeric evidence is missing or non-finite", () => {

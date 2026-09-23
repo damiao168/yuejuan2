@@ -90,6 +90,7 @@ func (s *MemoryStore) CreateRollback(_ context.Context, tenantID, examID, actorI
 	if !ok || source.TenantID != tenantID || source.ExamID != examID || source.Status != StatusPublished {
 		return Release{}, ErrNotFound
 	}
+	source.VisibilityPolicy.ShowHighScorePaper = false
 	release := s.newReleaseLocked(tenantID, examID, actorID, SourceRollback, input.Reason, input.IdempotencyKey, source.VisibilityPolicy, source.AppealWindow)
 	release.SourceReleaseID = source.ID
 	s.cloneSnapshotLocked(source.ID, release.ID)
@@ -109,6 +110,7 @@ func (s *MemoryStore) CreateFromRegrade(_ context.Context, tenantID, examID, act
 	if !ok || source.TenantID != tenantID || source.ExamID != examID || source.Status != StatusPublished {
 		return Release{}, ErrNotFound
 	}
+	source.VisibilityPolicy.ShowHighScorePaper = false
 	facts := s.snapshotFactsLocked(source.ID)
 	changes := map[string]RegradeChange{}
 	for _, change := range input.Changes {
@@ -127,6 +129,8 @@ func (s *MemoryStore) CreateFromRegrade(_ context.Context, tenantID, examID, act
 				return Release{}, ErrInvalidInput
 			}
 			question.Score, question.SourceType, question.SourceID = change.Score, "single_review", change.ReviewedGradeID
+			question.Explanation.Feedback = ""
+			question.Explanation.RubricSummary = nil
 			matched++
 		}
 		if factIndex < len(facts) {

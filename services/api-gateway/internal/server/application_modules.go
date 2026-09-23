@@ -9,17 +9,19 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/idempotency"
 	"edugrade-enterprise/services/api-gateway/internal/modelgovernance"
 	"edugrade-enterprise/services/api-gateway/internal/paper"
+	"edugrade-enterprise/services/api-gateway/internal/platformschools"
 	"edugrade-enterprise/services/api-gateway/internal/processing"
 )
 
 type ApplicationModules struct {
-	Identity     *IdentityModule
-	Exam         *ExamPreparationModule
-	Capture      *CaptureProcessingModule
-	Grading      *GradingQualityModule
-	Release      *ReleaseModule
-	AIGovernance *AIGovernanceModule
-	Idempotency  idempotency.Store
+	Identity        *IdentityModule
+	Exam            *ExamPreparationModule
+	Capture         *CaptureProcessingModule
+	Grading         *GradingQualityModule
+	Release         *ReleaseModule
+	AIGovernance    *AIGovernanceModule
+	PlatformSchools *platformschools.Handler
+	Idempotency     idempotency.Store
 }
 
 type ApplicationDependencies struct {
@@ -77,6 +79,8 @@ func newApplicationModules(dependencies ApplicationDependencies, stores Applicat
 	releaseModule := NewReleaseModule(stores.Release, ReleaseDependencies{
 		Auth: identity.AuthStore, Regrade: gradingQuality.RegradeService,
 		StudentQuestionImage: examModule.SegmentImages, StudentPaperPageImage: examModule.SegmentImages,
+		DB: dependencies.DB, FileStore: stores.Exam.Files, ObjectStore: dependencies.ObjectStore,
+		FileBucket: dependencies.Config.Files.Bucket,
 	})
 	aiGovernance := NewAIGovernanceModule(dependencies.Config, stores.AIGovernance, AIGovernanceDependencies{
 		Auth: identity.AuthStore, WorkerRuntime: captureModule.WorkerRuntimeStore, Reviews: gradingQuality.ReviewStore,
@@ -85,7 +89,7 @@ func newApplicationModules(dependencies ApplicationDependencies, stores Applicat
 	})
 	return ApplicationModules{
 		Identity: identity, Exam: examModule, Capture: captureModule, Grading: gradingQuality,
-		Release: releaseModule, AIGovernance: aiGovernance, Idempotency: stores.Idempotency,
+		Release: releaseModule, AIGovernance: aiGovernance, PlatformSchools: platformschools.NewHandler(stores.PlatformSchools), Idempotency: stores.Idempotency,
 	}, nil
 }
 
@@ -111,7 +115,7 @@ func newDocumentModelResolver(store modelgovernance.Store) func(context.Context,
 			return nil, err
 		}
 		return &paper.DocumentModelConfig{
-			AdapterType: connection.Config.AdapterType, BaseURL: connection.Config.BaseURL,
+			AdapterType: connection.Config.AdapterType, ProviderKey: connection.Config.ProviderKey, BaseURL: connection.Config.BaseURL,
 			APIKey: connection.APIKey, ModelName: connection.Config.ModelName, ModelVersion: connection.Config.ModelVersion,
 		}, nil
 	}

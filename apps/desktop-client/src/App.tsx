@@ -34,7 +34,7 @@ import { motion } from "framer-motion";
 import { getUserErrorMessage } from "./api/userError";
 import { OfflineWorkbench } from "./components/OfflineWorkbench";
 import { CapabilityTag, QueueList, SectionHead, StatusLine } from "./components/DesktopStatusViews";
-import { hasDurableDesktopStore } from "./lib/durableStore";
+import { claimLegacyDurableStore, hasDurableDesktopStore } from "./lib/durableStore";
 import {
   dependencyLabel,
   dependencyTone,
@@ -88,22 +88,45 @@ function App() {
   const {
     client, serverUrl, setServerUrl, tenantCode, setTenantCode, username, setUsername,
     password, setPassword, rememberLogin, setRememberLogin, credentialStoreMessage,
-    credentialStoreReady, token, expiresAt, user, authError, isLoggingIn,
-    handleLogin, handleForgetStoredLogin, handleCheckSession
+    credentialStoreReady, token, expiresAt, user, authError, isLoggingIn, durableScopeKey,
+    handleLogin, handleLogout, handleForgetStoredLogin, handleCheckSession
   } = useDesktopSession(defaultServer, logEvent);
   const {
     capabilities, diagnostics, localCacheSecurity, serviceStatus, isCheckingServiceStatus,
     diagnosticError, setDiagnosticError, refreshCapabilities, saveServerForSession,
     handleHealthCheck, handleSystemStatusCheck
-  } = useRuntimeDiagnostics(client, serverUrl, setServerUrl, logEvent);
-  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
+  } = useRuntimeDiagnostics(client, serverUrl, durableScopeKey, setServerUrl, logEvent);
+  const [legacyClaimConfirmed, setLegacyClaimConfirmed] = useState(false);
+  const [legacyClaimError, setLegacyClaimError] = useState<string | null>(null);
+  const [isClaimingLegacy, setIsClaimingLegacy] = useState(false);
+  const legacyDataPresent = capabilities.some((item) => item.key === "local_cache" && item.status === "legacy_data");
 
-  const { tasks, taskError, isLoadingTasks, handleLoadTasks } = useReviewTasks(client, logEvent);
-  const capture = useExamCaptureContext({ client, token, workspace, logEvent });
+  async function handleClaimLegacy() {
+    if (!legacyClaimConfirmed || !durableScopeKey) return;
+    setIsClaimingLegacy(true);
+    setLegacyClaimError(null);
+    try {
+      await claimLegacyDurableStore(durableScopeKey);
+      await refreshCapabilities();
+      setLegacyClaimConfirmed(false);
+    } catch (error) {
+      setLegacyClaimError(getUserErrorMessage(error, "旧版数据认领失败，原始数据仍隔离保留"));
+    } finally {
+      setIsClaimingLegacy(false);
+    }
+  }
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
+  useEffect(() => {
+    if (durableScopeKey) void refreshCapabilities();
+  }, [durableScopeKey, refreshCapabilities]);
+
+  const { tasks, taskError, isLoadingTasks, handleLoadTasks } = useReviewTasks(client, durableScopeKey, logEvent);
+  const capture = useExamCaptureContext({ client, token, durableScopeKey, workspace, logEvent });
   const { exams, selectedExamId, scanSubmissionId, captureBatchId, scanStartPage } = capture;
-  const scanner = useScannerController({ workspace, isOnline, logEvent });
+  const scanner = useScannerController({ workspace, isOnline, durableScopeKey, logEvent });
   const { scannerPreflight } = scanner;
   const scanQueue = useScanQueue({
+    durableScopeKey,
     exams, selectedExamId, captureBatchId, scanSubmissionId, scanStartPage,
     scannerPreflight, setDiagnosticError, logEvent
   });
@@ -112,10 +135,10 @@ function App() {
     uploadInFlightRef, queueRef, durablePersistenceRef, updateQueue,
   } = scanQueue;
   const uploadSync = useUploadSync({
-    client, token, isOnline, setIsOnline, queueRef, fileBufferRef,
+    client, token, durableScopeKey, isOnline, setIsOnline, queueRef, fileBufferRef,
     uploadInFlightRef, durablePersistenceRef, updateQueue, logEvent
   });
-  const quality = useSubmissionQuality(client, scanSubmissionId, logEvent);
+  const quality = useSubmissionQuality(client, scanSubmissionId, durableScopeKey, logEvent);
 
 
 
@@ -222,10 +245,10 @@ function App() {
           <SectionHead icon={<ServerCog size={20} />} title="服务端地址配置" description="当前 Story 不启用安全落盘；地址只保存到本次会话。" />
           <Form layout="vertical">
             <Form.Item label="API 服务端地址">
-              <Input value={serverUrl} onChange={(event) => setServerUrl(event.target.value)} placeholder={defaultServer} />
+              <Input value={serverUrl} disabled={Boolean(token)} onChange={(event) => setServerUrl(event.target.value)} placeholder={defaultServer} />
             </Form.Item>
             <Space wrap>
-              <Button type="primary" icon={<Settings size={16} />} onClick={saveServerForSession}>
+              <Button type="primary" icon={<Settings size={16} />} disabled={Boolean(token)} onClick={saveServerForSession}>
                 保存到当前会话
               </Button>
               <Button icon={<Wifi size={16} />} onClick={handleHealthCheck}>
@@ -260,6 +283,9 @@ function App() {
               <Button icon={<ShieldAlert size={16} />} disabled={!token} onClick={handleCheckSession}>
                 校验 session
               </Button>
+              <Button disabled={!token} onClick={() => void handleLogout()}>
+                退出登录
+              </Button>
               <Button disabled={!credentialStoreReady} onClick={() => void handleForgetStoredLogin()}>
                 清除已保存登录
               </Button>
@@ -267,6 +293,12 @@ function App() {
           </Form>
           {credentialStoreMessage && <Alert className="section-alert" type={credentialStoreReady ? "info" : "warning"} message={credentialStoreMessage} showIcon />}
           {authError && <Alert className="section-alert" type="error" message={authError} showIcon />}
+          {legacyDataPresent && token && <div className="legacy-claim-panel">
+            <Alert type="warning" showIcon message="检测到旧版未绑定账号的本地数据" description="请先由管理员核对该工作站旧扫描队列和离线草稿确属当前登录账号。认领会迁入当前账号的加密存储；若当前账号已有本地记录，操作会拒绝。" />
+            <Checkbox checked={legacyClaimConfirmed} onChange={(event) => setLegacyClaimConfirmed(event.target.checked)}>我已核对旧数据归属当前账号</Checkbox>
+            <Button disabled={!legacyClaimConfirmed} loading={isClaimingLegacy} onClick={() => void handleClaimLegacy()}>认领并迁移旧数据</Button>
+            {legacyClaimError && <Alert type="error" showIcon message={legacyClaimError} />}
+          </div>}
           {user && (
             <div className="identity-strip">
               <span>{user.display_name || user.username}</span>
@@ -320,7 +352,7 @@ function App() {
 
   function renderOffline() {
     return (
-      <OfflineWorkbench client={client} token={token} user={user} isOnline={isOnline} onLog={logEvent} />
+      <OfflineWorkbench key={durableScopeKey} durableScopeKey={durableScopeKey} client={client} token={token} user={user} isOnline={isOnline} onLog={logEvent} />
     );
   }
 

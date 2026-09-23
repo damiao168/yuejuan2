@@ -283,7 +283,7 @@ export interface SyncQueueItem {
   remoteUploadId?: string;
 }
 
-export type CapabilityStatus = "ready" | "not_configured" | "browser_fallback" | "unavailable";
+export type CapabilityStatus = "ready" | "not_configured" | "browser_fallback" | "unavailable" | "legacy_data";
 
 export interface CapabilityProbe {
   key: string;

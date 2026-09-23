@@ -22,6 +22,7 @@ def valid_math_v2_request():
 class FakeStructuredMathModel:
     def __init__(self):
         self.calls = []
+        self._last_usage = {}
 
     @contextmanager
     def session(self, request_id):
@@ -33,6 +34,13 @@ class FakeStructuredMathModel:
         assert name == "math_criterion_candidates"
         assert "suggested_score" not in json.dumps(schema)
         assert messages[-1]["content"][-1]["type"] == "image_url"
+        self._last_usage = {
+            "input_tokens": 321,
+            "cached_input_tokens": 123,
+            "output_tokens": 45,
+            "reasoning_tokens": 6,
+            "total_tokens": 366,
+        }
         return {
             "criterion_candidates": [
                 {
@@ -46,6 +54,9 @@ class FakeStructuredMathModel:
             "alternative_solution_candidate": False,
             "risk_flags": [],
         }
+
+    def last_usage(self):
+        return dict(self._last_usage)
 
     def ready(self):
         return True
@@ -77,6 +88,8 @@ class ProductionMathV2Tests(unittest.TestCase):
         self.assertTrue(result["needs_human_review"])
         self.assertNotIn("suggested_score", result)
         self.assertNotIn("max_score", result)
+        self.assertEqual(result["telemetry"]["usage"]["cached_input_tokens"], 123)
+        self.assertEqual(result["telemetry"]["usage"]["total_tokens"], 366)
         self.assertEqual(
             sum(call[0] == "request_structured" for call in self.model.calls),
             1,

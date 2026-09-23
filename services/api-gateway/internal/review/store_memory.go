@@ -125,6 +125,56 @@ func (s *MemoryStore) ListTasks(_ context.Context, tenantID string, filter ListF
 	return out, nil
 }
 
+func (s *MemoryStore) AggregateTasks(ctx context.Context, tenantID string, filter ListFilter) (TaskAggregate, error) {
+	filter.Limit = 0
+	filter.CursorID = ""
+	filter.CursorPriority = 0
+	filter.CursorCreatedAt = time.Time{}
+	tasks, err := s.ListTasks(ctx, tenantID, filter)
+	if err != nil {
+		return TaskAggregate{}, err
+	}
+	return aggregateReviewTasks(tasks), nil
+}
+
+func aggregateReviewTasks(tasks []ReviewTask) TaskAggregate {
+	aggregate := TaskAggregate{StatusCounts: map[string]int{}, Reviewers: []ReviewerTaskAggregate{}}
+	reviewers := map[string]*ReviewerTaskAggregate{}
+	for _, task := range tasks {
+		aggregate.TotalCount++
+		aggregate.StatusCounts[task.Status]++
+		completed := task.Status == "submitted" || task.Status == "completed"
+		if completed {
+			aggregate.CompletedCount++
+		} else {
+			aggregate.RemainingCount++
+		}
+		if task.AssignedTo == "" {
+			continue
+		}
+		reviewer := reviewers[task.AssignedTo]
+		if reviewer == nil {
+			reviewer = &ReviewerTaskAggregate{ReviewerID: task.AssignedTo}
+			reviewers[task.AssignedTo] = reviewer
+		}
+		reviewer.TotalCount++
+		if completed {
+			reviewer.CompletedCount++
+		} else {
+			reviewer.RemainingCount++
+		}
+	}
+	ids := make([]string, 0, len(reviewers))
+	for id := range reviewers {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		aggregate.Reviewers = append(aggregate.Reviewers, *reviewers[id])
+	}
+	return aggregate
+}
+
 func containsString(values []string, target string) bool {
 	for _, value := range values {
 		if value == target {

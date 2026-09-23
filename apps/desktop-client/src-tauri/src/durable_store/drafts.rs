@@ -3,7 +3,7 @@ use serde_json::Value;
 use tauri::AppHandle;
 
 use super::{
-    connection::{now_rfc3339, open_connection, sql_error},
+    connection::{now_rfc3339, open_connection, open_connection_at, sql_error},
     crypto::{decrypt_json, encrypt_json, master_key},
     paths::store_root,
     schema::initialize_schema,
@@ -23,7 +23,7 @@ pub fn save_durable_draft(app: AppHandle, record: Value) -> Result<(), String> {
     let metadata = draft_metadata(&record)?;
     let root = store_root(&app)?;
     let key = master_key(&root)?;
-    let conn = open_connection(&app)?;
+    let conn = open_connection_at(&root)?;
     initialize_schema(&conn)?;
     let (payload, nonce) = encrypt_json(&key, &record)?;
     conn.execute(
@@ -63,7 +63,7 @@ pub fn list_durable_drafts(app: AppHandle) -> Result<Vec<OfflineDraftEnvelope>, 
 pub fn load_durable_draft(app: AppHandle, task_id: String) -> Result<Option<Value>, String> {
     let root = store_root(&app)?;
     let key = master_key(&root)?;
-    let conn = open_connection(&app)?;
+    let conn = open_connection_at(&root)?;
     initialize_schema(&conn)?;
     let payload = conn
         .query_row(

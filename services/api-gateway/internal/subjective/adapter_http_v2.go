@@ -243,7 +243,7 @@ func (a *HTTPAdapterV2) mapResponse(input AdapterInput, response gradingAgentV2R
 	if response.AlternativeSolutionCandidate && !containsString(response.RiskFlags, "alternative_solution_candidate") {
 		return AdapterOutput{}, &GradingAgentError{Code: "agent_risk_flag_invalid"}
 	}
-	telemetry := AdapterTelemetry{Adapter: response.Telemetry.Adapter, Provider: response.Telemetry.Provider, Deployment: response.Telemetry.Deployment, Region: response.Telemetry.Region, Attempts: response.Telemetry.Attempts, RepairAttempted: response.Telemetry.RepairAttempted, PriorErrorCodes: nonNilStrings(response.Telemetry.PriorErrorCodes), ElapsedMS: response.Telemetry.ElapsedMS}
+	telemetry := AdapterTelemetry{Adapter: response.Telemetry.Adapter, Provider: response.Telemetry.Provider, Deployment: response.Telemetry.Deployment, Region: response.Telemetry.Region, Attempts: response.Telemetry.Attempts, RepairAttempted: response.Telemetry.RepairAttempted, PriorErrorCodes: nonNilStrings(response.Telemetry.PriorErrorCodes), ElapsedMS: response.Telemetry.ElapsedMS, Usage: response.Telemetry.Usage}
 	return AdapterOutput{SchemaVersion: response.SchemaVersion, RequestID: response.RequestID, Confidence: confidence, RiskFlags: nonNilStrings(response.RiskFlags), NeedsHumanReview: true,
 		StudentFeedback: "数学评分建议须由教师确认。", TeacherNote: "模型只提供语义候选映射；分值由服务器依据冻结评分规则计算。",
 		ModelVersion: response.ModelVersion, PromptVersion: response.PromptVersion, RubricVersion: response.RubricVersion, DeliveryMode: response.Delivery,

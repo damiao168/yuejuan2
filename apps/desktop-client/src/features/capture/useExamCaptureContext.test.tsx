@@ -32,7 +32,7 @@ describe("exam capture context controller", () => {
   async function mount() {
     function Probe() {
       current = useExamCaptureContext({
-        client: {} as never, token: "token", workspace: "scan",
+        client: {} as never, token: "token", durableScopeKey: "test-session", workspace: "scan",
         logEvent: vi.fn().mockResolvedValue(undefined)
       });
       return null;

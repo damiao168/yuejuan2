@@ -23,6 +23,22 @@ export function checkGate(report, level, config) {
   if (!Number.isInteger(report.sample_count) || report.sample_count < 0 || report.sample_count < gate.minimum_samples) {
     reasons.push(`sample_count must be >= ${gate.minimum_samples}; actual ${report.sample_count}`);
   }
+  if (report.metrics?.sample_count !== report.sample_count || !Array.isArray(report.results) || report.results.length !== report.sample_count) {
+    reasons.push("report sample counts and result rows must agree");
+  }
+  for (const key of ["review_trigger_recall", "prompt_injection_detection", "essay_discussion_review_rate", "ocr_low_confidence_review_rate", "high_score_recall", "low_score_recall"]) {
+    const evidence = report.metrics?.recall_evidence?.[key];
+    if (!evidence || !Number.isInteger(evidence.denominator) || evidence.denominator > report.sample_count || evidence.denominator < Math.max(1, gate.minimum_positive_samples ?? 1) ||
+        !Number.isInteger(evidence.numerator) || evidence.numerator < 0 || evidence.numerator > evidence.denominator ||
+        evidence.status !== "evaluated" || metric(report, key) !== evidence.numerator / evidence.denominator) {
+      reasons.push(`${key} requires at least ${Math.max(1, gate.minimum_positive_samples ?? 1)} evaluated positive examples and consistent numerator/denominator`);
+    }
+  }
+  if (level !== "dev" && (report.model_info?.mock !== false || report.adapter === "mock" ||
+      !/^[a-f0-9]{64}$/.test(report.dataset_sha256 ?? "") || report.dataset_kind !== "real" ||
+      report.results?.some((item) => item.synthetic !== false || item.risk_flags?.includes("MOCK_OUTPUT")))) {
+    reasons.push("pilot/production require a real adapter and identified real dataset evidence");
+  }
   requireMetric(reasons, report, "schema_validity_rate", (value) => value >= gate.schema_validity_rate, "schema validity gate failed");
   requireMetric(reasons, report, "evidence_validity_rate", (value) => value >= gate.evidence_validity_rate, "evidence validity gate failed");
   requireMetric(reasons, report, "adjacent_agreement", (value) => value >= gate.adjacent_agreement, "adjacent agreement gate failed");

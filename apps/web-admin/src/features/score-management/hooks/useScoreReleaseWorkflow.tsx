@@ -4,6 +4,7 @@ import type { Exam } from "../../../api/exams";
 import {
   createScoreRelease,
   publishScoreRelease,
+  revokeHighScorePaper,
   type ScoreRelease,
   type ScoreReleaseGate
 } from "../../../api/scoreReleases";
@@ -18,7 +19,8 @@ export const defaultReleaseVisibility = {
   show_percentile: true,
   show_exact_rank: true,
   show_question_statistics: true,
-  show_answers: true
+  show_answers: true,
+  show_high_score_paper: false
 };
 
 export const releaseVisibilityLabels: Record<keyof typeof defaultReleaseVisibility, string> = {
@@ -29,7 +31,8 @@ export const releaseVisibilityLabels: Record<keyof typeof defaultReleaseVisibili
   show_percentile: "百分位",
   show_exact_rank: "具体排名",
   show_question_statistics: "题目统计",
-  show_answers: "参考答案与本人答案"
+  show_answers: "参考答案与本人答案",
+  show_high_score_paper: "匿名高分范例卷"
 };
 
 type RunAction = (key: string, action: () => Promise<void>, successText: string) => Promise<void>;
@@ -50,7 +53,6 @@ export function useScoreReleaseWorkflow({
   const { message, modal } = App.useApp();
   const { runWithStepUp } = useStepUp();
   const [releaseReason, setReleaseReason] = useState("");
-  const [releaseHighScorePaper, setReleaseHighScorePaper] = useState(false);
   const [releaseVisibility, setReleaseVisibility] = useState(defaultReleaseVisibility);
   const [releaseModal, dispatchReleaseModal] = useReducer(workflowModalReducer, closedWorkflowModal);
 
@@ -69,12 +71,11 @@ export function useScoreReleaseWorkflow({
         await createScoreRelease(selectedExamId, {
           reason: releaseReason.trim(),
           idempotency_key: crypto.randomUUID(),
-          visibility_policy: { ...releaseVisibility, show_high_score_paper: releaseHighScorePaper },
+          visibility_policy: releaseVisibility,
           appeal_window: { enabled: selectedExam?.appeal_enabled ?? false }
         });
         dispatchReleaseModal({ type: "close" });
         setReleaseReason("");
-        setReleaseHighScorePaper(false);
       },
       "已创建成绩发布草稿"
     );
@@ -94,7 +95,8 @@ export function useScoreReleaseWorkflow({
       content: (
         <div>
           <p>考试：{selectedExam?.name} · 共 {gradeTotal} 份成绩 · 第 {release.version} 版</p>
-          <p>向学生公开：{visibleItems}{release.visibility_policy.show_high_score_paper ? "、最高分答卷" : ""}</p>
+          <p>向学生公开：{visibleItems}</p>
+          {release.visibility_policy.show_high_score_paper ? <p>发布前将生成匿名范例卷；如答卷缺少已确认的版面和身份区域，发布会被阻断。</p> : null}
           <p>后续更正需创建新版本；本次公开内容以此版本的冻结设置为准。</p>
         </div>
       ),
@@ -106,23 +108,34 @@ export function useScoreReleaseWorkflow({
     });
   };
 
+  const revokeSharedPaper = (release: ScoreRelease) => {
+    modal.confirm({
+      title: `撤回 V${release.version} 的范例卷分享`,
+      content: "撤回后学生将立即无法访问该版本的范例卷页面，成绩版本保持可查。",
+      okText: "确认撤回",
+      okButtonProps: { danger: true },
+      cancelText: "取消",
+      onOk: () => runAction("release-high-score-revoke", async () => {
+        await runWithStepUp({ reason: `撤回成绩版本 V${release.version} 的范例卷分享`, action: () => revokeHighScorePaper(release.id) });
+      }, "范例卷分享已撤回")
+    });
+  };
+
   const closeReleaseModal = () => {
     dispatchReleaseModal({ type: "close" });
     setReleaseReason("");
-    setReleaseHighScorePaper(false);
   };
 
   return {
     releaseReason,
     setReleaseReason,
-    releaseHighScorePaper,
-    setReleaseHighScorePaper,
     releaseVisibility,
     setReleaseVisibility,
     releaseModalOpen: releaseModal.status === "open",
     openReleaseModal: () => dispatchReleaseModal({ type: "open" }),
     closeReleaseModal,
     createRelease,
-    publishRelease
+    publishRelease,
+    revokeSharedPaper
   };
 }

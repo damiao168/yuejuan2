@@ -10,16 +10,23 @@ import (
 )
 
 type Service struct {
-	store Store
-	now   func() time.Time
+	store          Store
+	highScorePaper HighScorePaperManager
+	now            func() time.Time
 }
 
 func NewService(store Store) *Service {
 	return &Service{store: store, now: func() time.Time { return time.Now().UTC() }}
 }
 
+func (s *Service) WithHighScorePaper(manager HighScorePaperManager) *Service {
+	s.highScorePaper = manager
+	return s
+}
+
 func (s *Service) Create(ctx context.Context, tenantID, examID, actorID string, input CreateInput) (Release, error) {
-	if !validIDs(tenantID, examID, actorID) || !normalizeCreate(&input) {
+	if !validIDs(tenantID, examID, actorID) || !normalizeCreate(&input) ||
+		(input.VisibilityPolicy.ShowHighScorePaper && !input.VisibilityPolicy.ShowQuestionScores) {
 		return Release{}, ErrInvalidInput
 	}
 	return s.store.Create(ctx, tenantID, examID, actorID, input)
@@ -74,7 +81,32 @@ func (s *Service) Publish(ctx context.Context, tenantID, id, actorID string) (Re
 	if !validIDs(tenantID, id, actorID) {
 		return Release{}, ErrInvalidInput
 	}
+	detail, err := s.store.Get(ctx, tenantID, id)
+	if err != nil {
+		return Release{}, err
+	}
+	if detail.Release.Status == StatusPublished {
+		return s.store.Publish(ctx, tenantID, id, actorID)
+	}
+	if detail.Release.VisibilityPolicy.ShowHighScorePaper {
+		if s.highScorePaper == nil {
+			return Release{}, ErrAnonymousPaperUnavailable
+		}
+		if err := s.highScorePaper.Prepare(ctx, tenantID, id, actorID); err != nil {
+			return Release{}, err
+		}
+	}
 	return s.store.Publish(ctx, tenantID, id, actorID)
+}
+
+func (s *Service) RevokeHighScorePaper(ctx context.Context, tenantID, id, actorID string) error {
+	if !validIDs(tenantID, id, actorID) {
+		return ErrInvalidInput
+	}
+	if s.highScorePaper == nil {
+		return ErrAnonymousPaperUnavailable
+	}
+	return s.highScorePaper.Revoke(ctx, tenantID, id, actorID)
 }
 
 func (s *Service) CurrentPublished(ctx context.Context, tenantID, examID string) (Detail, error) {

@@ -641,6 +641,10 @@ WHERE tenant.code = $1
 }
 
 func e2ePostgresRouter(db *sql.DB, authOptions ...config.AuthConfig) http.Handler {
+	return e2ePostgresRouterWithObjects(db, files.NewMemoryObjectStorage(), authOptions...)
+}
+
+func e2ePostgresRouterWithObjects(db *sql.DB, objectStore *files.MemoryObjectStorage, authOptions ...config.AuthConfig) http.Handler {
 	cfg := config.Config{
 		Service: config.ServiceConfig{Name: "api-gateway-postgres-e2e-test", Environment: "test", ReadinessTimeout: time.Millisecond},
 		Auth:    config.AuthConfig{SessionTTL: time.Hour},
@@ -665,7 +669,6 @@ func e2ePostgresRouter(db *sql.DB, authOptions ...config.AuthConfig) http.Handle
 	if len(authOptions) > 0 {
 		cfg.Auth = authOptions[0]
 	}
-	objectStore := files.NewMemoryObjectStorage()
 	stores, err := NewPostgresApplicationStores(&Infrastructure{Config: cfg, DB: db, ObjectStore: objectStore})
 	if err != nil {
 		panic(fmt.Sprintf("build production PostgreSQL application stores: %v", err))

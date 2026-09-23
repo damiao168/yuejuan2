@@ -36,7 +36,7 @@ func (s *repairFailPut) Put(ctx context.Context, bucket, key string, body io.Rea
 }
 
 func TestReviewRepairsRecoveryWithPostgresTestDatabase(t *testing.T) {
-	db, router, adminToken, f, answers := repairFixture(t)
+	db, router, adminToken, f, answers, _ := repairFixture(t)
 	ctx := context.Background()
 	t.Run("seed follows normal authenticated claim context submit path", func(t *testing.T) {
 		graderID := e2eLookupUserID(t, db, "demo", "grader")

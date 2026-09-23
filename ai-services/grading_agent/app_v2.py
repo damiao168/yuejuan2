@@ -7,6 +7,7 @@ from collections import OrderedDict
 
 from .contract_v2 import validate_request_v2, validate_response_v2
 from .errors import AgentError
+from .model import sum_model_usage
 
 MAX_V2_REQUEST_BYTES = 8 * 1024 * 1024
 MAX_V2_INFERENCE_CONCURRENCY = 1
@@ -434,10 +435,14 @@ class ProductionMathV2Application:
         request_id = request["request_id"]
         started = time.monotonic()
         prior = []
+        usage = {}
         with self.model.session(request_id):
             for attempt in range(self.settings.model_max_retries + 1):
                 try:
-                    raw = self.model.request_structured(request_id, math_candidate_messages(request, prior[-1] if prior else None), math_candidate_schema(request), "math_criterion_candidates")
+                    try:
+                        raw = self.model.request_structured(request_id, math_candidate_messages(request, prior[-1] if prior else None), math_candidate_schema(request), "math_criterion_candidates")
+                    finally:
+                        usage = sum_model_usage(usage, getattr(self.model, "last_usage", lambda: {})())
                     risks = list(dict.fromkeys(raw["risk_flags"] + (["alternative_solution_candidate"] if raw["alternative_solution_candidate"] else []) + ["human_review_required"]))
                     result = {
                         "schema_version": "grading-agent-v2", "request_id": request_id, "status": "candidate_mapping", "delivery": "teacher_suggestion",
@@ -446,7 +451,8 @@ class ProductionMathV2Application:
                         "rubric_version": request["rubric_version"], "capability_profile": self.settings.capability_profile, "mock": False,
                         "telemetry": {"adapter": self.settings.adapter_type, "provider": self.settings.provider_key, "deployment": self.settings.deployment_key,
                                       "region": self.settings.deployment_region, "attempts": attempt + 1, "repair_attempted": attempt > 0,
-                                      "prior_error_codes": list(prior), "elapsed_ms": round((time.monotonic() - started) * 1000)},
+                                      "prior_error_codes": list(prior), "elapsed_ms": round((time.monotonic() - started) * 1000),
+                                      "usage": usage},
                     }
                     validate_response_v2(result, request)
                     self.logger({"event": "grading_agent_math_v2", "request_id": request_id, "status": "succeeded", "attempts": attempt + 1})

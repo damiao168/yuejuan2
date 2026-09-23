@@ -76,8 +76,8 @@ function PlatformDashboard({
 
   return (
     <div className="page-stack role-dashboard">
-      <section className="dashboard-heading">
-        <div><span className="dashboard-kicker">平台管理</span><h1>平台状态</h1><p>管理学校并确认平台服务是否可用</p></div>
+      <section className="page-heading dashboard-heading platform-dashboard-heading">
+        <div><h1>平台状态</h1><p>管理学校并确认平台服务是否可用</p></div>
         <Button icon={<RefreshCw size={16} />} loading={loading} onClick={() => void load()}>刷新</Button>
       </section>
       {error ? <Alert type="error" showIcon message="刷新失败" description={error} /> : null}

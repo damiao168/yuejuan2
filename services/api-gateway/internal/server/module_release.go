@@ -1,8 +1,10 @@
 package server
 
 import (
+	"database/sql"
 	"edugrade-enterprise/services/api-gateway/internal/appeal"
 	"edugrade-enterprise/services/api-gateway/internal/auth"
+	"edugrade-enterprise/services/api-gateway/internal/files"
 	"edugrade-enterprise/services/api-gateway/internal/regrade"
 	"edugrade-enterprise/services/api-gateway/internal/regraderelease"
 	"edugrade-enterprise/services/api-gateway/internal/releasegate"
@@ -39,10 +41,19 @@ type ReleaseDependencies struct {
 	Regrade               *regrade.Service
 	StudentQuestionImage  segment.CropImageReader
 	StudentPaperPageImage segment.PageImageReader
+	DB                    *sql.DB
+	FileStore             files.Store
+	ObjectStore           files.ObjectStorage
+	FileBucket            string
 }
 
 func NewReleaseModule(stores ReleaseStores, dependencies ReleaseDependencies) *ReleaseModule {
 	scoreReleaseService := scorerelease.NewService(stores.ScoreRelease)
+	var highScorePaper scorerelease.HighScorePaperManager
+	if dependencies.DB != nil && dependencies.FileStore != nil && dependencies.ObjectStore != nil && dependencies.FileBucket != "" {
+		highScorePaper = scorerelease.NewPostgresHighScorePaperManager(dependencies.DB, dependencies.FileStore, dependencies.ObjectStore, dependencies.FileBucket)
+		scoreReleaseService.WithHighScorePaper(highScorePaper)
+	}
 	releaseGateService := releasegate.NewService(stores.ReleaseGate, scoreReleaseService).
 		WithRegradeBlockerReader(regradeBlocker{service: dependencies.Regrade})
 	return &ReleaseModule{
@@ -52,7 +63,8 @@ func NewReleaseModule(stores ReleaseStores, dependencies ReleaseDependencies) *R
 				coordinator: releasegate.NewPublicationCoordinator(releaseGateService, scoreReleaseService),
 			}).
 			WithStudentQuestionImage(dependencies.StudentQuestionImage).
-			WithStudentPaperPageImage(dependencies.StudentPaperPageImage),
+			WithStudentPaperPageImage(dependencies.StudentPaperPageImage).
+			WithHighScorePaper(highScorePaper),
 		ReleaseGateHandler:   releasegate.NewHandler(releaseGateService, dependencies.Auth),
 		StudentPortalHandler: studentportal.NewHandler(studentportal.NewService(stores.StudentPortal)),
 		RegradeReleaseHandler: regraderelease.NewHandler(

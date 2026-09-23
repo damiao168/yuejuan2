@@ -10,12 +10,13 @@ import (
 )
 
 var (
-	ErrNotFound          = errors.New("score release not found")
-	ErrInvalidInput      = errors.New("invalid score release input")
-	ErrInvalidTransition = errors.New("invalid score release transition")
-	ErrGateBlocked       = errors.New("score release gate is blocked")
-	ErrForbidden         = errors.New("score release access forbidden")
-	ErrStaleSource       = errors.New("score release source is no longer current")
+	ErrNotFound                  = errors.New("score release not found")
+	ErrInvalidInput              = errors.New("invalid score release input")
+	ErrInvalidTransition         = errors.New("invalid score release transition")
+	ErrGateBlocked               = errors.New("score release gate is blocked")
+	ErrForbidden                 = errors.New("score release access forbidden")
+	ErrStaleSource               = errors.New("score release source is no longer current")
+	ErrAnonymousPaperUnavailable = errors.New("anonymous high-score paper is unavailable")
 )
 
 const (
@@ -325,7 +326,10 @@ type StudentImageGeometry struct {
 // only after proving that the current published release contains this
 // student's question.
 type StudentQuestionImageSource struct {
-	AnswerSegmentID string `json:"-"`
+	AnswerSegmentID      string `json:"-"`
+	AnonymousPageID      string `json:"-"`
+	AnonymousFileAssetID string `json:"-"`
+	ReleaseID            string `json:"-"`
 }
 
 type StudentAppealView struct {

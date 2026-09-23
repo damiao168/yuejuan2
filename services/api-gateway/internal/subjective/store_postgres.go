@@ -477,23 +477,49 @@ RETURNING id::text, tenant_id::text, answer_segment_id::text, question_id::text,
 		out.ProviderKey != "" &&
 		out.DeploymentKey != "" &&
 		out.DeploymentRegion != "" {
+		// Record the provider's complete usage in the same transaction as the
+		// grade. The model_call_fact trigger is a fallback for older callers;
+		// inserting first lets its ON CONFLICT preserve cached/reasoning tokens.
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO model_usage_event (
+  tenant_id, school_id, request_id, feature, agent_role, provider_key, model_name,
+  request_count, input_tokens, output_tokens, cached_input_tokens, reasoning_tokens, total_tokens,
+  status, metadata
+)
+SELECT $1::uuid, exam.school_id, $2, 'subjective_grading',
+  (SELECT NULLIF(run.agent_role, 'single') FROM subjective_grading_run run
+   WHERE run.tenant_id=$1::uuid AND run.id=NULLIF($3, '')::uuid), $4, $5,
+  CASE WHEN $15::bigint > 0 THEN $15::bigint ELSE 1 END,
+  $6, $7, $8, $9, CASE WHEN $10::bigint > 0 THEN $10::bigint ELSE $6::bigint+$7::bigint END, $11,
+  jsonb_build_object('deployment_key', $12, 'question_id', $13, 'answer_segment_id', $14)
+FROM answer_segment segment
+JOIN submission submission ON submission.tenant_id=segment.tenant_id AND submission.id=segment.submission_id
+JOIN exam ON exam.tenant_id=submission.tenant_id AND exam.id=submission.exam_id
+WHERE segment.tenant_id=$1::uuid AND segment.id=$14::uuid
+ON CONFLICT (tenant_id, request_id, feature) DO NOTHING
+`, tenantID, grade.AdapterRequestID, grade.RunID, grade.ProviderKey, grade.ModelVersion,
+			grade.InputTokens, grade.OutputTokens, grade.CachedInputTokens, grade.ReasoningTokens,
+			grade.TotalTokens, grade.Status, grade.DeploymentKey, grade.QuestionID, grade.AnswerSegmentID,
+			grade.AdapterAttempts); err != nil {
+			return Grade{}, err
+		}
 		if _, err := tx.ExecContext(ctx, `
 INSERT INTO model_call_fact (
   tenant_id, request_id, answer_segment_id, question_id,
   provider_key, deployment_key, adapter_type, model_version,
   prompt_version, rubric_version, capability_profile, deployment_region,
-  route_mode, route_reason, status, attempts, latency_ms, error_code
+  route_mode, route_reason, status, attempts, latency_ms, input_units, output_units, error_code
 )
 VALUES (
   $1, $2, $3, $4,
   $5, $6, $7, $8,
   $9, $10, $11, $12,
-  'local_only', 'configured governed grading-agent deployment', $13, $14, $15, $16
+  'local_only', 'configured governed grading-agent deployment', $13, $14, $15, $16, $17, $18
 )
 `, tenantID, out.AdapterRequestID, out.AnswerSegmentID, out.QuestionID,
 			out.ProviderKey, out.DeploymentKey, out.AdapterName, out.ModelVersion,
 			out.PromptVersion, out.RubricVersion, out.CapabilityProfile, out.DeploymentRegion,
-			out.Status, out.AdapterAttempts, out.AdapterLatencyMS, out.FailureReason); err != nil {
+			out.Status, out.AdapterAttempts, out.AdapterLatencyMS, grade.InputTokens, grade.OutputTokens, out.FailureReason); err != nil {
 			return Grade{}, err
 		}
 	}

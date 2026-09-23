@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"strings"
 	"time"
 
@@ -58,13 +59,13 @@ func (s *PostgresStore) CreateManagedAPIConfig(ctx context.Context, tenantID, ac
 INSERT INTO managed_model_api_config(
   id,tenant_id,provider_key,display_name,adapter_type,base_url,model_name,model_version,region,
   credential_ciphertext,credential_nonce,credential_hint,status,is_default,last_test_status,last_test_message,
-  last_test_latency_ms,last_tested_at,last_probe_mode,last_capability_status,last_capability_message,
+  last_test_latency_ms,last_tested_at,last_successful_tested_at,last_probe_mode,last_capability_status,last_capability_message,
   last_capability_tested_at,last_capability_probe_version,last_capability_usage,last_capability_diagnostic,
   config_source,provider_registry_version,created_by
 )
-VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24::jsonb,$25::jsonb,$26,$27,NULLIF($28,'')::uuid)
+VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,CASE WHEN $15='success' THEN $18 ELSE NULL END,$19,$20,$21,$22,$23,$24::jsonb,$25::jsonb,$26,$27,NULLIF($28,'')::uuid)
 RETURNING id::text,tenant_id::text,provider_key,display_name,adapter_type,base_url,model_name,model_version,region,
-          true,credential_hint,status,is_default,last_test_status,last_test_message,last_test_latency_ms,last_tested_at,
+          true,credential_hint,status,is_default,last_test_status,last_test_message,last_test_latency_ms,last_tested_at,last_successful_tested_at,
           last_probe_mode,last_capability_status,last_capability_message,last_capability_tested_at,last_capability_probe_version,last_capability_usage,last_capability_diagnostic,
           config_source,provider_registry_version,created_at,updated_at
 `, id, tenantID, normalized.ProviderKey, normalized.DisplayName, normalized.AdapterType,
@@ -120,6 +121,7 @@ SET display_name=$3,adapter_type=$4,base_url=$5,model_name=$6,model_version=$7,r
     last_test_message=CASE WHEN $14 THEN $16 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 THEN last_test_message ELSE '' END,
     last_test_latency_ms=CASE WHEN $14 THEN $17 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 THEN last_test_latency_ms ELSE NULL END,
     last_tested_at=CASE WHEN $14 THEN $18 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 THEN last_tested_at ELSE NULL END,
+    last_successful_tested_at=CASE WHEN $14 AND $15='success' THEN $18 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 THEN last_successful_tested_at ELSE NULL END,
     last_probe_mode=CASE WHEN $14 THEN $19 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 THEN last_probe_mode ELSE '' END,
     last_capability_status=CASE WHEN $20 THEN $21 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 THEN last_capability_status ELSE 'untested' END,
     last_capability_message=CASE WHEN $20 THEN $22 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 THEN last_capability_message ELSE '' END,
@@ -130,7 +132,7 @@ SET display_name=$3,adapter_type=$4,base_url=$5,model_name=$6,model_version=$7,r
     updated_at=now()
 WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL
 RETURNING id::text,tenant_id::text,provider_key,display_name,adapter_type,base_url,model_name,model_version,region,
-          true,credential_hint,status,is_default,last_test_status,last_test_message,last_test_latency_ms,last_tested_at,
+          true,credential_hint,status,is_default,last_test_status,last_test_message,last_test_latency_ms,last_tested_at,last_successful_tested_at,
           last_probe_mode,last_capability_status,last_capability_message,last_capability_tested_at,last_capability_probe_version,last_capability_usage,last_capability_diagnostic,
           config_source,provider_registry_version,created_at,updated_at
 `, tenantID, id, normalized.DisplayName, normalized.AdapterType, normalized.BaseURL,
@@ -188,28 +190,31 @@ func (s *PostgresStore) GetManagedAPIConnection(ctx context.Context, tenantID, i
 	return ManagedAPIConnection{Config: item, APIKey: apiKey}, nil
 }
 
-func (s *PostgresStore) RecordManagedAPIProbe(ctx context.Context, tenantID, id string, result ManagedAPIProbeResult) (ManagedAPIConfig, error) {
+func (s *PostgresStore) RecordManagedAPIProbe(ctx context.Context, tenantID, id string, expectedUpdatedAt time.Time, result ManagedAPIProbeResult) (ManagedAPIConfig, error) {
 	probe := managedProbePersistence(&result)
 	row := s.db.QueryRowContext(ctx, `
 UPDATE managed_model_api_config
-SET last_test_status=$3,last_test_message=$4,last_test_latency_ms=$5,last_tested_at=$6,last_probe_mode=$7,
-    last_capability_status=CASE WHEN $8 THEN $9 ELSE last_capability_status END,
-    last_capability_message=CASE WHEN $8 THEN $10 ELSE last_capability_message END,
-    last_capability_tested_at=CASE WHEN $8 THEN $11 ELSE last_capability_tested_at END,
-    last_capability_probe_version=CASE WHEN $8 THEN $12 ELSE last_capability_probe_version END,
-    last_capability_usage=CASE WHEN $8 THEN $13::jsonb ELSE last_capability_usage END,
-    last_capability_diagnostic=CASE WHEN $8 THEN $14::jsonb ELSE last_capability_diagnostic END,
-    updated_at=now()
-WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL
+SET last_test_status=$4,last_test_message=$5,last_test_latency_ms=$6,last_tested_at=$7,last_probe_mode=$8,
+    last_successful_tested_at=CASE WHEN $4='success' THEN $7 ELSE last_successful_tested_at END,
+    last_capability_status=CASE WHEN $9 THEN $10 ELSE last_capability_status END,
+    last_capability_message=CASE WHEN $9 THEN $11 ELSE last_capability_message END,
+    last_capability_tested_at=CASE WHEN $9 THEN $12 ELSE last_capability_tested_at END,
+    last_capability_probe_version=CASE WHEN $9 THEN $13 ELSE last_capability_probe_version END,
+    last_capability_usage=CASE WHEN $9 THEN $14::jsonb ELSE last_capability_usage END,
+    last_capability_diagnostic=CASE WHEN $9 THEN $15::jsonb ELSE last_capability_diagnostic END
+WHERE tenant_id=$1::uuid AND id=$2::uuid AND updated_at=$3 AND deleted_at IS NULL
 RETURNING id::text,tenant_id::text,provider_key,display_name,adapter_type,base_url,model_name,model_version,region,
-          true,credential_hint,status,is_default,last_test_status,last_test_message,last_test_latency_ms,last_tested_at,
+          true,credential_hint,status,is_default,last_test_status,last_test_message,last_test_latency_ms,last_tested_at,last_successful_tested_at,
           last_probe_mode,last_capability_status,last_capability_message,last_capability_tested_at,last_capability_probe_version,last_capability_usage,last_capability_diagnostic,
           config_source,provider_registry_version,created_at,updated_at
-`, tenantID, id, probe.Status, probe.Message, probe.Latency, probe.TestedAt, probe.Mode,
+`, tenantID, id, expectedUpdatedAt, probe.Status, probe.Message, probe.Latency, probe.TestedAt, probe.Mode,
 		probe.UpdateCapability, probe.CapabilityStatus, probe.CapabilityMessage, probe.CapabilityTestedAt,
 		probe.CapabilityVersion, probe.CapabilityUsage, probe.CapabilityDiagnostic)
 	item, err := scanManagedAPIConfig(row)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ManagedAPIConfig{}, ErrManagedProbeStale
+		}
 		return ManagedAPIConfig{}, mapStoreError(err)
 	}
 	return item, nil
@@ -217,7 +222,7 @@ RETURNING id::text,tenant_id::text,provider_key,display_name,adapter_type,base_u
 
 const managedAPIConfigSelect = `
 SELECT id::text,tenant_id::text,provider_key,display_name,adapter_type,base_url,model_name,model_version,region,
-       true,credential_hint,status,is_default,last_test_status,last_test_message,last_test_latency_ms,last_tested_at,
+       true,credential_hint,status,is_default,last_test_status,last_test_message,last_test_latency_ms,last_tested_at,last_successful_tested_at,
        last_probe_mode,last_capability_status,last_capability_message,last_capability_tested_at,last_capability_probe_version,last_capability_usage,
        last_capability_diagnostic,
        config_source,provider_registry_version,created_at,updated_at
@@ -233,7 +238,7 @@ func scanManagedAPIConfig(row rowScanner) (ManagedAPIConfig, error) {
 		&item.ID, &item.TenantID, &item.ProviderKey, &item.DisplayName, &item.AdapterType,
 		&item.BaseURL, &item.ModelName, &item.ModelVersion, &item.Region,
 		&item.CredentialConfigured, &item.CredentialHint, &item.Status, &item.IsDefault,
-		&item.LastTestStatus, &item.LastTestMessage, &lastTestLatency, &item.LastTestedAt,
+		&item.LastTestStatus, &item.LastTestMessage, &lastTestLatency, &item.LastTestedAt, &item.LastSuccessfulTestedAt,
 		&item.LastProbeMode, &item.LastCapabilityStatus, &item.LastCapabilityMessage,
 		&item.LastCapabilityTestedAt, &item.LastCapabilityVersion, &capabilityUsage, &capabilityDiagnostic,
 		&item.ConfigSource, &item.ProviderRegistryVersion, &item.CreatedAt, &item.UpdatedAt,
@@ -278,10 +283,13 @@ func managedProbePersistence(result *ManagedAPIProbeResult) managedProbePersiste
 	values.HasProbe = true
 	values.Status = "failed"
 	connectionOK := result.OK || (result.ProbeMode == "capability" && result.CredentialCheck.OK && result.ModelCheck.OK)
-	if connectionOK {
+	transientFailure := !result.OK && transientManagedProbeFailure(*result)
+	if transientFailure {
+		values.Status = "temporary_unavailable"
+	} else if connectionOK {
 		values.Status = "success"
 	}
-	if connectionOK && !result.OK {
+	if connectionOK && !result.OK && !transientFailure {
 		values.Message = "连接正常，结构化能力检测未通过"
 	} else {
 		values.Message = boundedManagedProbeMessage(result.Message)
@@ -293,7 +301,7 @@ func managedProbePersistence(result *ManagedAPIProbeResult) managedProbePersiste
 	if values.Mode == "" {
 		values.Mode = "capability"
 	}
-	values.UpdateCapability = values.Mode == "capability" && !result.Reused &&
+	values.UpdateCapability = values.Mode == "capability" && !result.Reused && !transientFailure &&
 		(result.GeneratedRequest || result.CapabilityCheck.OK || result.CapabilityCheck.Code != "")
 	if values.UpdateCapability {
 		values.CapabilityStatus = "failed"

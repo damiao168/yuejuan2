@@ -30,6 +30,7 @@ type DocumentImportService struct {
 // It must never be persisted in a paper import or returned to the browser.
 type DocumentModelConfig struct {
 	AdapterType  string `json:"adapter_type"`
+	ProviderKey  string `json:"provider_key,omitempty"`
 	BaseURL      string `json:"base_url"`
 	APIKey       string `json:"api_key"`
 	ModelName    string `json:"model_name"`

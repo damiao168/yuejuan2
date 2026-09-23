@@ -169,6 +169,10 @@ func TestRegisteredDirectIDRoutesDeclareResourceBoundaryOrExplicitTenantScope(t 
 		"/api/v1/score-commands/", "/api/v1/report-commands/",
 		"/api/v1/review/comment-templates/", "/api/v1/model-", "/api/v1/grading-evaluations/",
 		"/api/v1/ai-eligibility/", "/api/v1/platform/model-api-configs/",
+		// Platform-school routes intentionally address another tenant. Their
+		// dedicated guard requires a platform-tenant platform_admin plus
+		// tenant:manage before the cross-tenant read model is queried.
+		"/api/v1/platform/schools/",
 		// Reusable items have no exam ancestry. questionbank stores check the
 		// authenticated tenant, school scope and explicit bank action ACL on
 		// every read/write AND durable receipt replay (real PostgreSQL E2E).

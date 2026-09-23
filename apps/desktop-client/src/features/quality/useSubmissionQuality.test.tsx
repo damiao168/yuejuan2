@@ -26,7 +26,7 @@ describe("submission quality controller", () => {
   });
   async function mount(submissionId: string) {
     function Probe() {
-      current = useSubmissionQuality({} as never, submissionId, vi.fn().mockResolvedValue(undefined));
+      current = useSubmissionQuality({} as never, submissionId, "test-session", vi.fn().mockResolvedValue(undefined));
       return null;
     }
     await act(async () => { root.render(<Probe />); });

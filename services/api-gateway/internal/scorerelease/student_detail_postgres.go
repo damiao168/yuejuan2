@@ -23,7 +23,7 @@ func (s *PostgresStore) studentDetail(ctx context.Context, tenantID, examID, stu
 	}
 	filter := studentID
 	p := release.VisibilityPolicy
-	if p.ShowCohortStatistics || p.ShowScoreDistribution || p.ShowPercentile || p.ShowExactRank || (p.ShowQuestionScores && p.ShowHighScorePaper) {
+	if p.ShowCohortStatistics || p.ShowScoreDistribution || p.ShowPercentile || p.ShowExactRank {
 		filter = ""
 	}
 	items, err := s.filteredItems(ctx, tenantID, id, filter)

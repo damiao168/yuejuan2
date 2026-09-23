@@ -126,14 +126,23 @@ type AdapterOutput struct {
 }
 
 type AdapterTelemetry struct {
-	Adapter         string   `json:"adapter"`
-	Provider        string   `json:"provider"`
-	Deployment      string   `json:"deployment"`
-	Region          string   `json:"region"`
-	Attempts        int      `json:"attempts"`
-	RepairAttempted bool     `json:"repair_attempted"`
-	PriorErrorCodes []string `json:"prior_error_codes"`
-	ElapsedMS       int64    `json:"elapsed_ms"`
+	Adapter         string          `json:"adapter"`
+	Provider        string          `json:"provider"`
+	Deployment      string          `json:"deployment"`
+	Region          string          `json:"region"`
+	Attempts        int             `json:"attempts"`
+	RepairAttempted bool            `json:"repair_attempted"`
+	PriorErrorCodes []string        `json:"prior_error_codes"`
+	ElapsedMS       int64           `json:"elapsed_ms"`
+	Usage           ModelTokenUsage `json:"usage,omitempty"`
+}
+
+type ModelTokenUsage struct {
+	InputTokens       int64 `json:"input_tokens,omitempty"`
+	CachedInputTokens int64 `json:"cached_input_tokens,omitempty"`
+	OutputTokens      int64 `json:"output_tokens,omitempty"`
+	ReasoningTokens   int64 `json:"reasoning_tokens,omitempty"`
+	TotalTokens       int64 `json:"total_tokens,omitempty"`
 }
 
 type Grade struct {
@@ -159,6 +168,11 @@ type Grade struct {
 	AdapterAttempts        int                   `json:"adapter_attempts"`
 	AdapterLatencyMS       int64                 `json:"adapter_latency_ms"`
 	AdapterRepairAttempted bool                  `json:"adapter_repair_attempted"`
+	InputTokens            int64                 `json:"input_tokens,omitempty"`
+	CachedInputTokens      int64                 `json:"cached_input_tokens,omitempty"`
+	OutputTokens           int64                 `json:"output_tokens,omitempty"`
+	ReasoningTokens        int64                 `json:"reasoning_tokens,omitempty"`
+	TotalTokens            int64                 `json:"total_tokens,omitempty"`
 	SuggestedScore         float64               `json:"suggested_score"`
 	MaxScore               float64               `json:"max_score"`
 	Confidence             float64               `json:"confidence"`

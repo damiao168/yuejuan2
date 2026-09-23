@@ -16,19 +16,20 @@ import (
 )
 
 type Handler struct {
-	store             Store
-	audit             auth.AuditRecorder
-	secrets           SecretReferenceResolver
-	baseline          LocalBaseline
-	prompts           RuntimePromptSource
-	managedAPIProber  ManagedAPIProber
-	managedAPIChatter ManagedAPIChatter
-	chatMu            sync.Mutex
-	activeChats       map[string]int
+	store                   Store
+	audit                   auth.AuditRecorder
+	secrets                 SecretReferenceResolver
+	baseline                LocalBaseline
+	prompts                 RuntimePromptSource
+	managedAPIProber        ManagedAPIProber
+	managedAPIProbeObserver ManagedAPIProbeObserver
+	managedAPIChatter       ManagedAPIChatter
+	chatMu                  sync.Mutex
+	activeChats             map[string]int
 }
 
 func NewHandler(store Store, audit auth.AuditRecorder, secrets SecretReferenceResolver, baseline LocalBaseline) *Handler {
-	return &Handler{store: store, audit: audit, secrets: secrets, baseline: baseline}
+	return &Handler{store: store, audit: audit, secrets: secrets, baseline: baseline, managedAPIProber: NewHTTPManagedAPIProber(0)}
 }
 
 func (h *Handler) WithRuntimePromptSource(source RuntimePromptSource) *Handler {
@@ -315,23 +316,6 @@ func (h *Handler) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 	h.auditAction(r, "model.policy_updated", "tenant_model_policy", item.ID, input.Reason,
 		map[string]any{"tenant_id": tenantID, "mode": item.Mode, "external_enabled": item.ExternalEnabled, "text_export_enabled": item.TextExportEnabled, "image_export_enabled": item.ImageExportEnabled, "allowed_deployments": item.AllowedDeployments, "version": item.Version})
 	httpx.JSON(w, http.StatusOK, map[string]any{"policy": item})
-}
-
-func (h *Handler) ProbeSecret(w http.ResponseWriter, r *http.Request) {
-	var input struct {
-		CredentialRef string `json:"credential_ref"`
-	}
-	if !decodeStrictJSON(w, r, &input) {
-		return
-	}
-	probe, err := h.secrets.Probe(input.CredentialRef)
-	if err != nil {
-		httpx.Error(w, r, http.StatusBadRequest, "invalid_secret_reference", "invalid secret reference")
-		return
-	}
-	h.auditAction(r, "model.secret_reference_probed", "secret_reference", "", "probe secret reference without reading or returning its value",
-		map[string]any{"scheme": probe.Scheme, "resolver_supported": probe.ResolverSupported, "configured": probe.Configured})
-	httpx.JSON(w, http.StatusOK, map[string]any{"probe": probe})
 }
 
 func (h *Handler) ListSandboxApprovals(w http.ResponseWriter, r *http.Request) {

@@ -217,6 +217,9 @@ func (s *MemoryStore) Confirm(_ context.Context, tenantID, groupID, actorID stri
 	if !ok {
 		return Group{}, nil, ErrNotFound
 	}
+	if group.RepresentationVersion != s.provider.Version() || group.AlgorithmVersion != DefaultAlgorithmVersion {
+		return Group{}, nil, ErrStateConflict
+	}
 	refreshReadiness(&group)
 	if group.Decision == nil || group.Decision.Revision != input.ExpectedRevision {
 		return Group{}, nil, ErrRevisionConflict

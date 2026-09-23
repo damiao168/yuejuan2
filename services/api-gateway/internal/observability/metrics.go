@@ -31,6 +31,13 @@ type durationSeries struct {
 	buckets [len(durationBuckets)]uint64
 }
 
+type modelProbeKey struct {
+	operation    string
+	provider     string
+	errorCode    string
+	failureStage string
+}
+
 // Registry is a small Prometheus text exporter kept inside the gateway so the
 // production image has no separate metrics sidecar or global mutable registry.
 type Registry struct {
@@ -41,6 +48,7 @@ type Registry struct {
 	durations           map[[2]string]durationSeries
 	dbQueries           map[[2]string]durationSeries
 	dbSlow              map[string]uint64
+	modelProbes         map[modelProbeKey]uint64
 	inFlight            atomic.Int64
 	dbStats             func() DatabaseStats
 	authLimiterDegraded func() bool
@@ -59,6 +67,66 @@ func NewRegistry() *Registry {
 		requests: map[requestKey]uint64{}, durations: map[[2]string]durationSeries{},
 		errors: map[routeValueKey]uint64{}, outcomes: map[routeValueKey]uint64{},
 		dbQueries: map[[2]string]durationSeries{}, dbSlow: map[string]uint64{},
+		modelProbes: map[modelProbeKey]uint64{},
+	}
+}
+
+// ObserveManagedModelProbe records bounded labels only. User-defined provider
+// names, endpoints, credentials and upstream response bodies never become labels.
+func (r *Registry) ObserveManagedModelProbe(operation, provider, errorCode, failureStage string, ok bool) {
+	if r == nil {
+		return
+	}
+	key := modelProbeKey{
+		operation:    managedModelProbeOperation(operation),
+		provider:     managedModelProbeProvider(provider),
+		errorCode:    managedModelProbeErrorCode(errorCode, ok),
+		failureStage: managedModelProbeFailureStage(failureStage),
+	}
+	r.mu.Lock()
+	r.modelProbes[key]++
+	r.mu.Unlock()
+}
+
+func managedModelProbeOperation(value string) string {
+	switch value {
+	case "create", "validate", "models", "auto_create", "update", "quick", "capability":
+		return value
+	default:
+		return "other"
+	}
+}
+
+func managedModelProbeProvider(value string) string {
+	switch value {
+	case "deepseek", "aliyun", "openai", "zhipu", "moonshot", "anthropic", "gemini", "custom":
+		return value
+	default:
+		return "other"
+	}
+}
+
+func managedModelProbeErrorCode(value string, ok bool) string {
+	if ok {
+		return "none"
+	}
+	switch value {
+	case "provider_timeout", "provider_unavailable", "provider_rate_limited", "provider_error",
+		"provider_invalid_response", "credential_invalid", "model_permission_denied", "model_not_found",
+		"invalid_endpoint", "invalid_json", "no_choices", "response_format_unsupported",
+		"quick_probe_unsupported":
+		return value
+	default:
+		return "other"
+	}
+}
+
+func managedModelProbeFailureStage(value string) string {
+	switch value {
+	case "dns", "connect", "tls", "ttfb", "response", "body", "request":
+		return value
+	default:
+		return "none"
 	}
 }
 
@@ -195,6 +263,10 @@ func (r *Registry) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	for key, value := range r.dbSlow {
 		dbSlow[key] = value
 	}
+	modelProbes := make(map[modelProbeKey]uint64, len(r.modelProbes))
+	for key, value := range r.modelProbes {
+		modelProbes[key] = value
+	}
 	dbStats := r.dbStats
 	authLimiterDegraded := r.authLimiterDegraded
 	r.mu.RUnlock()
@@ -206,6 +278,19 @@ func (r *Registry) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	}
 	writeRouteValueCounters(&output, "edugrade_http_errors_total", "HTTP errors grouped by stable application error code.", "error_code", errors)
 	writeRouteValueCounters(&output, "edugrade_operation_outcomes_total", "Operation recovery outcomes grouped by stable result status.", "outcome", outcomes)
+	output.WriteString("# HELP edugrade_managed_model_probes_total Managed model checks by bounded provider and error category.\n# TYPE edugrade_managed_model_probes_total counter\n")
+	probeKeys := make([]modelProbeKey, 0, len(modelProbes))
+	for key := range modelProbes {
+		probeKeys = append(probeKeys, key)
+	}
+	sort.Slice(probeKeys, func(i, j int) bool {
+		a, b := probeKeys[i], probeKeys[j]
+		return a.operation+a.provider+a.errorCode+a.failureStage < b.operation+b.provider+b.errorCode+b.failureStage
+	})
+	for _, key := range probeKeys {
+		fmt.Fprintf(&output, "edugrade_managed_model_probes_total{operation=%q,provider=%q,error_code=%q,failure_stage=%q} %d\n",
+			key.operation, key.provider, key.errorCode, key.failureStage, modelProbes[key])
+	}
 	output.WriteString("# HELP edugrade_http_requests_in_flight Current in-flight HTTP requests.\n# TYPE edugrade_http_requests_in_flight gauge\n")
 	fmt.Fprintf(&output, "edugrade_http_requests_in_flight %d\n", r.inFlight.Load())
 	output.WriteString("# HELP edugrade_http_request_duration_seconds HTTP request duration.\n# TYPE edugrade_http_request_duration_seconds histogram\n")

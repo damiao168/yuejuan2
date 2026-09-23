@@ -1,6 +1,6 @@
 import { ApiClientError, getUserErrorMessage } from "../../../api/client";
 import type { RubricPoint } from "../../../api/papers";
-import type { AiGrade, ScoringRunItem } from "../../../api/review";
+import type { AiGrade, ReviewDraft, ScoringRunItem } from "../../../api/review";
 import type { StatusTone } from "../../../types";
 import type {
   DraftFallbackSnapshot,
@@ -228,6 +228,48 @@ export function createInitialDraft(ctx: WorkbenchContext | null): ScoreDraft {
 
 export function createDraftSnapshot(draft: ScoreDraft, mode: ViewerMode, scale: number, rotation: number, offset: { x: number; y: number }, fit: boolean): DraftFallbackSnapshot {
   return { draft, viewer: { mode, scale, rotation, offset, fit } };
+}
+
+export interface ServerDraftSnapshot {
+  snapshot: DraftFallbackSnapshot;
+  revision: number;
+  updatedAt: number;
+}
+
+/** Converts the authoritative API draft into the same shape as the in-memory fallback. */
+export function serverDraftSnapshot(initial: ScoreDraft, draft: ReviewDraft | null, canViewOriginalImage: boolean): ServerDraftSnapshot {
+  if (!draft) {
+    return {
+      snapshot: createDraftSnapshot(initial, "segment", 1, 0, { x: 0, y: 0 }, true),
+      revision: 0,
+      updatedAt: 0
+    };
+  }
+  const viewer = draft.viewer_state;
+  const savedMode = ["segment", "original", "ocr"].includes(String(viewer.mode)) ? viewer.mode as ViewerMode : "segment";
+  const mode = savedMode === "original" && !canViewOriginalImage ? "segment" : savedMode;
+  const scale = Number(viewer.scale ?? 1);
+  const rotation = Number(viewer.rotation ?? 0);
+  const savedOffset = viewer.offset as { x?: number; y?: number } | undefined;
+  return {
+    snapshot: createDraftSnapshot(
+      {
+        ...initial,
+        score: draft.score ?? null,
+        comments: draft.comments,
+        privateNote: draft.private_note,
+        studentFeedback: draft.student_feedback,
+        rubricSelections: Object.fromEntries(draft.rubric_selections.map((item) => [item.point_id, item.score]))
+      },
+      mode,
+      Number.isFinite(scale) ? scale : 1,
+      Number.isFinite(rotation) ? rotation : 0,
+      { x: Number(savedOffset?.x ?? 0), y: Number(savedOffset?.y ?? 0) },
+      viewer.fit !== false
+    ),
+    revision: draft.revision,
+    updatedAt: Date.parse(draft.updated_at) || 0
+  };
 }
 
 export function fallbackSnapshot(value: unknown, initial: ScoreDraft): DraftFallbackSnapshot | null {

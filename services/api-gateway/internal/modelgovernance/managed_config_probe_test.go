@@ -1,12 +1,78 @@
 package modelgovernance
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
+	"time"
 )
+
+func TestManagedReadOnlyProbeRetriesNetworkFailureOnce(t *testing.T) {
+	attempts := 0
+	response, err := retryManagedReadOnlyRequest(context.Background(), 20*time.Millisecond, func(context.Context) (*http.Response, error) {
+		attempts++
+		if attempts == 1 {
+			return nil, &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connection refused")}
+		}
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{"data":[]}`))}, nil
+	})
+	if err != nil || response.StatusCode != http.StatusOK || attempts != 2 {
+		t.Fatalf("expected one network retry, attempts=%d response=%#v err=%v", attempts, response, err)
+	}
+	response.Body.Close()
+}
+
+func TestManagedReadOnlyProbeDoesNotRetryResponseOrCertificateError(t *testing.T) {
+	attempts := 0
+	response, err := retryManagedReadOnlyRequest(context.Background(), 20*time.Millisecond, func(context.Context) (*http.Response, error) {
+		attempts++
+		return &http.Response{StatusCode: http.StatusUnauthorized, Body: io.NopCloser(strings.NewReader(""))}, nil
+	})
+	if err != nil || response.StatusCode != http.StatusUnauthorized || attempts != 1 {
+		t.Fatalf("HTTP response was retried: attempts=%d err=%v", attempts, err)
+	}
+	response.Body.Close()
+	attempts = 0
+	_, err = retryManagedReadOnlyRequest(context.Background(), 20*time.Millisecond, func(context.Context) (*http.Response, error) {
+		attempts++
+		return nil, &url.Error{Op: "Get", Err: errors.New("certificate verification failed")}
+	})
+	if err == nil || attempts != 1 {
+		t.Fatalf("certificate error was retried: attempts=%d err=%v", attempts, err)
+	}
+}
+
+func TestManagedPublicAddressFallbackKeepsPrivateAddressGuard(t *testing.T) {
+	addresses := []net.IPAddr{{IP: net.ParseIP("8.8.8.8")}, {IP: net.ParseIP("1.1.1.1")}}
+	attempts := 0
+	connection, err := dialPublicProviderAddresses(context.Background(), "tcp", "443", addresses,
+		func(context.Context, string, string) (net.Conn, error) {
+			attempts++
+			if attempts == 1 {
+				return nil, errors.New("first public IP unavailable")
+			}
+			client, server := net.Pipe()
+			server.Close()
+			return client, nil
+		}, nil)
+	if err != nil || attempts != 2 {
+		t.Fatalf("public address fallback failed: attempts=%d err=%v", attempts, err)
+	}
+	connection.Close()
+	attempts = 0
+	_, err = dialPublicProviderAddresses(context.Background(), "tcp", "443",
+		[]net.IPAddr{{IP: net.ParseIP("8.8.8.8")}, {IP: net.ParseIP("127.0.0.1")}},
+		func(context.Context, string, string) (net.Conn, error) { attempts++; return nil, nil }, nil)
+	if !errors.Is(err, ErrInvalidManagedConfig) || attempts != 0 {
+		t.Fatalf("mixed public/private DNS answer was not rejected before dial: attempts=%d err=%v", attempts, err)
+	}
+}
 
 func TestManagedProbeClassifiesProviderFailures(t *testing.T) {
 	tests := []struct {

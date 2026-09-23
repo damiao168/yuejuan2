@@ -81,6 +81,15 @@ foreach ($key in $requiredKeys) {
     throw "Required deployment setting is missing: $key"
   }
 }
+$promptManifestPath = Resolve-DeploymentPath "../../../ai-services/prompts/manifest.json"
+$promptManifest = Get-Content -LiteralPath $promptManifestPath -Raw -Encoding utf8 | ConvertFrom-Json
+$manifestPromptVersion = [string]$promptManifest.prompt_version
+if ([string]::IsNullOrWhiteSpace($manifestPromptVersion)) {
+  throw "Governed prompt manifest is missing prompt_version."
+}
+if ($envValues["EDUGRADE_AI_PROMPT_VERSION"] -ne $manifestPromptVersion) {
+  throw "EDUGRADE_AI_PROMPT_VERSION '$($envValues["EDUGRADE_AI_PROMPT_VERSION"])' does not match governed prompt manifest version '$manifestPromptVersion'."
+}
 if ($envValues["EDUGRADE_GRADING_AGENT_TOKEN"].Length -lt 32) {
   throw "EDUGRADE_GRADING_AGENT_TOKEN must contain at least 32 characters."
 }

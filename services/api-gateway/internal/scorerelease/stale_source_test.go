@@ -30,6 +30,10 @@ func TestRegradePublishRejectsStaleSourceWithoutChangingCurrent(t *testing.T) {
 		return r
 	}
 	a, b := makeDraft("stale-draft-001", 5), makeDraft("stale-draft-002", 3)
+	corrected, err := service.Get(ctx, tenant, a.ID)
+	if err != nil || len(corrected.Questions) != 1 || corrected.Questions[0].Explanation.Feedback != "" || len(corrected.Questions[0].Explanation.RubricSummary) != 0 {
+		t.Fatalf("regrade retained stale explanation: %+v %v", corrected, err)
+	}
 	if _, err = service.Publish(ctx, tenant, a.ID, actor); err != nil {
 		t.Fatal(err)
 	}

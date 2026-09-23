@@ -3,6 +3,12 @@
 import type { ApiTransport } from "../runtime";
 import { appendQuery, fillPath } from "../runtime";
 import type {
+  PlatformSchoolListResponse,
+  PlatformSchoolResponse,
+  PlatformSchoolMembersResponse,
+  PlatformSchoolUsageResponse,
+  PlatformSchoolModelHealthResponse,
+  PlatformSchoolActivityResponse,
   PanelModelRoleBindingInput,
   PanelModelRoleBindingList,
   PanelModelRoleBindingResponse,
@@ -273,6 +279,12 @@ import type {
 } from "./types";
 
 export interface operations {
+  "listPlatformSchools": { args: { query?: { "q"?: string; "status"?: "active" | "disabled"; "activity"?: "today" | "7d" | "30d" | "inactive_30d" | "never"; "model_health"?: "healthy" | "warning" | "unconfigured"; "usage_window"?: "today" | "1d" | "7d" | "30d" | "90d"; "sort"?: "created_at" | "last_activity" | "token_usage" | "student_count"; "order"?: "asc" | "desc"; "limit"?: number; "cursor"?: string; }; signal?: AbortSignal; }; response: PlatformSchoolListResponse; };
+  "getPlatformSchool": { args: { path: { "tenant_id": string; }; signal?: AbortSignal; }; response: PlatformSchoolResponse; };
+  "listPlatformSchoolMembers": { args: { path: { "tenant_id": string; }; query?: { "q"?: string; "role"?: "school_admin" | "tenant_admin" | "teacher" | "grader" | "arbitrator" | "auditor"; "status"?: "active" | "disabled"; }; signal?: AbortSignal; }; response: PlatformSchoolMembersResponse; };
+  "getPlatformSchoolUsage": { args: { path: { "tenant_id": string; }; query?: { "window"?: "today" | "1d" | "7d" | "30d" | "90d"; "start_date"?: string; "end_date"?: string; }; signal?: AbortSignal; }; response: PlatformSchoolUsageResponse; };
+  "getPlatformSchoolModelHealth": { args: { path: { "tenant_id": string; }; signal?: AbortSignal; }; response: PlatformSchoolModelHealthResponse; };
+  "getPlatformSchoolActivity": { args: { path: { "tenant_id": string; }; query?: { "limit"?: number; }; signal?: AbortSignal; }; response: PlatformSchoolActivityResponse; };
   "listPlatformPanelModelBindings": { args: { query: { "tenant_id": string; "education_stage": "junior" | "senior"; "subject_code": string; "archetype_code": string; }; signal?: AbortSignal; }; response: PanelModelRoleBindingList; };
   "savePlatformPanelModelBinding": { args: { body: PanelModelRoleBindingInput; signal?: AbortSignal; }; response: PanelModelRoleBindingResponse; };
   "getManagedChatModel": { args: { signal?: AbortSignal; }; response: ManagedChatModelResponse; };
@@ -390,6 +402,7 @@ export interface operations {
   "getScoreRelease": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: ScoreReleaseDetail; };
   "getScoreReleaseDiff": { args: { path: { "id": string; }; query?: { "base"?: string; }; signal?: AbortSignal; }; response: ScoreReleaseDiffResponse; };
   "publishScoreRelease": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: ScoreReleaseResponse; };
+  "revokeHighScorePaper": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: void; };
   "createScoreReleaseRollback": { args: { path: { "examId": string; }; body: CreateScoreReleaseRollbackRequest; signal?: AbortSignal; }; response: ScoreReleaseResponse; };
   "listStudentPublishedExams": { args: { signal?: AbortSignal; }; response: StudentPublishedExamListResponse; };
   "getStudentPublishedResult": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: StudentPublishedResultResponse; };
@@ -517,6 +530,36 @@ export interface operations {
 
 export class EduGradeApi {
   constructor(private readonly transport: ApiTransport) {}
+
+  listPlatformSchools(args: operations["listPlatformSchools"]["args"] = {}): Promise<operations["listPlatformSchools"]["response"]> {
+    const requestPath = appendQuery("/api/v1/platform/schools", args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getPlatformSchool(args: operations["getPlatformSchool"]["args"]): Promise<operations["getPlatformSchool"]["response"]> {
+    const requestPath = fillPath("/api/v1/platform/schools/{tenant_id}", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  listPlatformSchoolMembers(args: operations["listPlatformSchoolMembers"]["args"]): Promise<operations["listPlatformSchoolMembers"]["response"]> {
+    const requestPath = appendQuery(fillPath("/api/v1/platform/schools/{tenant_id}/members", args.path), args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getPlatformSchoolUsage(args: operations["getPlatformSchoolUsage"]["args"]): Promise<operations["getPlatformSchoolUsage"]["response"]> {
+    const requestPath = appendQuery(fillPath("/api/v1/platform/schools/{tenant_id}/usage", args.path), args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getPlatformSchoolModelHealth(args: operations["getPlatformSchoolModelHealth"]["args"]): Promise<operations["getPlatformSchoolModelHealth"]["response"]> {
+    const requestPath = fillPath("/api/v1/platform/schools/{tenant_id}/model-health", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getPlatformSchoolActivity(args: operations["getPlatformSchoolActivity"]["args"]): Promise<operations["getPlatformSchoolActivity"]["response"]> {
+    const requestPath = appendQuery(fillPath("/api/v1/platform/schools/{tenant_id}/activity", args.path), args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
 
   listPlatformPanelModelBindings(args: operations["listPlatformPanelModelBindings"]["args"]): Promise<operations["listPlatformPanelModelBindings"]["response"]> {
     const requestPath = appendQuery("/api/v1/platform/panel-model-bindings", args.query);
@@ -1100,6 +1143,11 @@ export class EduGradeApi {
 
   publishScoreRelease(args: operations["publishScoreRelease"]["args"]): Promise<operations["publishScoreRelease"]["response"]> {
     const requestPath = fillPath("/api/v1/score-releases/{id}/publish", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal });
+  }
+
+  revokeHighScorePaper(args: operations["revokeHighScorePaper"]["args"]): Promise<operations["revokeHighScorePaper"]["response"]> {
+    const requestPath = fillPath("/api/v1/score-releases/{id}/high-score-paper/revoke", args.path);
     return this.transport.request(requestPath, { method: "POST", signal: args.signal });
   }
 

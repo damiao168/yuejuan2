@@ -117,6 +117,31 @@ WHERE tenant_id=$1 AND id=$2::uuid AND current_generation=$3 AND source_revision
 	if rows != 1 {
 		return PaperImportJob{}, ErrConflict
 	}
+	if parsed.ModelUsage.RequestCount > 0 || parsed.ModelUsage.TotalTokens > 0 || parsed.ModelUsage.InputTokens > 0 || parsed.ModelUsage.OutputTokens > 0 || parsed.ModelUsage.CachedInputTokens > 0 || parsed.ModelUsage.ReasoningTokens > 0 {
+		if _, err = tx.ExecContext(ctx, `
+INSERT INTO model_usage_event(
+  tenant_id,school_id,request_id,feature,provider_key,model_name,
+  request_count,input_tokens,output_tokens,cached_input_tokens,reasoning_tokens,total_tokens,status,metadata
+)
+SELECT job.tenant_id,exam.school_id,$3,'paper_import',
+  COALESCE(NULLIF($11,''),config.provider_key,'document_parser'),COALESCE(NULLIF($12,''),config.model_name,'document-parser'),
+  CASE WHEN $13::bigint > 0 THEN $13::bigint ELSE 1 END,
+  $4,$5,$6,$7,CASE WHEN $8::bigint > 0 THEN $8::bigint ELSE $4::bigint+$5::bigint END,
+  'succeeded',jsonb_build_object('paper_import_id',$2::text,'generation',$9::bigint,'run_id',$10::text,'provider_request_count',CASE WHEN $13::bigint > 0 THEN $13::bigint ELSE 1 END)
+FROM paper_import_job job
+JOIN exam ON exam.tenant_id=job.tenant_id AND exam.id=job.exam_id
+LEFT JOIN LATERAL (
+  SELECT provider_key,model_name FROM managed_model_api_config
+  WHERE tenant_id=job.tenant_id AND is_default AND deleted_at IS NULL
+  ORDER BY updated_at DESC LIMIT 1
+) config ON true
+WHERE job.tenant_id=$1::uuid AND job.id=$2::uuid
+ON CONFLICT (tenant_id,request_id,feature) DO NOTHING`, tenantID, binding.ImportID, "paper-import:"+binding.RunID,
+			parsed.ModelUsage.InputTokens, parsed.ModelUsage.OutputTokens, parsed.ModelUsage.CachedInputTokens, parsed.ModelUsage.ReasoningTokens, parsed.ModelUsage.TotalTokens, binding.Generation, binding.RunID,
+			parsed.ModelUsage.ProviderKey, parsed.ModelUsage.ModelName, parsed.ModelUsage.RequestCount); err != nil {
+			return PaperImportJob{}, err
+		}
+	}
 	if _, err = tx.ExecContext(ctx, `UPDATE paper_import_source SET processing_status='processed',updated_at=now() WHERE tenant_id=$1 AND paper_import_id=$2::uuid AND deleted_at IS NULL`, tenantID, binding.ImportID); err != nil {
 		return PaperImportJob{}, err
 	}

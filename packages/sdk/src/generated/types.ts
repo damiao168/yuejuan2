@@ -1,5 +1,31 @@
 // Generated from services/api-gateway/openapi/edugrade-api.openapi.json. DO NOT EDIT.
 
+export type PlatformSchoolAdministrator = { "id"?: string; "display_name"?: string; "username"?: string; "admin_count": number; "last_login_at"?: string; };
+
+export type PlatformSchoolMemberCounts = { "accounts": number; "active_accounts": number; "administrators": number; "teachers": number; "graders": number; "students": number; "classes": number; };
+
+export type PlatformSchoolUsageSummary = { "input_tokens": number; "output_tokens": number; "cached_input_tokens": number; "reasoning_tokens": number; "total_tokens": number; "requests": number; "arbitration_requests": number; "estimated_cost_microusd": number; "window_days": number; };
+
+export type PlatformSchoolModelHealth = { "status": "healthy" | "warning" | "unconfigured"; "config_id"?: string; "config_status"?: string; "display_name"?: string; "provider_key"?: string; "model_name"?: string; "credential_hint"?: string; "connection_status"?: string; "connection_message"?: string; "capability_status"?: string; "capability_version"?: string; "capability_message"?: string; "latency_ms"?: number; "last_tested_at"?: string; "last_capability_tested_at"?: string; };
+
+export type PlatformSchoolSummary = { "tenant_id": string; "school_id": string; "name": string; "code": string; "status": "active" | "disabled"; "created_at": string; "last_activity_at"?: string; "administrator": PlatformSchoolAdministrator; "members": PlatformSchoolMemberCounts; "usage": PlatformSchoolUsageSummary; "model_health": PlatformSchoolModelHealth; "exam_count": number; "attention_reasons": Array<string>; };
+
+export type PlatformSchoolListResponse = { "schools": Array<PlatformSchoolSummary>; "summary": { "total": number; "active": number; "disabled": number; }; "next_cursor": string; "has_more": boolean; };
+
+export type PlatformSchoolResponse = { "school": PlatformSchoolSummary; };
+
+export type PlatformSchoolMember = { "id": string; "username": string; "display_name": string; "phone_masked"?: string; "employee_no"?: string; "status": string; "roles": Array<string>; "school_id"?: string; "created_at": string; "activated_at"?: string; "last_login_at"?: string; };
+
+export type PlatformSchoolMembersResponse = { "members": Array<PlatformSchoolMember>; "summary": { "total": number; "active": number; "disabled": number; "admins": number; "teachers": number; "graders": number; }; };
+
+export type PlatformSchoolUsageResponse = { "summary": PlatformSchoolUsageSummary; "trend": Array<{ "date": string; "total_tokens": number; "input_tokens": number; "output_tokens": number; "requests": number; }>; "by_feature": Array<PlatformSchoolUsageBreakdown>; "by_model": Array<PlatformSchoolUsageBreakdown>; "start_date": string; "end_date": string; };
+
+export type PlatformSchoolUsageBreakdown = { "key": string; "label": string; "total_tokens": number; "requests": number; "share": number; "estimated_cost_microusd": number; };
+
+export type PlatformSchoolModelHealthResponse = { "default_model": PlatformSchoolModelHealth; "roles": Array<{ "agent_role": "primary_a" | "primary_b" | "arbiter"; "model_name": string; "provider_key": string; "status": string; }>; };
+
+export type PlatformSchoolActivityResponse = { "activities": Array<{ "id": string; "event_type": string; "severity": string; "title": string; "summary": string; "actor_name"?: string; "happened_at": string; }>; "security": { "active_admins": number; "mfa_enabled": number; "active_sessions": number; "last_login_at"?: string; }; };
+
 export type PanelModelRoleBindingInput = { "tenant_id": string; "education_stage": "junior" | "senior"; "subject_code": "chinese" | "mathematics" | "english" | "physics" | "chemistry" | "biology" | "history" | "geography" | "ethics_politics"; "archetype_code": string; "agent_role": "primary_a" | "primary_b" | "arbiter"; "managed_model_api_config_id": string; "prompt_version": string; "strength_rank": number; "status": "active" | "disabled"; };
 
 export type PanelModelRoleBinding = { "id": string; "tenant_id": string; "education_stage": "junior" | "senior"; "subject_code": "chinese" | "mathematics" | "english" | "physics" | "chemistry" | "biology" | "history" | "geography" | "ethics_politics"; "archetype_code": string; "agent_role": "primary_a" | "primary_b" | "arbiter"; "managed_model_api_config_id": string; "prompt_version": string; "strength_rank": number; "status": "active" | "disabled"; "created_by": string; "created_at": string; "updated_at": string; };
@@ -216,7 +242,11 @@ export type SubmissionPage = (unknown) & (CursorPageMeta) & ({ "submissions": Ar
 
 export type ReviewTask = { "id": string; "tenant_id": string; "exam_id": string; "question_id": string; "question_no": string; "answer_segment_id": string; "submission_id": string; "anonymous_code": string; "source": string; "status": string; "priority": number; "assigned_to"?: string; "return_reason"?: string; "grade_round": string; "due_at"?: string; "revision": number; "created_by": string; "created_at": string; "updated_at": string; };
 
-export type ReviewTaskPage = (unknown) & (CursorPageMeta) & ({ "tasks": Array<ReviewTask>; });
+export type ReviewTaskAggregate = { "total_count": number; "completed_count": number; "remaining_count": number; "status_counts": (Record<string, never> & Record<string, number>); "reviewers": Array<ReviewerTaskAggregate>; };
+
+export type ReviewerTaskAggregate = { "reviewer_id": string; "total_count": number; "completed_count": number; "remaining_count": number; };
+
+export type ReviewTaskPage = (unknown) & (CursorPageMeta) & ({ "tasks": Array<ReviewTask>; "aggregate"?: ReviewTaskAggregate; });
 
 export type ReviewQuestion = ({ "id": string; "exam_id": string; "question_no": string; "question_type": string; "score": number; "stem"?: string; "knowledge_points"?: Array<string>; } & Record<string, unknown>);
 
@@ -1100,6 +1130,19 @@ export type QuestionBankBatchImportResult = { "items": Array<QuestionBankBatchIm
 
 export interface components {
   schemas: {
+    "PlatformSchoolAdministrator": PlatformSchoolAdministrator;
+    "PlatformSchoolMemberCounts": PlatformSchoolMemberCounts;
+    "PlatformSchoolUsageSummary": PlatformSchoolUsageSummary;
+    "PlatformSchoolModelHealth": PlatformSchoolModelHealth;
+    "PlatformSchoolSummary": PlatformSchoolSummary;
+    "PlatformSchoolListResponse": PlatformSchoolListResponse;
+    "PlatformSchoolResponse": PlatformSchoolResponse;
+    "PlatformSchoolMember": PlatformSchoolMember;
+    "PlatformSchoolMembersResponse": PlatformSchoolMembersResponse;
+    "PlatformSchoolUsageResponse": PlatformSchoolUsageResponse;
+    "PlatformSchoolUsageBreakdown": PlatformSchoolUsageBreakdown;
+    "PlatformSchoolModelHealthResponse": PlatformSchoolModelHealthResponse;
+    "PlatformSchoolActivityResponse": PlatformSchoolActivityResponse;
     "PanelModelRoleBindingInput": PanelModelRoleBindingInput;
     "PanelModelRoleBinding": PanelModelRoleBinding;
     "PanelModelRoleBindingList": PanelModelRoleBindingList;
@@ -1208,6 +1251,8 @@ export interface components {
     "ExamPage": ExamPage;
     "SubmissionPage": SubmissionPage;
     "ReviewTask": ReviewTask;
+    "ReviewTaskAggregate": ReviewTaskAggregate;
+    "ReviewerTaskAggregate": ReviewerTaskAggregate;
     "ReviewTaskPage": ReviewTaskPage;
     "ReviewQuestion": ReviewQuestion;
     "FrozenReviewRubric": FrozenReviewRubric;

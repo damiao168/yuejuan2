@@ -52,7 +52,7 @@ export function ScoreReleaseWorkspace({
   releaseWorkflow: ReturnType<typeof useScoreReleaseWorkflow>;
   regradeWorkflow: ReturnType<typeof useRegradeWorkflow>;
 }) {
-  const { openReleaseModal, publishRelease } = releaseWorkflow;
+  const { openReleaseModal, publishRelease, revokeSharedPaper } = releaseWorkflow;
   const {
     openRegradeModal, regradeQuestionOptions, transitionRegrade,
     openRegradeReview, materializeRegradeRelease
@@ -90,7 +90,11 @@ export function ScoreReleaseWorkspace({
         {scoreReleases.length ? <List
           size="small"
           dataSource={scoreReleases}
-          renderItem={(release) => <List.Item actions={release.status === "draft" ? [<Button key="publish" size="small" type="primary" disabled={!canWrite || !releaseGate?.passed} loading={actioning === "release-publish"} onClick={() => publishRelease(release)}>发布 V{release.version}</Button>] : undefined}>
+          renderItem={(release) => <List.Item actions={release.status === "draft"
+            ? [<Button key="publish" size="small" type="primary" disabled={!canWrite || !releaseGate?.passed} loading={actioning === "release-publish"} onClick={() => publishRelease(release)}>发布 V{release.version}</Button>]
+            : (publishedRelease?.id === release.id && release.visibility_policy.show_high_score_paper
+              ? [<Button key="revoke-paper" size="small" danger disabled={!canWrite} loading={actioning === "release-high-score-revoke"} onClick={() => revokeSharedPaper(release)}>撤回范例卷分享</Button>]
+              : undefined)}>
             <div className="score-release-row">
               <div><strong>V{release.version} · {scoreReleaseSourceLabels[release.source] ?? "其他来源"}</strong><span>{release.reason}</span></div>
               <StatusTag tone={scoreReleaseTone(release.status)}>{scoreReleaseStatusLabels[release.status] ?? "未知状态"}</StatusTag>

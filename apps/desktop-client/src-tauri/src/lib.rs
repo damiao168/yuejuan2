@@ -156,13 +156,26 @@ fn redact_sensitive_text(value: &str) -> String {
 }
 
 #[tauri::command]
-fn capability_statuses(app: AppHandle) -> Vec<CapabilityProbe> {
-    let local_cache = match durable_store::status(app) {
+fn capability_statuses(app: AppHandle, session_id: Option<String>) -> Vec<CapabilityProbe> {
+    let local_cache = match session_id
+        .as_deref()
+        .ok_or_else(|| "log in before inspecting durable local records".to_string())
+        .and_then(|session_id| durable_store::status(app, session_id))
+    {
         Ok(status) => CapabilityProbe {
             key: "local_cache".into(),
             name: "SQLite 加密本地存储".into(),
-            status: "ready".into(),
-            detail: format!("SQLite 队列与加密 spool 已就绪：{}", status.spool_path),
+            status: if status.legacy_data_present {
+                "legacy_data"
+            } else {
+                "ready"
+            }
+            .into(),
+            detail: if status.legacy_data_present {
+                format!("当前账号的 SQLite 队列与加密 spool 已就绪：{}；检测到旧版未绑定账号的本地数据，已隔离保留，需由管理员核对归属后恢复。", status.spool_path)
+            } else {
+                format!("SQLite 队列与加密 spool 已就绪：{}", status.spool_path)
+            },
         },
         Err(error) => CapabilityProbe {
             key: "local_cache".into(),
@@ -187,6 +200,11 @@ fn capability_statuses(app: AppHandle) -> Vec<CapabilityProbe> {
             detail: "未配置/待接入内网更新源、签名校验和灰度策略。".into(),
         },
     ]
+}
+
+#[tauri::command]
+fn claim_legacy_durable_store(app: AppHandle, session_id: String) -> Result<(), String> {
+    durable_store::with_session(&session_id, || durable_store::claim_legacy_store(app))
 }
 
 fn secure_config_capability() -> CapabilityProbe {
@@ -337,98 +355,160 @@ fn delete_desktop_credentials() -> Result<(), String> {
 }
 
 #[tauri::command]
+fn bind_durable_session(
+    server: String,
+    tenant_id: String,
+    actor_id: String,
+) -> Result<String, String> {
+    durable_store::bind_session(&server, &tenant_id, &actor_id)
+}
+
+#[tauri::command]
+fn clear_durable_session() -> Result<(), String> {
+    durable_store::clear_session()
+}
+
+#[tauri::command]
 fn begin_spool_local_asset(
     app: AppHandle,
+    session_id: String,
     input: durable_store::SpoolAssetInput,
 ) -> Result<durable_store::SpoolAssetSession, String> {
-    durable_store::begin_spool_local_asset(app, input)
+    durable_store::with_session(&session_id, || {
+        durable_store::begin_spool_local_asset(app, input)
+    })
 }
 
 #[tauri::command]
 fn write_spool_local_asset_chunk(
     app: AppHandle,
+    session_id: String,
     local_asset_id: String,
     offset: i64,
     bytes: Vec<u8>,
 ) -> Result<i64, String> {
-    durable_store::write_spool_local_asset_chunk(app, local_asset_id, offset, bytes)
+    durable_store::with_session(&session_id, || {
+        durable_store::write_spool_local_asset_chunk(app, local_asset_id, offset, bytes)
+    })
 }
 
 #[tauri::command]
 fn complete_spool_local_asset(
     app: AppHandle,
+    session_id: String,
     local_asset_id: String,
 ) -> Result<durable_store::DurableQueueItem, String> {
-    durable_store::complete_spool_local_asset(app, local_asset_id)
+    durable_store::with_session(&session_id, || {
+        durable_store::complete_spool_local_asset(app, local_asset_id)
+    })
 }
 
 #[tauri::command]
-fn list_durable_scan_queue(app: AppHandle) -> Result<Vec<durable_store::DurableQueueItem>, String> {
-    durable_store::list_durable_scan_queue(app)
+fn list_durable_scan_queue(
+    app: AppHandle,
+    session_id: String,
+) -> Result<Vec<durable_store::DurableQueueItem>, String> {
+    durable_store::with_session(&session_id, || durable_store::list_durable_scan_queue(app))
 }
 
 #[tauri::command]
 fn persist_durable_scan_queue_item(
     app: AppHandle,
+    session_id: String,
     item: durable_store::DurableQueueItem,
 ) -> Result<(), String> {
-    durable_store::persist_durable_scan_queue_item(app, item)
+    durable_store::with_session(&session_id, || {
+        durable_store::persist_durable_scan_queue_item(app, item)
+    })
 }
 
 #[tauri::command]
-fn archive_durable_scan_queue_items(app: AppHandle, ids: Vec<String>) -> Result<(), String> {
-    durable_store::archive_durable_scan_queue_items(app, ids)
+fn archive_durable_scan_queue_items(
+    app: AppHandle,
+    session_id: String,
+    ids: Vec<String>,
+) -> Result<(), String> {
+    durable_store::with_session(&session_id, || {
+        durable_store::archive_durable_scan_queue_items(app, ids)
+    })
 }
 
 #[tauri::command]
 fn read_durable_local_asset(
     app: AppHandle,
+    session_id: String,
     local_asset_id: String,
 ) -> Result<durable_store::DurableSpoolFile, String> {
-    durable_store::read_durable_local_asset(app, local_asset_id)
+    durable_store::with_session(&session_id, || {
+        durable_store::read_durable_local_asset(app, local_asset_id)
+    })
 }
 
 #[tauri::command]
 fn read_durable_local_asset_chunk(
     app: AppHandle,
+    session_id: String,
     local_asset_id: String,
     offset: i64,
     length: usize,
 ) -> Result<Vec<u8>, String> {
-    durable_store::read_durable_local_asset_chunk(app, local_asset_id, offset, length)
+    durable_store::with_session(&session_id, || {
+        durable_store::read_durable_local_asset_chunk(app, local_asset_id, offset, length)
+    })
 }
 
 #[tauri::command]
-fn save_durable_draft(app: AppHandle, record: serde_json::Value) -> Result<(), String> {
-    durable_store::save_durable_draft(app, record)
+fn save_durable_draft(
+    app: AppHandle,
+    session_id: String,
+    record: serde_json::Value,
+) -> Result<(), String> {
+    durable_store::with_session(&session_id, || {
+        durable_store::save_durable_draft(app, record)
+    })
 }
 
 #[tauri::command]
-fn list_durable_drafts(app: AppHandle) -> Result<Vec<durable_store::OfflineDraftEnvelope>, String> {
-    durable_store::list_durable_drafts(app)
+fn list_durable_drafts(
+    app: AppHandle,
+    session_id: String,
+) -> Result<Vec<durable_store::OfflineDraftEnvelope>, String> {
+    durable_store::with_session(&session_id, || durable_store::list_durable_drafts(app))
 }
 
 #[tauri::command]
 fn load_durable_draft(
     app: AppHandle,
+    session_id: String,
     task_id: String,
 ) -> Result<Option<serde_json::Value>, String> {
-    durable_store::load_durable_draft(app, task_id)
+    durable_store::with_session(&session_id, || {
+        durable_store::load_durable_draft(app, task_id)
+    })
 }
 
 #[tauri::command]
 fn update_durable_draft_status(
     app: AppHandle,
+    session_id: String,
     task_id: String,
     sync_status: String,
     sync_message: Option<String>,
 ) -> Result<(), String> {
-    durable_store::update_durable_draft_status(app, task_id, sync_status, sync_message)
+    durable_store::with_session(&session_id, || {
+        durable_store::update_durable_draft_status(app, task_id, sync_status, sync_message)
+    })
 }
 
 #[tauri::command]
-fn purge_expired_durable_drafts(app: AppHandle, now: String) -> Result<usize, String> {
-    durable_store::purge_expired_durable_drafts(app, now)
+fn purge_expired_durable_drafts(
+    app: AppHandle,
+    session_id: String,
+    now: String,
+) -> Result<usize, String> {
+    durable_store::with_session(&session_id, || {
+        durable_store::purge_expired_durable_drafts(app, now)
+    })
 }
 
 #[cfg(windows)]
@@ -440,7 +520,10 @@ fn credential_entry() -> Result<keyring::Entry, String> {
 pub fn run() {
     if let Err(error) = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
+            bind_durable_session,
+            clear_durable_session,
             capability_statuses,
+            claim_legacy_durable_store,
             begin_spool_local_asset,
             write_spool_local_asset_chunk,
             complete_spool_local_asset,

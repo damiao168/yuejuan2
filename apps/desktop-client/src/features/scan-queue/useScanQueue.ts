@@ -11,6 +11,7 @@ import type { Exam, LocalLogEntry, SyncQueueItem } from "../../types";
 type LogEvent = (level: LocalLogEntry["level"], message: string, context?: string) => Promise<void>;
 
 export function useScanQueue({
+  durableScopeKey,
   exams,
   selectedExamId,
   captureBatchId,
@@ -20,6 +21,7 @@ export function useScanQueue({
   setDiagnosticError,
   logEvent
 }: {
+  durableScopeKey: string;
   exams: Exam[];
   selectedExamId: string;
   captureBatchId: string;
@@ -36,16 +38,20 @@ export function useScanQueue({
   const uploadInFlightRef = useRef(new Set<string>());
   const queueRef = useRef(queue);
   const durablePersistenceRef = useRef<Promise<void>>(Promise.resolve());
+  const scopeRef = useRef(durableScopeKey);
+  scopeRef.current = durableScopeKey;
 
   const updateQueue = useCallback((updater: (current: SyncQueueItem[]) => SyncQueueItem[]) => {
     const next = updater(queueRef.current);
     queueRef.current = next;
     setQueue(next);
     if (hasDurableDesktopStore()) {
+      if (!scopeRef.current) return;
+      const scope = scopeRef.current;
       durablePersistenceRef.current = durablePersistenceRef.current
         .catch(() => undefined)
-        .then(() => Promise.all(next.filter((item) => item.kind === "scan_upload")
-          .map((item) => persistDurableScanQueueItem(item))))
+        .then(() => scopeRef.current === scope ? Promise.all(next.filter((item) => item.kind === "scan_upload")
+          .map((item) => persistDurableScanQueueItem(item, scope))) : undefined)
         .then(() => undefined)
         .catch((error) => console.warn("durable scan queue persistence failed", error));
     } else {
@@ -54,19 +60,33 @@ export function useScanQueue({
   }, []);
 
   useEffect(() => {
-    if (hasDurableDesktopStore()) {
-      void listDurableScanQueue()
+    if (!hasDurableDesktopStore()) return;
+    for (const item of queueRef.current) if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+    fileBufferRef.current.clear();
+    uploadInFlightRef.current.clear();
+    queueRef.current = [];
+    setQueue([]);
+    setOfflineDraftCount(0);
+    if (durableScopeKey) {
+      void listDurableScanQueue(durableScopeKey)
         .then((items) => {
+          if (scopeRef.current !== durableScopeKey) return;
           const current = queueRef.current;
           const currentIDs = new Set(current.map((item) => item.id));
           const merged = [...current, ...items.filter((item) => !currentIDs.has(item.id))];
           queueRef.current = merged;
           setQueue(merged);
         })
-        .catch((error) => setDiagnosticError(getUserErrorMessage(error, "本地耐久队列无法恢复")));
+        .catch((error) => {
+          if (scopeRef.current === durableScopeKey) setDiagnosticError(getUserErrorMessage(error, "本地耐久队列无法恢复"));
+        });
     }
-    void listOfflineDraftEnvelopes().then((drafts) => setOfflineDraftCount(drafts.length)).catch(() => undefined);
-  }, []);
+    if (durableScopeKey) {
+      void listOfflineDraftEnvelopes(durableScopeKey)
+        .then((drafts) => { if (scopeRef.current === durableScopeKey) setOfflineDraftCount(drafts.length); })
+        .catch(() => undefined);
+    }
+  }, [durableScopeKey]);
 
   useEffect(() => { queueRef.current = queue; }, [queue]);
   useEffect(() => () => {
@@ -76,6 +96,10 @@ export function useScanQueue({
   }, []);
 
   const handleFileSelection = async (files: FileList | null) => {
+    if (hasDurableDesktopStore() && !durableScopeKey) {
+      setDiagnosticError("请先登录，再保存扫描原件。");
+      return;
+    }
     const selected = files ? Array.from(files) : [];
     if (!selected.length) return;
     if (isTauriRuntime() && !scannerPreflight?.readyToScan) {
@@ -87,10 +111,12 @@ export function useScanQueue({
     const startPage = scanStartPage || 1;
     const nextItems: SyncQueueItem[] = [];
     for (const [index, file] of selected.entries()) {
+      if (hasDurableDesktopStore() && scopeRef.current !== durableScopeKey) return;
       const scannerChecks = isTauriRuntime() && scannerPreflight
         ? await inspectScannerSample(file, scannerPreflight.profile)
         : [];
       const qualityChecks = [...await inspectScanFile(file), ...scannerChecks];
+      if (hasDurableDesktopStore() && scopeRef.current !== durableScopeKey) return;
       const failedQuality = qualityChecks.some((check) => check.status === "failed");
       if (hasDurableDesktopStore()) {
         try {
@@ -101,7 +127,8 @@ export function useScanQueue({
             submissionId: submissionId || undefined,
             pageNo: startPage + index,
             qualityChecks
-          });
+          }, durableScopeKey);
+          if (scopeRef.current !== durableScopeKey) return;
           fileBufferRef.current.set(durableItem.id, file);
           nextItems.push({
             ...durableItem,
@@ -111,6 +138,7 @@ export function useScanQueue({
             qualityChecks
           });
         } catch (error) {
+          if (scopeRef.current !== durableScopeKey) return;
           await logEvent("error", "scan asset durable spool failed", error instanceof Error ? error.message : String(error));
           setDiagnosticError(getUserErrorMessage(error, "扫描原件无法写入耐久本地存储，已停止加入上传队列"));
         }
@@ -154,18 +182,23 @@ export function useScanQueue({
         qualityChecks
       });
     }
+    if (hasDurableDesktopStore() && scopeRef.current !== durableScopeKey) return;
     if (nextItems.length) updateQueue((current) => [...nextItems, ...current]);
     await logEvent("info", "scan files queued", `${selected.length} files`);
   };
 
   const clearSucceededQueueItems = async () => {
+    const scope = scopeRef.current;
+    if (hasDurableDesktopStore() && !scope) return;
     const succeededIds = queueRef.current
       .filter((item) => item.kind === "scan_upload" && item.status === "succeeded")
       .map((item) => item.localAssetId ?? item.id);
     if (hasDurableDesktopStore() && succeededIds.length) {
       try {
-        await archiveDurableScanQueueItems(succeededIds);
+        await archiveDurableScanQueueItems(succeededIds, scope);
+        if (scopeRef.current !== scope) return;
       } catch (error) {
+        if (scopeRef.current !== scope) return;
         const message = getUserErrorMessage(error, "本地已确认扫描件无法归档");
         setDiagnosticError(message);
         await logEvent("warning", "durable scan archive failed", message);

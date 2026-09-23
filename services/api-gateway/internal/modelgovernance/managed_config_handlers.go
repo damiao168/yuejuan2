@@ -1,13 +1,52 @@
 package modelgovernance
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
+	"edugrade-enterprise/services/api-gateway/internal/logger"
 )
+
+// ManagedAPIProbeObserver receives only categories and timings; implementations
+// must not use model names, endpoint URLs or credential values as metric labels.
+type ManagedAPIProbeObserver interface {
+	ObserveManagedModelProbe(operation, provider, errorCode, failureStage string, ok bool)
+}
+
+func (h *Handler) WithManagedAPIProbeObserver(observer ManagedAPIProbeObserver) *Handler {
+	h.managedAPIProbeObserver = observer
+	return h
+}
+
+func (h *Handler) observeManagedProbe(operation string, result ManagedAPIProbeResult) {
+	if h.managedAPIProbeObserver == nil {
+		return
+	}
+	h.managedAPIProbeObserver.ObserveManagedModelProbe(operation, result.Provider, result.ErrorCode,
+		result.ConnectionDiagnostic.FailureStage, result.OK)
+}
+
+func (h *Handler) recordManagedProbeUsage(ctx context.Context, tenantID string, connection ManagedAPIConnection, operation string, result ManagedAPIProbeResult) {
+	if !result.GeneratedRequest || result.Reused {
+		return
+	}
+	status := "failed"
+	if result.OK {
+		status = "succeeded"
+	}
+	h.recordUsage(ctx, ModelUsageEvent{
+		TenantID: tenantID, RequestID: logger.RequestID(ctx), Feature: "model_probe",
+		ProviderKey: connection.Config.ProviderKey, ModelName: connection.Config.ModelName,
+		InputTokens: result.Usage.InputTokens, OutputTokens: result.Usage.OutputTokens,
+		CachedInputTokens: result.Usage.CachedInputTokens, ReasoningTokens: result.Usage.ReasoningTokens,
+		TotalTokens: result.Usage.TotalTokens, Status: status,
+		Metadata: map[string]any{"operation": operation, "probe_mode": result.ProbeMode, "error_code": result.ErrorCode},
+	})
+}
 
 func (h *Handler) WithManagedAPIProber(prober ManagedAPIProber) *Handler {
 	h.managedAPIProber = prober
@@ -66,6 +105,7 @@ func (h *Handler) CreateManagedAPIConfig(w http.ResponseWriter, r *http.Request)
 		ModelVersion: normalized.ModelVersion, Region: normalized.Region, Status: normalized.Status,
 	}, APIKey: normalized.APIKey}
 	result := managedQuickProbe(r.Context(), prober, connection)
+	h.observeManagedProbe("create", result)
 	if !result.OK {
 		h.writeManagedValidationFailure(w, r, result)
 		return
@@ -123,6 +163,7 @@ func (h *Handler) ValidateManagedAPIConfig(w http.ResponseWriter, r *http.Reques
 		h.writeManagedAPIError(w, r, err)
 		return
 	}
+	h.observeManagedProbe("validate", result)
 	httpx.JSON(w, http.StatusOK, map[string]any{"provider": resolved.Provider, "validation": result})
 }
 
@@ -149,7 +190,10 @@ func (h *Handler) ListAvailableManagedAPIModels(w http.ResponseWriter, r *http.R
 		h.writeManagedAPIError(w, r, err)
 		return
 	}
+	h.observeManagedProbe("models", result)
 	if !result.OK {
+		h.auditAction(r, "model.managed_api_model_discovery_failed", "managed_model_api_config", "", "model discovery failed without exposing credential or response",
+			managedProbeAuditFields(tenantID, resolved.Provider.Key, result))
 		h.writeManagedValidationFailure(w, r, result)
 		return
 	}
@@ -181,6 +225,7 @@ func (h *Handler) AutoCreateManagedAPIConfig(w http.ResponseWriter, r *http.Requ
 		h.writeManagedAPIError(w, r, err)
 		return
 	}
+	h.observeManagedProbe("auto_create", result)
 	if !result.OK {
 		h.writeManagedValidationFailure(w, r, result)
 		return
@@ -265,6 +310,8 @@ func (h *Handler) UpdateManagedAPIConfig(w http.ResponseWriter, r *http.Request)
 		} else {
 			result = managedQuickProbe(r.Context(), prober, connection)
 		}
+		h.observeManagedProbe("update", result)
+		h.recordManagedProbeUsage(r.Context(), tenantID, connection, "update", result)
 		if !result.OK {
 			h.writeManagedValidationFailure(w, r, result)
 			return
@@ -346,18 +393,71 @@ func (h *Handler) ProbeManagedAPIConfig(w http.ResponseWriter, r *http.Request) 
 		result = prober.Probe(r.Context(), connection)
 		result.ProbeMode = "capability"
 	}
-	item, recordErr := store.RecordManagedAPIProbe(r.Context(), tenantID, connection.Config.ID, result)
+	if !result.Reused {
+		h.observeManagedProbe(mode, result)
+	}
+	h.recordManagedProbeUsage(r.Context(), tenantID, connection, "manual", result)
+	item, recordErr := store.RecordManagedAPIProbe(r.Context(), tenantID, connection.Config.ID, connection.Config.UpdatedAt, result)
 	if recordErr != nil {
 		h.writeManagedAPIError(w, r, recordErr)
 		return
 	}
 	h.auditAction(r, "model.managed_api_probed", "managed_model_api_config", item.ID, "test school third-party model API connection without exposing credential",
-		map[string]any{"tenant_id": tenantID, "provider_key": item.ProviderKey, "ok": result.OK, "probe_mode": result.ProbeMode,
+		map[string]any{"tenant_id": tenantID, "provider_key": managedProbeProviderCategory(item.ProviderKey), "ok": result.OK, "probe_mode": result.ProbeMode,
 			"generated_request": result.GeneratedRequest, "reused": result.Reused, "coalesced": result.Coalesced, "status_code": result.StatusCode,
-			"latency_ms": result.LatencyMS, "total_tokens": result.Usage.TotalTokens, "error_code": result.ErrorCode,
+			"latency_ms": result.LatencyMS, "total_tokens": result.Usage.TotalTokens, "error_code": managedProbeErrorCategory(result.ErrorCode, result.OK),
+			"attempts": result.ConnectionDiagnostic.Attempts, "dns_ms": result.ConnectionDiagnostic.DNSMS,
+			"connect_ms": result.ConnectionDiagnostic.ConnectMS, "tls_ms": result.ConnectionDiagnostic.TLSMS,
+			"ttfb_ms": result.ConnectionDiagnostic.TTFBMS, "failure_stage": managedProbeFailureStageCategory(result.ConnectionDiagnostic.FailureStage),
 			"finish_reason": result.Diagnostic.FinishReason, "response_format": result.Diagnostic.ResponseFormat,
 			"content_length": result.Diagnostic.ContentLength, "content_sha256": result.Diagnostic.ContentSHA256})
 	httpx.JSON(w, http.StatusOK, map[string]any{"result": result, "config": item})
+}
+
+func managedProbeAuditFields(tenantID, provider string, result ManagedAPIProbeResult) map[string]any {
+	diagnostic := result.ConnectionDiagnostic
+	return map[string]any{
+		"tenant_id": tenantID, "provider_key": managedProbeProviderCategory(provider),
+		"ok": result.OK, "probe_mode": result.ProbeMode,
+		"error_code": managedProbeErrorCategory(result.ErrorCode, result.OK),
+		"latency_ms": result.LatencyMS, "attempts": diagnostic.Attempts,
+		"dns_ms": diagnostic.DNSMS, "connect_ms": diagnostic.ConnectMS,
+		"tls_ms": diagnostic.TLSMS, "ttfb_ms": diagnostic.TTFBMS,
+		"failure_stage": managedProbeFailureStageCategory(diagnostic.FailureStage),
+	}
+}
+
+func managedProbeProviderCategory(value string) string {
+	switch value {
+	case "deepseek", "aliyun", "openai", "zhipu", "moonshot", "anthropic", "gemini", "custom":
+		return value
+	default:
+		return "other"
+	}
+}
+
+func managedProbeErrorCategory(value string, ok bool) string {
+	if ok {
+		return "none"
+	}
+	switch value {
+	case "provider_timeout", "provider_unavailable", "provider_rate_limited", "provider_error",
+		"provider_invalid_response", "credential_invalid", "model_permission_denied", "model_not_found",
+		"invalid_endpoint", "invalid_json", "no_choices", "response_format_unsupported",
+		"quick_probe_unsupported":
+		return value
+	default:
+		return "other"
+	}
+}
+
+func managedProbeFailureStageCategory(value string) string {
+	switch value {
+	case "dns", "connect", "tls", "ttfb", "response", "body", "request":
+		return value
+	default:
+		return "none"
+	}
 }
 
 func reusedManagedCapabilityProbe(connection ManagedAPIConnection) ManagedAPIProbeResult {
@@ -396,6 +496,8 @@ func (h *Handler) writeManagedAPIError(w http.ResponseWriter, r *http.Request, e
 		httpx.Error(w, r, http.StatusConflict, "managed_model_current_active_required", "当前使用的模型必须保持启用，请先切换模型或切回本地模型")
 	case errors.Is(err, ErrManagedCapabilityRequired):
 		httpx.Error(w, r, http.StatusConflict, "managed_model_capability_required", "请先通过完整能力检测，再设为当前使用")
+	case errors.Is(err, ErrManagedProbeStale):
+		httpx.Error(w, r, http.StatusConflict, "managed_model_probe_stale", "检测期间配置已发生变化，请重新检测")
 	case errors.Is(err, ErrInvalidManagedConfig):
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_managed_model_api", "第三方模型 API 配置不完整或不安全")
 	case errors.Is(err, ErrNotFound):

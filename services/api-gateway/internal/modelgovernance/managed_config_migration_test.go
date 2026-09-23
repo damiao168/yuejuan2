@@ -66,3 +66,27 @@ func TestLegacyPanelMigrationKeepsRecordedChecksumAndRestoresGuards(t *testing.T
 		}
 	}
 }
+
+func TestManagedModelTransientProbeMigrationPreservesDefinitiveFailures(t *testing.T) {
+	raw, err := os.ReadFile("../../migrations/000166_managed_model_probe_transient_status.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sql := string(raw)
+	for _, required := range []string{
+		"temporary_unavailable",
+		"ADD COLUMN IF NOT EXISTS last_successful_tested_at TIMESTAMPTZ",
+		"VALIDATE CONSTRAINT chk_managed_model_api_test_status",
+		"last_test_message IN ('模型服务连接超时，请稍后重试', '无法连接模型供应商')",
+		"last_capability_status = 'success'",
+	} {
+		if !strings.Contains(sql, required) {
+			t.Fatalf("transient probe migration missing %q", required)
+		}
+	}
+	for _, forbidden := range []string{"LIKE '%超时%'", "credential_invalid", "API Key 无效"} {
+		if strings.Contains(sql, forbidden) {
+			t.Fatalf("transient probe migration may reclassify a definitive failure via %q", forbidden)
+		}
+	}
+}

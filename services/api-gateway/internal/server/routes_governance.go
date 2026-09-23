@@ -9,6 +9,7 @@ import (
 )
 
 func registerGovernanceRoutes(mux *http.ServeMux, ctx routerContext) {
+	ctx.modules.AIGovernance.ModelGovernanceHandler.WithManagedAPIProbeObserver(ctx.metrics)
 	mux.Handle("GET /api/v1/model-providers", ctx.guards.requireModelRead(ctx.modules.AIGovernance.ModelGovernanceHandler.ListProviders))
 	mux.Handle("POST /api/v1/model-providers", ctx.guards.requireModelProviderManage(ctx.modules.AIGovernance.ModelGovernanceHandler.CreateProvider))
 	mux.Handle("PATCH /api/v1/model-providers/{id}/status", ctx.guards.requireModelProviderManage(ctx.modules.AIGovernance.ModelGovernanceHandler.UpdateProviderStatus))
@@ -18,7 +19,6 @@ func registerGovernanceRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("GET /api/v1/model-policy", ctx.guards.requireModelRead(ctx.modules.AIGovernance.ModelGovernanceHandler.GetPolicy))
 	mux.Handle("GET /api/v1/model-prompts/current", ctx.guards.requireModelRead(ctx.modules.AIGovernance.ModelGovernanceHandler.GetCurrentPrompt))
 	mux.Handle("PUT /api/v1/model-policy", ctx.guards.requireModelPolicyManage(ctx.modules.AIGovernance.ModelGovernanceHandler.UpdatePolicy))
-	mux.Handle("POST /api/v1/model-secrets/probe", ctx.guards.requireModelProviderManage(ctx.modules.AIGovernance.ModelGovernanceHandler.ProbeSecret))
 	mux.Handle("GET /api/v1/platform/model-api-configs", ctx.guards.requirePlatformModelManage(ctx.modules.AIGovernance.ModelGovernanceHandler.ListManagedAPIConfigs))
 	mux.Handle("POST /api/v1/platform/model-api-configs", ctx.guards.requirePlatformModelManage(ctx.modules.AIGovernance.ModelGovernanceHandler.CreateManagedAPIConfig))
 	mux.Handle("POST /api/v1/platform/model-api-configs/resolve", ctx.guards.requirePlatformModelManage(ctx.modules.AIGovernance.ModelGovernanceHandler.ResolveManagedAPIProvider))

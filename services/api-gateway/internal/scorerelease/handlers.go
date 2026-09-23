@@ -21,6 +21,7 @@ type Handler struct {
 	publisher                   PublicationPublisher
 	studentQuestionImageReader  segment.CropImageReader
 	studentPaperPageImageReader segment.PageImageReader
+	highScorePaper              HighScorePaperManager
 }
 
 // PublicationPublisher lets the composition root require an independently
@@ -49,6 +50,11 @@ func (h *Handler) WithStudentPaperPageImage(reader segment.PageImageReader) *Han
 	return h
 }
 
+func (h *Handler) WithHighScorePaper(manager HighScorePaperManager) *Handler {
+	h.highScorePaper = manager
+	return h
+}
+
 // RouteGuards separates ordinary release preparation from the two operations
 // that can change the formally published result.
 type RouteGuards struct {
@@ -69,12 +75,27 @@ func RegisterRoutes(mux *http.ServeMux, h *Handler, guards RouteGuards) {
 	mux.Handle("GET /api/v1/score-releases/{id}", guards.ReleaseManage(h.Get))
 	mux.Handle("GET /api/v1/score-releases/{id}/diff", guards.ReleaseManage(h.Diff))
 	mux.Handle("POST /api/v1/score-releases/{id}/publish", guards.CriticalRelease(h.Publish))
+	mux.Handle("POST /api/v1/score-releases/{id}/high-score-paper/revoke", guards.CriticalRelease(h.RevokeHighScorePaper))
 	mux.Handle("POST /api/v1/exams/{examId}/score-releases/rollback", guards.CriticalExam(h.Rollback))
 
 	mux.Handle("GET /api/v1/student/exams/{examId}/result", guards.StudentRead(h.StudentResult))
 	mux.Handle("GET /api/v1/student/exams/{examId}/questions/{questionId}", guards.StudentRead(h.StudentQuestion))
 	mux.Handle("GET /api/v1/student/exams/{examId}/questions/{questionId}/answer-image", guards.StudentRead(h.StudentQuestionImage))
 	mux.Handle("GET /api/v1/student/exams/{examId}/questions/{questionId}/page-image", guards.StudentRead(h.StudentPaperPageImage))
+}
+
+func (h *Handler) RevokeHighScorePaper(w http.ResponseWriter, r *http.Request) {
+	user, ok := releaseUser(w, r)
+	if !ok {
+		return
+	}
+	releaseID := r.PathValue("id")
+	if err := h.service.RevokeHighScorePaper(r.Context(), user.TenantID, releaseID, user.ID); err != nil {
+		writeError(w, r, err)
+		return
+	}
+	h.auditEvent(r, user, "score_release.high_score_paper_revoked", releaseID, nil)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
@@ -202,7 +223,9 @@ func (h *Handler) Publish(w http.ResponseWriter, r *http.Request) {
 		detail, detailErr := h.service.Get(r.Context(), user.TenantID, r.PathValue("id"))
 		if detailErr == nil {
 			gate, gateErr := h.service.Gate(r.Context(), user.TenantID, detail.Release.ExamID)
-			if gateErr == nil {
+			// Gate() is exam-wide and cannot include release-snapshot checks.
+			// Never attach a contradictory passed gate to a blocked response.
+			if gateErr == nil && !gate.Passed {
 				httpx.JSON(w, http.StatusConflict, map[string]any{"code": "score_release_gate_blocked", "message": "score release is blocked by the current quality gate", "release_gate": gate})
 				return
 			}
@@ -279,6 +302,19 @@ func (h *Handler) StudentPaperPageImage(w http.ResponseWriter, r *http.Request) 
 		writeError(w, r, err)
 		return
 	}
+	if highScore {
+		if h.highScorePaper == nil || source.AnonymousPageID == "" || source.AnonymousFileAssetID == "" || source.ReleaseID == "" {
+			httpx.Error(w, r, http.StatusNotFound, "student_paper_page_unavailable", "anonymous paper page is not available")
+			return
+		}
+		resource, readErr := h.highScorePaper.ReadAnonymousPage(r.Context(), user.TenantID, source.ReleaseID, source.AnonymousPageID, source.AnonymousFileAssetID)
+		if readErr != nil {
+			writeError(w, r, readErr)
+			return
+		}
+		binaryresourcehttp.Serve(w, r, resource, h.audit)
+		return
+	}
 	if h.studentPaperPageImageReader == nil {
 		httpx.Error(w, r, http.StatusNotFound, "student_paper_page_unavailable", "paper page is not available")
 		return
@@ -336,6 +372,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.Error(w, r, http.StatusForbidden, "score_release_forbidden", "published question details are not visible")
 	case errors.Is(err, ErrGateBlocked):
 		httpx.Error(w, r, http.StatusConflict, "score_release_gate_blocked", "score release is blocked by the current quality gate")
+	case errors.Is(err, ErrAnonymousPaperUnavailable):
+		httpx.Error(w, r, http.StatusConflict, "anonymous_high_score_paper_unavailable", "anonymous high-score paper is unavailable")
 	case errors.Is(err, ErrInvalidTransition):
 		httpx.Error(w, r, http.StatusConflict, "score_release_invalid_transition", "score release is not in a valid state for this action")
 	case errors.Is(err, ErrStaleSource):

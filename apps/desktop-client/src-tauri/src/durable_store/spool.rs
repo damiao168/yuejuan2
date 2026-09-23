@@ -8,7 +8,7 @@ use tauri::AppHandle;
 use uuid::Uuid;
 
 use super::{
-    connection::{now_rfc3339, open_connection, sql_error},
+    connection::{now_rfc3339, open_connection_at, sql_error},
     crypto::{decrypt_bytes, decrypt_json, encrypt_bytes, encrypt_json, master_key, sha256_hex},
     paths::{
         ensure_controlled_path, reject_symbolic_path, spool_path, store_root,
@@ -31,7 +31,7 @@ pub fn begin_spool_local_asset(
     validate_spool_input(&input)?;
     let root = store_root(&app)?;
     let key = master_key(&root)?;
-    let conn = open_connection(&app)?;
+    let conn = open_connection_at(&root)?;
     initialize_schema(&conn)?;
 
     let idempotency_key = format!(
@@ -152,7 +152,7 @@ pub fn write_spool_local_asset_chunk(
     }
     let root = store_root(&app)?;
     let key = master_key(&root)?;
-    let conn = open_connection(&app)?;
+    let conn = open_connection_at(&root)?;
     initialize_schema(&conn)?;
     let (expected_size, received_size, local_path): (i64, i64, String) = conn
         .query_row(
@@ -213,7 +213,7 @@ pub fn complete_spool_local_asset(
 ) -> Result<DurableQueueItem, String> {
     let root = store_root(&app)?;
     let key = master_key(&root)?;
-    let conn = open_connection(&app)?;
+    let conn = open_connection_at(&root)?;
     initialize_schema(&conn)?;
     let (expected_size, received_size, payload, payload_nonce, idempotency_key, expected_sha): (i64, i64, String, String, String, String) = conn
         .query_row(
@@ -271,7 +271,15 @@ pub fn read_durable_local_asset(
 ) -> Result<DurableSpoolFile, String> {
     let root = store_root(&app)?;
     let key = master_key(&root)?;
-    let conn = open_connection(&app)?;
+    read_durable_local_asset_at(&root, &key, &local_asset_id)
+}
+
+pub(crate) fn read_durable_local_asset_at(
+    root: &std::path::Path,
+    key: &[u8; 32],
+    local_asset_id: &str,
+) -> Result<DurableSpoolFile, String> {
+    let conn = open_connection_at(&root)?;
     initialize_schema(&conn)?;
     let (sha256, mime, size_bytes) = conn
         .query_row(
@@ -286,7 +294,7 @@ pub fn read_durable_local_asset(
             },
         )
         .map_err(sql_error)?;
-    let item = read_queue_item(&conn, &key, &local_asset_id)?;
+    let item = read_queue_item(&conn, key, local_asset_id)?;
     Ok(DurableSpoolFile {
         filename: item.file_name.unwrap_or(item.title),
         mime,
@@ -307,7 +315,7 @@ pub fn read_durable_local_asset_chunk(
     }
     let root = store_root(&app)?;
     let key = master_key(&root)?;
-    let conn = open_connection(&app)?;
+    let conn = open_connection_at(&root)?;
     initialize_schema(&conn)?;
     let (size_bytes, local_path, file_nonce): (i64, String, String) = conn
         .query_row(

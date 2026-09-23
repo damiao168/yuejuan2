@@ -96,6 +96,9 @@ func (s *PostgresStore) CreateRollback(ctx context.Context, tenantID, examID, ac
 	if source.ExamID != examID || source.Status != StatusPublished {
 		return Release{}, ErrInvalidTransition
 	}
+	// Historical releases may carry a high-score sharing policy. Do not
+	// propagate it into a new release while anonymous assets are unavailable.
+	source.VisibilityPolicy.ShowHighScorePaper = false
 	version, err := s.nextVersionTx(ctx, tx, tenantID, examID)
 	if err != nil {
 		return Release{}, err
@@ -152,6 +155,7 @@ func (s *PostgresStore) CreateFromRegrade(ctx context.Context, tenantID, examID,
 	if source.ExamID != examID || source.Status != StatusPublished {
 		return Release{}, ErrInvalidTransition
 	}
+	source.VisibilityPolicy.ShowHighScorePaper = false
 	facts, err := s.releaseFactsTx(ctx, tx, tenantID, source.ID)
 	if err != nil {
 		return Release{}, err
@@ -265,6 +269,15 @@ func (s *PostgresStore) Publish(ctx context.Context, tenantID, id, actorID strin
 	}
 	if release.Status != StatusDraft {
 		return Release{}, ErrInvalidTransition
+	}
+	if release.VisibilityPolicy.ShowHighScorePaper {
+		ready, err := s.anonymousPaperReadyTx(ctx, tx, tenantID, release.ID)
+		if err != nil {
+			return Release{}, err
+		}
+		if !ready {
+			return Release{}, ErrAnonymousPaperUnavailable
+		}
 	}
 	// Refresh the cross-service aggregate only after the exam advisory lock is
 	// held. Score writers use the same lock, so the gate and publication cannot
@@ -380,33 +393,7 @@ func (s *PostgresStore) StudentResult(ctx context.Context, tenantID, examID, stu
 				return StudentResult{}, err
 			}
 		}
-		if detail.Release.VisibilityPolicy.ShowHighScorePaper {
-			if top, found := highestScoreItem(detail.Items); found {
-				highPresentation, highPages, pageErr := s.studentPaperPresentation(ctx, tenantID, top.SubmissionID)
-				if pageErr != nil {
-					return StudentResult{}, pageErr
-				}
-				highPaper := &StudentHighScorePaper{Available: len(highPages) > 0, TotalScore: top.TotalScore, MaxScore: top.MaxScore, Pages: highPages}
-				highQuestions := detail.Questions
-				if top.SubmissionID != item.SubmissionID {
-					highQuestions, err = s.questions(ctx, tenantID, detail.Release.ID, top.SubmissionID)
-					if err != nil {
-						return StudentResult{}, err
-					}
-				}
-				for _, question := range highQuestions {
-					if question.SubmissionID != top.SubmissionID {
-						continue
-					}
-					mark := StudentPaperScoreMark{QuestionID: question.QuestionID, QuestionNo: question.QuestionNo, Score: question.Score, MaxScore: question.MaxScore}
-					if position, ok := highPresentation[question.QuestionID]; ok {
-						mark.PageNo, mark.AnswerGeometry = position.PageNo, position.Geometry
-					}
-					highPaper.ScoreMarks = append(highPaper.ScoreMarks, mark)
-				}
-				result.HighScorePaper = highPaper
-			}
-		}
+		// Peer paper images are withheld until a verified anonymous asset exists.
 		result.Questions = []StudentQuestion{}
 		for _, question := range detail.Questions {
 			if question.SubmissionID != item.SubmissionID {
@@ -433,6 +420,12 @@ func (s *PostgresStore) StudentResult(ctx context.Context, tenantID, examID, stu
 			result.Questions = append(result.Questions, view)
 		}
 		sort.Slice(result.Questions, func(i, j int) bool { return result.Questions[i].QuestionNo < result.Questions[j].QuestionNo })
+		if detail.Release.VisibilityPolicy.ShowHighScorePaper {
+			result.HighScorePaper, err = s.studentHighScorePaper(ctx, tenantID, detail.Release.ID)
+			if err != nil {
+				return StudentResult{}, err
+			}
+		}
 		return result, nil
 	}
 	return StudentResult{}, ErrNotFound
@@ -621,18 +614,6 @@ ORDER BY seg.question_id,seg.updated_at DESC,seg.id DESC
 	return out, pages, rows.Err()
 }
 
-func highestScoreItem(items []ReleaseItem) (ReleaseItem, bool) {
-	var top ReleaseItem
-	found := false
-	for _, item := range items {
-		if item.StudentID != "" && (!found || item.TotalScore > top.TotalScore) {
-			top = item
-			found = true
-		}
-	}
-	return top, found
-}
-
 func (s *PostgresStore) StudentQuestion(ctx context.Context, tenantID, examID, studentID, questionID string) (StudentQuestion, error) {
 	result, err := s.StudentResult(ctx, tenantID, examID, studentID)
 	if err != nil {
@@ -688,22 +669,44 @@ LIMIT 1
 }
 
 func (s *PostgresStore) StudentPaperPageImage(ctx context.Context, tenantID, examID, studentID, questionID string, highScore bool) (StudentQuestionImageSource, error) {
+	if highScore {
+		var source StudentQuestionImageSource
+		err := s.db.QueryRowContext(ctx, `
+SELECT current_release.release_id::text,ap.id::text,ap.file_asset_id::text
+FROM score_release_current current_release
+JOIN score_release release ON release.tenant_id=current_release.tenant_id AND release.id=current_release.release_id AND release.status='published'
+JOIN score_release_item mine ON mine.tenant_id=release.tenant_id AND mine.release_id=release.id AND mine.student_id=$3::uuid
+JOIN LATERAL (
+  SELECT submission_id FROM score_release_item
+  WHERE tenant_id=release.tenant_id AND release_id=release.id AND student_id IS NOT NULL
+  ORDER BY total_score DESC,submission_id LIMIT 1
+) highest ON true
+JOIN score_release_question q ON q.tenant_id=release.tenant_id AND q.release_id=release.id
+  AND q.submission_id=highest.submission_id AND q.question_id=$4::uuid
+JOIN answer_segment seg ON seg.tenant_id=q.tenant_id AND seg.submission_id=q.submission_id
+  AND seg.question_id=q.question_id AND seg.deleted_at IS NULL
+JOIN score_release_anonymous_page ap ON ap.tenant_id=release.tenant_id AND ap.release_id=release.id
+  AND ap.source_submission_page_id=seg.submission_page_id AND ap.revoked_at IS NULL
+WHERE current_release.tenant_id=$1::uuid AND current_release.exam_id=$2::uuid
+  AND COALESCE((release.visibility_policy->>'show_question_scores')::boolean,false)
+  AND COALESCE((release.visibility_policy->>'show_high_score_paper')::boolean,false)
+ORDER BY seg.updated_at DESC,seg.id DESC LIMIT 1
+`, tenantID, examID, studentID, questionID).Scan(&source.ReleaseID, &source.AnonymousPageID, &source.AnonymousFileAssetID)
+		if errors.Is(err, sql.ErrNoRows) {
+			return StudentQuestionImageSource{}, ErrNotFound
+		}
+		return source, err
+	}
 	var source StudentQuestionImageSource
 	err := s.db.QueryRowContext(ctx, `
-WITH selected_item AS (
-  SELECT item.* FROM score_release_current current_release
+SELECT seg.id::text FROM score_release_current current_release
   JOIN score_release release ON release.tenant_id=current_release.tenant_id AND release.id=current_release.release_id AND release.status='published'
-  JOIN score_release_item item ON item.tenant_id=release.tenant_id AND item.release_id=release.id
-  WHERE current_release.tenant_id=$1::uuid AND current_release.exam_id=$2::uuid
-    AND COALESCE((release.visibility_policy->>'show_question_scores')::boolean,false)
-    AND ((NOT $5::boolean AND item.student_id=$3::uuid) OR ($5::boolean AND COALESCE((release.visibility_policy->>'show_high_score_paper')::boolean,false)))
-  ORDER BY CASE WHEN $5::boolean THEN item.total_score ELSE 0 END DESC,item.submission_id
-  LIMIT 1
-)
-SELECT seg.id::text FROM selected_item item
+JOIN score_release_item item ON item.tenant_id=release.tenant_id AND item.release_id=release.id AND item.student_id=$3::uuid
 JOIN answer_segment seg ON seg.tenant_id=item.tenant_id AND seg.submission_id=item.submission_id AND seg.question_id=$4::uuid AND seg.deleted_at IS NULL
+WHERE current_release.tenant_id=$1::uuid AND current_release.exam_id=$2::uuid
+  AND COALESCE((release.visibility_policy->>'show_question_scores')::boolean,false)
 ORDER BY seg.updated_at DESC,seg.id DESC LIMIT 1
-`, tenantID, examID, studentID, questionID, highScore).Scan(&source.AnswerSegmentID)
+`, tenantID, examID, studentID, questionID).Scan(&source.AnswerSegmentID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return StudentQuestionImageSource{}, ErrNotFound
 	}
@@ -714,11 +717,15 @@ func (s *PostgresStore) currentFactsTx(ctx context.Context, tx *sql.Tx, tenantID
 	rows, err := tx.QueryContext(ctx, `
 SELECT sg.student_id::text, sg.submission_id::text, sg.total_score::float8, sg.max_score::float8, sg.status,
   fg.question_id::text, fg.question_no, fg.id::text, fg.score::float8, fg.max_score::float8, fg.source,
-  COALESCE(fg.arbitration_task_id::text, fg.double_mark_session_id::text, fg.id::text),
-  COALESCE((SELECT NULLIF(hg.student_feedback, '') FROM human_grade hg
-    WHERE hg.tenant_id = fg.tenant_id AND hg.answer_segment_id = fg.answer_segment_id AND hg.deleted_at IS NULL
-    ORDER BY hg.created_at DESC, hg.id DESC LIMIT 1),
-    (SELECT NULLIF(at.student_feedback, '') FROM arbitration_task at WHERE at.tenant_id = fg.tenant_id AND at.id = fg.arbitration_task_id AND at.deleted_at IS NULL), ''),
+  CASE fg.source
+    WHEN 'arbitration' THEN COALESCE(fg.arbitration_task_id::text, '')
+    WHEN 'single_review' THEN COALESCE(human_source.id::text, '')
+    WHEN 'double_mark_auto' THEN COALESCE(fg.double_mark_session_id::text, '')
+    ELSE fg.id::text END,
+  CASE fg.source
+    WHEN 'arbitration' THEN COALESCE(arbitration_source.student_feedback, '')
+    WHEN 'single_review' THEN COALESCE(human_source.student_feedback, '')
+    ELSE '' END,
   COALESCE(q.question_type, ''), COALESCE(q.stem, ''), COALESCE(q.knowledge_points, '[]'::jsonb),
   COALESCE((SELECT ak.standard_answer::text FROM question_answer_key ak
     WHERE ak.tenant_id=q.tenant_id AND ak.question_id=q.id AND ak.deleted_at IS NULL
@@ -729,6 +736,22 @@ SELECT sg.student_id::text, sg.submission_id::text, sg.total_score::float8, sg.m
 FROM submission_grade sg
 JOIN final_grade fg ON fg.tenant_id = sg.tenant_id AND fg.exam_id = sg.exam_id AND fg.submission_id = sg.submission_id AND fg.deleted_at IS NULL
 JOIN question q ON q.tenant_id = fg.tenant_id AND q.id = fg.question_id AND q.deleted_at IS NULL
+LEFT JOIN LATERAL (
+  SELECT at.id, at.student_feedback FROM arbitration_task at
+  WHERE fg.source = 'arbitration' AND at.tenant_id = fg.tenant_id AND at.id = fg.arbitration_task_id
+    AND at.status = 'submitted' AND at.final_score = fg.score AND at.deleted_at IS NULL
+) arbitration_source ON true
+LEFT JOIN LATERAL (
+  SELECT hg.id, hg.student_feedback, hg.score, hg.max_score,
+    COUNT(*) OVER (PARTITION BY hg.created_at) AS timestamp_peers
+  FROM human_grade hg
+  JOIN review_task rt ON rt.tenant_id=hg.tenant_id AND rt.id=hg.review_task_id
+  WHERE fg.source = 'single_review' AND hg.tenant_id = fg.tenant_id AND hg.answer_segment_id = fg.answer_segment_id
+    AND hg.grade_round = 'single' AND rt.grade_round = 'single' AND rt.status IN ('submitted','completed')
+    AND hg.created_at <= fg.created_at AND hg.deleted_at IS NULL
+    AND rt.deleted_at IS NULL
+  ORDER BY hg.created_at DESC, hg.id DESC LIMIT 1
+) human_source ON human_source.score = fg.score AND human_source.max_score = fg.max_score AND human_source.timestamp_peers = 1
 WHERE sg.tenant_id = $1 AND sg.exam_id = $2::uuid AND sg.deleted_at IS NULL
 ORDER BY sg.submission_id, fg.question_no, fg.id
 `, tenantID, examID)
@@ -984,6 +1007,10 @@ func applyRegradeChanges(facts []SubmissionFact, input CreateRegradeInput) bool 
 				return false
 			}
 			question.Score, question.SourceType, question.SourceID = change.Score, "single_review", change.ReviewedGradeID
+			// The reviewed regrade plan has no approved student feedback. The
+			// source release's explanation belongs to the old score.
+			question.Explanation.Feedback = ""
+			question.Explanation.RubricSummary = nil
 			matched++
 		}
 		fact.TotalScore = 0

@@ -24,6 +24,7 @@ export interface TaskRailProps {
   loadingTasks: boolean;
   taskError: string | null;
   hasMoreTasks: boolean;
+  pageError: string | null;
   loadingMoreTasks: boolean;
   actioning: string | null;
   onQueueScopeChange: (scope: "mine" | "all") => void;
@@ -35,7 +36,7 @@ export interface TaskRailProps {
   onAssignSelected: () => Promise<void>;
   onSelectTask: (taskId: string) => void;
   onLoadTasks: () => Promise<void>;
-  onLoadMoreTasks: () => Promise<void>;
+  onLoadMoreTasks: () => Promise<ReviewTask[]>;
 }
 
 export function TaskRail({
@@ -56,6 +57,7 @@ export function TaskRail({
   loadingTasks,
   taskError,
   hasMoreTasks,
+  pageError,
   loadingMoreTasks,
   actioning,
   onQueueScopeChange,
@@ -114,7 +116,7 @@ export function TaskRail({
         ) : (
           <List
             dataSource={filteredTasks}
-            loadMore={hasMoreTasks ? <div className="grading-task-load-more"><Button loading={loadingMoreTasks} onClick={() => void onLoadMoreTasks()}>加载更多</Button></div> : null}
+            loadMore={hasMoreTasks ? <div className="grading-task-load-more">{pageError ? <span role="alert">{pageError}</span> : null}<Button loading={loadingMoreTasks} onClick={() => void onLoadMoreTasks()}>{pageError ? "重试加载更多" : "加载更多"}</Button></div> : null}
             renderItem={(task) => (
               <List.Item className={task.id === selectedTaskId ? "grading-task-item active" : "grading-task-item"} onClick={() => onSelectTask(task.id)}>
                 {canManageTasks ? (

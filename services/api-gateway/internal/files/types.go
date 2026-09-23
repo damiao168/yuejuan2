@@ -147,6 +147,12 @@ type LifecycleStore interface {
 	MarkDeleteFailed(ctx context.Context, tenantID string, id string, expectedRevision int64, detail string) (FileAsset, error)
 }
 
+// MissingObjectRecovery restores an asset quarantined by reconciliation after
+// its object has been re-uploaded and verified at the original storage key.
+type MissingObjectRecovery interface {
+	RecoverMissing(context.Context, string, string, int64) (FileAsset, error)
+}
+
 func AllowsAsset(scope auth.AccessScope, asset FileAsset) bool {
 	if scope.TenantID == "" || asset.TenantID != scope.TenantID {
 		return false

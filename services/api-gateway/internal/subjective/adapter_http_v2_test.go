@@ -41,6 +41,9 @@ func TestHTTPAdapterV2SendsSanitizedEvidenceAndReturnsOnlyCandidates(t *testing.
 	if output.SuggestedScore != 0 || output.MathScore != nil || len(output.MathCandidates) != 1 || output.MathCandidates[0].RubricPointID != "p1" {
 		t.Fatalf("model response escaped candidate-only mapping: %#v", output)
 	}
+	if output.Telemetry.Usage.InputTokens != 211 || output.Telemetry.Usage.OutputTokens != 34 || output.Telemetry.Usage.TotalTokens != 245 {
+		t.Fatalf("v2 provider usage was not mapped: %#v", output.Telemetry.Usage)
+	}
 }
 
 func TestHTTPAdapterV2RejectsScoreInjectionAndInconsistentAlternativeRisk(t *testing.T) {
@@ -79,7 +82,7 @@ func writeMathAgentV2Success(t *testing.T, w http.ResponseWriter, extra map[stri
 		"alternative_solution_candidate": false, "risk_flags": []string{"human_review_required"}, "needs_human_review": true,
 		"model_version": "Qwen/Qwen3-4B-GGUF:Q4_K_M", "prompt_version": "subjective-governed-cn-subject-routing-v6", "rubric_version": "rubric-v3",
 		"capability_profile": "local-pilot-v1", "mock": false,
-		"telemetry": map[string]any{"adapter": "local_llama_cpp", "provider": "local", "deployment": "local-qwen3-4b-q4-k-m", "region": "on_premise", "attempts": 1, "repair_attempted": false, "prior_error_codes": []string{}, "elapsed_ms": 1},
+		"telemetry": map[string]any{"adapter": "local_llama_cpp", "provider": "local", "deployment": "local-qwen3-4b-q4-k-m", "region": "on_premise", "attempts": 1, "repair_attempted": false, "prior_error_codes": []string{}, "elapsed_ms": 1, "usage": map[string]any{"input_tokens": 211, "cached_input_tokens": 100, "output_tokens": 34, "reasoning_tokens": 5, "total_tokens": 245}},
 	}
 	for key, value := range extra {
 		if value == nil {

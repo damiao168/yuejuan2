@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentUser, login } from "../../api/auth";
 import { DesktopApiClient } from "../../api/client";
 import { getUserErrorMessage } from "../../api/userError";
+import { bindDurableSession, clearDurableSession } from "../../lib/durableStore";
 import {
   deleteStoredCredentials,
   isTauriRuntime,
@@ -22,30 +23,45 @@ export function useDesktopSession(defaultServer: string, logEvent: LogEvent) {
   const [credentialStoreMessage, setCredentialStoreMessage] = useState<string | null>(null);
   const [credentialStoreReady, setCredentialStoreReady] = useState(false);
   const [token, setToken] = useState<string | null>(null);
+  const [durableSessionKey, setDurableSessionKey] = useState<string | null>(null);
+  const [authenticatedServerUrl, setAuthenticatedServerUrl] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const autoLoginStartedRef = useRef(false);
+  const loginAttemptRef = useRef(0);
 
-  const client = useMemo(() => new DesktopApiClient({ baseUrl: serverUrl, getToken: () => token }), [serverUrl, token]);
+  const client = useMemo(() => new DesktopApiClient({ baseUrl: authenticatedServerUrl ?? serverUrl, getToken: () => token }), [authenticatedServerUrl, serverUrl, token]);
 
   const performLogin = useCallback(async (
     credentials: StoredDesktopCredentials,
     persistence: "save" | "delete" | "none"
   ) => {
+    const attempt = ++loginAttemptRef.current;
     setAuthError(null);
     setIsLoggingIn(true);
+    setToken(null);
+    setUser(null);
+    setDurableSessionKey(null);
+    setAuthenticatedServerUrl(null);
     try {
+      await clearDurableSession();
+      if (attempt !== loginAttemptRef.current) return false;
       const result = await login(new DesktopApiClient({ baseUrl: credentials.server_url }), {
         tenant_code: credentials.tenant_code.trim(),
         username: credentials.username.trim(),
         password: credentials.password
       });
+      if (attempt !== loginAttemptRef.current) return false;
+      const sessionKey = await bindDurableSession(credentials.server_url, result.user.tenant_id, result.user.id);
+      if (attempt !== loginAttemptRef.current) return false;
       setServerUrl(credentials.server_url);
+      setAuthenticatedServerUrl(credentials.server_url);
       setTenantCode(credentials.tenant_code.trim());
       setUsername(credentials.username.trim());
       setToken(result.access_token);
+      setDurableSessionKey(sessionKey);
       setExpiresAt(result.expires_at);
       setUser(result.user);
       if (persistence === "save") {
@@ -68,13 +84,17 @@ export function useDesktopSession(defaultServer: string, logEvent: LogEvent) {
       await logEvent("info", "login succeeded", `${result.user.username}@${result.user.tenant_code}`);
       return true;
     } catch (error) {
+      if (attempt !== loginAttemptRef.current) return false;
+      await clearDurableSession().catch(() => undefined);
       const message = getUserErrorMessage(error, "登录请求失败");
       setAuthError(message);
       await logEvent("error", "login failed", message);
       return false;
     } finally {
-      setPassword("");
-      setIsLoggingIn(false);
+      if (attempt === loginAttemptRef.current) {
+        setPassword("");
+        setIsLoggingIn(false);
+      }
     }
   }, [logEvent]);
 
@@ -123,23 +143,48 @@ export function useDesktopSession(defaultServer: string, logEvent: LogEvent) {
     }
   }, []);
 
+  const handleLogout = useCallback(async () => {
+    ++loginAttemptRef.current;
+    setToken(null);
+    setUser(null);
+    setDurableSessionKey(null);
+    setAuthenticatedServerUrl(null);
+    setExpiresAt(null);
+    setAuthError(null);
+    setIsLoggingIn(false);
+    await clearDurableSession();
+    await logEvent("info", "session logged out");
+  }, [logEvent]);
+
   const checkSession = useCallback(async () => {
+    const attempt = loginAttemptRef.current;
     setAuthError(null);
     try {
       const result = await getCurrentUser(client);
+      if (attempt !== loginAttemptRef.current) return;
+      if (user && (result.user.id !== user.id || result.user.tenant_id !== user.tenant_id)) {
+        await clearDurableSession();
+        setToken(null);
+        setUser(null);
+        setDurableSessionKey(null);
+        setAuthenticatedServerUrl(null);
+        throw new Error("服务端身份已变化，本地账号数据已锁定；请重新登录。");
+      }
       setUser(result.user);
       await logEvent("info", "session verified", result.user.username);
     } catch (error) {
+      if (attempt !== loginAttemptRef.current) return;
       const message = getUserErrorMessage(error, "登录状态校验失败");
       setAuthError(message);
       await logEvent("warning", "session verification failed", message);
     }
-  }, [client, logEvent]);
+  }, [client, logEvent, user]);
 
   return {
     client, serverUrl, setServerUrl, tenantCode, setTenantCode, username, setUsername,
     password, setPassword, rememberLogin, setRememberLogin, credentialStoreMessage,
     credentialStoreReady, token, expiresAt, user, authError, isLoggingIn,
-    handleLogin, handleForgetStoredLogin: forgetStoredLogin, handleCheckSession: checkSession
+    durableScopeKey: token && user && authenticatedServerUrl ? durableSessionKey ?? "" : "",
+    handleLogin, handleLogout, handleForgetStoredLogin: forgetStoredLogin, handleCheckSession: checkSession
   };
 }

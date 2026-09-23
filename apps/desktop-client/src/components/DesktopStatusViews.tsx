@@ -31,6 +31,7 @@ export function StatusLine(props: { label: string; value: string; tone: "ready" 
 
 export function CapabilityTag(props: { status: string }) {
   if (props.status === "ready") return <Tag color="success">已配置</Tag>;
+  if (props.status === "legacy_data") return <Tag color="warning">旧数据待核对</Tag>;
   if (props.status === "browser_fallback") return <Tag color="processing">开发模式</Tag>;
   if (props.status === "unavailable") return <Tag color="error">不可用</Tag>;
   return <Tag color="warning">未配置/待接入</Tag>;

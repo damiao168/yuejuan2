@@ -31,8 +31,8 @@ export async function getRuntimeDiagnostics(): Promise<RuntimeDiagnostics> {
   };
 }
 
-export async function getCapabilityStatuses(): Promise<CapabilityProbe[]> {
-  const native = await invokeOptional<CapabilityProbe[]>("capability_statuses");
+export async function getCapabilityStatuses(sessionId?: string): Promise<CapabilityProbe[]> {
+  const native = await invokeOptional<CapabilityProbe[]>("capability_statuses", { sessionId: sessionId || null });
   if (native) {
     return native;
   }

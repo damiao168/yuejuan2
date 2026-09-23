@@ -48,8 +48,7 @@ export function ScoreWorkflowModals({
   } = attendanceWorkflow;
   const {
     releaseModalOpen, closeReleaseModal, createRelease, releaseVisibility,
-    setReleaseVisibility, releaseReason, setReleaseReason, releaseHighScorePaper,
-    setReleaseHighScorePaper
+    setReleaseVisibility, releaseReason, setReleaseReason
   } = releaseWorkflow;
   const {
     regradeReviewOpen, closeRegradeReview, regradeReview, regradeReviewScores,
@@ -132,10 +131,10 @@ export function ScoreWorkflowModals({
     >
       <Alert type="info" showIcon message="草稿不会立即对学生生效" description="提交后会冻结当前已确认的成绩事实。请在发布门禁通过后，单独确认发布。" />
       <p><strong>{selectedExam?.name}</strong> · {gradeTotal} 份成绩</p>
-      <fieldset className="release-visibility-options"><legend>学生可见内容</legend>{(Object.keys(releaseVisibilityLabels) as Array<keyof typeof releaseVisibilityLabels>).map((key) => <Checkbox key={key} checked={releaseVisibility[key]} onChange={(event) => setReleaseVisibility((current) => ({ ...current, [key]: event.target.checked }))}>{releaseVisibilityLabels[key]}</Checkbox>)}</fieldset>
+      <fieldset className="release-visibility-options"><legend>学生可见内容</legend>{(Object.keys(releaseVisibilityLabels) as Array<keyof typeof releaseVisibilityLabels>).map((key) => <Checkbox key={key} checked={releaseVisibility[key]} disabled={key === "show_high_score_paper" && !releaseVisibility.show_question_scores} onChange={(event) => setReleaseVisibility((current) => ({ ...current, [key]: event.target.checked, ...(key === "show_question_scores" && !event.target.checked ? { show_high_score_paper: false } : {}) }))}>{releaseVisibilityLabels[key]}</Checkbox>)}</fieldset>
       <label className="score-attendance-label" htmlFor="score-release-reason">发布说明（必填）</label>
       <Input.TextArea id="score-release-reason" rows={3} maxLength={1000} showCount value={releaseReason} placeholder="例如：期末考试首次正式发布" onChange={(event) => setReleaseReason(event.target.value)} />
-      <Checkbox checked={releaseHighScorePaper} onChange={(event) => setReleaseHighScorePaper(event.target.checked)}>向学生开放本场最高分答卷</Checkbox>
+      {releaseVisibility.show_high_score_paper ? <Alert type="warning" showIcon message="发布前自动生成匿名范例卷" description="请确认最高分答卷的每页均有已锁定模板、完成页面配准，并配置覆盖姓名、学号和二维码的身份区域；缺少任一条件将阻断发布。" /> : null}
     </Modal>
 
     <Modal

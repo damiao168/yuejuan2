@@ -64,3 +64,26 @@ func TestRegistryExportsAuthRateLimiterDegradedGauge(t *testing.T) {
 		t.Fatalf("degraded gauge missing: %s", recorder.Body.String())
 	}
 }
+
+func TestRegistryManagedModelProbeLabelsAreBounded(t *testing.T) {
+	registry := NewRegistry()
+	registry.ObserveManagedModelProbe("quick", "deepseek", "provider_timeout", "connect", false)
+	registry.ObserveManagedModelProbe("models", "https://secret.example/key", "secret-error", "secret-stage", false)
+	registry.ObserveManagedModelProbe("quick", "deepseek", "should-be-ignored", "", true)
+
+	recorder := httptest.NewRecorder()
+	registry.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	body := recorder.Body.String()
+	for _, expected := range []string{
+		`edugrade_managed_model_probes_total{operation="quick",provider="deepseek",error_code="provider_timeout",failure_stage="connect"} 1`,
+		`edugrade_managed_model_probes_total{operation="models",provider="other",error_code="other",failure_stage="none"} 1`,
+		`edugrade_managed_model_probes_total{operation="quick",provider="deepseek",error_code="none",failure_stage="none"} 1`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("managed model probe counter missing %q: %s", expected, body)
+		}
+	}
+	if strings.Contains(body, "secret.example") || strings.Contains(body, "secret-error") || strings.Contains(body, "secret-stage") {
+		t.Fatalf("unbounded provider or diagnostic leaked into metrics: %s", body)
+	}
+}
