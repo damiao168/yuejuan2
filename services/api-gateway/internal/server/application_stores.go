@@ -53,15 +53,15 @@ import (
 )
 
 type ApplicationStores struct {
-	Identity     IdentityStores
-	Exam         ExamPreparationStores
-	Capture      CaptureProcessingStores
-	AIFoundation AIFoundationStores
-	Grading      GradingQualityStores
-	Release      ReleaseStores
-	AIGovernance AIGovernanceStores
+	Identity        IdentityStores
+	Exam            ExamPreparationStores
+	Capture         CaptureProcessingStores
+	AIFoundation    AIFoundationStores
+	Grading         GradingQualityStores
+	Release         ReleaseStores
+	AIGovernance    AIGovernanceStores
 	PlatformSchools platformschools.Store
-	Idempotency  idempotency.Store
+	Idempotency     idempotency.Store
 }
 
 func NewMemoryApplicationStores() ApplicationStores {
@@ -99,7 +99,7 @@ func NewMemoryApplicationStores() ApplicationStores {
 			MathCorrections: mathunderstanding.NewMemoryCorrectionStore(mathStore), MathPilotGates: mathunderstanding.NewMemoryPilotGateStore(),
 		},
 		PlatformSchools: platformschools.NewMemoryStore(),
-		Idempotency: idempotency.NewMemoryStore(),
+		Idempotency:     idempotency.NewMemoryStore(),
 	}
 	return stores
 }
@@ -172,7 +172,7 @@ func NewPostgresApplicationStores(infra *Infrastructure) (ApplicationStores, err
 			MathCorrections: mathunderstanding.NewPostgresCorrectionStore(infra.DB, mathStore), MathPilotGates: mathunderstanding.NewPostgresPilotGateStore(infra.DB),
 		},
 		PlatformSchools: platformschools.NewPostgresStore(infra.DB),
-		Idempotency: idempotency.NewPostgresStore(infra.DB),
+		Idempotency:     idempotency.NewPostgresStore(infra.DB),
 	}
 	if err := validatePostgresStoreGraph(stores); err != nil {
 		return ApplicationStores{}, err

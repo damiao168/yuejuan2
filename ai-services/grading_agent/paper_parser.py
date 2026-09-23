@@ -198,7 +198,7 @@ class PaperParser:
                 )
             finally:
                 usage = sum_model_usage(
-                    usage, getattr(self.model, "last_usage", lambda: {})()
+                    usage, getattr(self.model, "last_usage", dict)()
                 )
         self._progress(
             progress,
@@ -264,7 +264,7 @@ class PaperParser:
                     )
                 finally:
                     usage = sum_model_usage(
-                        usage, getattr(self.model, "last_usage", lambda: {})()
+                        usage, getattr(self.model, "last_usage", dict)()
                     )
                 expanded = expand_compact_output(output, chunk, chunk_index)
                 parsed_chunks.append(

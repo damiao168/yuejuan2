@@ -266,7 +266,10 @@ func TestUploadRetryAuthorizesPersistedAssetScope(t *testing.T) {
 }
 
 func TestChunkedUploadStopsAtOuterLimitBeforeIdempotencySpool(t *testing.T) {
-	t.Setenv("TMP", t.TempDir())
+	tempDir := t.TempDir()
+	t.Setenv("TMPDIR", tempDir)
+	t.Setenv("TMP", tempDir)
+	t.Setenv("TEMP", tempDir)
 	router := testRouter(authStoreWithPermissions(t, []string{"file:manage"}), files.NewMemoryStore(), files.NewMemoryObjectStorage())
 	token := login(t, router)
 	body, contentType := multipartUploadBody(t, "large.pdf", "application/pdf", append([]byte("%PDF-1.4\n"), bytes.Repeat([]byte{'x'}, 3*1024*1024)...), nil)
@@ -281,7 +284,7 @@ func TestChunkedUploadStopsAtOuterLimitBeforeIdempotencySpool(t *testing.T) {
 	if rec.Code != http.StatusRequestEntityTooLarge || reader.read > 2*1024*1024+1 {
 		t.Fatalf("expected bounded 413, got %d after reading %d bytes: %s", rec.Code, reader.read, rec.Body.String())
 	}
-	if leftover, err := os.ReadDir(os.TempDir()); err != nil || len(leftover) != 0 {
+	if leftover, err := os.ReadDir(tempDir); err != nil || len(leftover) != 0 {
 		t.Fatalf("temporary idempotency upload was not cleaned up: %v %#v", err, leftover)
 	}
 }

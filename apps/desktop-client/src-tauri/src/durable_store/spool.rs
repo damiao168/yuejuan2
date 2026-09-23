@@ -279,7 +279,7 @@ pub(crate) fn read_durable_local_asset_at(
     key: &[u8; 32],
     local_asset_id: &str,
 ) -> Result<DurableSpoolFile, String> {
-    let conn = open_connection_at(&root)?;
+    let conn = open_connection_at(root)?;
     initialize_schema(&conn)?;
     let (sha256, mime, size_bytes) = conn
         .query_row(

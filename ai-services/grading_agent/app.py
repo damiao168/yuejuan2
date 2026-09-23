@@ -177,7 +177,7 @@ class GradingAgentApplication:
                             repair_reason=prior_error_codes[-1] if prior_error_codes else None,
                         )
                     finally:
-                        usage = sum_model_usage(usage, getattr(self.model, "last_usage", lambda: {})())
+                        usage = sum_model_usage(usage, getattr(self.model, "last_usage", dict)())
                     telemetry = {
                         "adapter": self.settings.adapter_type,
                         "provider": self.settings.provider_key,

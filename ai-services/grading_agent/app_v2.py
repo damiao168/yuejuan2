@@ -442,7 +442,7 @@ class ProductionMathV2Application:
                     try:
                         raw = self.model.request_structured(request_id, math_candidate_messages(request, prior[-1] if prior else None), math_candidate_schema(request), "math_criterion_candidates")
                     finally:
-                        usage = sum_model_usage(usage, getattr(self.model, "last_usage", lambda: {})())
+                        usage = sum_model_usage(usage, getattr(self.model, "last_usage", dict)())
                     risks = list(dict.fromkeys(raw["risk_flags"] + (["alternative_solution_candidate"] if raw["alternative_solution_candidate"] else []) + ["human_review_required"]))
                     result = {
                         "schema_version": "grading-agent-v2", "request_id": request_id, "status": "candidate_mapping", "delivery": "teacher_suggestion",

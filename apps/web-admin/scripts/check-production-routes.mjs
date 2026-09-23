@@ -177,8 +177,10 @@ assert(
 
 const reviewerProgress = grading.match(/const reviewerProgress[\s\S]*?\n  \}, \[[^\n]+\]\);/)?.[0] ?? "";
 assert(
-  /tasks\.forEach/.test(reviewerProgress) && !/filteredTasks/.test(reviewerProgress),
-  "Reviewer progress must use every assigned task, independent of the current queue filter."
+  /taskAggregate\?\.reviewers/.test(reviewerProgress)
+    && /setTaskAggregate\(result\.aggregate \?\? null\)/.test(grading)
+    && !/filteredTasks/.test(reviewerProgress),
+  "Reviewer progress must use the complete server-side task aggregate, independent of the current queue filter."
 );
 
 assert(
