@@ -127,6 +127,57 @@ func TestPolicyUpdateRequiresKnownDeploymentAndVersion(t *testing.T) {
 	}
 }
 
+func TestUpdatePolicyRejectsMixedLegacyAndManagedModels(t *testing.T) {
+	const tenantID = "00000000-0000-0000-0000-000000000020"
+	handler := NewHandler(NewMemoryStore(), nil, NewEnvironmentSecretResolver(t.TempDir()), testBaseline())
+	user := auth.User{ID: "tenant-admin", TenantID: tenantID, Permissions: []string{"model:policy:manage"}}
+	body := `{"mode":"cloud_suggestion","external_enabled":true,"text_export_enabled":true,
+		"allowed_deployments":["old-deployment"],
+		"allowed_model_config_ids":["11111111-1111-4111-8111-111111111111"],
+		"fallback_mode":"manual_only","expected_version":1,"reason":"test"}`
+	response := performHandlerRequest(t, user, http.MethodPut, "/api/v1/model-policy", body, handler.UpdatePolicy)
+	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), `"mixed_model_policy_sources"`) {
+		t.Fatalf("mixed policy returned %d: %s", response.Code, response.Body.String())
+	}
+}
+
+func TestUpdatePolicyRejectsUnavailableManagedModel(t *testing.T) {
+	const tenantID = "00000000-0000-0000-0000-000000000020"
+	const modelID = "11111111-1111-4111-8111-111111111111"
+	user := auth.User{ID: "tenant-admin", TenantID: tenantID, Permissions: []string{"model:policy:manage"}}
+	body := `{"mode":"cloud_suggestion","external_enabled":true,"text_export_enabled":true,
+		"allowed_model_config_ids":["` + modelID + `"],
+		"fallback_mode":"manual_only","expected_version":1,"reason":"test"}`
+	valid := ManagedAPIConfig{ID: modelID, TenantID: tenantID, Status: "active",
+		LastCapabilityStatus: "success", LastCapabilityVersion: ManagedCapabilityProbeVersion}
+	tests := []struct {
+		name       string
+		config     *ManagedAPIConfig
+		wantStatus int
+		wantCode   string
+	}{
+		{name: "missing", wantStatus: http.StatusBadRequest, wantCode: "unknown_model_config"},
+		{name: "other school", config: func() *ManagedAPIConfig { c := valid; c.TenantID = "other-school"; return &c }(), wantStatus: http.StatusBadRequest, wantCode: "unknown_model_config"},
+		{name: "disabled", config: func() *ManagedAPIConfig { c := valid; c.Status = "disabled"; return &c }(), wantStatus: http.StatusBadRequest, wantCode: "unknown_model_config"},
+		{name: "capability failed", config: func() *ManagedAPIConfig { c := valid; c.LastCapabilityStatus = "failed"; return &c }(), wantStatus: http.StatusBadRequest, wantCode: "unknown_model_config"},
+		{name: "stale probe", config: func() *ManagedAPIConfig { c := valid; c.LastCapabilityVersion = "structured-json-v2"; return &c }(), wantStatus: http.StatusBadRequest, wantCode: "unknown_model_config"},
+		{name: "ready", config: &valid, wantStatus: http.StatusOK},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := NewMemoryStore()
+			if tt.config != nil {
+				store.managedConfigs[modelID] = *tt.config
+			}
+			handler := NewHandler(store, nil, NewEnvironmentSecretResolver(t.TempDir()), testBaseline())
+			response := performHandlerRequest(t, user, http.MethodPut, "/api/v1/model-policy", body, handler.UpdatePolicy)
+			if response.Code != tt.wantStatus || (tt.wantCode != "" && !strings.Contains(response.Body.String(), `"`+tt.wantCode+`"`)) {
+				t.Fatalf("policy update returned %d: %s", response.Code, response.Body.String())
+			}
+		})
+	}
+}
+
 func TestStoreBoundaryRejectsUnverifiedExternalActivation(t *testing.T) {
 	store := NewMemoryStore()
 	tenantID := "00000000-0000-0000-0000-000000000020"

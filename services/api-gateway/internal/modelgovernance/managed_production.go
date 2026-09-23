@@ -35,13 +35,13 @@ WHERE config.is_default OR EXISTS (
 			&connection, &capability, &probeVersion, &ciphertext, &nonce); err != nil {
 			return err
 		}
-		parsed, parseErr := url.Parse(endpoint)
 		key, decryptErr := s.credentialCipher.Decrypt(ciphertext, nonce, tenantID, id)
-		if parseErr != nil || parsed.Scheme != "https" || parsed.Host == "" || status != "active" || !present ||
-			strings.TrimSpace(version) == "" || strings.TrimSpace(region) == "" ||
-			connection != "success" || capability != "success" || probeVersion != ManagedCapabilityProbeVersion ||
-			decryptErr != nil || strings.TrimSpace(key) == "" {
-			return fmt.Errorf("%w: managed model %s is not ready", ErrProductionUnsafe, id)
+		if err := validateManagedProductionCandidate(managedProductionCandidate{
+			ID: id, Endpoint: endpoint, ModelVersion: version, Region: region,
+			Status: status, Present: present, ConnectionStatus: connection,
+			CapabilityStatus: capability, CapabilityVersion: probeVersion,
+		}, key, decryptErr); err != nil {
+			return err
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -52,6 +52,36 @@ WHERE config.is_default OR EXISTS (
 		return err
 	}
 	return s.validateApprovedPanelScopes(ctx)
+}
+
+type managedProductionCandidate struct {
+	ID                string
+	Endpoint          string
+	ModelVersion      string
+	Region            string
+	Status            string
+	Present           bool
+	ConnectionStatus  string
+	CapabilityStatus  string
+	CapabilityVersion string
+}
+
+func validateManagedProductionCandidate(item managedProductionCandidate, apiKey string, decryptErr error) error {
+	parsed, parseErr := url.Parse(item.Endpoint)
+	if parseErr != nil || parsed.Scheme != "https" || parsed.Host == "" ||
+		item.Status != "active" || !item.Present ||
+		strings.TrimSpace(item.ModelVersion) == "" || strings.TrimSpace(item.Region) == "" ||
+		item.ConnectionStatus != "success" || item.CapabilityStatus != "success" ||
+		item.CapabilityVersion != ManagedCapabilityProbeVersion ||
+		decryptErr != nil || strings.TrimSpace(apiKey) == "" {
+		return fmt.Errorf("%w: managed model %s is not ready", ErrProductionUnsafe, item.ID)
+	}
+	return nil
+}
+
+type approvedPanelScope struct {
+	tenant, stage, subject, archetype string
+	ready                             bool
 }
 
 // Only approved scopes are production routes. Partially configured shadow
@@ -69,13 +99,9 @@ WHERE policy.status='approved'`)
 	if err != nil {
 		return err
 	}
-	type scope struct {
-		tenant, stage, subject, archetype string
-		ready                             bool
-	}
-	scopes := []scope{}
+	scopes := []approvedPanelScope{}
 	for rows.Next() {
-		var item scope
+		var item approvedPanelScope
 		if err := rows.Scan(&item.tenant, &item.stage, &item.subject, &item.archetype, &item.ready); err != nil {
 			rows.Close()
 			return err
@@ -90,14 +116,21 @@ WHERE policy.status='approved'`)
 		return err
 	}
 	for _, item := range scopes {
-		if !item.ready {
-			return fmt.Errorf("%w: approved panel policy for %s/%s/%s/%s lacks completed evidence",
-				ErrProductionUnsafe, item.tenant, item.stage, item.subject, item.archetype)
+		if err := validateApprovedPanelScope(ctx, s, item); err != nil {
+			return err
 		}
-		if _, err := ResolvePanelRoleBindings(ctx, s, item.tenant, item.stage, item.subject, item.archetype); err != nil {
-			return fmt.Errorf("%w: approved panel policy for %s/%s/%s/%s lacks a valid A/B/C binding: %v",
-				ErrProductionUnsafe, item.tenant, item.stage, item.subject, item.archetype, err)
-		}
+	}
+	return nil
+}
+
+func validateApprovedPanelScope(ctx context.Context, store ModelRoleBindingStore, item approvedPanelScope) error {
+	if !item.ready {
+		return fmt.Errorf("%w: approved panel policy for %s/%s/%s/%s lacks completed evidence",
+			ErrProductionUnsafe, item.tenant, item.stage, item.subject, item.archetype)
+	}
+	if _, err := ResolvePanelRoleBindings(ctx, store, item.tenant, item.stage, item.subject, item.archetype); err != nil {
+		return fmt.Errorf("%w: approved panel policy for %s/%s/%s/%s lacks a valid A/B/C binding: %v",
+			ErrProductionUnsafe, item.tenant, item.stage, item.subject, item.archetype, err)
 	}
 	return nil
 }
