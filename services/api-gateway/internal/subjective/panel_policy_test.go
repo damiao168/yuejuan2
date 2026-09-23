@@ -7,10 +7,41 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/assessment"
 	"edugrade-enterprise/services/api-gateway/internal/gradingevaluation"
+	"edugrade-enterprise/services/api-gateway/internal/modelgovernance"
 )
+
+type panelApprovalList struct {
+	items []modelgovernance.ModelApproval
+}
+
+func (s *panelApprovalList) ListModelApprovals(_ context.Context, tenantID string) ([]modelgovernance.ModelApproval, error) {
+	result := make([]modelgovernance.ModelApproval, 0, len(s.items))
+	for _, item := range s.items {
+		if item.TenantID == tenantID {
+			result = append(result, item)
+		}
+	}
+	return result, nil
+}
+
+func readyPanelModelApprovals() *panelApprovalList {
+	result := &panelApprovalList{}
+	for _, item := range []struct{ config, model string }{
+		{"config-a", "model-a"}, {"config-b", "model-b"}, {"config-c", "model-c-strong"},
+	} {
+		result.items = append(result.items, modelgovernance.ModelApproval{
+			TenantID: "tenant-1", ModelConfigID: item.config, ModelVersion: item.model,
+			PromptVersion: "panel-prompt-v1", RubricVersion: "rubric-v1",
+			Subject: "mathematics", Grade: "senior", QuestionType: "short_answer",
+			Modality: "text", ExpiresAt: time.Now().Add(time.Hour),
+		})
+	}
+	return result
+}
 
 func TestPanelPolicyApprovalRequiresCompletedAlignedShadowEvidence(t *testing.T) {
 	ctx := context.Background()
@@ -53,7 +84,12 @@ func TestPanelPolicyApprovalRequiresCompletedAlignedShadowEvidence(t *testing.T)
 	a := &panelTestAdapter{supported: map[string]bool{"p1": true}, confidence: .9}
 	b := &panelTestAdapter{supported: map[string]bool{"p1": true}, confidence: .9}
 	c := &panelTestAdapter{supported: map[string]bool{"p1": true}, confidence: .99}
-	orchestrator := newTestPanelOrchestrator(t, a, b, c).WithApprovedPolicyStore(store)
+	orchestrator := newTestPanelOrchestrator(t, a, b, c)
+	orchestrator.agents.PrimaryA.ModelConfigID = "config-a"
+	orchestrator.agents.PrimaryB.ModelConfigID = "config-b"
+	orchestrator.agents.Arbiter.ModelConfigID = "config-c"
+	approvals := readyPanelModelApprovals()
+	orchestrator.WithApprovedPolicyStore(store).WithManagedApprovals(approvals)
 	gradingContext := panelTestContext()
 	gradingContext.AssessmentSnapshot.EducationStage = assessment.StageSenior
 	gradingContext.AssessmentSnapshot.SubjectCode = assessment.SubjectMathematics
@@ -61,10 +97,21 @@ func TestPanelPolicyApprovalRequiresCompletedAlignedShadowEvidence(t *testing.T)
 	if _, err := orchestrator.Grade(ctx, "tenant-1", "actor-1", gradingContext, PanelDecisionConfig{}); !errors.Is(err, ErrPanelPolicyRequired) {
 		t.Fatalf("approved-only orchestrator accepted an unapproved explicit config: %v", err)
 	}
+	now := time.Now().UTC()
+	approvals.items[0].RevokedAt = &now
+	if _, err := orchestrator.GradeWithApprovedPolicy(ctx, "tenant-1", "actor-1", gradingContext); !errors.Is(err, ErrPanelPolicyRequired) || len(a.inputs) != 0 || len(b.inputs) != 0 {
+		t.Fatalf("revoked model approval dispatched grading: err=%v A=%d B=%d", err, len(a.inputs), len(b.inputs))
+	}
+	approvals.items[0].RevokedAt = nil
 	result, err := orchestrator.GradeWithApprovedPolicy(ctx, "tenant-1", "actor-1", gradingContext)
 	if err != nil || result.Panel.Status != PanelResolved || result.Panel.PolicyVersion != approved.PolicyVersion {
 		t.Fatalf("approved thresholds were not used by the governed entry point: %#v err=%v", result.Panel, err)
 	}
+	approvals.items[0].RevokedAt = &now
+	if _, err := orchestrator.GradeWithApprovedPolicy(ctx, "tenant-1", "actor-1", gradingContext); !errors.Is(err, ErrPanelPolicyRequired) {
+		t.Fatalf("revoked model approval remained runnable: %v", err)
+	}
+	approvals.items[0].RevokedAt = nil
 	orchestrator.agents.PrimaryB.Policy.ModelVersion = "changed-model-b"
 	if _, err := orchestrator.GradeWithApprovedPolicy(ctx, "tenant-1", "actor-1", gradingContext); !errors.Is(err, ErrPanelPolicyRequired) {
 		t.Fatalf("changed model set reused old policy: %v", err)
@@ -235,9 +282,9 @@ func policyTestModelSetReference() string {
 		return ModelPolicy{ModelVersion: model, PromptVersion: "panel-prompt-v1", MinConfidence: .8}
 	}
 	return PanelModelSetReference(PanelAgents{
-		PrimaryA: PanelAgentBinding{Policy: policy("model-a")},
-		PrimaryB: PanelAgentBinding{Policy: policy("model-b")},
-		Arbiter:  PanelAgentBinding{Policy: policy("model-c-strong")},
+		PrimaryA: PanelAgentBinding{Policy: policy("model-a"), ModelConfigID: "config-a"},
+		PrimaryB: PanelAgentBinding{Policy: policy("model-b"), ModelConfigID: "config-b"},
+		Arbiter:  PanelAgentBinding{Policy: policy("model-c-strong"), ModelConfigID: "config-c"},
 	})
 }
 

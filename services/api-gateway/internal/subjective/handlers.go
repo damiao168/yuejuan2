@@ -66,15 +66,15 @@ func (h *Handler) NewShadowPanelOrchestrator(agents PanelAgents) (*PanelOrchestr
 
 // NewApprovedPanelOrchestrator enables only the evaluation-backed policy
 // entry point. It does not change or auto-enable the existing grading route.
-func (h *Handler) NewApprovedPanelOrchestrator(agents PanelAgents, policies PanelPolicyStore) (*PanelOrchestrator, error) {
-	if policies == nil {
+func (h *Handler) NewApprovedPanelOrchestrator(agents PanelAgents, policies PanelPolicyStore, approvals PanelModelApprovalReader) (*PanelOrchestrator, error) {
+	if policies == nil || approvals == nil {
 		return nil, ErrPanelConfiguration
 	}
 	panel, err := h.NewShadowPanelOrchestrator(agents)
 	if err != nil {
 		return nil, err
 	}
-	return panel.WithApprovedPolicyStore(policies), nil
+	return panel.WithApprovedPolicyStore(policies).WithManagedApprovals(approvals), nil
 }
 
 // EvaluationEvidenceProvider supplies only the aggregate, aligned offline

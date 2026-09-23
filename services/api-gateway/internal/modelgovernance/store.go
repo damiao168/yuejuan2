@@ -63,6 +63,7 @@ func PolicyFromUpdate(input PolicyUpdateInput) TenantPolicy {
 		TextExportEnabled:        input.TextExportEnabled,
 		ImageExportEnabled:       input.ImageExportEnabled,
 		AllowedDeployments:       input.AllowedDeployments,
+		AllowedModelConfigIDs:    input.AllowedModelConfigIDs,
 		MaxCostMicrosPerQuestion: input.MaxCostMicrosPerQuestion,
 		MaxCostMicrosPerExam:     input.MaxCostMicrosPerExam,
 		FallbackMode:             input.FallbackMode,

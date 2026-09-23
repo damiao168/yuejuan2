@@ -44,6 +44,7 @@ import {
   listModelCalibrations,
   putAIEligibilityPolicy,
   routeAIHumanDisagreement,
+  setScoringAssuranceSchool,
   type AddGradingEvaluationObservationRequest,
   type AddModelCalibrationEvidenceRequest,
   type AIEligibilityDecision,
@@ -134,18 +135,21 @@ type ObservationForm = AddGradingEvaluationObservationRequest;
 type CalibrationForm = CreateModelCalibrationRequest;
 
 export function ScoringAssuranceWorkspace({
+  tenantID,
   canReadEligibility,
   canManageEligibility,
   canManageEvaluations,
   canReadDisagreements,
   canManageDisagreements
 }: {
+  tenantID: string;
   canReadEligibility: boolean;
   canManageEligibility: boolean;
   canManageEvaluations: boolean;
   canReadDisagreements: boolean;
   canManageDisagreements: boolean;
 }) {
+  setScoringAssuranceSchool(tenantID);
   const { message } = App.useApp();
   const [axis, setAxis] = useState<EligibilityAxis>(defaultAxis);
   const [policy, setPolicy] = useState<AIEligibilityPolicy>();

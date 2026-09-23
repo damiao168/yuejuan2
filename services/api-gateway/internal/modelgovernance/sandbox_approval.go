@@ -8,6 +8,9 @@ import (
 type SandboxApproval struct {
 	ID                    string     `json:"id"`
 	TenantID              string     `json:"tenant_id,omitempty"`
+	ModelConfigID         string     `json:"model_config_id,omitempty"`
+	ModelName             string     `json:"model_name,omitempty"`
+	ModelVersion          string     `json:"model_version,omitempty"`
 	ProviderID            string     `json:"provider_id"`
 	DeploymentID          string     `json:"deployment_id"`
 	ProviderKey           string     `json:"provider_key"`
@@ -29,6 +32,7 @@ type SandboxApproval struct {
 
 type SandboxApprovalInput struct {
 	TenantID              string    `json:"tenant_id,omitempty"`
+	ModelConfigID         string    `json:"model_config_id,omitempty"`
 	ProviderID            string    `json:"provider_id"`
 	DeploymentID          string    `json:"deployment_id"`
 	Protocol              string    `json:"protocol"`
@@ -50,8 +54,9 @@ type SandboxApprovalRevokeInput struct {
 }
 
 func ValidateSandboxApprovalInput(input SandboxApprovalInput, now time.Time) error {
-	if strings.TrimSpace(input.ProviderID) == "" ||
-		strings.TrimSpace(input.DeploymentID) == "" ||
+	managed := strings.TrimSpace(input.ModelConfigID) != ""
+	legacy := strings.TrimSpace(input.ProviderID) != "" && strings.TrimSpace(input.DeploymentID) != ""
+	if managed == legacy ||
 		input.Protocol != SandboxProtocolDashScopeNative ||
 		!governanceKey.MatchString(strings.TrimSpace(input.ApprovalReference)) ||
 		strings.TrimSpace(input.ApprovedRegion) == "" ||

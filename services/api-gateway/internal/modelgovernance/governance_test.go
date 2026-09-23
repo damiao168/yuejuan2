@@ -1,9 +1,85 @@
 package modelgovernance
 
 import (
+	"context"
 	"errors"
 	"testing"
 )
+
+func TestPolicyAuthorizesOnlyVerifiedModelsFromItsSchool(t *testing.T) {
+	store := NewMemoryStore()
+	const school = "school-a"
+	const allowed = "11111111-1111-4111-8111-111111111111"
+	const otherSchool = "22222222-2222-4222-8222-222222222222"
+	const disabled = "33333333-3333-4333-8333-333333333333"
+	store.managedConfigs[allowed] = ManagedAPIConfig{
+		ID: allowed, TenantID: school, Status: "active",
+		LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v3",
+	}
+	store.managedConfigs[otherSchool] = ManagedAPIConfig{
+		ID: otherSchool, TenantID: "school-b", Status: "active",
+		LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v3",
+	}
+	store.managedConfigs[disabled] = ManagedAPIConfig{
+		ID: disabled, TenantID: school, Status: "disabled",
+		LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v3",
+	}
+	current, err := store.GetPolicy(context.Background(), school)
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := PolicyUpdateInput{
+		Mode: ModeCloudSuggestion, ExternalEnabled: true, TextExportEnabled: true,
+		FallbackMode: "manual_only", ExpectedVersion: current.Version, Reason: "test",
+		AllowedModelConfigIDs: []string{otherSchool},
+	}
+	if _, err := store.UpdatePolicy(context.Background(), school, "actor", input); !errors.Is(err, ErrInvalidPolicy) {
+		t.Fatalf("cross-school model must be rejected: %v", err)
+	}
+	input.AllowedModelConfigIDs = []string{disabled}
+	if _, err := store.UpdatePolicy(context.Background(), school, "actor", input); !errors.Is(err, ErrInvalidPolicy) {
+		t.Fatalf("disabled model must be rejected: %v", err)
+	}
+	input.AllowedModelConfigIDs = []string{allowed}
+	updated, err := store.UpdatePolicy(context.Background(), school, "actor", input)
+	if err != nil || len(updated.AllowedModelConfigIDs) != 1 || updated.AllowedModelConfigIDs[0] != allowed ||
+		len(updated.AllowedDeployments) != 0 {
+		t.Fatalf("managed policy did not retain sole model identity: %#v %v", updated, err)
+	}
+}
+
+func TestSelectManagedModelFailsClosedForDisabledOrUnverifiedConfig(t *testing.T) {
+	const id = "11111111-1111-4111-8111-111111111111"
+	policy := TenantPolicy{
+		TenantID: "school-a", Mode: ModeCloudSuggestion, ExternalEnabled: true,
+		TextExportEnabled: true, FallbackMode: "manual_only",
+		AllowedModelConfigIDs: []string{id},
+	}
+	config := ManagedAPIConfig{
+		ID: id, TenantID: "school-a", ProviderKey: "deepseek", ModelName: "model-a",
+		ModelVersion: "v1", AdapterType: "openai_compatible", Region: "global",
+		Modalities: []string{"text"}, Status: "active", LastTestStatus: "success",
+		LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v3",
+	}
+	decision, err := SelectManagedModel(policy, RouteRequest{Modality: "text"}, []ManagedAPIConfig{config})
+	if err != nil || decision.ModelConfigID != id || decision.ModelVersion != "v1" {
+		t.Fatalf("managed route did not freeze allowed identity: %#v %v", decision, err)
+	}
+	config.Status = "disabled"
+	if _, err := SelectManagedModel(policy, RouteRequest{Modality: "text"}, []ManagedAPIConfig{config}); !errors.Is(err, ErrNoDeployment) {
+		t.Fatalf("disabled model must not route: %v", err)
+	}
+	config.Status = "active"
+	config.LastCapabilityVersion = "legacy-v1"
+	if _, err := SelectManagedModel(policy, RouteRequest{Modality: "text"}, []ManagedAPIConfig{config}); !errors.Is(err, ErrNoDeployment) {
+		t.Fatalf("stale capability must not route: %v", err)
+	}
+	config.LastCapabilityVersion = "structured-json-v3"
+	config.TenantID = "school-b"
+	if _, err := SelectManagedModel(policy, RouteRequest{Modality: "text"}, []ManagedAPIConfig{config}); !errors.Is(err, ErrNoDeployment) {
+		t.Fatalf("cross-school model must not route: %v", err)
+	}
+}
 
 func TestDefaultPolicyCannotRouteToExternalDeployment(t *testing.T) {
 	external := Provider{

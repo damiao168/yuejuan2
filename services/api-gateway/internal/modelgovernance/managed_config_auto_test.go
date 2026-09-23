@@ -416,6 +416,7 @@ func TestManagedAPIConfigHandlerPromotesPreviouslyVerifiedBackupWithoutNewGenera
 	base.BaseURL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 	base.ModelName = "qwen-plus"
 	base.ModelVersion = "qwen-plus"
+	base.Region = "cn"
 	base.IsDefault = false
 	verified := successfulManagedProbe()
 	verified.ProbeMode = "capability"

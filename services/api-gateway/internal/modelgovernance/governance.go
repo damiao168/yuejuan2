@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -88,6 +90,7 @@ type TenantPolicy struct {
 	TextExportEnabled        bool      `json:"text_export_enabled"`
 	ImageExportEnabled       bool      `json:"image_export_enabled"`
 	AllowedDeployments       []string  `json:"allowed_deployments"`
+	AllowedModelConfigIDs    []string  `json:"allowed_model_config_ids"`
 	MaxCostMicrosPerQuestion int64     `json:"max_cost_micros_per_question"`
 	MaxCostMicrosPerExam     int64     `json:"max_cost_micros_per_exam"`
 	FallbackMode             string    `json:"fallback_mode"`
@@ -152,6 +155,7 @@ type PolicyUpdateInput struct {
 	TextExportEnabled        bool     `json:"text_export_enabled"`
 	ImageExportEnabled       bool     `json:"image_export_enabled"`
 	AllowedDeployments       []string `json:"allowed_deployments"`
+	AllowedModelConfigIDs    []string `json:"allowed_model_config_ids"`
 	MaxCostMicrosPerQuestion int64    `json:"max_cost_micros_per_question"`
 	MaxCostMicrosPerExam     int64    `json:"max_cost_micros_per_exam"`
 	FallbackMode             string   `json:"fallback_mode"`
@@ -169,11 +173,21 @@ type RouteDecision struct {
 	Reason        string `json:"reason"`
 }
 
+type ManagedRouteDecision struct {
+	ModelConfigID string `json:"model_config_id"`
+	ProviderKey   string `json:"provider_key"`
+	ModelName     string `json:"model_name"`
+	ModelVersion  string `json:"model_version"`
+	AdapterType   string `json:"adapter_type"`
+	Region        string `json:"region"`
+}
+
 func DefaultTenantPolicy() TenantPolicy {
 	return TenantPolicy{
-		Mode:               ModeLocalOnly,
-		AllowedDeployments: []string{},
-		FallbackMode:       "manual_only",
+		Mode:                  ModeLocalOnly,
+		AllowedDeployments:    []string{},
+		AllowedModelConfigIDs: []string{},
+		FallbackMode:          "manual_only",
 	}
 }
 
@@ -246,13 +260,21 @@ func ValidateTenantPolicy(policy TenantPolicy) error {
 		(policy.Mode != ModeLocalOnly ||
 			policy.TextExportEnabled ||
 			policy.ImageExportEnabled ||
-			len(policy.AllowedDeployments) != 0) {
+			len(policy.AllowedDeployments) != 0 ||
+			len(policy.AllowedModelConfigIDs) != 0) {
 		return ErrInvalidPolicy
 	}
 	for _, deployment := range policy.AllowedDeployments {
 		if !governanceKey.MatchString(deployment) {
 			return ErrInvalidPolicy
 		}
+	}
+	seenConfigs := make(map[string]bool, len(policy.AllowedModelConfigIDs))
+	for _, id := range policy.AllowedModelConfigIDs {
+		if _, err := uuid.Parse(id); err != nil || seenConfigs[id] {
+			return ErrInvalidPolicy
+		}
+		seenConfigs[id] = true
 	}
 	return nil
 }
@@ -319,6 +341,50 @@ func SelectDeployment(
 		}, nil
 	}
 	return RouteDecision{}, ErrNoDeployment
+}
+
+// SelectManagedModel resolves current policy authorization through the school
+// model inventory. Callers must still record the returned identity snapshot in
+// the grading run and call ledger before dispatch.
+func SelectManagedModel(policy TenantPolicy, request RouteRequest, configs []ManagedAPIConfig) (ManagedRouteDecision, error) {
+	if err := ValidateTenantPolicy(policy); err != nil ||
+		(request.Modality != "text" && request.Modality != "image") {
+		return ManagedRouteDecision{}, ErrInvalidPolicy
+	}
+	if !policy.ExternalEnabled || policy.Mode == ModeLocalOnly ||
+		(request.Modality == "text" && !policy.TextExportEnabled) ||
+		(request.Modality == "image" && !policy.ImageExportEnabled) {
+		return ManagedRouteDecision{}, ErrNoDeployment
+	}
+	allowed := make(map[string]bool, len(policy.AllowedModelConfigIDs))
+	for _, id := range policy.AllowedModelConfigIDs {
+		allowed[id] = true
+	}
+	candidates := append([]ManagedAPIConfig(nil), configs...)
+	sort.Slice(candidates, func(i, j int) bool {
+		if candidates[i].ProviderKey != candidates[j].ProviderKey {
+			return candidates[i].ProviderKey < candidates[j].ProviderKey
+		}
+		if candidates[i].ModelName != candidates[j].ModelName {
+			return candidates[i].ModelName < candidates[j].ModelName
+		}
+		return candidates[i].ID < candidates[j].ID
+	})
+	for _, config := range candidates {
+		if config.TenantID != policy.TenantID || !allowed[config.ID] ||
+			config.Status != "active" || config.LastTestStatus != "success" ||
+			config.LastCapabilityStatus != "success" ||
+			config.LastCapabilityVersion != "structured-json-v3" ||
+			!contains(config.Modalities, request.Modality) {
+			continue
+		}
+		return ManagedRouteDecision{
+			ModelConfigID: config.ID, ProviderKey: config.ProviderKey,
+			ModelName: config.ModelName, ModelVersion: config.ModelVersion,
+			AdapterType: config.AdapterType, Region: config.Region,
+		}, nil
+	}
+	return ManagedRouteDecision{}, ErrNoDeployment
 }
 
 func validCredentialReference(value string) bool {

@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/aieligibility"
+	"edugrade-enterprise/services/api-gateway/internal/modelgovernance"
 )
 
 type PanelAgentBinding struct {
@@ -15,6 +17,7 @@ type PanelAgentBinding struct {
 	Policy        ModelPolicy
 	StrengthRank  int
 	ModelConfigID string
+	ModelName     string
 	ProviderKey   string
 	AdapterType   string
 	BaseURL       string
@@ -33,11 +36,16 @@ type PanelResult struct {
 	Arbiter  *Grade       `json:"arbiter,omitempty"`
 }
 
+type PanelModelApprovalReader interface {
+	ListModelApprovals(context.Context, string) ([]modelgovernance.ModelApproval, error)
+}
+
 type PanelOrchestrator struct {
 	store        PanelPersistence
 	agents       PanelAgents
 	admission    decideEligibilityFunc
 	policies     PanelPolicyStore
+	approvals    PanelModelApprovalReader
 	approvedOnly bool
 	math         *panelMathRuntime
 }
@@ -50,12 +58,19 @@ func (o *PanelOrchestrator) WithApprovedPolicyStore(store PanelPolicyStore) *Pan
 	return o
 }
 
+func (o *PanelOrchestrator) WithManagedApprovals(reader PanelModelApprovalReader) *PanelOrchestrator {
+	if o != nil {
+		o.approvals = reader
+	}
+	return o
+}
+
 // GradeWithApprovedPolicy is the fail-closed production entry point. Shadow
 // experiments may still call Grade with an explicit frozen config, while this
 // path accepts thresholds only from an approved exact stage/subject/archetype
 // policy backed by a completed evaluation run.
 func (o *PanelOrchestrator) GradeWithApprovedPolicy(ctx context.Context, tenantID, actorID string, gradingContext Context) (PanelResult, error) {
-	if o == nil || o.policies == nil || !gradingContext.AssessmentSnapshot.EducationStage.Valid() ||
+	if o == nil || o.policies == nil || o.approvals == nil || !gradingContext.AssessmentSnapshot.EducationStage.Valid() ||
 		!gradingContext.AssessmentSnapshot.SubjectCode.Valid() || strings.TrimSpace(gradingContext.AssessmentSnapshot.ArchetypeCode) == "" {
 		return PanelResult{}, ErrPanelPolicyRequired
 	}
@@ -74,7 +89,40 @@ func (o *PanelOrchestrator) GradeWithApprovedPolicy(ctx context.Context, tenantI
 		policy.ModelSetReference != PanelModelSetReference(o.agents) {
 		return PanelResult{}, ErrPanelPolicyRequired
 	}
+	if err := o.requireManagedApprovals(ctx, tenantID, gradingContext); err != nil {
+		return PanelResult{}, err
+	}
 	return o.gradeWithConfig(ctx, tenantID, actorID, gradingContext, policy.DecisionConfig)
+}
+
+func (o *PanelOrchestrator) requireManagedApprovals(ctx context.Context, tenantID string, gradingContext Context) error {
+	items, err := o.approvals.ListModelApprovals(ctx, tenantID)
+	if err != nil {
+		return err
+	}
+	modality := "text"
+	if strings.TrimSpace(gradingContext.AnswerText) == "" && len(gradingContext.AnswerImageRef) > 0 {
+		modality = "image"
+	}
+	for _, binding := range []PanelAgentBinding{o.agents.PrimaryA, o.agents.PrimaryB, o.agents.Arbiter} {
+		if binding.ModelConfigID == "" {
+			return ErrPanelPolicyRequired
+		}
+		scope := modelgovernance.ModelApprovalScope{
+			ModelConfigID: binding.ModelConfigID,
+			ModelVersion:  binding.Policy.ModelVersion,
+			PromptVersion: binding.Policy.PromptVersion,
+			RubricVersion: gradingContext.Rubric.Version,
+			Subject:       gradingContext.Subject,
+			Grade:         gradingContext.GradeLevel,
+			QuestionType:  gradingContext.Question.QuestionType,
+			Modality:      modality,
+		}
+		if _, err := modelgovernance.RequireActiveModelApproval(items, scope, time.Now().UTC()); err != nil {
+			return ErrPanelPolicyRequired
+		}
+	}
+	return nil
 }
 
 // The math runtime is installed only by Handler, which owns the existing
@@ -367,7 +415,10 @@ func (o *PanelOrchestrator) executeBlindAgent(ctx context.Context, tenantID, act
 	}
 	ApplyPromptGuard(&output, input.PromptGuard)
 	ApplyReviewPolicy(&output, gradingContext, binding.Policy)
-	grade, err := o.store.CreateGrade(ctx, tenantID, actorID, successfulGrade(gradingContext, binding.Policy, run.ID, output))
+	gradeInput := successfulGrade(gradingContext, binding.Policy, run.ID, output)
+	gradeInput.ModelConfigID = binding.ModelConfigID
+	gradeInput.ModelName = binding.ModelName
+	grade, err := o.store.CreateGrade(ctx, tenantID, actorID, gradeInput)
 	if err != nil {
 		return run, Grade{}, err
 	}

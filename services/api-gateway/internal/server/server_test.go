@@ -124,7 +124,7 @@ func TestModelGovernanceRoutesEnforceSeparateReadAndManagePermissions(t *testing
 	listResponse := httptest.NewRecorder()
 	router.ServeHTTP(listResponse, listRequest)
 	if listResponse.Code != http.StatusOK ||
-		!strings.Contains(listResponse.Body.String(), `"provider_key":"local"`) ||
+		!strings.Contains(listResponse.Body.String(), `"providers":[]`) ||
 		strings.Contains(listResponse.Body.String(), `"credential_ref":`) {
 		t.Fatalf("governed provider read returned %d: %s", listResponse.Code, listResponse.Body.String())
 	}

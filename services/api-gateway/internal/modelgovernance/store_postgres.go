@@ -285,7 +285,33 @@ WHERE tenant_id = $1 AND policy_key = 'default' AND deleted_at IS NULL
 	if err != nil {
 		return TenantPolicy{}, mapStoreError(err)
 	}
+	item.AllowedModelConfigIDs, err = s.policyModelConfigIDs(ctx, tenantID, item.ID)
+	if err != nil {
+		return TenantPolicy{}, err
+	}
 	return item, nil
+}
+
+func (s *PostgresStore) policyModelConfigIDs(ctx context.Context, tenantID, policyID string) ([]string, error) {
+	rows, err := s.db.QueryContext(ctx, `
+SELECT managed_model_api_config_id::text
+FROM tenant_model_policy_model
+WHERE tenant_id = $1 AND policy_id::text = $2 AND enabled
+ORDER BY managed_model_api_config_id
+`, tenantID, policyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	ids := []string{}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
 }
 
 func (s *PostgresStore) UpdatePolicy(ctx context.Context, tenantID string, _ string, input PolicyUpdateInput) (TenantPolicy, error) {
@@ -299,7 +325,12 @@ func (s *PostgresStore) UpdatePolicy(ctx context.Context, tenantID string, _ str
 	if err != nil {
 		return TenantPolicy{}, ErrInvalidPolicy
 	}
-	row := s.db.QueryRowContext(ctx, `
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return TenantPolicy{}, err
+	}
+	defer tx.Rollback()
+	row := tx.QueryRowContext(ctx, `
 UPDATE tenant_model_policy
 SET display_name = COALESCE(NULLIF($2, ''), display_name),
     mode = $3,
@@ -331,14 +362,40 @@ RETURNING id::text, tenant_id::text, policy_key, display_name, mode,
 	if err != nil {
 		return TenantPolicy{}, mapStoreError(err)
 	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM tenant_model_policy_model WHERE tenant_id = $1 AND policy_id::text = $2`, tenantID, item.ID); err != nil {
+		return TenantPolicy{}, mapStoreError(err)
+	}
+	for _, id := range input.AllowedModelConfigIDs {
+		result, err := tx.ExecContext(ctx, `
+INSERT INTO tenant_model_policy_model (tenant_id, policy_id, managed_model_api_config_id)
+SELECT $1::uuid, $2::uuid, config.id
+FROM managed_model_api_config config
+WHERE config.tenant_id = $1::uuid AND config.id::text = $3
+  AND config.deleted_at IS NULL AND config.status = 'active'
+  AND config.last_capability_status = 'success'
+  AND config.last_capability_probe_version = 'structured-json-v3'
+`, tenantID, item.ID, id)
+		if err != nil {
+			return TenantPolicy{}, mapStoreError(err)
+		}
+		count, err := result.RowsAffected()
+		if err != nil || count != 1 {
+			return TenantPolicy{}, ErrInvalidPolicy
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return TenantPolicy{}, mapStoreError(err)
+	}
+	item.AllowedModelConfigIDs = append([]string{}, input.AllowedModelConfigIDs...)
 	return item, nil
 }
 
 func (s *PostgresStore) ListSandboxApprovals(ctx context.Context, tenantID string) ([]SandboxApproval, error) {
 	rows, err := s.db.QueryContext(ctx, `
 SELECT approval.id::text, approval.tenant_id::text,
-       approval.provider_id::text, approval.deployment_id::text,
-       provider.provider_key, deployment.deployment_key,
+       COALESCE(approval.provider_id::text, ''), COALESCE(approval.deployment_id::text, ''),
+       COALESCE(NULLIF(approval.provider_key, ''), provider.provider_key, ''), COALESCE(deployment.deployment_key, ''),
+       COALESCE(approval.managed_model_api_config_id::text, ''), approval.model_name, approval.model_version,
        approval.protocol, approval.approval_reference, approval.approved_region,
        approval.sandbox_account, approval.contract_reviewed,
        approval.retention_reviewed, approval.data_residency_reviewed,
@@ -346,9 +403,9 @@ SELECT approval.id::text, approval.tenant_id::text,
        approval.image_export_reviewed, approval.expires_at,
        approval.revoked_at, approval.created_at
 FROM model_sandbox_approval approval
-JOIN model_provider provider
+LEFT JOIN model_provider provider
   ON provider.tenant_id = approval.tenant_id AND provider.id = approval.provider_id
-JOIN model_deployment deployment
+LEFT JOIN model_deployment deployment
   ON deployment.tenant_id = approval.tenant_id AND deployment.id = approval.deployment_id
 WHERE approval.tenant_id = $1
 ORDER BY approval.created_at DESC, approval.id
@@ -376,6 +433,9 @@ func (s *PostgresStore) CreateSandboxApproval(
 ) (SandboxApproval, error) {
 	if ValidateSandboxApprovalInput(input, time.Now().UTC()) != nil {
 		return SandboxApproval{}, ErrInvalidApproval
+	}
+	if input.ModelConfigID != "" {
+		return s.createManagedSandboxApproval(ctx, tenantID, actorID, input)
 	}
 	row := s.db.QueryRowContext(ctx, `
 WITH inventory AS (
@@ -415,6 +475,7 @@ inserted AS (
 SELECT inserted.id::text, inserted.tenant_id::text,
        inserted.provider_id::text, inserted.deployment_id::text,
        inventory.provider_key, inventory.deployment_key,
+       '', '', '',
        inserted.protocol, inserted.approval_reference, inserted.approved_region,
        inserted.sandbox_account, inserted.contract_reviewed,
        inserted.retention_reviewed, inserted.data_residency_reviewed,
@@ -430,6 +491,49 @@ JOIN inventory
 		input.ContractReviewed, input.RetentionReviewed, input.DataResidencyReviewed,
 		input.PricingReviewed, input.SyntheticDataOnly, input.ImageExportReviewed,
 		input.ExpiresAt.UTC(), actorID)
+	item, err := scanSandboxApproval(row)
+	if err != nil {
+		return SandboxApproval{}, mapSandboxApprovalStoreError(err)
+	}
+	return item, nil
+}
+
+func (s *PostgresStore) createManagedSandboxApproval(
+	ctx context.Context, tenantID, actorID string, input SandboxApprovalInput,
+) (SandboxApproval, error) {
+	row := s.db.QueryRowContext(ctx, `
+WITH config AS (
+  SELECT id, provider_key, model_name, model_version
+  FROM managed_model_api_config
+  WHERE tenant_id = $1::uuid AND id = $2::uuid AND deleted_at IS NULL
+    AND status = 'active' AND provider_key = 'aliyun' AND region = $5
+), inserted AS (
+  INSERT INTO model_sandbox_approval (
+    tenant_id, managed_model_api_config_id, provider_key, model_name, model_version,
+    protocol, approval_reference, approved_region, sandbox_account,
+    contract_reviewed, retention_reviewed, data_residency_reviewed,
+    pricing_reviewed, synthetic_data_only, image_export_reviewed,
+    expires_at, created_by
+  )
+  SELECT $1::uuid, config.id, config.provider_key, config.model_name, config.model_version,
+    $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NULLIF($14, '')::uuid
+  FROM config
+  RETURNING *
+)
+SELECT inserted.id::text, inserted.tenant_id::text, '', '',
+       inserted.provider_key, '', inserted.managed_model_api_config_id::text,
+       inserted.model_name, inserted.model_version,
+       inserted.protocol, inserted.approval_reference, inserted.approved_region,
+       inserted.sandbox_account, inserted.contract_reviewed,
+       inserted.retention_reviewed, inserted.data_residency_reviewed,
+       inserted.pricing_reviewed, inserted.synthetic_data_only,
+       inserted.image_export_reviewed, inserted.expires_at,
+       inserted.revoked_at, inserted.created_at
+FROM inserted
+`, tenantID, input.ModelConfigID, input.Protocol, input.ApprovalReference,
+		input.ApprovedRegion, input.SandboxAccount, input.ContractReviewed,
+		input.RetentionReviewed, input.DataResidencyReviewed, input.PricingReviewed,
+		input.SyntheticDataOnly, input.ImageExportReviewed, input.ExpiresAt.UTC(), actorID)
 	item, err := scanSandboxApproval(row)
 	if err != nil {
 		return SandboxApproval{}, mapSandboxApprovalStoreError(err)
@@ -457,8 +561,9 @@ WITH revoked AS (
   RETURNING *
 )
 SELECT revoked.id::text, revoked.tenant_id::text,
-       revoked.provider_id::text, revoked.deployment_id::text,
-       provider.provider_key, deployment.deployment_key,
+       COALESCE(revoked.provider_id::text, ''), COALESCE(revoked.deployment_id::text, ''),
+       COALESCE(NULLIF(revoked.provider_key, ''), provider.provider_key, ''), COALESCE(deployment.deployment_key, ''),
+       COALESCE(revoked.managed_model_api_config_id::text, ''), revoked.model_name, revoked.model_version,
        revoked.protocol, revoked.approval_reference, revoked.approved_region,
        revoked.sandbox_account, revoked.contract_reviewed,
        revoked.retention_reviewed, revoked.data_residency_reviewed,
@@ -466,9 +571,9 @@ SELECT revoked.id::text, revoked.tenant_id::text,
        revoked.image_export_reviewed, revoked.expires_at,
        revoked.revoked_at, revoked.created_at
 FROM revoked
-JOIN model_provider provider
+LEFT JOIN model_provider provider
   ON provider.tenant_id = revoked.tenant_id AND provider.id = revoked.provider_id
-JOIN model_deployment deployment
+LEFT JOIN model_deployment deployment
   ON deployment.tenant_id = revoked.tenant_id AND deployment.id = revoked.deployment_id
 `, tenantID, id, actorID, reason)
 	item, err := scanSandboxApproval(row)
@@ -536,15 +641,16 @@ LIMIT NULLIF($4, 0)
 		args = append(args, run.ID)
 	}
 	candidateRows, err := s.db.QueryContext(ctx, `
-SELECT id::text, tenant_id::text, run_id::text, deployment_id::text,
-       provider_key, deployment_key, model_version, prompt_version, rubric_version,
+SELECT id::text, tenant_id::text, run_id::text, coalesce(deployment_id::text, ''),
+       coalesce(managed_model_api_config_id::text, ''), provider_key,
+       coalesce(deployment_key, ''), model_name, model_version, prompt_version, rubric_version,
        evaluated_samples, teacher_reviewed_samples, teacher_accepted_samples,
        serious_error_samples, evidence_valid_samples,
        repeat_comparisons, stable_repeat_samples,
        p95_latency_ms, total_cost_micros, created_at
 FROM model_evaluation_candidate
 WHERE tenant_id = $1 AND run_id IN (`+strings.Join(placeholders, ",")+`)
-ORDER BY deployment_key, id
+ORDER BY model_name, deployment_key, id
 `, args...)
 	if err != nil {
 		return nil, err
@@ -620,6 +726,9 @@ func (s *PostgresStore) AddEvaluationCandidate(
 	if ValidateEvaluationCandidateInput(input, run) != nil {
 		return EvaluationCandidate{}, ErrInvalidEvaluation
 	}
+	if input.ModelConfigID != "" {
+		return s.addManagedEvaluationCandidate(ctx, tenantID, actorID, runID, input)
+	}
 	deployments, err := s.ListDeployments(ctx, tenantID)
 	if err != nil {
 		return EvaluationCandidate{}, err
@@ -639,7 +748,7 @@ func (s *PostgresStore) AddEvaluationCandidate(
 	row := s.db.QueryRowContext(ctx, `
 INSERT INTO model_evaluation_candidate (
   tenant_id, run_id, deployment_id,
-  provider_key, deployment_key, model_version, prompt_version, rubric_version,
+  provider_key, deployment_key, model_name, model_version, prompt_version, rubric_version,
   evaluated_samples, teacher_reviewed_samples, teacher_accepted_samples,
   serious_error_samples, evidence_valid_samples,
   repeat_comparisons, stable_repeat_samples,
@@ -647,7 +756,7 @@ INSERT INTO model_evaluation_candidate (
 )
 SELECT
   $1, evaluation.id, deployment.id,
-  provider.provider_key, deployment.deployment_key, deployment.model_version, $4, $5,
+  provider.provider_key, deployment.deployment_key, deployment.model_name, deployment.model_version, $4, $5,
   $6, $7, $8,
   $9, $10,
   $11, $12,
@@ -665,7 +774,8 @@ WHERE evaluation.tenant_id = $1
   AND evaluation.id::text = $2
   AND evaluation.status = 'draft'
 RETURNING id::text, tenant_id::text, run_id::text, deployment_id::text,
-          provider_key, deployment_key, model_version, prompt_version, rubric_version,
+          coalesce(managed_model_api_config_id::text, ''), provider_key,
+          deployment_key, model_name, model_version, prompt_version, rubric_version,
           evaluated_samples, teacher_reviewed_samples, teacher_accepted_samples,
           serious_error_samples, evidence_valid_samples,
           repeat_comparisons, stable_repeat_samples,
@@ -679,6 +789,53 @@ RETURNING id::text, tenant_id::text, run_id::text, deployment_id::text,
 	item, err := scanEvaluationCandidate(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return EvaluationCandidate{}, ErrConflict
+	}
+	if err != nil {
+		return EvaluationCandidate{}, mapEvaluationStoreError(err)
+	}
+	return item, nil
+}
+
+func (s *PostgresStore) addManagedEvaluationCandidate(
+	ctx context.Context, tenantID, actorID, runID string, input EvaluationCandidateInput,
+) (EvaluationCandidate, error) {
+	row := s.db.QueryRowContext(ctx, `
+INSERT INTO model_evaluation_candidate (
+  tenant_id, run_id, managed_model_api_config_id,
+  provider_key, model_name, model_version, prompt_version, rubric_version,
+  evaluated_samples, teacher_reviewed_samples, teacher_accepted_samples,
+  serious_error_samples, evidence_valid_samples, repeat_comparisons,
+  stable_repeat_samples, p95_latency_ms, total_cost_micros, created_by
+)
+SELECT evaluation.tenant_id, evaluation.id, config.id,
+       config.provider_key, config.model_name, config.model_version, $4, $5,
+       $6, $7, $8, $9, $10, $11, $12, $13, $14, NULLIF($15, '')::uuid
+FROM model_evaluation_run evaluation
+JOIN managed_model_api_config config
+  ON config.tenant_id = evaluation.tenant_id
+ AND config.id::text = $3
+ AND config.deleted_at IS NULL
+ AND config.status = 'active'
+ AND config.last_capability_status = 'success'
+ AND config.last_capability_probe_version = 'structured-json-v3'
+ AND config.modalities ? evaluation.modality
+WHERE evaluation.tenant_id = $1 AND evaluation.id::text = $2
+  AND evaluation.status = 'draft'
+RETURNING id::text, tenant_id::text, run_id::text, coalesce(deployment_id::text, ''),
+          managed_model_api_config_id::text, provider_key,
+          coalesce(deployment_key, ''), model_name, model_version, prompt_version, rubric_version,
+          evaluated_samples, teacher_reviewed_samples, teacher_accepted_samples,
+          serious_error_samples, evidence_valid_samples, repeat_comparisons,
+          stable_repeat_samples, p95_latency_ms, total_cost_micros, created_at
+`, tenantID, runID, input.ModelConfigID,
+		strings.TrimSpace(input.PromptVersion), strings.TrimSpace(input.RubricVersion),
+		input.EvaluatedSamples, input.TeacherReviewedSamples, input.TeacherAcceptedSamples,
+		input.SeriousErrorSamples, input.EvidenceValidSamples,
+		input.RepeatComparisons, input.StableRepeatSamples,
+		input.P95LatencyMS, input.TotalCostMicros, actorID)
+	item, err := scanEvaluationCandidate(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return EvaluationCandidate{}, ErrNotFound
 	}
 	if err != nil {
 		return EvaluationCandidate{}, mapEvaluationStoreError(err)
@@ -802,15 +959,16 @@ func (s *PostgresStore) evaluationRunWithCandidates(
 
 func (s *PostgresStore) evaluationCandidates(ctx context.Context, tenantID string, runID string) ([]EvaluationCandidate, error) {
 	rows, err := s.db.QueryContext(ctx, `
-SELECT id::text, tenant_id::text, run_id::text, deployment_id::text,
-       provider_key, deployment_key, model_version, prompt_version, rubric_version,
+SELECT id::text, tenant_id::text, run_id::text, coalesce(deployment_id::text, ''),
+       coalesce(managed_model_api_config_id::text, ''), provider_key,
+       coalesce(deployment_key, ''), model_name, model_version, prompt_version, rubric_version,
        evaluated_samples, teacher_reviewed_samples, teacher_accepted_samples,
        serious_error_samples, evidence_valid_samples,
        repeat_comparisons, stable_repeat_samples,
        p95_latency_ms, total_cost_micros, created_at
 FROM model_evaluation_candidate
 WHERE tenant_id = $1 AND run_id::text = $2
-ORDER BY deployment_key, id
+ORDER BY model_name, deployment_key, id
 `, tenantID, runID)
 	if err != nil {
 		return nil, err
@@ -846,8 +1004,9 @@ WHERE tenant_id = $1 AND id::text = $2
 func (s *PostgresStore) ListModelApprovals(ctx context.Context, tenantID string) ([]ModelApproval, error) {
 	rows, err := s.db.QueryContext(ctx, `
 SELECT id::text, tenant_id::text, evaluation_run_id::text,
-       evaluation_candidate_id::text, deployment_id::text,
-       provider_key, deployment_key, model_version, prompt_version, rubric_version,
+       evaluation_candidate_id::text, coalesce(deployment_id::text, ''),
+       coalesce(managed_model_api_config_id::text, ''), provider_key,
+       coalesce(deployment_key, ''), model_name, model_version, prompt_version, rubric_version,
        dataset_reference, dataset_sha256, authorization_reference,
        subject, grade, question_type, modality, manual_review_rate,
        decision_reference, expires_at, revoked_at, revision, created_at
@@ -891,7 +1050,8 @@ func (s *PostgresStore) CreateModelApproval(
 	var candidate EvaluationCandidate
 	found := false
 	for _, item := range run.Candidates {
-		if item.DeploymentID == input.DeploymentID {
+		if (input.ModelConfigID != "" && item.ModelConfigID == input.ModelConfigID) ||
+			(input.DeploymentID != "" && item.DeploymentID == input.DeploymentID) {
 			candidate = item
 			found = true
 			break
@@ -906,7 +1066,7 @@ func (s *PostgresStore) CreateModelApproval(
 	}
 	defer tx.Rollback()
 	lockKey := strings.Join([]string{
-		tenantID, candidate.DeploymentID, candidate.ModelVersion,
+		tenantID, candidate.ModelConfigID, candidate.DeploymentID, candidate.ModelVersion,
 		candidate.PromptVersion, candidate.RubricVersion,
 		run.Subject, run.Grade, run.QuestionType, run.Modality,
 	}, "\x1f")
@@ -919,18 +1079,19 @@ SELECT EXISTS (
   SELECT 1
   FROM model_approval
   WHERE tenant_id = $1
-    AND deployment_id = $2
-    AND model_version = $3
-    AND prompt_version = $4
-    AND rubric_version = $5
-    AND subject = $6
-    AND grade = $7
-    AND question_type = $8
-    AND modality = $9
+    AND ((NULLIF($2, '') IS NOT NULL AND managed_model_api_config_id::text = $2)
+         OR (NULLIF($2, '') IS NULL AND deployment_id::text = $3))
+    AND model_version = $4
+    AND prompt_version = $5
+    AND rubric_version = $6
+    AND subject = $7
+    AND grade = $8
+    AND question_type = $9
+    AND modality = $10
     AND revoked_at IS NULL
     AND expires_at > now()
 )
-`, tenantID, candidate.DeploymentID, candidate.ModelVersion,
+`, tenantID, candidate.ModelConfigID, candidate.DeploymentID, candidate.ModelVersion,
 		candidate.PromptVersion, candidate.RubricVersion,
 		run.Subject, run.Grade, run.QuestionType, run.Modality).Scan(&duplicate); err != nil {
 		return ModelApproval{}, err
@@ -941,26 +1102,30 @@ SELECT EXISTS (
 	row := tx.QueryRowContext(ctx, `
 INSERT INTO model_approval (
   tenant_id, evaluation_run_id, evaluation_candidate_id, deployment_id,
-  provider_key, deployment_key, model_version, prompt_version, rubric_version,
+  managed_model_api_config_id, provider_key, deployment_key, model_name,
+  model_version, prompt_version, rubric_version,
   dataset_reference, dataset_sha256, authorization_reference,
   subject, grade, question_type, modality,
   manual_review_rate, decision_reference, expires_at, created_by
 )
 VALUES (
-  $1, $2, $3, $4,
-  $5, $6, $7, $8, $9,
-  $10, $11, $12,
-  $13, $14, $15, $16,
-  $17, $18, $19, NULLIF($20, '')::uuid
+  $1, $2, $3, NULLIF($4, '')::uuid,
+  NULLIF($5, '')::uuid, $6, NULLIF($7, ''), $8,
+  $9, $10, $11,
+  $12, $13, $14,
+  $15, $16, $17, $18,
+  $19, $20, $21, NULLIF($22, '')::uuid
 )
 RETURNING id::text, tenant_id::text, evaluation_run_id::text,
-          evaluation_candidate_id::text, deployment_id::text,
-          provider_key, deployment_key, model_version, prompt_version, rubric_version,
+          evaluation_candidate_id::text, coalesce(deployment_id::text, ''),
+          coalesce(managed_model_api_config_id::text, ''), provider_key,
+          coalesce(deployment_key, ''), model_name, model_version, prompt_version, rubric_version,
           dataset_reference, dataset_sha256, authorization_reference,
           subject, grade, question_type, modality, manual_review_rate,
           decision_reference, expires_at, revoked_at, revision, created_at
 `, tenantID, run.ID, candidate.ID, candidate.DeploymentID,
-		candidate.ProviderKey, candidate.DeploymentKey, candidate.ModelVersion,
+		candidate.ModelConfigID, candidate.ProviderKey, candidate.DeploymentKey,
+		candidate.ModelName, candidate.ModelVersion,
 		candidate.PromptVersion, candidate.RubricVersion,
 		run.DatasetReference, run.DatasetSHA256, run.AuthorizationRef,
 		run.Subject, run.Grade, run.QuestionType, run.Modality,
@@ -997,8 +1162,9 @@ WHERE tenant_id = $1
   AND revoked_at IS NULL
   AND revision = $5
 RETURNING id::text, tenant_id::text, evaluation_run_id::text,
-          evaluation_candidate_id::text, deployment_id::text,
-          provider_key, deployment_key, model_version, prompt_version, rubric_version,
+          evaluation_candidate_id::text, coalesce(deployment_id::text, ''),
+          coalesce(managed_model_api_config_id::text, ''), provider_key,
+          coalesce(deployment_key, ''), model_name, model_version, prompt_version, rubric_version,
           dataset_reference, dataset_sha256, authorization_reference,
           subject, grade, question_type, modality, manual_review_rate,
           decision_reference, expires_at, revoked_at, revision, created_at
@@ -1098,7 +1264,8 @@ func scanSandboxApproval(row rowScanner) (SandboxApproval, error) {
 	var item SandboxApproval
 	if err := row.Scan(
 		&item.ID, &item.TenantID, &item.ProviderID, &item.DeploymentID,
-		&item.ProviderKey, &item.DeploymentKey, &item.Protocol,
+		&item.ProviderKey, &item.DeploymentKey,
+		&item.ModelConfigID, &item.ModelName, &item.ModelVersion, &item.Protocol,
 		&item.ApprovalReference, &item.ApprovedRegion, &item.SandboxAccount,
 		&item.ContractReviewed, &item.RetentionReviewed,
 		&item.DataResidencyReviewed, &item.PricingReviewed,
@@ -1129,7 +1296,8 @@ func scanEvaluationCandidate(row rowScanner) (EvaluationCandidate, error) {
 	var item EvaluationCandidate
 	if err := row.Scan(
 		&item.ID, &item.TenantID, &item.RunID, &item.DeploymentID,
-		&item.ProviderKey, &item.DeploymentKey, &item.ModelVersion,
+		&item.ModelConfigID, &item.ProviderKey, &item.DeploymentKey,
+		&item.ModelName, &item.ModelVersion,
 		&item.PromptVersion, &item.RubricVersion,
 		&item.EvaluatedSamples, &item.TeacherReviewedSamples,
 		&item.TeacherAcceptedSamples, &item.SeriousErrorSamples,
@@ -1147,7 +1315,8 @@ func scanModelApproval(row rowScanner) (ModelApproval, error) {
 	if err := row.Scan(
 		&item.ID, &item.TenantID, &item.EvaluationRunID,
 		&item.EvaluationCandidateID, &item.DeploymentID,
-		&item.ProviderKey, &item.DeploymentKey, &item.ModelVersion,
+		&item.ModelConfigID, &item.ProviderKey, &item.DeploymentKey,
+		&item.ModelName, &item.ModelVersion,
 		&item.PromptVersion, &item.RubricVersion,
 		&item.DatasetReference, &item.DatasetSHA256, &item.AuthorizationRef,
 		&item.Subject, &item.Grade, &item.QuestionType, &item.Modality,

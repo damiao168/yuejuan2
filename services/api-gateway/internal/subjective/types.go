@@ -155,6 +155,8 @@ type Grade struct {
 	AnswerVersion          string                `json:"answer_version"`
 	GraderType             string                `json:"grader_type"`
 	ModelVersion           string                `json:"model_version"`
+	ModelConfigID          string                `json:"model_config_id,omitempty"`
+	ModelName              string                `json:"model_name,omitempty"`
 	PromptVersion          string                `json:"prompt_version"`
 	RubricVersion          string                `json:"rubric_version"`
 	DeliveryMode           string                `json:"delivery_mode"`

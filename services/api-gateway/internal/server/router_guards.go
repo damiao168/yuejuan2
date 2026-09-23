@@ -238,13 +238,13 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 		return authenticate(auth.RequireRequestResourceBoundary(resourceResolver)(auth.RequireAnyRole("school_admin")(handler)))
 	}
 	requireModelRead := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequirePermission("model:read")(handler))
+		return requireAuth(auth.RequireAnyPermission("model:governance:read", "model:read")(handler))
 	}
 	requirePlatformModelPermission := func(permission string, handler http.HandlerFunc) http.Handler {
 		return authenticate(auth.RequireRequestResourceBoundary(resourceResolver)(auth.RequireAnyRole("platform_admin")(
 			// Role, permission and resource checks run on every request. The
 			// model-governance store keeps the audit trail for writes.
-			auth.RequirePermission(permission)(idempotent(handler)),
+			auth.RequireAnyPermission(permission, "model:config:manage")(idempotent(handler)),
 		)))
 	}
 	requirePlatformModelRead := func(handler http.HandlerFunc) http.Handler {

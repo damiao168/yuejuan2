@@ -23,9 +23,21 @@ import type {
   RouteAIHumanDisagreementRequest,
   SubjectCode
 } from "@edugrade/sdk";
-import { apiClient } from "./client";
+import { ApiClient, apiClient } from "./client";
 
-const api = new EduGradeApi(apiClient);
+let selectedSchoolID = "";
+export function setScoringAssuranceSchool(tenantID: string) {
+  selectedSchoolID = tenantID;
+}
+
+const scopedClient = new class extends ApiClient {
+  override request<T>(path: string, init: RequestInit = {}): Promise<T> {
+    if (!selectedSchoolID) return apiClient.request<T>(path, init);
+    const separator = path.includes("?") ? "&" : "?";
+    return apiClient.request<T>(`${path}${separator}tenant_id=${encodeURIComponent(selectedSchoolID)}`, init);
+  }
+}();
+const api = new EduGradeApi(scopedClient);
 
 export type {
   AddGradingEvaluationObservationRequest,

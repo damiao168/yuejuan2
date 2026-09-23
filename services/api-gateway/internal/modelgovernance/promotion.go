@@ -13,8 +13,10 @@ type ModelApproval struct {
 	EvaluationRunID       string     `json:"evaluation_run_id"`
 	EvaluationCandidateID string     `json:"evaluation_candidate_id"`
 	DeploymentID          string     `json:"deployment_id"`
+	ModelConfigID         string     `json:"model_config_id,omitempty"`
 	ProviderKey           string     `json:"provider_key"`
 	DeploymentKey         string     `json:"deployment_key"`
+	ModelName             string     `json:"model_name"`
 	ModelVersion          string     `json:"model_version"`
 	PromptVersion         string     `json:"prompt_version"`
 	RubricVersion         string     `json:"rubric_version"`
@@ -37,6 +39,7 @@ type ModelApprovalInput struct {
 	TenantID          string    `json:"tenant_id,omitempty"`
 	EvaluationRunID   string    `json:"evaluation_run_id"`
 	DeploymentID      string    `json:"deployment_id"`
+	ModelConfigID     string    `json:"model_config_id"`
 	ManualReviewRate  float64   `json:"manual_review_rate"`
 	DecisionReference string    `json:"decision_reference"`
 	ExpiresAt         time.Time `json:"expires_at"`
@@ -49,6 +52,7 @@ type ModelApprovalRevokeInput struct {
 }
 
 type ModelApprovalScope struct {
+	ModelConfigID string
 	DeploymentID  string
 	ModelVersion  string
 	PromptVersion string
@@ -61,7 +65,7 @@ type ModelApprovalScope struct {
 
 func ValidateModelApprovalInput(input ModelApprovalInput, now time.Time) error {
 	if strings.TrimSpace(input.EvaluationRunID) == "" ||
-		strings.TrimSpace(input.DeploymentID) == "" ||
+		(strings.TrimSpace(input.DeploymentID) == "") == (strings.TrimSpace(input.ModelConfigID) == "") ||
 		!governanceKey.MatchString(strings.TrimSpace(input.DecisionReference)) ||
 		input.ManualReviewRate < 0 ||
 		input.ManualReviewRate > 1 ||
@@ -81,6 +85,7 @@ func (approval ModelApproval) IsActive(now time.Time) bool {
 
 func (approval ModelApproval) Matches(scope ModelApprovalScope, now time.Time) bool {
 	return approval.IsActive(now) &&
+		approval.ModelConfigID == scope.ModelConfigID &&
 		approval.DeploymentID == scope.DeploymentID &&
 		approval.ModelVersion == scope.ModelVersion &&
 		approval.PromptVersion == scope.PromptVersion &&

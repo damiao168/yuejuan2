@@ -34,6 +34,11 @@ type ManagedAPIConfig struct {
 	ModelName                string                    `json:"model_name"`
 	ModelVersion             string                    `json:"model_version"`
 	Region                   string                    `json:"region"`
+	Modalities               []string                  `json:"modalities"`
+	CapabilityProfile        string                    `json:"capability_profile"`
+	PricingPolicy            map[string]any            `json:"pricing_policy"`
+	DataPolicy               map[string]any            `json:"data_policy"`
+	HealthState              string                    `json:"health_state"`
 	CredentialConfigured     bool                      `json:"credential_configured"`
 	CredentialHint           string                    `json:"credential_hint,omitempty"`
 	Status                   string                    `json:"status"`
