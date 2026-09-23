@@ -490,8 +490,9 @@ SELECT $1::uuid, exam.school_id, $2, 'subjective_grading',
   (SELECT NULLIF(run.agent_role, 'single') FROM subjective_grading_run run
    WHERE run.tenant_id=$1::uuid AND run.id=NULLIF($3, '')::uuid), $4, $5,
   CASE WHEN $15::bigint > 0 THEN $15::bigint ELSE 1 END,
-  $6, $7, $8, $9, CASE WHEN $10::bigint > 0 THEN $10::bigint ELSE $6::bigint+$7::bigint END, $11,
-  jsonb_build_object('deployment_key', $12, 'question_id', $13, 'answer_segment_id', $14)
+  $6::bigint, $7::bigint, $8::bigint, $9::bigint,
+  CASE WHEN $10::bigint > 0 THEN $10::bigint ELSE $6::bigint+$7::bigint END, $11,
+  jsonb_build_object('deployment_key', $12::text, 'question_id', $13::uuid, 'answer_segment_id', $14::uuid)
 FROM answer_segment segment
 JOIN submission submission ON submission.tenant_id=segment.tenant_id AND submission.id=segment.submission_id
 JOIN exam ON exam.tenant_id=submission.tenant_id AND exam.id=submission.exam_id
