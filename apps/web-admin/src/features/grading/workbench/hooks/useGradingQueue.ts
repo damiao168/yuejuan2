@@ -106,9 +106,8 @@ export function useGradingQueue({ canManageTasks, canWork, currentUserId, initia
     setTaskError(null);
     setPageError(null);
     try {
-      const teacherScope = personalScope ? { assigned_to: currentUserId } : {};
       const personalQueue = personalScope || (canManageTasks && canWork && queueScope === "mine");
-      const result = await listReviewTasks({ ...(personalQueue ? { assigned_to: currentUserId } : teacherScope), ...(initialExamId ? { exam_id: initialExamId } : {}), limit: 50 });
+      const result = await listReviewTasks({ ...(personalQueue ? { assigned_to: currentUserId } : {}), ...(initialExamId ? { exam_id: initialExamId } : {}), limit: 50 });
       if (requestId !== taskListRequestRef.current) return;
       const scopedTasks = initialExamId ? result.tasks.filter((task) => task.exam_id === initialExamId) : result.tasks;
       const requestedId = requestedTaskRef.current;

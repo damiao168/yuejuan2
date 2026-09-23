@@ -15,6 +15,7 @@ const appShell = read("src/AppShell.tsx");
 const appRouter = read("src/router/appRouter.tsx");
 const login = read("src/pages/LoginPage.tsx");
 const grading = read("src/features/grading/workbench/GradingWorkbench.tsx");
+const gradingQueue = read("src/features/grading/workbench/hooks/useGradingQueue.ts");
 const gradingStyles = read("src/features/grading/workbench/grading-workbench.css");
 const experience = read("src/router/experience.ts");
 const teacherDashboard = read("src/pages/TeacherDashboardPage.tsx");
@@ -132,9 +133,12 @@ assert(
   "Teacher home must request only review and arbitration tasks assigned to the current user."
 );
 
+const personalQueueScopes = gradingQueue.match(/personalQueue\s*\?\s*\{\s*assigned_to:\s*currentUserId\s*\}\s*:\s*\{\s*\}/g) ?? [];
 assert(
-  /personalScope \? \{ assigned_to: currentUserId \} : \{\}/.test(grading),
-  "Teacher grading must enforce personal task scope in the API query."
+  /useGradingQueue/.test(grading)
+    && /const personalQueue\s*=\s*personalScope\s*\|\|/.test(gradingQueue)
+    && personalQueueScopes.length >= 3,
+  "Teacher grading must enforce personal task scope in initial load, pagination, and aggregate refresh."
 );
 
 assert(
@@ -175,10 +179,10 @@ assert(
   "Immersive grading must keep the scoring inspector scrollable and restore document flow on short desktops."
 );
 
-const reviewerProgress = grading.match(/const reviewerProgress[\s\S]*?\n  \}, \[[^\n]+\]\);/)?.[0] ?? "";
+const reviewerProgress = gradingQueue.match(/const reviewerProgress[\s\S]*?\n  \}, \[[^\n]+\]\);/)?.[0] ?? "";
 assert(
   /taskAggregate\?\.reviewers/.test(reviewerProgress)
-    && /setTaskAggregate\(result\.aggregate \?\? null\)/.test(grading)
+    && /setTaskAggregate\(result\.aggregate \?\? null\)/.test(gradingQueue)
     && !/filteredTasks/.test(reviewerProgress),
   "Reviewer progress must use the complete server-side task aggregate, independent of the current queue filter."
 );
