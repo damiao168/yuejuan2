@@ -146,6 +146,44 @@ func TestMemoryEvaluationLifecycleIsTenantBoundImmutableAndRequiresLocalBaseline
 	}
 }
 
+func TestManagedEvaluationCandidatesUseTenantConfigAndFrozenIdentity(t *testing.T) {
+	store := NewMemoryStore()
+	tenantID := "school-1"
+	for _, id := range []string{"model-a", "model-b"} {
+		store.managedConfigs[id] = ManagedAPIConfig{
+			ID: id, TenantID: tenantID, ProviderKey: "deepseek", ModelName: id,
+			ModelVersion: "version-1", Status: "active",
+			LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v3",
+		}
+	}
+	run, err := store.CreateEvaluationRun(context.Background(), tenantID, "actor", validEvaluationRunInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := validEvaluationCandidateInput("", run)
+	input.ModelConfigID = "model-a"
+	if _, err := store.AddEvaluationCandidate(context.Background(), "school-2", "actor", run.ID, input); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("cross-school candidate must be rejected: %v", err)
+	}
+	first, err := store.AddEvaluationCandidate(context.Background(), tenantID, "actor", run.ID, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.DeploymentID != "" || first.ModelConfigID != "model-a" || first.ModelName != "model-a" || first.ModelVersion != "version-1" {
+		t.Fatalf("candidate did not freeze managed model identity: %#v", first)
+	}
+	if _, err := store.AddEvaluationCandidate(context.Background(), tenantID, "actor", run.ID, input); !errors.Is(err, ErrConflict) {
+		t.Fatalf("duplicate managed candidate must conflict: %v", err)
+	}
+	input.ModelConfigID = "model-b"
+	if _, err := store.AddEvaluationCandidate(context.Background(), tenantID, "actor", run.ID, input); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.CompleteEvaluationRun(context.Background(), tenantID, "actor", run.ID, "complete"); err != nil {
+		t.Fatalf("two managed candidates should complete without a legacy deployment: %v", err)
+	}
+}
+
 func TestEvaluationHandlersUseStrictJSONAndAuditLifecycle(t *testing.T) {
 	store := NewMemoryStore()
 	audits := auth.NewMemoryStore()

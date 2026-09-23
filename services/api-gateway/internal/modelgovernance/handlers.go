@@ -57,7 +57,7 @@ func (h *Handler) GetCurrentPrompt(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListProviders(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := h.targetTenant(w, r, r.URL.Query().Get("tenant_id"))
-	if !ok || !h.ensureBaseline(w, r, tenantID) {
+	if !ok {
 		return
 	}
 	items, err := h.store.ListProviders(r.Context(), tenantID)
@@ -155,7 +155,7 @@ func (h *Handler) UpdateProviderStatus(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListDeployments(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := h.targetTenant(w, r, r.URL.Query().Get("tenant_id"))
-	if !ok || !h.ensureBaseline(w, r, tenantID) {
+	if !ok {
 		return
 	}
 	items, err := h.store.ListDeployments(r.Context(), tenantID)
@@ -271,7 +271,7 @@ func (h *Handler) UpdateDeploymentState(w http.ResponseWriter, r *http.Request) 
 
 func (h *Handler) GetPolicy(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := h.targetTenant(w, r, r.URL.Query().Get("tenant_id"))
-	if !ok || !h.ensureBaseline(w, r, tenantID) {
+	if !ok {
 		return
 	}
 	item, err := h.store.GetPolicy(r.Context(), tenantID)
@@ -294,19 +294,49 @@ func (h *Handler) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 	if input.AllowedDeployments == nil {
 		input.AllowedDeployments = []string{}
 	}
+	if input.AllowedModelConfigIDs == nil {
+		input.AllowedModelConfigIDs = []string{}
+	}
 	policy := PolicyFromUpdate(input)
 	if strings.TrimSpace(input.Reason) == "" || input.ExpectedVersion < 1 || ValidateTenantPolicy(policy) != nil {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_model_policy", "valid policy, expected_version and reason are required")
 		return
 	}
-	deployments, err := h.store.ListDeployments(r.Context(), tenantID)
-	if err != nil {
-		httpx.Error(w, r, http.StatusInternalServerError, "model_deployment_list_failed", "failed to validate allowed deployments")
+	if len(input.AllowedModelConfigIDs) > 0 && len(input.AllowedDeployments) > 0 {
+		httpx.Error(w, r, http.StatusBadRequest, "mixed_model_policy_sources", "model config IDs and deployment keys cannot be mixed")
 		return
 	}
-	if !deploymentKeysExist(input.AllowedDeployments, deployments) {
-		httpx.Error(w, r, http.StatusBadRequest, "unknown_model_deployment", "allowed_deployments contains an unknown tenant deployment")
-		return
+	if len(input.AllowedModelConfigIDs) > 0 {
+		store, ready := h.managedAPIStore(w, r)
+		if !ready {
+			return
+		}
+		configs, err := store.ListManagedAPIConfigs(r.Context(), tenantID)
+		if err != nil {
+			writeStoreError(w, r, err, "model_config_list_failed", "failed to validate allowed model configurations")
+			return
+		}
+		eligible := make(map[string]bool, len(configs))
+		for _, config := range configs {
+			eligible[config.ID] = config.TenantID == tenantID && config.Status == "active" &&
+				config.LastCapabilityStatus == "success" && config.LastCapabilityVersion == "structured-json-v3"
+		}
+		for _, id := range input.AllowedModelConfigIDs {
+			if !eligible[id] {
+				httpx.Error(w, r, http.StatusBadRequest, "unknown_model_config", "allowed_model_config_ids contains an unavailable school model")
+				return
+			}
+		}
+	} else if len(input.AllowedDeployments) > 0 {
+		deployments, err := h.store.ListDeployments(r.Context(), tenantID)
+		if err != nil {
+			httpx.Error(w, r, http.StatusInternalServerError, "model_deployment_list_failed", "failed to validate allowed deployments")
+			return
+		}
+		if !deploymentKeysExist(input.AllowedDeployments, deployments) {
+			httpx.Error(w, r, http.StatusBadRequest, "unknown_model_deployment", "allowed_deployments contains an unknown tenant deployment")
+			return
+		}
 	}
 	item, err := h.store.UpdatePolicy(r.Context(), tenantID, mustUser(r).ID, input)
 	if err != nil {
@@ -314,7 +344,7 @@ func (h *Handler) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.auditAction(r, "model.policy_updated", "tenant_model_policy", item.ID, input.Reason,
-		map[string]any{"tenant_id": tenantID, "mode": item.Mode, "external_enabled": item.ExternalEnabled, "text_export_enabled": item.TextExportEnabled, "image_export_enabled": item.ImageExportEnabled, "allowed_deployments": item.AllowedDeployments, "version": item.Version})
+		map[string]any{"tenant_id": tenantID, "mode": item.Mode, "external_enabled": item.ExternalEnabled, "text_export_enabled": item.TextExportEnabled, "image_export_enabled": item.ImageExportEnabled, "allowed_model_config_ids": item.AllowedModelConfigIDs, "version": item.Version})
 	httpx.JSON(w, http.StatusOK, map[string]any{"policy": item})
 }
 
@@ -644,14 +674,6 @@ func (h *Handler) RevokeModelApproval(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"model_approval": item})
 }
 
-func (h *Handler) ensureBaseline(w http.ResponseWriter, r *http.Request, tenantID string) bool {
-	if err := h.store.EnsureLocalBaseline(r.Context(), tenantID, h.baseline); err != nil {
-		httpx.Error(w, r, http.StatusInternalServerError, "local_model_registry_failed", "failed to register local model baseline")
-		return false
-	}
-	return true
-}
-
 func (h *Handler) targetTenant(w http.ResponseWriter, r *http.Request, requested string) (string, bool) {
 	user := mustUser(r)
 	requested = strings.TrimSpace(requested)
@@ -659,7 +681,8 @@ func (h *Handler) targetTenant(w http.ResponseWriter, r *http.Request, requested
 		return user.TenantID, true
 	}
 	if user.TenantID == auth.PlatformTenantID &&
-		(hasPermission(user, "model:provider:manage") ||
+		(hasPermission(user, "model:config:manage") ||
+			hasPermission(user, "model:provider:manage") ||
 			hasPermission(user, "model:evaluation:manage")) {
 		return requested, true
 	}

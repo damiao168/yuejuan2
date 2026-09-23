@@ -1,50 +1,6 @@
 import { apiClient } from "./client";
 
-export type ProviderKind = "local" | "external";
-export type ProviderStatus = "unverified" | "active" | "degraded" | "rate_limited" | "disabled";
-export type DeploymentStatus = "unverified" | "shadow_only" | "disabled";
-export type HealthState = "unverified" | "available" | "degraded" | "rate_limited" | "unavailable" | "disabled";
 export type PolicyMode = "local_only" | "shadow_compare" | "cloud_suggestion" | "hybrid_escalation" | "dual_provider_review";
-
-export interface DataPolicy {
-  training_allowed: boolean;
-  retention_mode: "no_store" | "contractual";
-}
-
-export interface ModelProvider {
-  id: string;
-  tenant_id: string;
-  provider_key: string;
-  display_name: string;
-  provider_kind: ProviderKind;
-  adapter_type: string;
-  credential_reference_set: boolean;
-  credential_scheme?: string;
-  region: string;
-  data_policy: DataPolicy;
-  status: ProviderStatus;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ModelDeployment {
-  id: string;
-  tenant_id: string;
-  provider_id: string;
-  provider_key: string;
-  deployment_key: string;
-  model_name: string;
-  model_version: string;
-  region: string;
-  capability_profile: string;
-  modalities: Array<"text" | "image">;
-  capability_policy?: Record<string, unknown>;
-  pricing_policy?: Record<string, unknown>;
-  status: DeploymentStatus;
-  health_state: HealthState;
-  created_at: string;
-  updated_at: string;
-}
 
 export interface TenantModelPolicy {
   id: string;
@@ -56,6 +12,7 @@ export interface TenantModelPolicy {
   text_export_enabled: boolean;
   image_export_enabled: boolean;
   allowed_deployments: string[];
+  allowed_model_config_ids: string[];
   max_cost_micros_per_question: number;
   max_cost_micros_per_exam: number;
   fallback_mode: "manual_only" | "approved_deployment_only";
@@ -64,38 +21,13 @@ export interface TenantModelPolicy {
   updated_at: string;
 }
 
-export interface CreateProviderInput {
-  provider_key: string;
-  display_name: string;
-  provider_kind: ProviderKind;
-  adapter_type: string;
-  credential_ref?: string;
-  region: string;
-  data_policy: DataPolicy;
-  status?: ProviderStatus;
-}
-
-export interface CreateDeploymentInput {
-  provider_id: string;
-  deployment_key: string;
-  model_name: string;
-  model_version: string;
-  region: string;
-  capability_profile: string;
-  modalities: Array<"text" | "image">;
-  capability_policy: Record<string, unknown>;
-  pricing_policy: Record<string, unknown>;
-  status?: DeploymentStatus;
-  health_state?: HealthState;
-}
-
 export interface UpdatePolicyInput {
   display_name: string;
   mode: PolicyMode;
   external_enabled: boolean;
   text_export_enabled: boolean;
   image_export_enabled: boolean;
-  allowed_deployments: string[];
+  allowed_model_config_ids: string[];
   max_cost_micros_per_question: number;
   max_cost_micros_per_exam: number;
   fallback_mode: "manual_only" | "approved_deployment_only";
@@ -134,6 +66,8 @@ export interface EvaluationCandidate {
   tenant_id?: string;
   run_id: string;
   deployment_id: string;
+  model_config_id?: string;
+  model_name: string;
   provider_key: string;
   deployment_key: string;
   model_version: string;
@@ -175,6 +109,7 @@ export interface EvaluationRun {
 }
 
 export interface CreateEvaluationRunInput {
+  tenant_id: string;
   run_key: string;
   display_name: string;
   dataset_reference: string;
@@ -191,7 +126,7 @@ export interface CreateEvaluationRunInput {
 }
 
 export interface AddEvaluationCandidateInput {
-  deployment_id: string;
+  model_config_id: string;
   prompt_version: string;
   rubric_version: string;
   evaluated_samples: number;
@@ -212,6 +147,8 @@ export interface ModelApproval {
   evaluation_run_id: string;
   evaluation_candidate_id: string;
   deployment_id: string;
+  model_config_id?: string;
+  model_name: string;
   provider_key: string;
   deployment_key: string;
   model_version: string;
@@ -233,42 +170,26 @@ export interface ModelApproval {
 }
 
 export interface CreateModelApprovalInput {
+  tenant_id: string;
   evaluation_run_id: string;
-  deployment_id: string;
+  model_config_id: string;
   manual_review_rate: number;
   decision_reference: string;
   expires_at: string;
   reason: string;
 }
 
-export function listModelProviders() {
-  return apiClient.request<{ providers: ModelProvider[] }>("/api/v1/model-providers");
+function tenantURL(path: string, tenantID: string) {
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}tenant_id=${encodeURIComponent(tenantID)}`;
 }
 
-export function createModelProvider(input: CreateProviderInput) {
-  return apiClient.request<{ provider: ModelProvider }>("/api/v1/model-providers", {
-    method: "POST",
-    body: JSON.stringify(input)
-  });
+export function getModelPolicy(tenantID: string) {
+  return apiClient.request<{ policy: TenantModelPolicy }>(tenantURL("/api/v1/model-policy", tenantID));
 }
 
-export function listModelDeployments() {
-  return apiClient.request<{ deployments: ModelDeployment[] }>("/api/v1/model-deployments");
-}
-
-export function createModelDeployment(input: CreateDeploymentInput) {
-  return apiClient.request<{ deployment: ModelDeployment }>("/api/v1/model-deployments", {
-    method: "POST",
-    body: JSON.stringify(input)
-  });
-}
-
-export function getModelPolicy() {
-  return apiClient.request<{ policy: TenantModelPolicy }>("/api/v1/model-policy");
-}
-
-export function updateModelPolicy(input: UpdatePolicyInput) {
-  return apiClient.request<{ policy: TenantModelPolicy }>("/api/v1/model-policy", {
+export function updateModelPolicy(tenantID: string, input: UpdatePolicyInput) {
+  return apiClient.request<{ policy: TenantModelPolicy }>(tenantURL("/api/v1/model-policy", tenantID), {
     method: "PUT",
     body: JSON.stringify(input)
   });
@@ -278,12 +199,12 @@ export function getCurrentRuntimePrompt() {
   return apiClient.request<{ prompt: RuntimePrompt }>("/api/v1/model-prompts/current");
 }
 
-export function listModelEvaluationRuns(filter: { limit?: number; cursor?: string } = {}) {
+export function listModelEvaluationRuns(tenantID: string, filter: { limit?: number; cursor?: string } = {}) {
   const params = new URLSearchParams();
   if (filter.limit) params.set("limit", String(filter.limit));
   if (filter.cursor) params.set("cursor", filter.cursor);
   const query = params.toString();
-  return apiClient.request<{ evaluation_runs: EvaluationRun[]; next_cursor: string; has_more: boolean }>(`/api/v1/model-evaluation-runs${query ? `?${query}` : ""}`);
+  return apiClient.request<{ evaluation_runs: EvaluationRun[]; next_cursor: string; has_more: boolean }>(tenantURL(`/api/v1/model-evaluation-runs${query ? `?${query}` : ""}`, tenantID));
 }
 
 export function createModelEvaluationRun(input: CreateEvaluationRunInput) {
@@ -293,29 +214,29 @@ export function createModelEvaluationRun(input: CreateEvaluationRunInput) {
   });
 }
 
-export function addModelEvaluationCandidate(runID: string, input: AddEvaluationCandidateInput) {
-  return apiClient.request<{ candidate: EvaluationCandidate }>(`/api/v1/model-evaluation-runs/${runID}/candidates`, {
+export function addModelEvaluationCandidate(tenantID: string, runID: string, input: AddEvaluationCandidateInput) {
+  return apiClient.request<{ candidate: EvaluationCandidate }>(tenantURL(`/api/v1/model-evaluation-runs/${runID}/candidates`, tenantID), {
     method: "POST",
     body: JSON.stringify(input)
   });
 }
 
-export function completeModelEvaluationRun(runID: string, reason: string) {
-  return apiClient.request<{ evaluation_run: EvaluationRun }>(`/api/v1/model-evaluation-runs/${runID}/complete`, {
+export function completeModelEvaluationRun(tenantID: string, runID: string, reason: string) {
+  return apiClient.request<{ evaluation_run: EvaluationRun }>(tenantURL(`/api/v1/model-evaluation-runs/${runID}/complete`, tenantID), {
     method: "POST",
     body: JSON.stringify({ reason })
   });
 }
 
-export function invalidateModelEvaluationRun(runID: string, reason: string) {
-  return apiClient.request<{ evaluation_run: EvaluationRun }>(`/api/v1/model-evaluation-runs/${runID}/invalidate`, {
+export function invalidateModelEvaluationRun(tenantID: string, runID: string, reason: string) {
+  return apiClient.request<{ evaluation_run: EvaluationRun }>(tenantURL(`/api/v1/model-evaluation-runs/${runID}/invalidate`, tenantID), {
     method: "POST",
     body: JSON.stringify({ reason })
   });
 }
 
-export function listModelApprovals() {
-  return apiClient.request<{ model_approvals: ModelApproval[] }>("/api/v1/model-approvals");
+export function listModelApprovals(tenantID: string) {
+  return apiClient.request<{ model_approvals: ModelApproval[] }>(tenantURL("/api/v1/model-approvals", tenantID));
 }
 
 export function createModelApproval(input: CreateModelApprovalInput) {
@@ -325,8 +246,8 @@ export function createModelApproval(input: CreateModelApprovalInput) {
   });
 }
 
-export function revokeModelApproval(approvalID: string, reason: string, expectedRevision: number) {
-  return apiClient.request<{ model_approval: ModelApproval }>(`/api/v1/model-approvals/${approvalID}/revoke`, {
+export function revokeModelApproval(tenantID: string, approvalID: string, reason: string, expectedRevision: number) {
+  return apiClient.request<{ model_approval: ModelApproval }>(tenantURL(`/api/v1/model-approvals/${approvalID}/revoke`, tenantID), {
     method: "POST",
     body: JSON.stringify({ reason, expected_revision: expectedRevision })
   });

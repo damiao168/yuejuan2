@@ -53,8 +53,10 @@ type EvaluationCandidate struct {
 	TenantID               string            `json:"tenant_id,omitempty"`
 	RunID                  string            `json:"run_id"`
 	DeploymentID           string            `json:"deployment_id"`
+	ModelConfigID          string            `json:"model_config_id,omitempty"`
 	ProviderKey            string            `json:"provider_key"`
 	DeploymentKey          string            `json:"deployment_key"`
+	ModelName              string            `json:"model_name"`
 	ModelVersion           string            `json:"model_version"`
 	PromptVersion          string            `json:"prompt_version"`
 	RubricVersion          string            `json:"rubric_version"`
@@ -98,6 +100,7 @@ type EvaluationRunInput struct {
 
 type EvaluationCandidateInput struct {
 	DeploymentID           string `json:"deployment_id"`
+	ModelConfigID          string `json:"model_config_id"`
 	PromptVersion          string `json:"prompt_version"`
 	RubricVersion          string `json:"rubric_version"`
 	EvaluatedSamples       int    `json:"evaluated_samples"`
@@ -143,7 +146,7 @@ func ValidateEvaluationRunInput(input EvaluationRunInput) error {
 
 func ValidateEvaluationCandidateInput(input EvaluationCandidateInput, run EvaluationRun) error {
 	maxComparisons := run.SampleCount * (run.RepeatCount - 1)
-	if strings.TrimSpace(input.DeploymentID) == "" ||
+	if (strings.TrimSpace(input.DeploymentID) == "") == (strings.TrimSpace(input.ModelConfigID) == "") ||
 		!safeEvaluationText(input.PromptVersion) ||
 		!safeEvaluationText(input.RubricVersion) ||
 		input.EvaluatedSamples != run.SampleCount ||

@@ -15,7 +15,8 @@ const workspace = read(
   "model-governance",
   "ModelEvaluationWorkspace.tsx"
 );
-const appShell = read("apps", "web-admin", "src", "AppShell.tsx");
+const routes = read("apps", "web-admin", "src", "router", "routes.tsx");
+const managedWorkspace = read("apps", "web-admin", "src", "components", "model-governance", "ManagedGovernanceWorkspace.tsx");
 const governanceRoutes = read("services", "api-gateway", "internal", "server", "routes_governance.go");
 const story = read("docs", "stories", "STORY-061-multi-provider-native-model-governance.md");
 
@@ -44,9 +45,10 @@ for (const invariant of [
   assert.ok(workspace.includes(invariant), `evaluation workspace missing product invariant: ${invariant}`);
 }
 
-assert.ok(appShell.includes('["model:evaluation:manage"]'), "evaluation mutations must be permission gated");
+assert.ok(routes.includes('anyPermissions: ["model:config:manage", "model:provider:manage"]'), "model management must be permission gated");
+assert.ok(managedWorkspace.includes("<ModelEvaluationWorkspace tenantID={tenantID}"), "evaluation mutations must use the selected school context");
 assert.ok(workspace.includes("canManage && selectedRun.status"), "lifecycle controls must be permission and state gated");
-assert.ok(workspace.includes("至少需要两个候选，并且必须包含本地基线"), "completion readiness must explain the local baseline gate");
+assert.ok(workspace.includes("至少需要两个候选；新评测请选择两个学校模型"), "completion readiness must explain the managed model gate");
 assert.equal(workspace.includes("/promote"), false, "STORY-061C2 must not expose promotion");
 assert.equal(workspace.includes("promoteModel"), false, "STORY-061C2 must not implement promotion");
 assert.ok(story.includes("061C2（已完成）"), "story status must record completed visible evaluation center");

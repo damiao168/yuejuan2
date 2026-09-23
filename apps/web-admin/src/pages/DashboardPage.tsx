@@ -5,7 +5,7 @@ import { BrainCircuit, Building2, Plus, RefreshCw, ScrollText, ServerCog } from 
 import { getSafeUserText, getUserErrorMessage } from "../api/client";
 import { getDashboardSummary, type DashboardSummary } from "../api/dashboard";
 import { getSystemStatus, type SystemStatus } from "../api/system";
-import { hasEveryPermission, type SessionUser } from "../auth/session";
+import { hasAnyPermission, hasEveryPermission, type SessionUser } from "../auth/session";
 import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
 import { StatusTag } from "../components/StatusTag";
 import { SchoolDashboard, type DashboardWorkItem } from "../features/dashboard/SchoolDashboard";
@@ -67,7 +67,7 @@ function PlatformDashboard({
   const quickActions = [
     ...(hasEveryPermission(user, ["tenant:manage"]) ? [{ label: "学校管理", path: "/platform/schools", icon: <Building2 size={17} /> }] : []),
     ...(hasEveryPermission(user, ["system:read"]) ? [{ label: "系统状态", path: "/system/status", icon: <ServerCog size={17} /> }] : []),
-    ...(hasEveryPermission(user, ["model:read"]) ? [{ label: "模型治理", path: "/system/models", icon: <BrainCircuit size={17} /> }] : []),
+    ...(hasAnyPermission(user, ["model:config:manage", "model:provider:manage"]) ? [{ label: "模型管理", path: "/platform/model-config", icon: <BrainCircuit size={17} /> }] : []),
     ...(hasEveryPermission(user, ["audit:read"]) ? [{ label: "操作审计", path: "/audit", icon: <ScrollText size={17} /> }] : [])
   ];
 

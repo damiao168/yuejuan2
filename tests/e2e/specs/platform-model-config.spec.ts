@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { installApiMocks } from "../fixtures/apiMocks";
 
 test("切换学校后忽略过期配置响应，并保留新学校的配置", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await installApiMocks(page, { role: "platform_admin", initiallyAuthenticated: true });
   await page.route("**/api/v1/tenants?*", route => route.fulfill({ json: {
     tenants: [{ id: "school-a", code: "A", name: "甲学校", status: "active" },
@@ -24,7 +25,7 @@ test("切换学校后忽略过期配置响应，并保留新学校的配置", as
       last_test_status: "untested", region: "global" }] } });
     if (tenant === "school-a") finishedA = true;
   });
-  await page.goto("/#/platform/model-config");
+  await page.goto("/#/platform/model-config", { waitUntil: "domcontentloaded" });
   await expect.poll(() => startedA).toBe(true);
   const schoolSelect = page.locator(".platform-model-school-select .ant-select-selector");
   await schoolSelect.click();
@@ -43,6 +44,7 @@ test("切换学校后忽略过期配置响应，并保留新学校的配置", as
 });
 
 test("只填供应商和 API Key 即可零 Token 获取模型并保存", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await installApiMocks(page, { role: "platform_admin", initiallyAuthenticated: true });
   await page.route("**/api/v1/tenants?*", route => route.fulfill({ json: {
     tenants: [{ id: "school-a", code: "A", name: "甲学校", status: "active" }], has_more: false
@@ -90,7 +92,7 @@ test("只填供应商和 API Key 即可零 Token 获取模型并保存", async (
   await page.goto("/#/platform/model-config");
   await page.getByRole("button", { name: "添加模型" }).click();
   await page.getByLabel("供应商").click();
-  await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "DeepSeek" }).click();
+  await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "DeepSeek" }).click({ force: true });
   await page.getByLabel("API Key").fill("deepseek-secret-at-least-16");
   await page.getByRole("button", { name: "获取可用模型" }).click();
   const modelDropdown = page.locator(".ant-select-dropdown:visible");
@@ -309,7 +311,7 @@ test("关闭新建侧边栏后两分钟内恢复未保存内容且不写入浏�
   await page.getByLabel("API Key").fill("draft-secret-at-least-16");
   await page.getByLabel("API 地址").fill("https://models.example.test/v1");
   await page.getByLabel("模型名称").fill("draft-model");
-  await page.getByRole("button", { name: "关闭", exact: true }).click();
+  await page.getByRole("button", { name: "关闭", exact: true }).click({ force: true });
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
   const browserStorage = await page.evaluate(() => `${JSON.stringify(localStorage)}${JSON.stringify(sessionStorage)}`);
@@ -377,7 +379,7 @@ test("新建草稿按学校隔离且页面重新加载后清除密钥", async ({
   await page.getByRole("button", { name: "添加模型" }).click();
   await expect(page.getByLabel("API Key")).toHaveValue("school-a-draft-secret-at-least-16");
   await expect(page.getByLabel("模型名称")).toHaveValue("school-a-draft-model");
-  await page.getByRole("button", { name: "关闭", exact: true }).click();
+  await page.getByRole("button", { name: "关闭", exact: true }).click({ force: true });
 
   await page.reload();
   await page.getByRole("button", { name: "添加模型" }).click();

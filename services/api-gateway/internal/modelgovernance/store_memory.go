@@ -284,6 +284,17 @@ func (s *MemoryStore) UpdatePolicy(_ context.Context, tenantID string, _ string,
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if len(input.AllowedDeployments) > 0 && len(input.AllowedModelConfigIDs) > 0 {
+		return TenantPolicy{}, ErrInvalidPolicy
+	}
+	for _, id := range input.AllowedModelConfigIDs {
+		config, exists := s.managedConfigs[id]
+		if !exists || config.TenantID != tenantID || config.Status != "active" ||
+			config.LastCapabilityStatus != "success" ||
+			config.LastCapabilityVersion != "structured-json-v3" {
+			return TenantPolicy{}, ErrInvalidPolicy
+		}
+	}
 	current, ok := s.policies[tenantID]
 	if !ok {
 		current = DefaultTenantPolicy()
@@ -340,6 +351,30 @@ func (s *MemoryStore) CreateSandboxApproval(
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if input.ModelConfigID != "" {
+		config, ok := s.managedConfigs[input.ModelConfigID]
+		if !ok || config.TenantID != tenantID || config.Status != "active" ||
+			config.ProviderKey != "aliyun" || config.Region != input.ApprovedRegion {
+			return SandboxApproval{}, ErrNotFound
+		}
+		for _, item := range s.approvals {
+			if item.TenantID == tenantID && item.ModelConfigID == config.ID && item.RevokedAt == nil {
+				return SandboxApproval{}, ErrConflict
+			}
+		}
+		item := SandboxApproval{
+			ID: uuid.NewString(), TenantID: tenantID, ModelConfigID: config.ID,
+			ProviderKey: config.ProviderKey, ModelName: config.ModelName, ModelVersion: config.ModelVersion,
+			Protocol: input.Protocol, ApprovalReference: strings.TrimSpace(input.ApprovalReference),
+			ApprovedRegion: strings.TrimSpace(input.ApprovedRegion), SandboxAccount: input.SandboxAccount,
+			ContractReviewed: input.ContractReviewed, RetentionReviewed: input.RetentionReviewed,
+			DataResidencyReviewed: input.DataResidencyReviewed, PricingReviewed: input.PricingReviewed,
+			SyntheticDataOnly: input.SyntheticDataOnly, ImageExportReviewed: input.ImageExportReviewed,
+			ExpiresAt: input.ExpiresAt.UTC(), CreatedAt: now,
+		}
+		s.approvals[item.ID] = item
+		return item, nil
+	}
 	provider, ok := s.providers[input.ProviderID]
 	if !ok || provider.TenantID != tenantID ||
 		provider.Kind != ProviderExternal ||
@@ -503,23 +538,46 @@ func (s *MemoryStore) AddEvaluationCandidate(
 	if ValidateEvaluationCandidateInput(input, run) != nil {
 		return EvaluationCandidate{}, ErrInvalidEvaluation
 	}
-	deployment, ok := s.deployments[input.DeploymentID]
-	if !ok || deployment.TenantID != tenantID || !contains(deployment.Modalities, run.Modality) {
-		return EvaluationCandidate{}, ErrNotFound
+	var deployment Deployment
+	var managed ManagedAPIConfig
+	if input.ModelConfigID != "" {
+		managed, ok = s.managedConfigs[input.ModelConfigID]
+		if !ok || managed.TenantID != tenantID || managed.Status != "active" ||
+			managed.LastCapabilityStatus != "success" ||
+			managed.LastCapabilityVersion != "structured-json-v3" || run.Modality != "text" {
+			return EvaluationCandidate{}, ErrNotFound
+		}
+	} else {
+		deployment, ok = s.deployments[input.DeploymentID]
+		if !ok || deployment.TenantID != tenantID || !contains(deployment.Modalities, run.Modality) {
+			return EvaluationCandidate{}, ErrNotFound
+		}
 	}
 	for _, item := range s.candidates {
-		if item.TenantID == tenantID && item.RunID == runID && item.DeploymentID == deployment.ID {
+		if item.TenantID == tenantID && item.RunID == runID &&
+			((input.ModelConfigID != "" && item.ModelConfigID == input.ModelConfigID) ||
+				(input.DeploymentID != "" && item.DeploymentID == input.DeploymentID)) {
 			return EvaluationCandidate{}, ErrConflict
 		}
+	}
+	modelName := deployment.ModelName
+	modelVersion := deployment.ModelVersion
+	providerKey := deployment.ProviderKey
+	if input.ModelConfigID != "" {
+		modelName = managed.ModelName
+		modelVersion = managed.ModelVersion
+		providerKey = managed.ProviderKey
 	}
 	item := PopulateEvaluationMetrics(EvaluationCandidate{
 		ID:                     uuid.NewString(),
 		TenantID:               tenantID,
 		RunID:                  runID,
 		DeploymentID:           deployment.ID,
-		ProviderKey:            deployment.ProviderKey,
+		ModelConfigID:          managed.ID,
+		ProviderKey:            providerKey,
 		DeploymentKey:          deployment.Key,
-		ModelVersion:           deployment.ModelVersion,
+		ModelName:              modelName,
+		ModelVersion:           modelVersion,
 		PromptVersion:          strings.TrimSpace(input.PromptVersion),
 		RubricVersion:          strings.TrimSpace(input.RubricVersion),
 		EvaluatedSamples:       input.EvaluatedSamples,
@@ -557,7 +615,14 @@ func (s *MemoryStore) CompleteEvaluationRun(
 		return EvaluationRun{}, ErrConflict
 	}
 	candidates := s.evaluationCandidatesLocked(tenantID, runID)
-	if len(candidates) < 2 || !s.hasLocalEvaluationCandidateLocked(tenantID, candidates) {
+	managedCount := 0
+	for _, candidate := range candidates {
+		if candidate.DeploymentID == "" {
+			managedCount++
+		}
+	}
+	if len(candidates) < 2 || (managedCount > 0 && managedCount != len(candidates)) ||
+		(managedCount == 0 && !s.hasLocalEvaluationCandidateLocked(tenantID, candidates)) {
 		return EvaluationRun{}, ErrInvalidEvaluation
 	}
 	now := time.Now().UTC()
@@ -668,7 +733,8 @@ func (s *MemoryStore) CreateModelApproval(
 	for _, item := range s.candidates {
 		if item.TenantID == tenantID &&
 			item.RunID == run.ID &&
-			item.DeploymentID == input.DeploymentID {
+			((input.ModelConfigID != "" && item.ModelConfigID == input.ModelConfigID) ||
+				(input.DeploymentID != "" && item.DeploymentID == input.DeploymentID)) {
 			candidate = item
 			found = true
 			break
@@ -682,6 +748,7 @@ func (s *MemoryStore) CreateModelApproval(
 			return ModelApproval{}, ErrConflict
 		}
 		if item.TenantID == tenantID &&
+			item.ModelConfigID == candidate.ModelConfigID &&
 			item.DeploymentID == candidate.DeploymentID &&
 			item.ModelVersion == candidate.ModelVersion &&
 			item.PromptVersion == candidate.PromptVersion &&
@@ -700,8 +767,10 @@ func (s *MemoryStore) CreateModelApproval(
 		EvaluationRunID:       run.ID,
 		EvaluationCandidateID: candidate.ID,
 		DeploymentID:          candidate.DeploymentID,
+		ModelConfigID:         candidate.ModelConfigID,
 		ProviderKey:           candidate.ProviderKey,
 		DeploymentKey:         candidate.DeploymentKey,
+		ModelName:             candidate.ModelName,
 		ModelVersion:          candidate.ModelVersion,
 		PromptVersion:         candidate.PromptVersion,
 		RubricVersion:         candidate.RubricVersion,

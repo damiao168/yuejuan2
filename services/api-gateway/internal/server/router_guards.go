@@ -236,7 +236,7 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 		return authenticate(auth.RequireRequestResourceBoundary(resourceResolver)(auth.RequireAnyRole("school_admin")(handler)))
 	}
 	requireModelRead := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequirePermission("model:read")(handler))
+		return requireAuth(auth.RequireAnyPermission("model:governance:read", "model:read")(handler))
 	}
 	requirePlatformModelManage := func(handler http.HandlerFunc) http.Handler {
 		return authenticate(auth.RequireRequestResourceBoundary(resourceResolver)(auth.RequireAnyRole("platform_admin")(
@@ -244,7 +244,7 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 			// credentials without typing the same login password again. Current
 			// role/permission/resource checks still run on every request, and the
 			// model-governance store keeps the existing immutable audit trail.
-			auth.RequirePermission("model:provider:manage")(idempotent(handler)),
+			auth.RequireAnyPermission("model:config:manage", "model:provider:manage")(idempotent(handler)),
 		)))
 	}
 	requirePlatformSchoolRead := func(handler http.HandlerFunc) http.Handler {

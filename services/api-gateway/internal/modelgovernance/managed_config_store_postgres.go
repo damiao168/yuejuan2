@@ -67,6 +67,7 @@ VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$1
 RETURNING id::text,tenant_id::text,provider_key,display_name,adapter_type,base_url,model_name,model_version,region,
           true,credential_hint,status,is_default,last_test_status,last_test_message,last_test_latency_ms,last_tested_at,last_successful_tested_at,
           last_probe_mode,last_capability_status,last_capability_message,last_capability_tested_at,last_capability_probe_version,last_capability_usage,last_capability_diagnostic,
+          modalities,capability_profile,pricing_policy,data_policy,health_state,
           config_source,provider_registry_version,created_at,updated_at
 `, id, tenantID, normalized.ProviderKey, normalized.DisplayName, normalized.AdapterType,
 		normalized.BaseURL, normalized.ModelName, normalized.ModelVersion, normalized.Region,
@@ -117,23 +118,24 @@ SET display_name=$3,adapter_type=$4,base_url=$5,model_name=$6,model_version=$7,r
     credential_nonce=CASE WHEN $10::bytea IS NULL THEN credential_nonce ELSE $10::bytea END,
     credential_hint=CASE WHEN $9::bytea IS NULL THEN credential_hint ELSE $11 END,
     status=$12,is_default=$13,
-    last_test_status=CASE WHEN $14 THEN $15 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 THEN last_test_status ELSE 'untested' END,
-    last_test_message=CASE WHEN $14 THEN $16 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 THEN last_test_message ELSE '' END,
-    last_test_latency_ms=CASE WHEN $14 THEN $17 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 THEN last_test_latency_ms ELSE NULL END,
-    last_tested_at=CASE WHEN $14 THEN $18 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 THEN last_tested_at ELSE NULL END,
-    last_successful_tested_at=CASE WHEN $14 AND $15='success' THEN $18 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 THEN last_successful_tested_at ELSE NULL END,
-    last_probe_mode=CASE WHEN $14 THEN $19 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 THEN last_probe_mode ELSE '' END,
-    last_capability_status=CASE WHEN $20 THEN $21 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 THEN last_capability_status ELSE 'untested' END,
-    last_capability_message=CASE WHEN $20 THEN $22 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 THEN last_capability_message ELSE '' END,
-    last_capability_tested_at=CASE WHEN $20 THEN $23 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 THEN last_capability_tested_at ELSE NULL END,
-    last_capability_probe_version=CASE WHEN $20 THEN $24 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 THEN last_capability_probe_version ELSE '' END,
-    last_capability_usage=CASE WHEN $20 THEN $25::jsonb WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 THEN last_capability_usage ELSE '{}'::jsonb END,
-    last_capability_diagnostic=CASE WHEN $20 THEN $26::jsonb WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 THEN last_capability_diagnostic ELSE '{}'::jsonb END,
+    last_test_status=CASE WHEN $14 THEN $15 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 AND model_version=$7 AND region=$8 THEN last_test_status ELSE 'untested' END,
+    last_test_message=CASE WHEN $14 THEN $16 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 AND model_version=$7 AND region=$8 THEN last_test_message ELSE '' END,
+    last_test_latency_ms=CASE WHEN $14 THEN $17 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 AND model_version=$7 AND region=$8 THEN last_test_latency_ms ELSE NULL END,
+    last_tested_at=CASE WHEN $14 THEN $18 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 AND model_version=$7 AND region=$8 THEN last_tested_at ELSE NULL END,
+    last_successful_tested_at=CASE WHEN $14 AND $15='success' THEN $18 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 AND model_version=$7 AND region=$8 THEN last_successful_tested_at ELSE NULL END,
+    last_probe_mode=CASE WHEN $14 THEN $19 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 AND model_version=$7 AND region=$8 THEN last_probe_mode ELSE '' END,
+    last_capability_status=CASE WHEN $20 THEN $21 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 AND model_version=$7 AND region=$8 THEN last_capability_status ELSE 'untested' END,
+    last_capability_message=CASE WHEN $20 THEN $22 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 AND model_version=$7 AND region=$8 THEN last_capability_message ELSE '' END,
+    last_capability_tested_at=CASE WHEN $20 THEN $23 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 AND model_version=$7 AND region=$8 THEN last_capability_tested_at ELSE NULL END,
+    last_capability_probe_version=CASE WHEN $20 THEN $24 WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 AND model_version=$7 AND region=$8 THEN last_capability_probe_version ELSE '' END,
+    last_capability_usage=CASE WHEN $20 THEN $25::jsonb WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 AND model_version=$7 AND region=$8 THEN last_capability_usage ELSE '{}'::jsonb END,
+    last_capability_diagnostic=CASE WHEN $20 THEN $26::jsonb WHEN $9::bytea IS NULL AND adapter_type=$4 AND base_url=$5 AND model_name=$6 AND model_version=$7 AND region=$8 THEN last_capability_diagnostic ELSE '{}'::jsonb END,
     updated_at=now()
 WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL
 RETURNING id::text,tenant_id::text,provider_key,display_name,adapter_type,base_url,model_name,model_version,region,
           true,credential_hint,status,is_default,last_test_status,last_test_message,last_test_latency_ms,last_tested_at,last_successful_tested_at,
           last_probe_mode,last_capability_status,last_capability_message,last_capability_tested_at,last_capability_probe_version,last_capability_usage,last_capability_diagnostic,
+          modalities,capability_profile,pricing_policy,data_policy,health_state,
           config_source,provider_registry_version,created_at,updated_at
 `, tenantID, id, normalized.DisplayName, normalized.AdapterType, normalized.BaseURL,
 		normalized.ModelName, normalized.ModelVersion, normalized.Region,
@@ -164,7 +166,19 @@ func (s *PostgresStore) DeleteManagedAPIConfig(ctx context.Context, tenantID, id
 	if isDefault {
 		return ErrManagedDefaultMutation
 	}
-	if _, err = tx.ExecContext(ctx, `DELETE FROM managed_model_api_config WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL`, tenantID, id); err != nil {
+	var inUse bool
+	if err = tx.QueryRowContext(ctx, `
+SELECT EXISTS(SELECT 1 FROM model_role_binding WHERE tenant_id=$1::uuid AND managed_model_api_config_id=$2::uuid AND status='active')
+    OR EXISTS(SELECT 1 FROM model_approval WHERE tenant_id=$1::uuid AND managed_model_api_config_id=$2::uuid AND revoked_at IS NULL AND expires_at > now())
+    OR EXISTS(SELECT 1 FROM model_sandbox_approval WHERE tenant_id=$1::uuid AND managed_model_api_config_id=$2::uuid AND revoked_at IS NULL AND expires_at > now())
+    OR EXISTS(SELECT 1 FROM tenant_model_policy_model WHERE tenant_id=$1::uuid AND managed_model_api_config_id=$2::uuid AND enabled)
+`, tenantID, id).Scan(&inUse); err != nil {
+		return mapStoreError(err)
+	}
+	if inUse {
+		return ErrConflict
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE managed_model_api_config SET status='disabled',is_default=false,deleted_at=now(),updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL`, tenantID, id); err != nil {
 		return mapStoreError(err)
 	}
 	return tx.Commit()
@@ -206,6 +220,7 @@ WHERE tenant_id=$1::uuid AND id=$2::uuid AND updated_at=$3 AND deleted_at IS NUL
 RETURNING id::text,tenant_id::text,provider_key,display_name,adapter_type,base_url,model_name,model_version,region,
           true,credential_hint,status,is_default,last_test_status,last_test_message,last_test_latency_ms,last_tested_at,last_successful_tested_at,
           last_probe_mode,last_capability_status,last_capability_message,last_capability_tested_at,last_capability_probe_version,last_capability_usage,last_capability_diagnostic,
+          modalities,capability_profile,pricing_policy,data_policy,health_state,
           config_source,provider_registry_version,created_at,updated_at
 `, tenantID, id, expectedUpdatedAt, probe.Status, probe.Message, probe.Latency, probe.TestedAt, probe.Mode,
 		probe.UpdateCapability, probe.CapabilityStatus, probe.CapabilityMessage, probe.CapabilityTestedAt,
@@ -225,6 +240,7 @@ SELECT id::text,tenant_id::text,provider_key,display_name,adapter_type,base_url,
        true,credential_hint,status,is_default,last_test_status,last_test_message,last_test_latency_ms,last_tested_at,last_successful_tested_at,
        last_probe_mode,last_capability_status,last_capability_message,last_capability_tested_at,last_capability_probe_version,last_capability_usage,
        last_capability_diagnostic,
+       modalities,capability_profile,pricing_policy,data_policy,health_state,
        config_source,provider_registry_version,created_at,updated_at
 FROM managed_model_api_config
 `
@@ -234,6 +250,7 @@ func scanManagedAPIConfig(row rowScanner) (ManagedAPIConfig, error) {
 	var lastTestLatency sql.NullInt64
 	var capabilityUsage []byte
 	var capabilityDiagnostic []byte
+	var modalities, pricingPolicy, dataPolicy []byte
 	if err := row.Scan(
 		&item.ID, &item.TenantID, &item.ProviderKey, &item.DisplayName, &item.AdapterType,
 		&item.BaseURL, &item.ModelName, &item.ModelVersion, &item.Region,
@@ -241,6 +258,7 @@ func scanManagedAPIConfig(row rowScanner) (ManagedAPIConfig, error) {
 		&item.LastTestStatus, &item.LastTestMessage, &lastTestLatency, &item.LastTestedAt, &item.LastSuccessfulTestedAt,
 		&item.LastProbeMode, &item.LastCapabilityStatus, &item.LastCapabilityMessage,
 		&item.LastCapabilityTestedAt, &item.LastCapabilityVersion, &capabilityUsage, &capabilityDiagnostic,
+		&modalities, &item.CapabilityProfile, &pricingPolicy, &dataPolicy, &item.HealthState,
 		&item.ConfigSource, &item.ProviderRegistryVersion, &item.CreatedAt, &item.UpdatedAt,
 	); err != nil {
 		return ManagedAPIConfig{}, err
@@ -253,6 +271,15 @@ func scanManagedAPIConfig(row rowScanner) (ManagedAPIConfig, error) {
 	}
 	if len(capabilityDiagnostic) > 0 {
 		_ = json.Unmarshal(capabilityDiagnostic, &item.LastCapabilityDiagnostic)
+	}
+	if err := json.Unmarshal(modalities, &item.Modalities); err != nil {
+		return ManagedAPIConfig{}, err
+	}
+	if err := json.Unmarshal(pricingPolicy, &item.PricingPolicy); err != nil {
+		return ManagedAPIConfig{}, err
+	}
+	if err := json.Unmarshal(dataPolicy, &item.DataPolicy); err != nil {
+		return ManagedAPIConfig{}, err
 	}
 	return item, nil
 }

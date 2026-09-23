@@ -27,7 +27,7 @@ type ApprovalState = "active" | "expired" | "revoked";
 
 interface ApprovalFormValues {
   evaluation_run_id: string;
-  deployment_id: string;
+  model_config_id: string;
   manual_review_percent: number;
   decision_reference: string;
   expires_at: string;
@@ -67,11 +67,13 @@ function errorMessage(error: unknown) {
 }
 
 export function ModelApprovalWorkspace({
+  tenantID,
   approvals,
   evaluationRuns,
   canManage,
   onRefresh
 }: {
+  tenantID: string;
   approvals: ModelApproval[];
   evaluationRuns: EvaluationRun[];
   canManage: boolean;
@@ -107,8 +109,9 @@ export function ModelApprovalWorkspace({
     setSaving(true);
     try {
       await createModelApproval({
+        tenant_id: tenantID,
         evaluation_run_id: values.evaluation_run_id,
-        deployment_id: values.deployment_id,
+        model_config_id: values.model_config_id,
         manual_review_rate: values.manual_review_percent / 100,
         decision_reference: values.decision_reference,
         expires_at: new Date(values.expires_at).toISOString(),
@@ -129,7 +132,7 @@ export function ModelApprovalWorkspace({
     const { reason } = await revokeForm.validateFields();
     setSaving(true);
     try {
-      await revokeModelApproval(revokeTarget.id, reason, revokeTarget.revision);
+      await revokeModelApproval(tenantID, revokeTarget.id, reason, revokeTarget.revision);
       setRevokeTarget(undefined);
       revokeForm.resetFields();
       message.success("模型批准已撤销，新任务必须停止使用该范围");
@@ -143,11 +146,11 @@ export function ModelApprovalWorkspace({
 
   const columns: TableColumnsType<ModelApproval> = [
     {
-      title: "部署与适用范围",
+      title: "模型与适用范围",
       key: "scope",
       render: (_value, approval) => (
         <div className="model-governance-stack">
-          <span>{approval.deployment_key}</span>
+          <span>{approval.model_name || "历史模型配置（已停用）"}</span>
           <small>{approval.subject} · {approval.grade} · {approval.question_type} · {approval.modality}</small>
         </div>
       )
@@ -266,19 +269,19 @@ export function ModelApprovalWorkspace({
         <Form form={form} layout="vertical" className="model-evaluation-form">
           <Form.Item name="evaluation_run_id" label="授权冻结集评测" rules={[{ required: true }]}>
             <Select
-              onChange={() => form.setFieldValue("deployment_id", undefined)}
+              onChange={() => form.setFieldValue("model_config_id", undefined)}
               options={eligibleRuns.map((run) => ({
                 value: run.id,
                 label: `${run.display_name} · ${run.subject}/${run.grade}/${run.question_type}`
               }))}
             />
           </Form.Item>
-          <Form.Item name="deployment_id" label="候选部署" rules={[{ required: true }]}>
+          <Form.Item name="model_config_id" label="评测模型" rules={[{ required: true }]}>
             <Select
               disabled={!selectedRun}
-              options={(selectedRun?.candidates ?? []).map((candidate) => ({
-                value: candidate.deployment_id,
-                label: `${candidate.deployment_key} · ${candidate.model_version} · 教师接受率 ${(candidate.metrics.teacher_acceptance_rate * 100).toFixed(1)}%`
+              options={(selectedRun?.candidates ?? []).filter((candidate) => candidate.model_config_id).map((candidate) => ({
+                value: candidate.model_config_id!,
+                label: `${candidate.model_name} · ${candidate.model_version} · 教师接受率 ${(candidate.metrics.teacher_acceptance_rate * 100).toFixed(1)}%`
               }))}
             />
           </Form.Item>

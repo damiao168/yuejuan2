@@ -10,6 +10,7 @@ import {
   Empty,
   Form,
   Input,
+  Segmented,
   Select,
   Space,
   Tooltip,
@@ -35,6 +36,8 @@ import { ResponsiveTable } from "../components/ResponsiveTable";
 import { StatusTag } from "../components/StatusTag";
 import { onboardingQueryKey } from "../features/onboarding/queries";
 import { PanelModelBindingsSection } from "./PanelModelBindingsSection";
+import { ManagedGovernanceWorkspace } from "../components/model-governance/ManagedGovernanceWorkspace";
+import { hashQueryParam } from "../router/query";
 
 type SupplierPreset = "aliyun" | "deepseek" | "openai" | "zhipu" | "moonshot" | "anthropic" | "gemini" | "custom";
 
@@ -152,6 +155,10 @@ export function PlatformModelConfigPage() {
   const [schools, setSchools] = useState<Tenant[]>([]);
   const [schoolLoading, setSchoolLoading] = useState(true);
   const [selectedTenantID, setSelectedTenantID] = useState("");
+  const [activeTab, setActiveTab] = useState<"models" | "bindings" | "governance">(() => {
+    const requested = hashQueryParam("tab");
+    return requested === "bindings" || requested === "governance" ? requested : "models";
+  });
   const [configs, setConfigs] = useState<ManagedModelAPIConfig[]>([]);
   const [configLoading, setConfigLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -664,12 +671,12 @@ export function PlatformModelConfigPage() {
     <div className="platform-model-page">
       <section className="page-heading platform-model-heading">
         <div>
-          <h1>AI 模型接入</h1>
-          <p>选择学校，分别配置日常对话模型和三智能体评分模型。</p>
+          <h1>模型管理</h1>
+          <p>选择学校，管理学校模型、三智能体评分和模型治理。</p>
         </div>
         <Space>
           <Button icon={<RefreshCw size={16} />} loading={schoolLoading || configLoading} onClick={() => { void loadSchools(); void loadConfigs(selectedTenantID); }}>刷新</Button>
-          <Button type="primary" icon={<Plus size={16} />} disabled={!selectedTenantID || configLoading} onClick={openCreate}>添加模型</Button>
+          {activeTab === "models" ? <Button type="primary" icon={<Plus size={16} />} disabled={!selectedTenantID || configLoading} onClick={openCreate}>添加模型</Button> : null}
         </Space>
       </section>
 
@@ -708,7 +715,17 @@ export function PlatformModelConfigPage() {
         message="密钥加密保存且学校配置相互隔离。模型库中的日常对话默认选择与下方三智能体绑定分开管理；完整能力检测通过后才能启用评分角色。"
       />
 
-      <h2 className="platform-model-section-title">学校模型库</h2>
+      <Segmented
+        value={activeTab}
+        options={[{ value: "models", label: "学校模型" }, { value: "bindings", label: "三智能体配置" }, { value: "governance", label: "治理与评测" }]}
+        onChange={(value) => {
+          const next = value as "models" | "bindings" | "governance";
+          setActiveTab(next);
+          window.location.hash = `/admin/platform/model-config?tab=${next}`;
+        }}
+      />
+
+      {activeTab === "models" ? <><h2 className="platform-model-section-title">学校模型库</h2>
       <section className="platform-model-table-shell">
         {selectedTenantID ? (
           <ResponsiveTable<ManagedModelAPIConfig>
@@ -725,7 +742,9 @@ export function PlatformModelConfigPage() {
         )}
       </section>
 
-      <PanelModelBindingsSection tenantID={selectedTenantID} configs={configs} loadingConfigs={configLoading} />
+      </> : null}
+      {activeTab === "bindings" ? <PanelModelBindingsSection tenantID={selectedTenantID} configs={configs} loadingConfigs={configLoading} /> : null}
+      {activeTab === "governance" ? <ManagedGovernanceWorkspace tenantID={selectedTenantID} configs={configs} /> : null}
 
       <Drawer
         title={editing ? `编辑 ${editing.display_name}` : `为${selectedSchool?.name ?? "学校"}添加模型`}

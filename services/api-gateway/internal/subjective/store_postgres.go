@@ -475,7 +475,7 @@ RETURNING id::text, tenant_id::text, answer_segment_id::text, question_id::text,
 		out.AdapterRequestID != "" &&
 		out.AdapterName != "" &&
 		out.ProviderKey != "" &&
-		out.DeploymentKey != "" &&
+		(out.DeploymentKey != "" || grade.ModelConfigID != "") &&
 		out.DeploymentRegion != "" {
 		// Record the provider's complete usage in the same transaction as the
 		// grade. The model_call_fact trigger is a fallback for older callers;
@@ -508,19 +508,22 @@ ON CONFLICT (tenant_id, request_id, feature) DO NOTHING
 INSERT INTO model_call_fact (
   tenant_id, request_id, answer_segment_id, question_id,
   provider_key, deployment_key, adapter_type, model_version,
+  managed_model_api_config_id, model_name,
   prompt_version, rubric_version, capability_profile, deployment_region,
   route_mode, route_reason, status, attempts, latency_ms, input_units, output_units, error_code
 )
 VALUES (
   $1, $2, $3, $4,
   $5, $6, $7, $8,
+  NULLIF($19, '')::uuid, $20,
   $9, $10, $11, $12,
-  'local_only', 'configured governed grading-agent deployment', $13, $14, $15, $16, $17, $18
+  'local_only', 'configured governed grading-agent model', $13, $14, $15, $16, $17, $18
 )
 `, tenantID, out.AdapterRequestID, out.AnswerSegmentID, out.QuestionID,
 			out.ProviderKey, out.DeploymentKey, out.AdapterName, out.ModelVersion,
 			out.PromptVersion, out.RubricVersion, out.CapabilityProfile, out.DeploymentRegion,
-			out.Status, out.AdapterAttempts, out.AdapterLatencyMS, grade.InputTokens, grade.OutputTokens, out.FailureReason); err != nil {
+			out.Status, out.AdapterAttempts, out.AdapterLatencyMS, grade.InputTokens, grade.OutputTokens, out.FailureReason,
+			grade.ModelConfigID, grade.ModelName); err != nil {
 			return Grade{}, err
 		}
 	}

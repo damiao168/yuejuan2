@@ -50,7 +50,11 @@ func (s *MemoryStore) CreateManagedAPIConfig(_ context.Context, tenantID, _ stri
 		DisplayName: normalized.DisplayName, AdapterType: normalized.AdapterType,
 		BaseURL: normalized.BaseURL, ModelName: normalized.ModelName, ModelVersion: normalized.ModelVersion,
 		Region: normalized.Region, CredentialConfigured: true, CredentialHint: credentialHint(normalized.APIKey),
-		Status: normalized.Status, IsDefault: normalized.IsDefault, LastTestStatus: "untested",
+		Modalities: []string{"text"}, CapabilityProfile: "general",
+		PricingPolicy: map[string]any{},
+		DataPolicy:    map[string]any{"training_allowed": false, "retention_mode": "no_store"},
+		HealthState:   "unverified",
+		Status:        normalized.Status, IsDefault: normalized.IsDefault, LastTestStatus: "untested",
 		LastCapabilityStatus: "untested",
 		ConfigSource:         normalized.ConfigSource, ProviderRegistryVersion: normalized.ProviderRegistryVersion,
 		CreatedAt: now, UpdatedAt: now,
@@ -83,7 +87,8 @@ func (s *MemoryStore) UpdateManagedAPIConfig(_ context.Context, tenantID, id str
 		s.clearManagedDefault(tenantID, id)
 	}
 	connectionChanged := item.AdapterType != normalized.AdapterType || item.BaseURL != normalized.BaseURL ||
-		item.ModelName != normalized.ModelName || normalized.APIKey != ""
+		item.ModelName != normalized.ModelName || item.ModelVersion != normalized.ModelVersion ||
+		item.Region != normalized.Region || normalized.APIKey != ""
 	item.DisplayName = normalized.DisplayName
 	item.AdapterType = normalized.AdapterType
 	item.BaseURL = normalized.BaseURL
@@ -131,6 +136,28 @@ func (s *MemoryStore) DeleteManagedAPIConfig(_ context.Context, tenantID, id str
 	}
 	if item.IsDefault {
 		return ErrManagedDefaultMutation
+	}
+	for _, binding := range s.roleBindings {
+		if binding.TenantID == tenantID && binding.ManagedModelAPIConfigID == id && binding.Status == "active" {
+			return ErrConflict
+		}
+	}
+	for _, approval := range s.modelApprovals {
+		if approval.TenantID == tenantID && approval.ModelConfigID == id && approval.IsActive(time.Now().UTC()) {
+			return ErrConflict
+		}
+	}
+	for _, approval := range s.approvals {
+		if approval.TenantID == tenantID && approval.ModelConfigID == id && approval.IsActive(time.Now().UTC()) {
+			return ErrConflict
+		}
+	}
+	if policy, ok := s.policies[tenantID]; ok {
+		for _, allowed := range policy.AllowedModelConfigIDs {
+			if allowed == id {
+				return ErrConflict
+			}
+		}
 	}
 	delete(s.managedConfigs, id)
 	delete(s.managedSecrets, id)

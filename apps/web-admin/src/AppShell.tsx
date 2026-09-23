@@ -45,7 +45,6 @@ const CreateExamPage = lazy(() => import("./features/exams/create/CreateExamPage
 const GradingWorkbenchPage = lazy(() => import("./pages/GradingWorkbenchPage").then((module) => ({ default: module.GradingWorkbenchPage })));
 const AdminGradingOperationsPage = lazy(() => import("./pages/AdminGradingOperationsPage").then((module) => ({ default: module.AdminGradingOperationsPage })));
 const LearningReportsPage = lazy(() => import("./pages/LearningReportsPage").then((module) => ({ default: module.LearningReportsPage })));
-const ModelGovernancePage = lazy(() => import("./pages/ModelGovernancePage").then((module) => ({ default: module.ModelGovernancePage })));
 const SubjectiveGradingBatchPage = lazy(() => import("./pages/SubjectiveGradingBatchPage").then((module) => ({ default: module.SubjectiveGradingBatchPage })));
 const OrganizationSetupPage = lazy(() => import("./pages/OrganizationSetupPage").then((module) => ({ default: module.OrganizationSetupPage })));
 const StudentManagementPage = lazy(() => import("./pages/StudentManagementPage").then((module) => ({ default: module.StudentManagementPage })));
@@ -145,6 +144,12 @@ export function AppShell() {
       router.history.replace(nextPath);
     }
   }, [path, requestedExperience, router, user]);
+
+  useEffect(() => {
+    if (user && canonicalPath === "/system/models") {
+      router.history.replace(pathForExperience("/platform/model-config?tab=governance", "admin"));
+    }
+  }, [canonicalPath, router, user]);
 
   const navigate = (nextPath: string) => {
     const targetExperience = experienceFromPath(nextPath) ?? navigationExperience;
@@ -366,14 +371,7 @@ export function AppShell() {
     ) : route.path === "/system/status" ? (
       <SystemStatusPage />
     ) : route.path === "/system/models" ? (
-      <ModelGovernancePage
-        canManageProviders={hasEveryPermission(user, ["model:provider:manage"])}
-        canManagePolicy={hasEveryPermission(user, ["model:policy:manage"])}
-        canManageEvaluations={hasEveryPermission(user, ["model:evaluation:manage"])}
-        canReadEligibility={hasEveryPermission(user, ["model:read"])}
-        canReadDisagreements={hasAnyPermission(user, ["review:work", "review:manage"])}
-        canManageDisagreements={hasEveryPermission(user, ["review:manage"])}
-      />
+      <PlatformModelConfigPage />
     ) : route.path === "/account/sessions" ? (
       <SessionManagementPage key={`${user.tenant}:${user.id}`} onLoggedOut={logout} accountLabel={`${user.tenant}/${user.username}`} />
     ) : route.path === "/grading/subjective-batches" ? (

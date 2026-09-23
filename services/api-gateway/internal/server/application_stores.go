@@ -130,11 +130,8 @@ func NewPostgresApplicationStores(infra *Infrastructure) (ApplicationStores, err
 		return ApplicationStores{}, err
 	}
 	governanceStore := modelgovernance.NewPostgresStore(infra.DB, credentialCipher)
-	if err := governanceStore.EnsureLocalBaseline(context.Background(), "", localModelBaseline(infra.Config)); err != nil {
-		return ApplicationStores{}, err
-	}
 	if strings.EqualFold(strings.TrimSpace(infra.Config.Service.Environment), "production") && infra.Config.AIService.Enabled {
-		if err := governanceStore.ValidateProductionReadiness(context.Background(), modelgovernance.NewEnvironmentSecretResolver("")); err != nil {
+		if err := governanceStore.ValidateManagedProductionReadiness(context.Background()); err != nil {
 			return ApplicationStores{}, err
 		}
 	}

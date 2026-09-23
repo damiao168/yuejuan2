@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { getUserErrorMessage } from "../../api/client";
+import type { ManagedModelAPIConfig } from "../../api/modelApiConfig";
 import {
   addModelEvaluationCandidate,
   completeModelEvaluationRun,
@@ -38,7 +39,6 @@ import {
   EvaluationEvidenceClass,
   EvaluationRun,
   EvaluationRunStatus,
-  ModelDeployment
 } from "../../api/modelGovernance";
 import { ResponsiveTable } from "../ResponsiveTable";
 
@@ -81,13 +81,15 @@ type TransitionKind = "complete" | "invalidate";
 
 export function ModelEvaluationWorkspace({
   runs,
-  deployments,
+  tenantID,
+  configs,
   loading,
   canManage,
   onRefresh
 }: {
   runs: EvaluationRun[];
-  deployments: ModelDeployment[];
+  tenantID: string;
+  configs: ManagedModelAPIConfig[];
   loading: boolean;
   canManage: boolean;
   onRefresh: () => Promise<void>;
@@ -128,13 +130,17 @@ export function ModelEvaluationWorkspace({
   }, [runs, selectedRunID]);
 
   const selectedRun = runs.find((run) => run.id === selectedRunID);
-  const availableDeployments = selectedRun
-    ? deployments.filter((deployment) => !selectedRun.candidates.some((candidate) => candidate.deployment_id === deployment.id))
+  const availableConfigs = selectedRun
+    ? configs.filter((config) => config.status === "active"
+      && config.last_capability_status === "success"
+      && config.last_capability_probe_version === "structured-json-v3"
+      && !selectedRun.candidates.some((candidate) => candidate.model_config_id === config.id))
     : [];
   const canCompleteSelected = Boolean(
     selectedRun
     && selectedRun.candidates.length >= 2
-    && selectedRun.candidates.some((candidate) => candidate.provider_key === "local")
+    && (selectedRun.candidates.some((candidate) => candidate.provider_key === "local")
+      || selectedRun.candidates.filter((candidate) => candidate.model_config_id).length >= 2)
   );
 
   const bestMetrics = useMemo(() => {
@@ -230,11 +236,11 @@ export function ModelEvaluationWorkspace({
 
   const candidateColumns: TableColumnsType<EvaluationCandidate> = [
     {
-      title: "候选部署",
-      dataIndex: "deployment_key",
+      title: "评测模型",
+      dataIndex: "model_name",
       render: (_value, candidate) => (
         <div className="model-governance-stack">
-          <span>{candidate.deployment_key}</span>
+          <span>{candidate.model_name || "历史模型配置（已停用）"}</span>
           <small>{candidate.provider_key} · {candidate.model_version}</small>
         </div>
       )
@@ -330,6 +336,7 @@ export function ModelEvaluationWorkspace({
     try {
       const response = await createModelEvaluationRun({
         ...values,
+        tenant_id: tenantID,
         authorization_reference: values.evidence_class === "authorized_frozen_set"
           ? values.authorization_reference
           : undefined
@@ -350,7 +357,7 @@ export function ModelEvaluationWorkspace({
     const values = await candidateForm.validateFields();
     setSaving(true);
     try {
-      await addModelEvaluationCandidate(selectedRun.id, {
+      await addModelEvaluationCandidate(tenantID, selectedRun.id, {
         ...values,
         evaluated_samples: selectedRun.sample_count,
         teacher_reviewed_samples: selectedRun.evidence_class === "authorized_frozen_set"
@@ -376,10 +383,10 @@ export function ModelEvaluationWorkspace({
     setSaving(true);
     try {
       if (transitionKind === "complete") {
-        await completeModelEvaluationRun(selectedRun.id, reason);
+        await completeModelEvaluationRun(tenantID, selectedRun.id, reason);
         message.success("评测批次已冻结，候选证据不再接受修改");
       } else {
-        await invalidateModelEvaluationRun(selectedRun.id, reason);
+        await invalidateModelEvaluationRun(tenantID, selectedRun.id, reason);
         message.success("评测证据已标记为失效");
       }
       setTransitionKind(undefined);
@@ -467,13 +474,13 @@ export function ModelEvaluationWorkspace({
             <Space wrap>
               <Tag color={statusColor(selectedRun.status)}>{statusLabels[selectedRun.status]}</Tag>
               {canManage && selectedRun.status === "draft" ? (
-                <Button icon={<Plus size={15} />} disabled={availableDeployments.length === 0} onClick={openCandidateDrawer}>
+                <Button icon={<Plus size={15} />} disabled={availableConfigs.length === 0} onClick={openCandidateDrawer}>
                   添加候选
                 </Button>
               ) : null}
               {canManage && selectedRun.status === "draft" ? (
                 <Tooltip
-                  title={canCompleteSelected ? undefined : "至少需要两个候选，并且必须包含本地基线"}
+                  title={canCompleteSelected ? undefined : "至少需要两个候选；新评测请选择两个学校模型"}
                 >
                   <span>
                     <Button
@@ -646,11 +653,11 @@ export function ModelEvaluationWorkspace({
               description={`批次固定 ${selectedRun.sample_count} 个样本、重复 ${selectedRun.repeat_count} 次；候选版本写入后不可修改。`}
             />
             <Form form={candidateForm} layout="vertical" className="model-evaluation-form">
-              <Form.Item name="deployment_id" label="候选部署" rules={[{ required: true }]}>
+              <Form.Item name="model_config_id" label="评测模型" rules={[{ required: true }]}>
                 <Select
-                  options={availableDeployments.map((deployment) => ({
-                    value: deployment.id,
-                    label: `${deployment.model_name} · ${deployment.deployment_key}`
+                  options={availableConfigs.map((config) => ({
+                    value: config.id,
+                    label: `${config.display_name} · ${config.model_name}`
                   }))}
                 />
               </Form.Item>

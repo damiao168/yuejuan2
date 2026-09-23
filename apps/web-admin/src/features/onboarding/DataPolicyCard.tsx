@@ -7,7 +7,7 @@ function enabled(value: unknown) { return value === true ? "已允许" : "关闭
 
 export function DataPolicyCard({ check, onNavigate }: { check: OnboardingCheck; onNavigate: (path: string) => void }) {
   return (
-    <OnboardingCheckCard check={check} action={<Button onClick={() => onNavigate(check.action_path || "/system/models")}>模型治理 <ArrowRight size={15} /></Button>}>
+    <OnboardingCheckCard check={check} action={<Button onClick={() => onNavigate(check.action_path || "/platform/model-config?tab=governance")}>模型管理 <ArrowRight size={15} /></Button>}>
       <dl className="onboarding-policy-summary">
         <div><dt>外部 AI</dt><dd>{enabled(check.metadata?.external_enabled)}</dd></div>
         <div><dt>答题文本外发</dt><dd>{enabled(check.metadata?.text_export_enabled)}</dd></div>
