@@ -307,6 +307,13 @@ export function PaperRubricPage({
         <ErrorState message={configError} onRetry={() => void loadConfig(selectedExam.id)} />
       ) : (
         <>
+          {embedded && initialView === "questions" && !papers.length && !paperImports.length ? <Alert
+            type="info"
+            showIcon
+            message="尚未上传考试资料"
+            description="推荐先上传试卷、答案或评分标准，系统可自动识别题目和分值；也可以继续手动添加题目。"
+            action={onNavigate ? <Button size="small" onClick={() => onNavigate(`/exams/${encodeURIComponent(selectedExam.id)}/paper`)}>上传资料</Button> : undefined}
+          /> : null}
           {showMaterials ? <PaperImportWorkspace
             canManage={canManage}
             latestPaperImport={latestPaperImport}

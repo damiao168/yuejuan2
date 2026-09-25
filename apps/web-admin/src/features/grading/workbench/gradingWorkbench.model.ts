@@ -25,7 +25,7 @@ export const sourceLabels: Record<string, string> = {
   ocr_low_confidence: "手写内容识别不确定",
   subjective_default_review: "主观题需要教师确认",
   evidence_verification_failed: "未找到足够评分依据",
-  double_mark_required: "需要第二位教师独立评分",
+  double_mark_required: "双评任务 · 独立评分",
   score_anomaly: "评分结果与同类答案差异较大",
   manual_sample: "人工抽检",
   omr_ambiguous: "客观题识别存在歧义",
@@ -38,7 +38,7 @@ export const sourceDescriptions: Record<string, string> = {
   ocr_low_confidence: "识别结果可能与学生原始作答不一致，请优先核对答题图。",
   subjective_default_review: "本题按阅卷策略进入人工确认，请依据评分细则给分。",
   evidence_verification_failed: "系统建议缺少可核验的采分依据，请检查学生答案与评分细则。",
-  double_mark_required: "本题需要独立完成第二次评分，避免受首次评分影响。",
+  double_mark_required: "本题由两名同校教师互盲评分。请独立核对原图和评分细则；分数不一致时转仲裁。",
   score_anomaly: "本题评分与相近答案差异较大，请复核最终得分。",
   manual_sample: "本题由抽样复核策略选中，用于检查自动评分质量。",
   omr_ambiguous: "涂卡结果无法唯一确定，请对照原始答题图确认选项。",
@@ -52,6 +52,7 @@ export const taskStatusLabels: Record<string, string> = {
   in_progress: "处理中",
   returned: "退回",
   submitted: "已提交",
+  needs_arbitration: "待仲裁",
   completed: "已完成"
 };
 
@@ -80,7 +81,11 @@ export const questionTypeLabels: Record<string, string> = {
   multiple_choice: "多选题",
   true_false: "判断题",
   fill_blank: "填空题",
-  numeric: "数值题"
+  numeric: "数值题",
+  short_answer: "简答题",
+  calculation: "计算题",
+  essay: "作文题",
+  discussion: "论述题"
 };
 
 export const recognitionDecisionLabels: Record<string, string> = {

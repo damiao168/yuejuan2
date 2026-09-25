@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
+	"edugrade-enterprise/services/api-gateway/internal/config"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -45,7 +46,7 @@ WHERE t.code='demo' AND u.username='student'`).Scan(&uniquePhone); err != nil ||
 		t.Fatalf("migration must normalize an unambiguous legacy phone: phone=%q err=%v", uniquePhone, err)
 	}
 	e2eActivatePostgresDemoUsers(t, db, []string{"tenant_admin", "school_admin", "teacher"})
-	router := e2ePostgresRouter(db)
+	router := e2ePostgresRouter(db, config.AuthConfig{SessionTTL: time.Hour, RecentAuthTTL: 5 * time.Minute})
 	adminToken := e2eLoginWithTenant(t, router, "demo", "tenant_admin", "ChangeMe123!")
 	school := e2ePostJSON(t, router, http.MethodPost, "/api/v1/schools", adminToken,
 		`{"name":"Account security test school","code":"auth-security"}`, http.StatusCreated)["school"].(map[string]any)

@@ -250,13 +250,13 @@ func (s *MemoryStore) CreateBatch(_ context.Context, tenantID string, actorID st
 	defer s.mu.Unlock()
 	batchKey := key(tenantID, input.IdempotencyKey)
 	if existing, ok := s.batches[batchKey]; ok {
-		if existing.CreatedBy != actorID || !sameStringSlice(existing.SegmentIDs, segments) {
+		if existing.CreatedBy != actorID || existing.ScoringRunID != input.ScoringRunID || !sameStringSlice(existing.SegmentIDs, segments) {
 			return GradingBatch{}, ErrIdempotencyConflict
 		}
 		return existing, nil
 	}
 	now := time.Now().UTC()
-	batch := GradingBatch{ID: s.id("subjective-batch"), TenantID: tenantID, IdempotencyKey: input.IdempotencyKey, Status: "planned", SegmentIDs: cloneStrings(segments), TotalCount: len(segments), CreatedBy: actorID, CreatedAt: now, UpdatedAt: now}
+	batch := GradingBatch{ID: s.id("subjective-batch"), TenantID: tenantID, IdempotencyKey: input.IdempotencyKey, ScoringRunID: input.ScoringRunID, Status: "planned", SegmentIDs: cloneStrings(segments), TotalCount: len(segments), CreatedBy: actorID, CreatedAt: now, UpdatedAt: now}
 	s.batches[batchKey] = batch
 	return batch, nil
 }
@@ -271,6 +271,47 @@ func (s *MemoryStore) GetBatch(_ context.Context, tenantID string, batchID strin
 		}
 	}
 	return GradingBatch{}, ErrNotFound
+}
+
+func (s *MemoryStore) ListScoringRunBatches(_ context.Context, tenantID, scoringRunID string) ([]GradingBatch, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	batches := []GradingBatch{}
+	for _, batch := range s.batches {
+		if batch.TenantID == tenantID && batch.ScoringRunID == scoringRunID && scoringRunID != "" {
+			batch.SegmentIDs = cloneStrings(batch.SegmentIDs)
+			batches = append(batches, batch)
+		}
+	}
+	return batches, nil
+}
+
+func (s *MemoryStore) FailedBatchSegments(_ context.Context, tenantID, batchID string) ([]string, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var found *GradingBatch
+	for _, batch := range s.batches {
+		if batch.TenantID == tenantID && batch.ID == batchID {
+			found = &batch
+			break
+		}
+	}
+	if found == nil {
+		return nil, ErrNotFound
+	}
+	if found.ScoringRunID == "" || found.Status == "cancelled" {
+		return nil, ErrInvalidInput
+	}
+	segments := []string{}
+	for _, id := range found.SegmentIDs {
+		for _, run := range s.runs {
+			if run.TenantID == tenantID && run.BatchID == batchID && run.AnswerSegmentID == id && (run.Status == RunFailed || run.Status == RunConflict) {
+				segments = append(segments, id)
+				break
+			}
+		}
+	}
+	return segments, nil
 }
 
 func (s *MemoryStore) RefreshBatch(_ context.Context, tenantID string, batchID string) (GradingBatch, error) {
@@ -326,6 +367,9 @@ func (s *MemoryStore) UpdateBatch(_ context.Context, tenantID string, batchID st
 		}
 		if input.Status != "planned" && input.Status != "processing" && input.Status != "completed" && input.Status != "failed" && input.Status != "cancelled" {
 			return GradingBatch{}, ErrInvalidInput
+		}
+		if batch.Status == "cancelled" && input.Status != "cancelled" {
+			return GradingBatch{}, ErrBatchCancelled
 		}
 		if input.QueuedCount < 0 || input.ProcessingCount < 0 || input.SucceededCount < 0 || input.FailedCount < 0 || input.QueuedCount+input.ProcessingCount+input.SucceededCount+input.FailedCount > batch.TotalCount {
 			return GradingBatch{}, ErrInvalidInput

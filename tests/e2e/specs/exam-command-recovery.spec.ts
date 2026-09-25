@@ -32,7 +32,7 @@ test("CMD browser refresh retains unknown command and replays its original reque
   await expect(page.getByRole("button", { name: "继续确认原操作" })).toBeVisible();
   await page.getByRole("textbox", { name: "考试名称 *" }).fill("刷新后的草稿修改");
   await page.getByRole("button", { name: "继续确认原操作" }).click();
-  await expect(page).toHaveURL(/exam-created-math\/settings/);
+  await expect(page).toHaveURL(/exam-created-math\/students/);
   expect(sent).toHaveLength(2);
   expect(sent[1]).toEqual(sent[0]);
   expect(JSON.parse(stored!).commandId).toBe(sent[0].key);
@@ -52,7 +52,7 @@ test("CMD browser double click and failed draft cleanup preserve a successful co
     };
   });
   await page.getByRole("button", { name: "创建考试", exact: true }).evaluate((button) => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
-  await expect(page).toHaveURL(/exam-created-math\/settings/);
+  await expect(page).toHaveURL(/exam-created-math\/students/);
   expect(submissions).toBe(1);
   const receipt = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!),commandKey);
   expect(receipt).toMatchObject({state:"succeeded",result:{examSessionId:"session-created"}});

@@ -76,7 +76,8 @@ SELECT seg.id::text,seg.submission_id::text,seg.submission_page_id::text,sp.page
   COALESCE(ac.source,''),COALESCE(ac.display_text,''),COALESCE(ac.decision,''),ac.confidence::float8,
   COALESCE(ak.standard_answer,'null'::jsonb),COALESCE(sr.rule_type,''),g.score::float8,g.max_score::float8,COALESCE(g.source,''),
   COALESCE(o.id::text,''),COALESCE(o.status,''),COALESCE(o.runtime_task_id::text,''),COALESCE(wt.status,''),COALESCE(o.error_code,''),
-  COALESCE(rt.id::text,''),COALESCE(rt.status,''),COALESCE(rt.reason_code,''),COALESCE(g.id::text,'')
+  COALESCE(rt.id::text,''),CASE WHEN pending_arb.id IS NOT NULL THEN 'needs_arbitration' ELSE COALESCE(rt.status,'') END,
+  CASE WHEN pending_arb.id IS NOT NULL THEN 'double_mark_disagreement' ELSE COALESCE(rt.reason_code,'') END,COALESCE(g.id::text,'')
 FROM answer_segment seg
 JOIN submission sub ON sub.tenant_id=seg.tenant_id AND sub.id=seg.submission_id AND sub.deleted_at IS NULL
 JOIN submission_page sp ON sp.tenant_id=seg.tenant_id AND sp.id=seg.submission_page_id AND sp.deleted_at IS NULL
@@ -105,6 +106,14 @@ LEFT JOIN LATERAL (
   WHERE tenant_id=seg.tenant_id AND scoring_run_id=$3::uuid AND answer_segment_id=seg.id AND deleted_at IS NULL
   ORDER BY created_at DESC LIMIT 1
 ) rt ON true
+LEFT JOIN LATERAL (
+  SELECT arb.id FROM double_mark_session dm
+  JOIN review_task first_task ON first_task.tenant_id=dm.tenant_id AND first_task.id=dm.first_review_task_id
+  JOIN arbitration_task arb ON arb.tenant_id=dm.tenant_id AND arb.double_mark_session_id=dm.id
+  WHERE dm.tenant_id=seg.tenant_id AND dm.answer_segment_id=seg.id AND first_task.scoring_run_id=$3::uuid
+    AND arb.status IN ('pending','assigned') AND arb.deleted_at IS NULL
+  LIMIT 1
+) pending_arb ON true
 LEFT JOIN LATERAL (
   SELECT id::text,source,score,max_score FROM question_grade
   WHERE tenant_id=seg.tenant_id AND scoring_run_id=$3::uuid AND answer_segment_id=seg.id AND is_current AND deleted_at IS NULL
@@ -258,7 +267,7 @@ func scoringItemState(runStatus, omrStatus, reviewStatus, gradeID string) string
 	if omrStatus == "terminal_error" || (runStatus == "failed" && gradeID == "" && reviewStatus == "") {
 		return "failed"
 	}
-	if reviewStatus == "pending" || reviewStatus == "assigned" || reviewStatus == "in_progress" || reviewStatus == "returned" {
+	if reviewStatus == "pending" || reviewStatus == "assigned" || reviewStatus == "in_progress" || reviewStatus == "returned" || reviewStatus == "needs_arbitration" {
 		return "review"
 	}
 	if gradeID != "" {

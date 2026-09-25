@@ -17,3 +17,7 @@ export async function login(client: DesktopApiClient, payload: LoginPayload) {
 export async function getCurrentUser(client: DesktopApiClient) {
   return client.request<{ user: AuthUser }>("/api/v1/auth/me");
 }
+
+export async function logout(client: DesktopApiClient, signal?: AbortSignal) {
+  return client.request<{ status: "logged_out" }>("/api/v1/auth/logout", { method: "POST", signal });
+}

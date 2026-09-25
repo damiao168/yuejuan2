@@ -240,6 +240,7 @@ import type {
   ScoringCommandRecovery,
   SubjectiveAIGradeRequest,
   SubjectiveAIGradeResponse,
+  SubjectiveGradingBatch,
   SubjectiveBatchResponse,
   SubjectiveBatchCreateRequest,
   SubjectiveBatchCommandRecovery,
@@ -302,6 +303,8 @@ export interface operations {
   "updateScoringRule": { args: { path: { "id": string; }; body: { "config": Record<string, unknown>; "expected_revision": number; }; signal?: AbortSignal; }; response: { "scoring_rule": ScoringRule; }; };
   "publishScoringRule": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: { "scoring_rule": ScoringRule; }; };
   "getScoringRun": { args: { path: { "runId": string; }; signal?: AbortSignal; }; response: ScoringRunDetailResponse; };
+  "listScoringRunAIBatches": { args: { path: { "runId": string; }; signal?: AbortSignal; }; response: { "batches": Array<SubjectiveGradingBatch>; }; };
+  "getFailedSubjectiveBatchSegments": { args: { path: { "batchId": string; }; signal?: AbortSignal; }; response: { "segment_ids": Array<string>; }; };
   "cancelScoringRun": { args: { path: { "runId": string; }; signal?: AbortSignal; }; response: ScoringRunResponse; };
   "retryFailedScoringRun": { args: { path: { "runId": string; }; signal?: AbortSignal; }; response: ScoringRunRetryResponse; };
   "getOMRCalibration": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: OMRCalibrationResponse; };
@@ -608,6 +611,16 @@ export class EduGradeApi {
 
   getScoringRun(args: operations["getScoringRun"]["args"]): Promise<operations["getScoringRun"]["response"]> {
     const requestPath = fillPath("/api/v1/scoring-runs/{runId}", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  listScoringRunAIBatches(args: operations["listScoringRunAIBatches"]["args"]): Promise<operations["listScoringRunAIBatches"]["response"]> {
+    const requestPath = fillPath("/api/v1/scoring-runs/{runId}/ai-batches", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getFailedSubjectiveBatchSegments(args: operations["getFailedSubjectiveBatchSegments"]["args"]): Promise<operations["getFailedSubjectiveBatchSegments"]["response"]> {
+    const requestPath = fillPath("/api/v1/subjective-grading-batches/{batchId}/failed-segments", args.path);
     return this.transport.request(requestPath, { method: "GET", signal: args.signal });
   }
 

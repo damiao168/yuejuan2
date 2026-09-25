@@ -26,7 +26,7 @@ for (const viewport of desktopViewports) {
     await expect(stages).toHaveCount(4);
     await expect(stages).toHaveText([/考试准备/, /答卷导入/, /阅卷/, /成绩/]);
     await expect(page.getByRole("navigation", { name: "考试准备" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "1. 学生范围" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "准备检查与确认" })).toBeVisible();
     await page.evaluate(async () => document.fonts.ready);
 
     const dimensions = await page.evaluate(() => ({

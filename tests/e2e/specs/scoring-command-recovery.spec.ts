@@ -14,7 +14,10 @@ test("scoring start double click and reload retain the same command", async ({ p
   await page.goto("/#/exams/exam-1/grading");
   const start = page.getByRole("button", { name: "开始评分", exact: true });
   await expect(start).toBeEnabled();
-  await start.evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
+  await start.click();
+  const plan = page.getByRole("dialog", { name: "确认本次评分路线" });
+  await expect(plan).toBeVisible();
+  await plan.getByRole("button", { name: "按此路线启动" }).evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
   await expect.poll(() => requests.length).toBe(1);
   await page.reload();
   await page.getByRole("button", { name: "继续确认评分" }).click();

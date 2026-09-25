@@ -986,11 +986,11 @@ export type MathGradingReviewResponse = { "review_required": true; "code": "math
 
 export type SubjectiveGradingRun = { "id": string; "tenant_id": string; "answer_segment_id": string; "batch_id"?: string; "answer_version": string; "question_id": string; "rubric_version": string; "model_version": string; "prompt_version": string; "min_confidence": number; "request_id": string; "math_artifact_id"?: string; "math_artifact_version"?: number; "math_correction_revision"?: number; "math_scoring_version"?: string; "status": "queued" | "processing" | "succeeded" | "failed" | "conflict"; "attempt_count": number; "grade_id"?: string; "error_code"?: string; "started_at"?: string; "completed_at"?: string; "created_at": string; "updated_at": string; };
 
-export type SubjectiveGradingBatch = { "id": string; "tenant_id": string; "idempotency_key": string; "status": "planned" | "processing" | "completed" | "failed" | "cancelled"; "created_by": string; "created_at": string; "updated_at": string; "segment_ids": Array<string>; "total_count": number; "queued_count": number; "processing_count": number; "succeeded_count": number; "failed_count": number; };
+export type SubjectiveGradingBatch = { "id": string; "tenant_id": string; "idempotency_key": string; "scoring_run_id"?: string; "status": "planned" | "processing" | "completed" | "failed" | "cancelled"; "created_by": string; "created_at": string; "updated_at": string; "segment_ids": Array<string>; "total_count": number; "queued_count": number; "processing_count": number; "succeeded_count": number; "failed_count": number; };
 
 export type SubjectiveBatchResponse = { "batch": SubjectiveGradingBatch; };
 
-export type SubjectiveBatchCreateRequest = { "idempotency_key": string; "segment_ids": Array<string>; };
+export type SubjectiveBatchCreateRequest = { "idempotency_key": string; "scoring_run_id"?: string; "segment_ids": Array<string>; };
 
 export type SubjectiveBatchCommandRecovery = { "command_id": string; "status": "not_accepted" | "succeeded"; "batch"?: SubjectiveGradingBatch; };
 

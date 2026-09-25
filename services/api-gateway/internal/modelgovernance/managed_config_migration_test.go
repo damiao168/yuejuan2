@@ -29,6 +29,20 @@ func TestManagedModelMultiModelMigrationKeepsTenantAndDefaultGuards(t *testing.T
 	}
 }
 
+func TestManagedModelMultipleCredentialsMigrationKeepsDefaultGuard(t *testing.T) {
+	raw, err := os.ReadFile("../../migrations/000176_managed_model_api_multiple_credentials.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sql := string(raw)
+	if !strings.Contains(sql, "DROP INDEX uq_managed_model_api_provider_model") {
+		t.Fatal("multiple credentials migration must remove provider/model uniqueness")
+	}
+	if strings.Contains(sql, "uq_managed_model_api_default") {
+		t.Fatal("multiple credentials migration must preserve one default model per school")
+	}
+}
+
 func TestLegacyPanelMigrationKeepsRecordedChecksumAndRestoresGuards(t *testing.T) {
 	panel, err := os.ReadFile("../../migrations/000155_subjective_multi_agent_panel.sql")
 	if err != nil {

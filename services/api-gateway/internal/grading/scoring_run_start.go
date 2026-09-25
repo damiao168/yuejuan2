@@ -155,10 +155,12 @@ RETURNING id::text`, tenantID, examID, input.IdempotencyKey, actorID, requestHas
    COALESCE(sr.id::text,''), COALESCE(ans.id::text,''), COALESCE(ans.answer_text,''),
    COALESCE(ans.answer_payload,'{}'::jsonb), COALESCE(ans.source,''), ans.confidence::float8,
    COALESCE(ast.status,''), COALESCE(ast.content_hash,''), COALESCE(ast.layout,'{}'::jsonb),
-   COALESCE(reference_file.id::text,''), COALESCE(reference_file.hash_sha256,''), COALESCE(reference_file.content_type,'')
+   COALESCE(reference_file.id::text,''), COALESCE(reference_file.hash_sha256,''), COALESCE(reference_file.content_type,''),
+   COALESCE(eqs.scoring_policy_snapshot_json->>'mode','')
  FROM answer_segment seg
  JOIN submission sub ON sub.tenant_id=seg.tenant_id AND sub.id=seg.submission_id AND sub.deleted_at IS NULL
  JOIN question q ON q.tenant_id=seg.tenant_id AND q.id=seg.question_id AND q.deleted_at IS NULL
+ LEFT JOIN exam_question_snapshot eqs ON eqs.tenant_id=q.tenant_id AND eqs.exam_id=q.exam_id AND eqs.question_id=q.id
  JOIN file_asset fa ON fa.tenant_id=seg.tenant_id AND fa.id=seg.crop_file_asset_id AND fa.deleted_at IS NULL
 	LEFT JOIN answer_sheet_template ast ON ast.tenant_id=seg.tenant_id AND ast.id=seg.template_id AND ast.deleted_at IS NULL
  LEFT JOIN exam_paper reference_paper ON reference_paper.tenant_id=ast.tenant_id AND reference_paper.id=ast.exam_paper_id AND reference_paper.deleted_at IS NULL
@@ -173,16 +175,16 @@ ORDER BY q.sort_order, seg.created_at`, tenantID, examID, segmentID)
 		return ScoringRun{}, err
 	}
 	type segmentRow struct {
-		id, submissionID, questionID, no, kind, cropID, cropHash, templateID, templateHash, anonymous, contentType, ruleID string
-		answerID, answerText, answerSource, templateStatus, currentTemplateHash                                            string
-		referenceAssetID, referenceHash, referenceContentType                                                              string
-		area, answerPayload, templateLayout                                                                                []byte
-		answerConfidence                                                                                                   sql.NullFloat64
+		id, submissionID, questionID, no, kind, cropID, cropHash, templateID, templateHash, anonymous, contentType, ruleID, scoringMode string
+		answerID, answerText, answerSource, templateStatus, currentTemplateHash                                                         string
+		referenceAssetID, referenceHash, referenceContentType                                                                           string
+		area, answerPayload, templateLayout                                                                                             []byte
+		answerConfidence                                                                                                                sql.NullFloat64
 	}
 	segments := []segmentRow{}
 	for rows.Next() {
 		var item segmentRow
-		if err := rows.Scan(&item.id, &item.submissionID, &item.questionID, &item.no, &item.kind, &item.cropID, &item.cropHash, &item.templateID, &item.templateHash, &item.area, &item.anonymous, &item.contentType, &item.ruleID, &item.answerID, &item.answerText, &item.answerPayload, &item.answerSource, &item.answerConfidence, &item.templateStatus, &item.currentTemplateHash, &item.templateLayout, &item.referenceAssetID, &item.referenceHash, &item.referenceContentType); err != nil {
+		if err := rows.Scan(&item.id, &item.submissionID, &item.questionID, &item.no, &item.kind, &item.cropID, &item.cropHash, &item.templateID, &item.templateHash, &item.area, &item.anonymous, &item.contentType, &item.ruleID, &item.answerID, &item.answerText, &item.answerPayload, &item.answerSource, &item.answerConfidence, &item.templateStatus, &item.currentTemplateHash, &item.templateLayout, &item.referenceAssetID, &item.referenceHash, &item.referenceContentType, &item.scoringMode); err != nil {
 			rows.Close()
 			return ScoringRun{}, err
 		}
@@ -194,6 +196,66 @@ ORDER BY q.sort_order, seg.created_at`, tenantID, examID, segmentID)
 	}
 	if err = rows.Close(); err != nil {
 		return ScoringRun{}, err
+	}
+	// Resolve the school roster inside the same transaction as task creation.
+	// DUAL_HUMAN must never silently fall back to a single unassigned task.
+	dualNeeded := false
+	for _, segment := range segments {
+		if segment.scoringMode == "DUAL_HUMAN" {
+			dualNeeded = true
+			break
+		}
+	}
+	dualReviewers := []string{}
+	if dualNeeded {
+		graderRows, graderErr := tx.QueryContext(ctx, `SELECT DISTINCT u.id::text FROM app_user u
+JOIN exam e ON e.tenant_id=u.tenant_id AND e.school_id=u.school_id
+JOIN user_role ur ON ur.tenant_id=u.tenant_id AND ur.user_id=u.id AND ur.deleted_at IS NULL
+JOIN role r ON r.tenant_id=ur.tenant_id AND r.id=ur.role_id AND r.code='grader' AND r.deleted_at IS NULL
+WHERE e.tenant_id=$1::uuid AND e.id=$2::uuid AND u.status='active' AND u.deleted_at IS NULL
+ORDER BY u.id::text`, tenantID, examID)
+		if graderErr != nil {
+			return ScoringRun{}, graderErr
+		}
+		for graderRows.Next() {
+			var reviewerID string
+			if err := graderRows.Scan(&reviewerID); err != nil {
+				graderRows.Close()
+				return ScoringRun{}, err
+			}
+			dualReviewers = append(dualReviewers, reviewerID)
+		}
+		if err := graderRows.Err(); err != nil {
+			graderRows.Close()
+			return ScoringRun{}, err
+		}
+		graderRows.Close()
+		if len(dualReviewers) < 2 {
+			return ScoringRun{}, ErrScoringNotReady
+		}
+	}
+	dualIndex := 0
+	insertDualMark := func(segment segmentRow) error {
+		first := dualReviewers[dualIndex%len(dualReviewers)]
+		second := dualReviewers[(dualIndex+1)%len(dualReviewers)]
+		dualIndex++
+		ids := [2]string{}
+		for i, reviewerID := range []string{first, second} {
+			round := "first_mark"
+			if i == 1 {
+				round = "second_mark"
+			}
+			if err := tx.QueryRowContext(ctx, `INSERT INTO review_task
+(tenant_id,exam_id,question_id,question_no,answer_segment_id,submission_id,anonymous_code,source,status,priority,assigned_to,grade_round,reason_code,scoring_run_id,created_by)
+VALUES ($1::uuid,$2::uuid,$3::uuid,$4,$5::uuid,$6::uuid,$7,'double_mark_required','assigned',50,$8::uuid,$9,'dual_human_policy',$10::uuid,$11::uuid)
+RETURNING id::text`, tenantID, examID, segment.questionID, segment.no, segment.id, segment.submissionID, segment.anonymous, reviewerID, round, runID, actorID).Scan(&ids[i]); err != nil {
+				return err
+			}
+		}
+		_, err := tx.ExecContext(ctx, `INSERT INTO double_mark_session
+(tenant_id,exam_id,question_id,question_no,answer_segment_id,submission_id,anonymous_code,first_review_task_id,second_review_task_id,first_reviewer_id,second_reviewer_id,threshold,resolution_strategy,status,created_by)
+VALUES ($1::uuid,$2::uuid,$3::uuid,$4,$5::uuid,$6::uuid,$7,$8::uuid,$9::uuid,$10::uuid,$11::uuid,0,'average','pending',$12::uuid)`, tenantID, examID, segment.questionID, segment.no, segment.id, segment.submissionID, segment.anonymous, ids[0], ids[1], first, second, actorID)
+		return err
 	}
 	insertReviewTask := func(segment segmentRow, source, reason string) (bool, error) {
 		result, insertErr := tx.ExecContext(ctx, `INSERT INTO review_task (tenant_id,exam_id,question_id,question_no,answer_segment_id,submission_id,anonymous_code,source,status,priority,grade_round,reason_code,scoring_run_id,created_by)
@@ -213,9 +275,8 @@ ON CONFLICT (tenant_id,answer_segment_id,source,grade_round) WHERE status IN ('p
 		}
 		options, _ := area["option_regions"].([]any)
 		options = cropRelativeOptionRegions(area, options)
-		isOMR := segment.kind == "single_choice" || segment.kind == "true_false" || segment.kind == "multiple_choice"
-		isTextRule := segment.kind == "fill_blank" || segment.kind == "numeric"
-		if isTextRule && segment.ruleID != "" && segment.answerID != "" {
+		route := routeScoringSegmentForMode(segment.kind, segment.scoringMode, segment.ruleID != "", segment.answerID != "", len(options))
+		if route.Kind == scoringRouteRuleInput {
 			confidence := 0.0
 			if segment.answerConfidence.Valid {
 				confidence = segment.answerConfidence.Float64
@@ -248,7 +309,7 @@ ON CONFLICT (tenant_id,answer_segment_id,source,grade_round) WHERE status IN ('p
 					review++
 				}
 			}
-		} else if isOMR && segment.ruleID != "" && len(options) >= 2 {
+		} else if route.Kind == scoringRouteOMR {
 			var templateLayout paper.TemplateLayout
 			if err := decodeJSONB(segment.templateLayout, &templateLayout, "answer_sheet_template.layout"); err != nil {
 				return ScoringRun{}, err
@@ -314,15 +375,13 @@ ON CONFLICT (tenant_id,task_type,idempotency_key) DO UPDATE SET idempotency_key=
 				return ScoringRun{}, err
 			}
 			queued++
+		} else if segment.scoringMode == "DUAL_HUMAN" {
+			if err := insertDualMark(segment); err != nil {
+				return ScoringRun{}, err
+			}
+			review++
 		} else {
-			reason := "rule_review_required"
-			if isOMR && len(options) < 2 {
-				reason = "omr_option_regions_missing"
-			}
-			if isOMR && segment.ruleID == "" {
-				reason = "scoring_rule_missing"
-			}
-			created, insertErr := insertReviewTask(segment, "rule_review_required", reason)
+			created, insertErr := insertReviewTask(segment, route.Source, route.Reason)
 			if insertErr != nil {
 				return ScoringRun{}, insertErr
 			}
@@ -331,13 +390,7 @@ ON CONFLICT (tenant_id,task_type,idempotency_key) DO UPDATE SET idempotency_key=
 			}
 		}
 	}
-	status := "processing"
-	if queued == 0 && review > 0 {
-		status = "needs_review"
-	}
-	if len(segments) == 0 {
-		status = "failed"
-	}
+	status := scoringRunStatusForCounts(len(segments), queued, review)
 	_, err = tx.ExecContext(ctx, `UPDATE scoring_run SET status=$3,total_count=$4,queued_count=$5,review_count=$6,failed_count=$7,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, runID, status, len(segments), queued, review, map[bool]int{true: 1, false: 0}[len(segments) == 0])
 	if err != nil {
 		return ScoringRun{}, err

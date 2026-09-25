@@ -10,6 +10,7 @@ import {
   type PanelEducationStage,
   type PanelModelRoleBinding
 } from "../api/modelApiConfig";
+import { modelConfigOptionLabel } from "../features/platform-model-config/lib/modelConfig";
 
 const roles: { key: PanelAgentRole; title: string; description: string; rank: number }[] = [
   { key: "primary_a", title: "主评 A", description: "独立盲评", rank: 1 },
@@ -120,7 +121,7 @@ export function PanelModelBindingsSection({ tenantID, configs, loadingConfigs = 
 
   const modelOptions = useMemo(() => [...configs.map((config) => ({
     value: config.id,
-    label: `${config.display_name} · ${config.model_name}${config.is_default ? " · 日常对话当前使用" : ""}${capabilityVerified(config) ? "" : " · 不可启用"}`,
+    label: `${modelConfigOptionLabel(config)}${config.is_default ? " · 日常对话当前使用" : ""}${capabilityVerified(config) ? "" : " · 不可启用"}`,
     disabled: !capabilityVerified(config) && !bindings.some((binding) => binding.managed_model_api_config_id === config.id)
   })), ...bindings.filter((binding) => !configs.some((config) => config.id === binding.managed_model_api_config_id))
     .map((binding) => ({ value: binding.managed_model_api_config_id, label: `已移除模型 · ${binding.managed_model_api_config_id}`, disabled: true }))], [bindings, configs]);

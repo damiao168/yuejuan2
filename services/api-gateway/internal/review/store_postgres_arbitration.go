@@ -21,11 +21,14 @@ func (s *PostgresStore) CreateArbitrationTask(ctx context.Context, tenantID stri
 		return ArbitrationTask{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	if err := lockScoringRunForSessionTx(ctx, tx, tenantID, input.DoubleMarkSessionID); err != nil {
+		return ArbitrationTask{}, err
+	}
 	session, err := s.getSessionTx(ctx, tx, tenantID, input.DoubleMarkSessionID, true)
 	if err != nil {
 		return ArbitrationTask{}, err
 	}
-	if session.ArbitrationTaskID != "" {
+	if session.ArbitrationTaskID != "" || session.Status == "cancelled" {
 		return ArbitrationTask{}, ErrInvalidTransition
 	}
 	first, firstOK, err := s.latestGradeTx(ctx, tx, tenantID, session.FirstReviewTaskID)
@@ -115,6 +118,9 @@ func (s *PostgresStore) AssignArbitrationTask(ctx context.Context, tenantID stri
 		return ArbitrationTask{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	if _, err := lockScoringRunForArbitrationTx(ctx, tx, tenantID, id); err != nil {
+		return ArbitrationTask{}, err
+	}
 	task, err := scanArbitration(tx.QueryRowContext(ctx, arbitrationSelect()+`
 WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
 FOR UPDATE
@@ -122,7 +128,7 @@ FOR UPDATE
 	if err != nil {
 		return ArbitrationTask{}, err
 	}
-	if task.Status == "submitted" {
+	if task.Status != "pending" && task.Status != "assigned" {
 		return ArbitrationTask{}, ErrInvalidTransition
 	}
 	if task.Revision != input.ExpectedRevision {
@@ -168,6 +174,11 @@ func (s *PostgresStore) SubmitArbitration(ctx context.Context, tenantID string, 
 	if found, err := commandreceipt.Load(ctx, tx, tenantID, arbitratorID, "review.arbitrate", id, input, &replay); err != nil || found {
 		return replay.Task, replay.Grade, err
 	}
+	// Match scoring cancellation's lock order before locking the task.
+	scoringRunID, err := lockScoringRunForArbitrationTx(ctx, tx, tenantID, id)
+	if err != nil {
+		return ArbitrationTask{}, FinalGrade{}, err
+	}
 	task, err := scanArbitration(tx.QueryRowContext(ctx, arbitrationSelect()+`
 WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
 FOR UPDATE
@@ -175,7 +186,7 @@ FOR UPDATE
 	if err != nil {
 		return ArbitrationTask{}, FinalGrade{}, err
 	}
-	if task.Status == "submitted" {
+	if task.Status != "pending" && task.Status != "assigned" {
 		return ArbitrationTask{}, FinalGrade{}, ErrInvalidTransition
 	}
 	if task.Revision != input.ExpectedRevision {
@@ -228,6 +239,14 @@ WHERE tenant_id = $1 AND id::text = $2
 	}
 	if err := s.completeSessionReviewTasksTx(ctx, tx, tenantID, session); err != nil {
 		return ArbitrationTask{}, FinalGrade{}, err
+	}
+	if scoringRunID.Valid {
+		if _, err := s.recordScoringDoubleMarkGradeTx(ctx, tx, tenantID, scoringRunID.String, session.SecondReviewTaskID, arbitratorID, &finalGrade); err != nil {
+			return ArbitrationTask{}, FinalGrade{}, err
+		}
+		if err := s.syncScoringDoubleMarkRunTx(ctx, tx, tenantID, scoringRunID.String); err != nil {
+			return ArbitrationTask{}, FinalGrade{}, err
+		}
 	}
 	if err := commandreceipt.Save(ctx, tx, tenantID, arbitratorID, "review.arbitrate", id, input, ArbitrationSubmitResult{Task: task, Grade: finalGrade}); err != nil {
 		return ArbitrationTask{}, FinalGrade{}, err

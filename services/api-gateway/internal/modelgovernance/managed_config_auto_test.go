@@ -93,10 +93,16 @@ func TestAutoManagedAPIConfigReusesSchoolCredentialForAnotherModel(t *testing.T)
 	if err != nil || connection.APIKey != secret {
 		t.Fatalf("new model did not store its own credential: %v", err)
 	}
-	if _, _, _, err = service.Create(ctx, "school-a", "actor", AutoManagedAPIConfigInput{
-		CredentialSourceID: first.ID, Provider: "deepseek", ModelName: "deepseek-v4-flash",
-	}); !errors.Is(err, ErrConflict) || len(seen) != 2 {
-		t.Fatalf("duplicate provider/model must fail before probing: %v calls=%d", err, len(seen))
+	thirdKey := "another-deepseek-secret-at-least-16"
+	third, _, _, err := service.Create(ctx, "school-a", "actor", AutoManagedAPIConfigInput{
+		APIKey: thirdKey, Provider: "deepseek", ModelName: "deepseek-v4-flash",
+	})
+	if err != nil || third.ID == second.ID || len(seen) != 3 || seen[2].APIKey != thirdKey {
+		t.Fatalf("same provider/model must accept a separate key: %#v %v calls=%d", third, err, len(seen))
+	}
+	connection, err = store.GetManagedAPIConnection(ctx, "school-a", third.ID)
+	if err != nil || connection.APIKey != thirdKey {
+		t.Fatalf("separate configuration did not keep its own key: %v", err)
 	}
 	if _, _, _, err = service.Create(ctx, "school-b", "actor", AutoManagedAPIConfigInput{
 		CredentialSourceID: first.ID, Provider: "deepseek", ModelName: "deepseek-v4-flash",
@@ -117,8 +123,8 @@ func TestAutoManagedAPIConfigReusesSchoolCredentialForAnotherModel(t *testing.T)
 		DisplayName: second.DisplayName, AdapterType: second.AdapterType, BaseURL: second.BaseURL,
 		ModelName: first.ModelName, ModelVersion: first.ModelName, Region: second.Region,
 		Status: "active",
-	}); !errors.Is(err, ErrConflict) {
-		t.Fatalf("editing another model into a duplicate must fail: %v", err)
+	}); err != nil {
+		t.Fatalf("editing a model to match another configuration must succeed: %v", err)
 	}
 	if _, err := store.UpdateManagedAPIConfig(ctx, "school-a", first.ID, ManagedAPIConfigUpdateInput{
 		DisplayName: first.DisplayName, AdapterType: first.AdapterType, BaseURL: first.BaseURL,

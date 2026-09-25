@@ -50,6 +50,10 @@ func (h *Handler) Claim(w http.ResponseWriter, r *http.Request) {
 	if !decodeRuntimeJSON(w, r, &input) {
 		return
 	}
+	if !workerIdentityAllows(user, input.QueueName, input.WorkerService) {
+		httpx.Error(w, r, http.StatusForbidden, "worker_service_forbidden", "authenticated worker service cannot claim the requested queue")
+		return
+	}
 	var tasks []Task
 	var err error
 	if auth.IsPlatformWorker(user) {

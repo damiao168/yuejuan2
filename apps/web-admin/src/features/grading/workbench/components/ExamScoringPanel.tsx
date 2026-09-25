@@ -1,7 +1,7 @@
-import { Alert, Button, Drawer, Input, Modal, Popconfirm, Segmented, Select, Space, Tooltip } from "antd";
-import { Award, BadgeCheck, CircleStop, Eye, Play, RefreshCw, RotateCcw, Search } from "lucide-react";
+import { Alert, Button, Drawer, Input, Modal, Popconfirm, Progress, Segmented, Select, Space, Tooltip } from "antd";
+import { Award, BadgeCheck, CircleStop, Eye, Play, RefreshCw, RotateCcw, Search, Sparkles } from "lucide-react";
 import { getSafeUserText } from "../../../../api/client";
-import type { ScoringRunItem } from "../../../../api/review";
+import type { ReviewTask, ScoringRunItem } from "../../../../api/review";
 import { OcrWorkerAlert } from "../../../../components/OcrWorkerAlert";
 import { ResponsiveTable } from "../../../../components/ResponsiveTable";
 import { ScoringPaperMonitor } from "../../../../components/ScoringPaperMonitor";
@@ -21,6 +21,8 @@ import {
 } from "../gradingWorkbench.model";
 import type { ScoringResultState, ScoringResultType } from "../gradingWorkbench.types";
 import type { ExamScoringController } from "../hooks/useExamScoring";
+import { scoringModeLabels, scoringRiskLabels } from "../scoringPlan";
+import { FastConfirmDrawer } from "./FastConfirmDrawer";
 
 export interface ExamScoringPanelProps {
   initialExamId: string;
@@ -31,6 +33,9 @@ export interface ExamScoringPanelProps {
   scoring: ExamScoringController;
   onOpenGoldPapers: () => void;
   onOpenCalibration: (questionId: string) => void;
+  tasks: ReviewTask[];
+  currentUserId: string;
+  onTasksChanged: () => Promise<void>;
 }
 
 export function ExamScoringPanel({
@@ -41,31 +46,34 @@ export function ExamScoringPanel({
   currentQuestionId,
   scoring,
   onOpenGoldPapers,
-  onOpenCalibration
+  onOpenCalibration,
+  tasks,
+  currentUserId,
+  onTasksChanged
 }: ExamScoringPanelProps) {
   const fallbackQuestionId = scoring.summary?.questions[0]?.question_id ?? "";
+  const fastConfirmExamId = initialExamId || tasks.find((task) => task.assigned_to === currentUserId)?.exam_id || "";
   return (
     <>
+      {fastConfirmExamId && canWork ? <div className="grading-fast-confirm-entry"><FastConfirmDrawer key={fastConfirmExamId} tasks={tasks} examId={fastConfirmExamId} currentUserId={currentUserId} onTasksChanged={onTasksChanged} onScoringChanged={async () => { if (canGrade) await scoring.loadSummary(); }} /></div> : null}
       {initialExamId && canGrade ? (
         <section className="grading-overview">
           <div className="grading-overview-head">
-            <div><h2>自动阅卷</h2><p>查看整张答题卡、识别结果和题目得分；异常题目进入人工复核。</p></div>
+            <div><h2>评分与 AI 辅助</h2><p>规则题自动判分，主观题按冻结策略生成 AI 建议或进入人工；最终成绩由教师确认。</p></div>
             <Space wrap>
               <Button icon={<RefreshCw size={15} />} loading={scoring.loading} onClick={() => void scoring.loadSummary()}>刷新</Button>
               <Button type={scoring.summary?.run ? "primary" : "default"} icon={<Eye size={15} />} loading={scoring.actioning === "scoring-detail"} onClick={() => void scoring.showDetail()}>逐卷查看</Button>
               {canManageTasks ? <Button icon={<Award size={15} />} onClick={onOpenGoldPapers}>标准卷</Button> : null}
               {canManageTasks && (currentQuestionId || fallbackQuestionId) ? <Button icon={<BadgeCheck size={15} />} onClick={() => onOpenCalibration(currentQuestionId || fallbackQuestionId)}>阅卷校准</Button> : null}
               {scoring.summary?.run && scoring.summary.run.failed_count > 0 ? <Button icon={<RotateCcw size={15} />} loading={scoring.actioning === "retry-scoring"} onClick={() => void scoring.retry()}>重新处理失败项</Button> : null}
-              {scoring.summary?.run && ["queued", "processing", "needs_review", "failed"].includes(scoring.summary.run.status) ? (
-                <Popconfirm title="取消本次评分？" description="未完成的自动处理和人工任务将停止，已保留的历史结果不会删除。" okText="取消评分" cancelText="保留" okButtonProps={{ danger: true }} onConfirm={() => void scoring.cancel()}>
-                  <Button danger icon={<CircleStop size={15} />} loading={scoring.actioning === "cancel-scoring"}>取消评分</Button>
+              {scoring.summary?.run && ["queued", "processing", "needs_review", "failed", "cancelling"].includes(scoring.summary.run.status) ? (
+                <Popconfirm title={scoring.summary.run.status === "cancelling" ? "继续完成取消？" : "取消本次评分？"} description="未完成的规则、AI 建议和人工任务将停止，已保留的历史结果不会删除。" okText={scoring.summary.run.status === "cancelling" ? "继续取消" : "取消评分"} cancelText="保留" okButtonProps={{ danger: true }} onConfirm={() => void scoring.cancel()}>
+                  <Button danger icon={<CircleStop size={15} />} loading={scoring.actioning === "cancel-scoring"}>{scoring.summary.run.status === "cancelling" ? "继续取消" : "取消评分"}</Button>
                 </Popconfirm>
               ) : null}
               {scoring.pendingCommand ? <Button loading={scoring.actioning === "start-scoring"} onClick={() => void scoring.start()}>继续确认评分</Button> : !scoring.hasUnresolvedRun && scoring.summary?.run ? (
-                <Popconfirm title="重新开始自动评分？" description="已确认的结果会保留，未完成项将重新处理" okText="重新评分" cancelText="暂不" onConfirm={() => void scoring.start()}>
-                  <Button icon={<Play size={15} />} disabled={!scoring.readiness?.ready} loading={scoring.actioning === "start-scoring"}>重新评分</Button>
-                </Popconfirm>
-              ) : !scoring.hasUnresolvedRun ? <Button type="primary" icon={<Play size={15} />} disabled={!scoring.readiness?.ready} loading={scoring.actioning === "start-scoring"} onClick={() => void scoring.start()}>开始评分</Button> : null}
+                <Button icon={<Play size={15} />} disabled={!scoring.readiness?.ready} loading={scoring.actioning === "prepare-scoring"} onClick={() => void scoring.prepareStart()}>重新评分</Button>
+              ) : !scoring.hasUnresolvedRun ? <Button type="primary" icon={<Play size={15} />} disabled={!scoring.readiness?.ready} loading={scoring.actioning === "prepare-scoring"} onClick={() => void scoring.prepareStart()}>开始评分</Button> : null}
             </Space>
           </div>
           {scoring.readiness ? (
@@ -79,8 +87,8 @@ export function ExamScoringPanel({
                   <div className="grading-readiness-counts">
                     <span>题目 <strong>{scoring.readiness.total_questions}</strong></span>
                     <span>题块 <strong>{scoring.readiness.ready_segments}/{scoring.readiness.total_segments}</strong></span>
-                    <span>预计自动 <strong>{scoring.readiness.automatic_candidates}</strong></span>
-                    <span>预计人工 <strong>{scoring.readiness.manual_review_candidates}</strong></span>
+                    <span>规则自动 <strong>{scoring.readiness.automatic_candidates}</strong></span>
+                    <span>人工任务 <strong>{scoring.readiness.manual_review_candidates}</strong></span>
                   </div>
                   {(scoring.hasUnresolvedRun ? scoring.blockingChecks.filter((check) => check.code === "active_run_clear") : [...scoring.blockingChecks, ...scoring.warningChecks]).length ? (
                     <ul className="grading-readiness-issues">
@@ -88,7 +96,7 @@ export function ExamScoringPanel({
                         <li key={check.code} className={check.severity}><strong>{getSafeUserText(check.label, "评分准备检查")}</strong><span>{getSafeUserText(check.message, "检查未通过，请完成相关设置")}</span></li>
                       ))}
                     </ul>
-                  ) : <span className="grading-readiness-ok">全部题块均可进入自动处理或人工复核。</span>}
+                  ) : <span className="grading-readiness-ok">全部题块均可进入规则处理或人工复核；AI 建议需另通过准入检查。</span>}
                 </div>
               )}
             />
@@ -103,7 +111,10 @@ export function ExamScoringPanel({
               <span>待人工 <strong>{scoring.summary.run.review_count}</strong></span>
               <span>失败 <strong>{scoring.summary.run.failed_count}</strong></span>
             </div>
-          ) : <Alert type="info" showIcon message="尚未开始评分" description="请先完成答题卡上传与题目切分，再点击右上角“开始评分”；无法自动判分的答案会转入人工阅卷。" />}
+          ) : <Alert type="info" showIcon message="尚未开始评分" description="请先完成答题卡上传与题目切分；启动前会展示每题的规则、AI 建议和人工路线。" />}
+          {scoring.aiProgress ? <div className="grading-ai-progress"><div><Sparkles size={17} /><strong>AI 辅助建议</strong><span>{scoring.aiProgress.succeeded}/{scoring.aiProgress.total} 已完成</span><span>{scoring.aiProgress.queued + scoring.aiProgress.processing} 处理中</span><span>{scoring.aiProgress.failed} 累计失败（含重试历史）</span>{scoring.aiProgress.cancelled ? <span>{scoring.aiProgress.cancelled} 已取消</span> : null}</div><Progress percent={scoring.aiProgress.total ? Math.round((scoring.aiProgress.succeeded + scoring.aiProgress.failed + scoring.aiProgress.cancelled) / scoring.aiProgress.total * 100) : 0} size="small" status={scoring.aiProgress.failed ? "exception" : undefined} /></div> : null}
+          {scoring.retryableAIBatches.length ? <Alert type="warning" showIcon message={`${scoring.retryableAIBatches.length} 个 AI 批次包含失败建议；人工阅卷可继续`} action={scoring.summary?.run && ["queued", "processing", "needs_review", "failed"].includes(scoring.summary.run.status) ? <Button size="small" loading={scoring.actioning === "retry-failed-ai"} onClick={() => void scoring.retryFailedAI()}>重试失败的 AI 建议</Button> : undefined} /> : null}
+          {scoring.aiIssue ? <Alert type="warning" showIcon message={scoring.aiIssue} action={scoring.summary?.run && ["queued", "processing", "needs_review", "failed"].includes(scoring.summary.run.status) ? <Button size="small" loading={scoring.actioning === "enqueue-ai"} onClick={() => void scoring.retryAI()}>重试 AI 入队</Button> : undefined} /> : null}
           <ResponsiveTable className="dense-data-table" size="small" pagination={false} loading={scoring.loading} rowKey="question_id" dataSource={scoring.summary?.questions ?? []} columns={[
             { title: "题号", dataIndex: "question_no", width: 90 },
             { title: "题型", dataIndex: "question_type", width: 140, render: (value: string) => <span title={value}>{questionTypeLabels[value] ?? "其他题型"}</span> },
@@ -116,6 +127,14 @@ export function ExamScoringPanel({
         </section>
       ) : null}
       <OcrWorkerAlert enabled={canWork} />
+      <Modal title="确认本次评分路线" open={scoring.planOpen} onCancel={() => scoring.setPlanOpen(false)} onOk={() => void scoring.start()} okText="按此路线启动" okButtonProps={{ loading: scoring.actioning === "start-scoring" }} cancelText="返回核对" width={760}>
+        {scoring.plan ? <div className="grading-plan">
+          <p>按冻结的题目策略分流。AI 只写建议，不自动发布分数；准入不通过或模型失败时保留人工任务。</p>
+          <div className="grading-plan-counts"><span>预计规则自动 <strong>{scoring.plan.counts.rule}</strong></span><span>预计 AI 建议 <strong>{scoring.plan.counts.ai}</strong></span><span>预计人工 <strong>{scoring.plan.counts.human}</strong></span></div>
+          {scoring.plan.snapshotFailures ? <Alert type="warning" showIcon message={`${scoring.plan.snapshotFailures} 道题的冻结策略暂不可读，按人工路线处理`} /> : null}
+          <div className="grading-plan-list">{scoring.plan.questions.map((question) => <div key={question.questionId}><strong>{question.questionNo} · {questionTypeLabels[question.questionType] ?? question.questionType}</strong><span>{question.count} 份</span><span>{scoringModeLabels[question.mode] ?? "人工复核"}</span><span>{scoringRiskLabels[question.riskTier] ?? question.riskTier}</span><small>{question.note}</small></div>)}</div>
+        </div> : null}
+      </Modal>
       <Drawer title="自动阅卷 · 逐卷查看" width="min(1680px, 98vw)" open={scoring.detailOpen} onClose={() => scoring.setDetailOpen(false)} destroyOnClose={false}>
         <div className="automation-results">
           <ScoringPaperMonitor run={scoring.summary?.run} items={scoring.runDetail?.items ?? []} loading={scoring.actioning === "scoring-detail"} onRefresh={() => void scoring.showDetail()} />

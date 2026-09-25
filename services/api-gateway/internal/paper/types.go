@@ -681,15 +681,33 @@ type ReadinessCheck struct {
 	Section  string `json:"section"`
 }
 
+type ReadinessAdvisoryQuestion struct {
+	QuestionID   string  `json:"question_id"`
+	QuestionNo   string  `json:"question_no"`
+	QuestionType string  `json:"question_type"`
+	Score        float64 `json:"score"`
+}
+
+type ReadinessAdvisory struct {
+	Code      string                      `json:"code"`
+	Label     string                      `json:"label"`
+	Severity  string                      `json:"severity"`
+	Message   string                      `json:"message"`
+	Section   string                      `json:"section"`
+	Score     float64                     `json:"score"`
+	Questions []ReadinessAdvisoryQuestion `json:"questions"`
+}
+
 type ReadinessResult struct {
-	Ready                   bool             `json:"ready"`
-	Confirmed               bool             `json:"confirmed"`
-	ConfigurationHash       string           `json:"configuration_hash"`
-	SnapshotID              string           `json:"snapshot_id,omitempty"`
-	ImportSnapshotAvailable bool             `json:"import_snapshot_available"`
-	Checks                  []ReadinessCheck `json:"checks"`
-	ConfirmedAt             *time.Time       `json:"confirmed_at,omitempty"`
-	ConfirmedBy             string           `json:"confirmed_by,omitempty"`
+	Ready                   bool                `json:"ready"`
+	Confirmed               bool                `json:"confirmed"`
+	ConfigurationHash       string              `json:"configuration_hash"`
+	SnapshotID              string              `json:"snapshot_id,omitempty"`
+	ImportSnapshotAvailable bool                `json:"import_snapshot_available"`
+	Checks                  []ReadinessCheck    `json:"checks"`
+	Advisories              []ReadinessAdvisory `json:"advisories"`
+	ConfirmedAt             *time.Time          `json:"confirmed_at,omitempty"`
+	ConfirmedBy             string              `json:"confirmed_by,omitempty"`
 }
 
 type PaperRepository interface {

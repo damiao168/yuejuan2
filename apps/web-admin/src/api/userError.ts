@@ -96,7 +96,7 @@ const apiErrorMessages: Record<string, string> = {
   unsupported_file_type: "文件内容与格式不匹配，或包含无法识别的隐藏字符。请使用 UTF-8 文本、PDF、Word 或图片后重试。",
   provider_unknown: "暂时无法识别模型供应商，请选择服务来源。",
   invalid_managed_model_api: "模型 API 配置不完整或接口地址不安全。",
-  managed_model_api_conflict: "该学校已经配置了同一供应商。",
+  managed_model_api_conflict: "模型配置发生冲突，请刷新后重试。",
   managed_model_current_active_required: "当前使用的模型必须保持启用，请先切换模型或切回本地模型。",
   managed_model_in_use: "该模型正在被评分智能体使用，请先更换 Primary A / Primary B / Arbiter 的模型绑定。",
   credential_invalid: "API Key 无效或已被禁用。",

@@ -88,7 +88,7 @@ function App() {
   const {
     client, serverUrl, setServerUrl, tenantCode, setTenantCode, username, setUsername,
     password, setPassword, rememberLogin, setRememberLogin, credentialStoreMessage,
-    credentialStoreReady, token, expiresAt, user, authError, isLoggingIn, durableScopeKey,
+    credentialStoreReady, token, expiresAt, user, authError, isLoggingIn, isLoggingOut, durableScopeKey,
     handleLogin, handleLogout, handleForgetStoredLogin, handleCheckSession
   } = useDesktopSession(defaultServer, logEvent);
   const {
@@ -283,7 +283,7 @@ function App() {
               <Button icon={<ShieldAlert size={16} />} disabled={!token} onClick={handleCheckSession}>
                 校验 session
               </Button>
-              <Button disabled={!token} onClick={() => void handleLogout()}>
+              <Button disabled={!token} loading={isLoggingOut} onClick={() => void handleLogout()}>
                 退出登录
               </Button>
               <Button disabled={!credentialStoreReady} onClick={() => void handleForgetStoredLogin()}>

@@ -125,6 +125,10 @@ func TaskScope(store Store) func(http.Handler) http.Handler {
 				httpx.Error(w, r, http.StatusForbidden, "worker_scope_forbidden", "worker task capability is invalid or expired")
 				return
 			}
+			if !workerIdentityAllowsTask(user, task) {
+				httpx.Error(w, r, http.StatusForbidden, "worker_scope_forbidden", "authenticated worker service does not own this task queue")
+				return
+			}
 
 			scope := taskAccessScope(task)
 			if user.TenantID != task.TenantID {

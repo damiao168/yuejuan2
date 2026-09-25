@@ -33,6 +33,8 @@ type scoringReadinessCounts struct {
 	missingMetadata   int
 	automatic         int
 	missingAutomation int
+	dualQuestions     int
+	eligibleGraders   int
 }
 
 func (s *PostgresStore) GetScoringReadiness(ctx context.Context, tenantID, examID string) (ScoringReadiness, error) {
@@ -76,6 +78,7 @@ WITH scoped_segments AS (
     seg.template_id,
     seg.template_content_hash,
     q.question_type,
+    COALESCE(eqs.scoring_policy_snapshot_json->>'mode','') AS scoring_mode,
     q.answer_area,
     EXISTS (
       SELECT 1 FROM file_asset fa
@@ -100,6 +103,8 @@ WITH scoped_segments AS (
     ON sub.tenant_id=seg.tenant_id AND sub.id=seg.submission_id AND sub.deleted_at IS NULL
   JOIN question q
     ON q.tenant_id=seg.tenant_id AND q.id=seg.question_id AND q.deleted_at IS NULL
+  LEFT JOIN exam_question_snapshot eqs
+    ON eqs.tenant_id=q.tenant_id AND eqs.exam_id=q.exam_id AND eqs.question_id=q.id
   WHERE seg.tenant_id=$1::uuid AND sub.exam_id=$2::uuid AND seg.deleted_at IS NULL
 ),
 segment_facts AS (
@@ -117,13 +122,13 @@ SELECT
   count(*) FILTER (WHERE processable)::int,
   count(*) FILTER (WHERE processable AND missing_metadata)::int,
   count(*) FILTER (
-    WHERE processable AND NOT missing_metadata AND has_rule AND (
+    WHERE processable AND NOT missing_metadata AND scoring_mode='RULE_AUTO' AND has_rule AND (
       (question_type IN ('single_choice','multiple_choice','true_false') AND option_count >= 2)
       OR (question_type IN ('fill_blank','numeric') AND has_answer)
     )
   )::int,
   count(*) FILTER (
-    WHERE processable AND (
+    WHERE processable AND scoring_mode='RULE_AUTO' AND (
       (question_type IN ('single_choice','multiple_choice','true_false') AND (NOT has_rule OR option_count < 2))
       OR (question_type IN ('fill_blank','numeric') AND (NOT has_rule OR NOT has_answer))
     )
@@ -140,6 +145,18 @@ FROM segment_facts
 	)
 	if err != nil {
 		return ScoringReadiness{}, fmt.Errorf("calculate scoring readiness: %w", err)
+	}
+	if err := q.QueryRowContext(ctx, `SELECT count(*) FROM exam_question_snapshot WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND scoring_policy_snapshot_json->>'mode'='DUAL_HUMAN'`, tenantID, examID).Scan(&counts.dualQuestions); err != nil {
+		return ScoringReadiness{}, fmt.Errorf("count dual-mark questions: %w", err)
+	}
+	if counts.dualQuestions > 0 {
+		if err := q.QueryRowContext(ctx, `SELECT count(DISTINCT u.id) FROM app_user u
+JOIN exam e ON e.tenant_id=u.tenant_id AND e.school_id=u.school_id
+JOIN user_role ur ON ur.tenant_id=u.tenant_id AND ur.user_id=u.id AND ur.deleted_at IS NULL
+JOIN role r ON r.tenant_id=ur.tenant_id AND r.id=ur.role_id AND r.code='grader' AND r.deleted_at IS NULL
+WHERE e.tenant_id=$1::uuid AND e.id=$2::uuid AND u.status='active' AND u.deleted_at IS NULL`, tenantID, examID).Scan(&counts.eligibleGraders); err != nil {
+			return ScoringReadiness{}, fmt.Errorf("count school graders: %w", err)
+		}
 	}
 	return buildScoringReadiness(status, activeRun, counts), nil
 }
@@ -228,6 +245,11 @@ func buildScoringReadiness(status string, activeRun *ScoringRun, counts scoringR
 			Passed:   noActiveRun,
 			Severity: "blocker",
 			Message:  scoringRunAvailabilityMessage(activeRun),
+		},
+		{
+			Code: "dual_mark_graders", Label: "双评阅卷员", Passed: counts.dualQuestions == 0 || counts.eligibleGraders >= 2,
+			Severity: "blocker", Count: counts.eligibleGraders,
+			Message: map[bool]string{true: "双评题具备同校两名在岗阅卷员。", false: "双评题至少需要同校两名在岗阅卷员，不能退化为单评。"}[counts.dualQuestions == 0 || counts.eligibleGraders >= 2],
 		},
 		{
 			Code:     "automation_coverage",

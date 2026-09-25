@@ -1,0 +1,12 @@
+{
+  "go-test.jsonl": {
+    "package_skip": 8,
+    "test_pass": 1540,
+    "package_pass": 63,
+    "test_skip": 56
+  },
+  "go-postgres.jsonl": {
+    "test_pass": 67,
+    "package_pass": 2
+  }
+}

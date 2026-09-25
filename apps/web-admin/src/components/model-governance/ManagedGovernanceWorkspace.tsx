@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Alert, App, Button, Empty, Form, Input, InputNumber, Segmented, Select, Space, Switch, Tag } from "antd";
 import { RefreshCw } from "lucide-react";
 import type { ManagedModelAPIConfig } from "../../api/modelApiConfig";
+import { modelConfigOptionLabel } from "../../features/platform-model-config/lib/modelConfig";
 import { getUserErrorMessage } from "../../api/client";
 import {
   getModelPolicy, listModelApprovals, listModelEvaluationRuns, updateModelPolicy,
@@ -108,7 +109,10 @@ export function ManagedGovernanceWorkspace({ tenantID, configs }: { tenantID: st
         <span className="model-policy-label">当前生效策略 · 版本 {policy.version}</span>
         <h2>{policy.display_name}</h2>
         <p>已允许 {policy.allowed_model_config_ids?.length ?? 0} 个学校模型</p>
-        {(policy.allowed_model_config_ids ?? []).map((id) => <Tag key={id}>{configs.find((item) => item.id === id)?.model_name ?? "历史模型配置（已停用）"}</Tag>)}
+        {(policy.allowed_model_config_ids ?? []).map((id) => {
+          const config = configs.find((item) => item.id === id);
+          return <Tag key={id}>{config ? modelConfigOptionLabel(config) : "历史模型配置（已停用）"}</Tag>;
+        })}
       </div>
       <div className="model-policy-inspector">
         <Form form={form} layout="vertical" onFinish={() => void savePolicy()}>
@@ -118,7 +122,7 @@ export function ManagedGovernanceWorkspace({ tenantID, configs }: { tenantID: st
           <Form.Item name="text_export_enabled" label="允许发送文本" valuePropName="checked"><Switch /></Form.Item>
           <Form.Item name="image_export_enabled" label="允许发送图片" valuePropName="checked"><Switch /></Form.Item>
           <Form.Item name="allowed_model_config_ids" label="允许使用的学校模型">
-            <Select mode="multiple" options={configs.filter((item) => item.status === "active" && item.last_capability_status === "success" && item.last_capability_probe_version === "structured-json-v3").map((item) => ({ value: item.id, label: `${item.display_name} · ${item.model_name}` }))} />
+            <Select mode="multiple" options={configs.filter((item) => item.status === "active" && item.last_capability_status === "success" && item.last_capability_probe_version === "structured-json-v3").map((item) => ({ value: item.id, label: modelConfigOptionLabel(item) }))} />
           </Form.Item>
           <Form.Item name="max_cost_micros_per_question" label="单题预算（微元）"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
           <Form.Item name="max_cost_micros_per_exam" label="单考试预算（微元）"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>

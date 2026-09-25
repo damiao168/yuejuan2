@@ -4,8 +4,8 @@
   "exception_ledger": "contracts/openapi/registered-route-exceptions.json",
   "policy": "Every registered route is covered by OpenAPI or an exact, reviewed exception-ledger entry; generation never invents approvals.",
   "counts": {
-    "registered": 506,
-    "openapi": 254,
+    "registered": 508,
+    "openapi": 256,
     "registered_gaps": 252
   },
   "routes": [
@@ -4444,6 +4444,13 @@
       "operation_id": "getScoringRun"
     },
     {
+      "method": "GET",
+      "path": "/api/v1/scoring-runs/{runId}/ai-batches",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
+      "coverage": "openapi",
+      "operation_id": "listScoringRunAIBatches"
+    },
+    {
       "method": "POST",
       "path": "/api/v1/scoring-runs/{runId}/cancel",
       "source": "services/api-gateway/internal/server/routes_grading.go",
@@ -4670,6 +4677,13 @@
       "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "openapi",
       "operation_id": "recoverSubjectiveEnqueueCommand"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/subjective-grading-batches/{batchId}/failed-segments",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
+      "coverage": "openapi",
+      "operation_id": "getFailedSubjectiveBatchSegments"
     },
     {
       "method": "POST",

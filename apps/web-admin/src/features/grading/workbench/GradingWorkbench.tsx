@@ -469,6 +469,9 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         canManageTasks={canManageTasks}
         currentQuestionId={ctx?.task.question_id ?? ""}
         scoring={examScoring}
+        tasks={tasks}
+        currentUserId={currentUserId}
+        onTasksChanged={loadTasks}
         onOpenGoldPapers={() => setGoldPaperManagerOpen(true)}
         onOpenCalibration={setCalibrationQuestionId}
       />

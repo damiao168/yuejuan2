@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getCurrentUser, login } from "../../api/auth";
+import { getCurrentUser, login, logout } from "../../api/auth";
 import { DesktopApiClient } from "../../api/client";
 import { getUserErrorMessage } from "../../api/userError";
 import { bindDurableSession, clearDurableSession } from "../../lib/durableStore";
@@ -29,8 +29,10 @@ export function useDesktopSession(defaultServer: string, logEvent: LogEvent) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const autoLoginStartedRef = useRef(false);
   const loginAttemptRef = useRef(0);
+  const logoutInProgressRef = useRef(false);
 
   const client = useMemo(() => new DesktopApiClient({ baseUrl: authenticatedServerUrl ?? serverUrl, getToken: () => token }), [authenticatedServerUrl, serverUrl, token]);
 
@@ -144,17 +146,41 @@ export function useDesktopSession(defaultServer: string, logEvent: LogEvent) {
   }, []);
 
   const handleLogout = useCallback(async () => {
+    if (logoutInProgressRef.current) return;
+    logoutInProgressRef.current = true;
+    setIsLoggingOut(true);
     ++loginAttemptRef.current;
-    setToken(null);
-    setUser(null);
-    setDurableSessionKey(null);
-    setAuthenticatedServerUrl(null);
-    setExpiresAt(null);
-    setAuthError(null);
-    setIsLoggingIn(false);
-    await clearDurableSession();
-    await logEvent("info", "session logged out");
-  }, [logEvent]);
+    const currentToken = token;
+    const currentServerUrl = authenticatedServerUrl ?? serverUrl;
+    let revokeError: string | null = null;
+    let clearError: string | null = null;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 5000);
+    try {
+      if (currentToken) {
+        await logout(new DesktopApiClient({ baseUrl: currentServerUrl, getToken: () => currentToken }), controller.signal);
+      }
+    } catch (error) {
+      revokeError = getUserErrorMessage(error, "服务端会话吊销未确认");
+    } finally {
+      window.clearTimeout(timeout);
+      setToken(null);
+      setUser(null);
+      setDurableSessionKey(null);
+      setAuthenticatedServerUrl(null);
+      setExpiresAt(null);
+      setIsLoggingIn(false);
+      try {
+        await clearDurableSession();
+      } catch (error) {
+        clearError = getUserErrorMessage(error, "本地会话清理失败");
+      }
+      setAuthError(clearError ? "本地保存的会话清理失败，请检查本机凭据存储。" : revokeError ? "本机已退出，但服务端会话吊销未确认；请在账户安全页退出所有设备。" : null);
+      await logEvent(revokeError || clearError ? "warning" : "info", revokeError || clearError ? "session logout incomplete" : "session logged out", clearError ?? revokeError ?? undefined).catch(() => undefined);
+      setIsLoggingOut(false);
+      logoutInProgressRef.current = false;
+    }
+  }, [authenticatedServerUrl, logEvent, serverUrl, token]);
 
   const checkSession = useCallback(async () => {
     const attempt = loginAttemptRef.current;
@@ -183,7 +209,7 @@ export function useDesktopSession(defaultServer: string, logEvent: LogEvent) {
   return {
     client, serverUrl, setServerUrl, tenantCode, setTenantCode, username, setUsername,
     password, setPassword, rememberLogin, setRememberLogin, credentialStoreMessage,
-    credentialStoreReady, token, expiresAt, user, authError, isLoggingIn,
+    credentialStoreReady, token, expiresAt, user, authError, isLoggingIn, isLoggingOut,
     durableScopeKey: token && user && authenticatedServerUrl ? durableSessionKey ?? "" : "",
     handleLogin, handleLogout, handleForgetStoredLogin: forgetStoredLogin, handleCheckSession: checkSession
   };

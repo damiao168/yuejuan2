@@ -444,6 +444,7 @@ export function PlatformModelConfigPage() {
           <div>
             <strong>{config.display_name}</strong>
             <small>{config.model_name}</small>
+            <small>配置 {config.id.slice(0, 8)}</small>
           </div>
         </div>
       )
@@ -572,7 +573,7 @@ export function PlatformModelConfigPage() {
         className="platform-model-security-note"
         type="info"
         showIcon
-        message="密钥加密保存且学校配置相互隔离。模型库中的日常对话默认选择与下方三智能体绑定分开管理；完整能力检测通过后才能启用评分角色。"
+        message="同一学校可为同一供应商和模型配置多个 API Key；密钥分别加密保存。模型库中的日常对话默认选择与下方三智能体绑定分开管理；完整能力检测通过后才能启用评分角色。"
       />
 
       <Segmented

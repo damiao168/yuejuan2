@@ -195,7 +195,12 @@ func (s *PostgresStore) AssignTask(ctx context.Context, tenantID string, id stri
 	row := s.db.QueryRowContext(ctx, `
 UPDATE review_task
 SET assigned_to = $3::uuid, status = 'assigned', return_reason = '', revision = revision + 1, updated_at = now()
-WHERE tenant_id = $1 AND id::text = $2 AND revision = $4 AND deleted_at IS NULL AND status NOT IN ('submitted', 'completed')
+WHERE tenant_id = $1 AND id::text = $2 AND revision = $4 AND deleted_at IS NULL AND status NOT IN ('submitted', 'completed', 'cancelled')
+  AND (source <> 'double_mark_required' OR assigned_to=$3::uuid)
+  AND (scoring_run_id IS NULL OR EXISTS (
+    SELECT 1 FROM scoring_run sr WHERE sr.tenant_id=review_task.tenant_id AND sr.id=review_task.scoring_run_id
+      AND sr.status IN ('queued','processing','needs_review','failed') AND sr.deleted_at IS NULL
+  ))
 RETURNING `+reviewTaskColumns+`
 `, tenantID, id, input.AssignedTo, input.ExpectedRevision)
 	task, err := scanTask(row)
@@ -232,7 +237,12 @@ func (s *PostgresStore) BatchAssignTasks(ctx context.Context, tenantID string, _
 		task, err := scanTask(tx.QueryRowContext(ctx, `
 UPDATE review_task
 SET assigned_to = $3::uuid, status = 'assigned', return_reason = '', revision = revision + 1, updated_at = now()
-WHERE tenant_id = $1 AND id::text = $2 AND revision = $4 AND deleted_at IS NULL AND status NOT IN ('submitted', 'completed')
+WHERE tenant_id = $1 AND id::text = $2 AND revision = $4 AND deleted_at IS NULL AND status NOT IN ('submitted', 'completed', 'cancelled')
+  AND (source <> 'double_mark_required' OR assigned_to=$3::uuid)
+  AND (scoring_run_id IS NULL OR EXISTS (
+    SELECT 1 FROM scoring_run sr WHERE sr.tenant_id=review_task.tenant_id AND sr.id=review_task.scoring_run_id
+      AND sr.status IN ('queued','processing','needs_review','failed') AND sr.deleted_at IS NULL
+  ))
 RETURNING `+reviewTaskColumns+`
 `, tenantID, id, input.AssignedTo, expected))
 		if errors.Is(err, ErrNotFound) {
@@ -263,6 +273,27 @@ func (s *PostgresStore) SubmitGrade(ctx context.Context, tenantID string, id str
 	var replay SubmitResult
 	if found, err := commandreceipt.Load(ctx, tx, tenantID, reviewerID, "review.submit", id, input, &replay); err != nil || found {
 		return replay, err
+	}
+	// Lock the parent run before the task, matching cancellation's lock order.
+	// A cancelled run must never gain a new human grade or current question grade.
+	var runID sql.NullString
+	if err := tx.QueryRowContext(ctx, `SELECT scoring_run_id::text FROM review_task WHERE tenant_id=$1::uuid AND id::text=$2 AND deleted_at IS NULL`, tenantID, id).Scan(&runID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return SubmitResult{}, ErrNotFound
+		}
+		return SubmitResult{}, err
+	}
+	if runID.Valid {
+		var runStatus string
+		if err := tx.QueryRowContext(ctx, `SELECT status FROM scoring_run WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, runID.String).Scan(&runStatus); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return SubmitResult{}, ErrInvalidTransition
+			}
+			return SubmitResult{}, err
+		}
+		if runStatus != "queued" && runStatus != "processing" && runStatus != "needs_review" && runStatus != "failed" {
+			return SubmitResult{}, ErrInvalidTransition
+		}
 	}
 	task, err := scanTask(tx.QueryRowContext(ctx, `
 	SELECT `+reviewTaskColumns+`
@@ -359,6 +390,17 @@ FROM review_task rt WHERE rt.tenant_id=$1::uuid AND rt.id=$2::uuid AND rt.scorin
 	session, finalGrade, arbitrationTask, err := s.resolveDoubleMarkAfterGradeTx(ctx, tx, tenantID, reviewerID, task)
 	if err != nil {
 		return SubmitResult{}, err
+	}
+	if runID.Valid && (task.GradeRound == "first_mark" || task.GradeRound == "second_mark") {
+		if finalGrade != nil {
+			questionGradeID, err = s.recordScoringDoubleMarkGradeTx(ctx, tx, tenantID, runID.String, task.ID, reviewerID, finalGrade)
+			if err != nil {
+				return SubmitResult{}, err
+			}
+		}
+		if err := s.syncScoringDoubleMarkRunTx(ctx, tx, tenantID, runID.String); err != nil {
+			return SubmitResult{}, err
+		}
 	}
 	if refreshed, refreshErr := s.getTaskTx(ctx, tx, tenantID, id); refreshErr == nil {
 		task = refreshed

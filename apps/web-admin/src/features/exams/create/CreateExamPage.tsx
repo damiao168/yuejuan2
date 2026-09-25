@@ -18,7 +18,7 @@ function draftStorageKey(tenant: string, userId: string) {
 
 function completionPath(mode: ExamCreationMode, examId?: string) {
   if (!examId) return "/exams";
-  return mode === "materials" ? `/exams/${encodeURIComponent(examId)}/paper` : `/exams/${encodeURIComponent(examId)}/settings`;
+  return mode === "materials" ? `/exams/${encodeURIComponent(examId)}/paper` : `/exams/${encodeURIComponent(examId)}/students`;
 }
 
 export function CreateExamPage({ user, onNavigate }: { user: SessionUser; onNavigate: (path: string) => void }) {

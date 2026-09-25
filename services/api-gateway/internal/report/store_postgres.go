@@ -133,16 +133,36 @@ type reportQueryer interface {
 
 func (s *PostgresStore) loadDataset(ctx context.Context, q reportQueryer, tenantID string, examID string) (dataset, error) {
 	data := dataset{ExamID: examID}
-	subRows, err := q.QueryContext(ctx, `
+	var hasRelease bool
+	if err := q.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM score_release_current WHERE tenant_id=$1::uuid AND exam_id=$2::uuid)`, tenantID, examID).Scan(&hasRelease); err != nil {
+		return dataset{}, err
+	}
+	subQuery := `
+SELECT item.submission_id::text, COALESCE(item.student_id::text, ''), COALESCE(st.class_id::text, ''),
+  COALESCE(sc.name, ''), COALESCE(NULLIF(sub.candidate_no,''),sub.id::text), item.total_score::float8, item.max_score::float8
+FROM score_release_current current_release
+JOIN score_release release ON release.tenant_id=current_release.tenant_id AND release.id=current_release.release_id AND release.status='published'
+JOIN score_release_item item ON item.tenant_id=release.tenant_id AND item.release_id=release.id
+JOIN submission sub ON sub.tenant_id=item.tenant_id AND sub.id=item.submission_id AND sub.deleted_at IS NULL
+LEFT JOIN student st ON st.tenant_id = item.tenant_id AND st.id = item.student_id AND st.deleted_at IS NULL
+LEFT JOIN school_class sc ON sc.tenant_id = st.tenant_id AND sc.id = st.class_id AND sc.deleted_at IS NULL
+WHERE current_release.tenant_id = $1 AND current_release.exam_id::text = $2
+ORDER BY sub.candidate_no, sub.id
+`
+	if !hasRelease {
+		// Older examinations publish through submission_grade without a score
+		// release. Keep their scores available, but do not attach later AI or
+		// human feedback to those published facts.
+		subQuery = `
 SELECT sg.submission_id::text, COALESCE(sg.student_id::text, ''), COALESCE(st.class_id::text, ''),
   COALESCE(sc.name, ''), sg.anonymous_code, sg.total_score::float8, sg.max_score::float8
 FROM submission_grade sg
-LEFT JOIN student st ON st.tenant_id = sg.tenant_id AND st.id = sg.student_id AND st.deleted_at IS NULL
-LEFT JOIN school_class sc ON sc.tenant_id = st.tenant_id AND sc.id = st.class_id AND sc.deleted_at IS NULL
-WHERE sg.tenant_id = $1 AND sg.exam_id::text = $2
-  AND sg.status = 'published' AND sg.locked = true AND sg.deleted_at IS NULL
-ORDER BY sg.anonymous_code
-`, tenantID, examID)
+LEFT JOIN student st ON st.tenant_id=sg.tenant_id AND st.id=sg.student_id AND st.deleted_at IS NULL
+LEFT JOIN school_class sc ON sc.tenant_id=st.tenant_id AND sc.id=st.class_id AND sc.deleted_at IS NULL
+WHERE sg.tenant_id=$1::uuid AND sg.exam_id=$2::uuid AND sg.status='published' AND sg.locked AND sg.deleted_at IS NULL
+ORDER BY sg.anonymous_code`
+	}
+	subRows, err := q.QueryContext(ctx, subQuery, tenantID, examID)
 	if err != nil {
 		return dataset{}, err
 	}
@@ -157,18 +177,22 @@ ORDER BY sg.anonymous_code
 	if err := subRows.Err(); err != nil {
 		return dataset{}, err
 	}
-	rows, err := q.QueryContext(ctx, `
-SELECT fg.submission_id::text, COALESCE(sg.student_id::text, ''), COALESCE(st.class_id::text, ''),
-  COALESCE(sc.name, ''), fg.question_id::text, fg.question_no, q.question_type, fg.answer_segment_id::text,
-  fg.score::float8, fg.max_score::float8, fg.source, q.knowledge_points,
+	gradeQuery := `
+SELECT released_question.submission_id::text, COALESCE(item.student_id::text, ''), COALESCE(st.class_id::text, ''),
+  COALESCE(sc.name, ''), released_question.question_id::text, released_question.question_no, q.question_type, fg.answer_segment_id::text,
+  released_question.score::float8, released_question.max_score::float8, released_question.source_type, q.knowledge_points,
   COALESCE(ans.answer_payload, '{}'::jsonb),
-  ag.suggested_score::float8, ag.student_feedback, ag.missing_points, ag.risk_flags,
-  hg.score::float8, hg.student_feedback, hg.comments
-FROM final_grade fg
-JOIN submission_grade sg ON sg.tenant_id = fg.tenant_id AND sg.submission_id = fg.submission_id AND sg.deleted_at IS NULL
-LEFT JOIN student st ON st.tenant_id = sg.tenant_id AND st.id = sg.student_id AND st.deleted_at IS NULL
+  ag.suggested_score::float8, hg.score::float8,
+  CASE WHEN COALESCE((release.visibility_policy->>'show_feedback')::boolean, false)
+    THEN NULLIF(BTRIM(released_question.student_explanation->>'feedback'), '') ELSE NULL END
+FROM score_release_current current_release
+JOIN score_release release ON release.tenant_id=current_release.tenant_id AND release.id=current_release.release_id AND release.status='published'
+JOIN score_release_item item ON item.tenant_id=release.tenant_id AND item.release_id=release.id
+JOIN score_release_question released_question ON released_question.tenant_id=item.tenant_id AND released_question.release_id=item.release_id AND released_question.submission_id=item.submission_id
+JOIN final_grade fg ON fg.tenant_id=released_question.tenant_id AND fg.id=released_question.final_grade_id AND fg.deleted_at IS NULL
+LEFT JOIN student st ON st.tenant_id = item.tenant_id AND st.id = item.student_id AND st.deleted_at IS NULL
 LEFT JOIN school_class sc ON sc.tenant_id = st.tenant_id AND sc.id = st.class_id AND sc.deleted_at IS NULL
-JOIN question q ON q.tenant_id = fg.tenant_id AND q.id = fg.question_id AND q.deleted_at IS NULL
+JOIN question q ON q.tenant_id = released_question.tenant_id AND q.id = released_question.question_id AND q.deleted_at IS NULL
 LEFT JOIN LATERAL (
   SELECT answer_payload
   FROM answer_segment_answer
@@ -177,23 +201,48 @@ LEFT JOIN LATERAL (
   LIMIT 1
 ) ans ON true
 LEFT JOIN LATERAL (
-  SELECT suggested_score, student_feedback, missing_points, risk_flags
+  SELECT suggested_score
   FROM ai_grade
   WHERE tenant_id = fg.tenant_id AND answer_segment_id = fg.answer_segment_id AND deleted_at IS NULL AND status = 'succeeded'
-  ORDER BY created_at DESC
+    AND created_at <= release.published_at
+  ORDER BY created_at DESC, id DESC
   LIMIT 1
 ) ag ON true
 LEFT JOIN LATERAL (
-  SELECT score, student_feedback, comments
+  SELECT score
   FROM human_grade
-  WHERE tenant_id = fg.tenant_id AND answer_segment_id = fg.answer_segment_id AND deleted_at IS NULL
-  ORDER BY created_at DESC
+  WHERE tenant_id = released_question.tenant_id AND id = released_question.source_id
+    AND released_question.source_type = 'single_review' AND deleted_at IS NULL
   LIMIT 1
 ) hg ON true
-WHERE fg.tenant_id = $1 AND fg.exam_id::text = $2 AND fg.deleted_at IS NULL
-  AND sg.status = 'published' AND sg.locked = true
-ORDER BY fg.question_no, fg.created_at DESC
-`, tenantID, examID)
+WHERE current_release.tenant_id = $1 AND current_release.exam_id::text = $2
+ORDER BY released_question.question_no, released_question.id
+`
+	if !hasRelease {
+		gradeQuery = `
+SELECT fg.submission_id::text, COALESCE(sg.student_id::text,''), COALESCE(st.class_id::text,''),
+  COALESCE(sc.name,''), fg.question_id::text, fg.question_no, question.question_type, fg.answer_segment_id::text,
+  fg.score::float8, fg.max_score::float8, fg.source, question.knowledge_points,
+  COALESCE(ans.answer_payload,'{}'::jsonb), ag.suggested_score::float8, hg.score::float8, NULL::text
+FROM final_grade fg
+JOIN submission_grade sg ON sg.tenant_id=fg.tenant_id AND sg.submission_id=fg.submission_id AND sg.deleted_at IS NULL
+LEFT JOIN student st ON st.tenant_id=sg.tenant_id AND st.id=sg.student_id AND st.deleted_at IS NULL
+LEFT JOIN school_class sc ON sc.tenant_id=st.tenant_id AND sc.id=st.class_id AND sc.deleted_at IS NULL
+JOIN question ON question.tenant_id=fg.tenant_id AND question.id=fg.question_id AND question.deleted_at IS NULL
+LEFT JOIN LATERAL (
+  SELECT answer_payload FROM answer_segment_answer WHERE tenant_id=fg.tenant_id AND answer_segment_id=fg.answer_segment_id AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1
+) ans ON true
+LEFT JOIN LATERAL (
+  SELECT suggested_score FROM ai_grade WHERE tenant_id=fg.tenant_id AND answer_segment_id=fg.answer_segment_id AND deleted_at IS NULL AND status='succeeded' AND created_at<=sg.published_at ORDER BY created_at DESC,id DESC LIMIT 1
+) ag ON true
+LEFT JOIN LATERAL (
+  SELECT score FROM human_grade WHERE tenant_id=fg.tenant_id AND answer_segment_id=fg.answer_segment_id AND deleted_at IS NULL AND created_at<=sg.published_at ORDER BY created_at DESC,id DESC LIMIT 1
+) hg ON true
+WHERE fg.tenant_id=$1::uuid AND fg.exam_id=$2::uuid AND fg.deleted_at IS NULL AND fg.status IN ('published','locked')
+  AND sg.status='published' AND sg.locked
+ORDER BY fg.question_no, fg.created_at DESC`
+	}
+	rows, err := q.QueryContext(ctx, gradeQuery, tenantID, examID)
 	if err != nil {
 		return dataset{}, err
 	}
@@ -203,12 +252,8 @@ ORDER BY fg.question_no, fg.created_at DESC
 		var knowledgeRaw []byte
 		var payloadRaw []byte
 		var aiScore sql.NullFloat64
-		var aiFeedback sql.NullString
-		var missingRaw []byte
-		var riskRaw []byte
 		var humanScore sql.NullFloat64
-		var humanFeedback sql.NullString
-		var humanComments sql.NullString
+		var publishedFeedback sql.NullString
 		if err := rows.Scan(
 			&record.SubmissionID,
 			&record.StudentID,
@@ -224,12 +269,8 @@ ORDER BY fg.question_no, fg.created_at DESC
 			&knowledgeRaw,
 			&payloadRaw,
 			&aiScore,
-			&aiFeedback,
-			&missingRaw,
-			&riskRaw,
 			&humanScore,
-			&humanFeedback,
-			&humanComments,
+			&publishedFeedback,
 		); err != nil {
 			return dataset{}, err
 		}
@@ -243,20 +284,8 @@ ORDER BY fg.question_no, fg.created_at DESC
 			value := humanScore.Float64
 			record.HumanScore = &value
 		}
-		if aiFeedback.Valid && strings.TrimSpace(aiFeedback.String) != "" {
-			record.AIFeedback = append(record.AIFeedback, FeedbackItem{QuestionID: record.QuestionID, QuestionNo: record.QuestionNo, Source: "ai_grade", Text: strings.TrimSpace(aiFeedback.String)})
-		}
-		for _, item := range parseStringList(missingRaw) {
-			record.ErrorClues = append(record.ErrorClues, ErrorClue{QuestionID: record.QuestionID, QuestionNo: record.QuestionNo, Source: "ai_missing_points", Text: item})
-		}
-		for _, item := range parseStringList(riskRaw) {
-			record.ErrorClues = append(record.ErrorClues, ErrorClue{QuestionID: record.QuestionID, QuestionNo: record.QuestionNo, Source: "ai_risk_flags", Text: item})
-		}
-		if humanFeedback.Valid && strings.TrimSpace(humanFeedback.String) != "" {
-			record.TeacherFeedback = append(record.TeacherFeedback, FeedbackItem{QuestionID: record.QuestionID, QuestionNo: record.QuestionNo, Source: "human_grade", Text: strings.TrimSpace(humanFeedback.String)})
-		}
-		if humanComments.Valid && strings.TrimSpace(humanComments.String) != "" {
-			record.TeacherFeedback = append(record.TeacherFeedback, FeedbackItem{QuestionID: record.QuestionID, QuestionNo: record.QuestionNo, Source: "human_comments", Text: strings.TrimSpace(humanComments.String)})
+		if publishedFeedback.Valid {
+			record.TeacherFeedback = append(record.TeacherFeedback, FeedbackItem{QuestionID: record.QuestionID, QuestionNo: record.QuestionNo, Source: "published_release", Text: strings.TrimSpace(publishedFeedback.String)})
 		}
 		data.Grades = append(data.Grades, record)
 	}

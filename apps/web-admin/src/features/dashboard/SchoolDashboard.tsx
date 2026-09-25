@@ -19,7 +19,7 @@ function examAction(exam: DashboardActiveExam) {
   const encodedId = encodeURIComponent(exam.id);
   const issueCount = exam.failed_count + exam.quality_issue_count + exam.unmatched_count;
   if (["draft", "configured", "ready"].includes(exam.status)) {
-    return { label: "完善试卷", path: `/exams/${encodedId}/settings` };
+    return { label: "完善试卷", path: `/exams/${encodedId}/paper` };
   }
   if (["collecting", "processing"].includes(exam.status)) {
     return { label: issueCount ? "处理答卷" : "继续导入", path: `/exams/${encodedId}/capture` };

@@ -113,6 +113,28 @@ func TestPlatformWorkerClaimsAndHeartbeatsSchoolTask(t *testing.T) {
 	}
 }
 
+func TestPlatformPageWorkerCannotClaimSubjectiveGradingTask(t *testing.T) {
+	store := workerruntime.NewMemoryStore()
+	handler := workerruntime.NewHandler(store, auth.NewMemoryStore())
+	input := imageQualityTaskInput()
+	input.TaskType = "ai_grade"
+	input.QueueName = "subjective-grading"
+	input.SourceType = "subjective_grading_run"
+	input.IdempotencyKey = "subjective:school-task"
+	_, err := store.CreateTask(t.Context(), runtimeTenantID, "school-actor", input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pageWorker := auth.User{ID: auth.PlatformTenantID, TenantID: auth.PlatformTenantID, Roles: []string{"page_processing_worker"}, Permissions: []string{"ocr:manage"}}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/internal/worker/tasks/claim", bytes.NewBufferString(`{"queue_name":"subjective-grading","worker_service":"subjective-grading-worker","worker_instance_id":"attacker","limit":1,"lease_seconds":300}`))
+	req = req.WithContext(auth.WithUser(req.Context(), pageWorker))
+	rec := httptest.NewRecorder()
+	handler.Claim(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestHandlerRejectsSensitivePayload(t *testing.T) {
 	store := workerruntime.NewMemoryStore()
 	handler := workerruntime.NewHandler(store, auth.NewMemoryStore())

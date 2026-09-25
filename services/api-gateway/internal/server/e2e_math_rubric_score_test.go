@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
@@ -33,7 +34,7 @@ func TestPostgresMathRubricScoreUsesOnlyFrozenExamRubric(t *testing.T) {
 	_, err := db.ExecContext(ctx, `
 CREATE TABLE exam(id uuid PRIMARY KEY,tenant_id uuid NOT NULL,deleted_at timestamptz);
 CREATE TABLE question(id uuid PRIMARY KEY,tenant_id uuid NOT NULL,exam_id uuid NOT NULL,deleted_at timestamptz);
-CREATE TABLE answer_segment(id uuid PRIMARY KEY,tenant_id uuid NOT NULL,question_id uuid NOT NULL,deleted_at timestamptz);
+CREATE TABLE answer_segment(id uuid PRIMARY KEY,tenant_id uuid NOT NULL,question_id uuid NOT NULL,crop_sha256 text,deleted_at timestamptz);
 CREATE TABLE exam_question_snapshot(id uuid PRIMARY KEY,tenant_id uuid NOT NULL,exam_id uuid NOT NULL,question_id uuid NOT NULL,profile_snapshot_json jsonb NOT NULL,rubric_snapshot_json jsonb NOT NULL);
 CREATE TABLE question_rubric(id uuid PRIMARY KEY,tenant_id uuid NOT NULL,question_id uuid NOT NULL,points jsonb NOT NULL);
 CREATE TABLE ai_grade(id uuid PRIMARY KEY);
@@ -58,6 +59,7 @@ CREATE TABLE math_understanding_correction(
 		}
 		return raw
 	}
+	cropHash := strings.Repeat("a", 64)
 	// A minimal legacy-shaped fixture omits ID/version; normal production
 	// snapshots include them. Snapshot identity/hash must still bind this case.
 	frozen := paper.Rubric{Status: "locked", MaxScore: 2, Points: []paper.RubricPoint{{ID: "P1", Score: 2, Description: "final result", EvidenceRequirements: []paper.EvidenceRequirement{{Type: "final_result", Target: "x=2"}}}}}
@@ -67,7 +69,7 @@ CREATE TABLE math_understanding_correction(
 	}{
 		{`INSERT INTO exam(id,tenant_id) VALUES($1,$2)`, []any{exam, tenant}},
 		{`INSERT INTO question(id,tenant_id,exam_id) VALUES($1,$2,$3)`, []any{question, tenant, exam}},
-		{`INSERT INTO answer_segment(id,tenant_id,question_id) VALUES($1,$2,$3)`, []any{segment, tenant, question}},
+		{`INSERT INTO answer_segment(id,tenant_id,question_id,crop_sha256) VALUES($1,$2,$3,$4)`, []any{segment, tenant, question, cropHash}},
 		{`INSERT INTO exam_question_snapshot(id,tenant_id,exam_id,question_id,profile_snapshot_json,rubric_snapshot_json) VALUES($1,$2,$3,$4,'{"subject_code":"mathematics"}',$5)`, []any{snapshot, tenant, exam, question, encode(frozen)}},
 		{`INSERT INTO question_rubric(id,tenant_id,question_id,points) VALUES($1,$2,$3,'[{"id":"P1","score":999}]')`, []any{uuid.NewString(), tenant, question}},
 	} {
@@ -76,8 +78,8 @@ CREATE TABLE math_understanding_correction(
 		}
 	}
 	contract := mathunderstanding.CreateArtifactInput{
-		SubjectCode: "mathematics", AnswerSegmentID: segment, ExamQuestionSnapshotID: snapshot, InputHash: "sha256:synthetic-crop", EngineVersion: "fixture-v1",
-		Blocks:        []mathunderstanding.MathAnswerBlock{{ID: "b1", Kind: "formula", Status: "active", BoundingBox: mathunderstanding.BoundingBox{X: .1, Y: .1, Width: .5, Height: .2}, RecognitionEngine: "fixture", RecognitionVersion: "v1", RecognitionConfidence: .9, StructureConfidence: .9, SourceImageHash: "sha256:synthetic-crop"}},
+		SubjectCode: "mathematics", AnswerSegmentID: segment, ExamQuestionSnapshotID: snapshot, InputHash: "sha256:" + cropHash, EngineVersion: "fixture-v1",
+		Blocks:        []mathunderstanding.MathAnswerBlock{{ID: "b1", Kind: "formula", Status: "active", BoundingBox: mathunderstanding.BoundingBox{X: .1, Y: .1, Width: .5, Height: .2}, RecognitionEngine: "fixture", RecognitionVersion: "v1", RecognitionConfidence: .9, StructureConfidence: .9, SourceImageHash: "sha256:" + cropHash}},
 		Formulas:      []mathunderstanding.FormulaArtifact{{ID: "f1", BlockID: "b1", BoundingBox: mathunderstanding.BoundingBox{X: .1, Y: .1, Width: .5, Height: .2}, CanonicalLatex: "x=2", RecognitionEngine: "fixture", RecognitionVersion: "v1", ParserVersion: "v1", ParseStatus: "parsed", Confidence: .9, AST: &mathunderstanding.FormulaAST{Kind: "equation", Children: []mathunderstanding.FormulaAST{{Kind: "symbol", Value: "x"}, {Kind: "number", Value: "2"}}}}},
 		SolutionGraph: mathunderstanding.SolutionGraph{ID: "g1", AnswerSegmentID: segment, BuilderVersion: "v1", FormulaModelVersion: "v1", OverallConfidence: .9, Steps: []mathunderstanding.SolutionStep{{ID: "s1", Kind: "conclusion", BlockIDs: []string{"b1"}, FormulaIDs: []string{"f1"}, Confidence: .9}}},
 		Verifications: []mathunderstanding.MathVerification{{ID: "syntax-1", StepID: "s1", FormulaID: "f1", Kind: "syntax", Status: "verified", ReasonCode: "ast_well_formed", Domain: "real", Engine: "fixture", EngineVersion: "v1", RulesetVersion: "v1", Confidence: 1}},

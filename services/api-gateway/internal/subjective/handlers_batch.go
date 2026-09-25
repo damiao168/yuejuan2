@@ -30,7 +30,7 @@ func (h *Handler) CreateBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if recovered.Batch != nil {
-		if !sameStringSlice(recovered.Batch.SegmentIDs, segments) {
+		if !sameStringSlice(recovered.Batch.SegmentIDs, segments) || recovered.Batch.ScoringRunID != input.ScoringRunID {
 			writeStoreError(w, r, ErrIdempotencyConflict)
 			return
 		}
@@ -48,7 +48,7 @@ func (h *Handler) CreateBatch(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	batch, err := h.store.CreateBatch(r.Context(), user.TenantID, user.ID, CreateBatchInput{IdempotencyKey: input.IdempotencyKey, SegmentIDs: segments})
+	batch, err := h.store.CreateBatch(r.Context(), user.TenantID, user.ID, CreateBatchInput{IdempotencyKey: input.IdempotencyKey, SegmentIDs: segments, ScoringRunID: input.ScoringRunID})
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
@@ -84,6 +84,26 @@ func (h *Handler) GetBatch(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"batch": batch})
 }
 
+func (h *Handler) ListScoringRunBatches(w http.ResponseWriter, r *http.Request) {
+	user := mustUser(r)
+	batches, err := h.store.ListScoringRunBatches(r.Context(), user.TenantID, r.PathValue("runId"))
+	if err != nil {
+		writeStoreError(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"batches": batches})
+}
+
+func (h *Handler) GetFailedBatchSegments(w http.ResponseWriter, r *http.Request) {
+	user := mustUser(r)
+	segments, err := h.store.FailedBatchSegments(r.Context(), user.TenantID, r.PathValue("batchId"))
+	if err != nil {
+		writeStoreError(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"segment_ids": segments})
+}
+
 func (h *Handler) EnqueueBatch(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	if !h.requireAvailable(w, r) {
@@ -96,6 +116,10 @@ func (h *Handler) EnqueueBatch(w http.ResponseWriter, r *http.Request) {
 	batch, err := h.store.GetBatch(r.Context(), user.TenantID, r.PathValue("batchId"))
 	if err != nil {
 		writeStoreError(w, r, err)
+		return
+	}
+	if batch.Status == "cancelled" {
+		writeStoreError(w, r, ErrBatchCancelled)
 		return
 	}
 	plan, err := h.store.GetEnqueuePlan(r.Context(), user.TenantID, user.ID, batch.ID)

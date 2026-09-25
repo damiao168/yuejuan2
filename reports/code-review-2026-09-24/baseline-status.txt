@@ -1,0 +1,28 @@
+ M apps/web-admin/src/api/configuration.ts
+ M apps/web-admin/src/features/dashboard/SchoolDashboard.tsx
+ M apps/web-admin/src/features/exams/create/CreateExamPage.tsx
+ M apps/web-admin/src/features/exams/workspace/ExamWorkspaceLayout.tsx
+ M apps/web-admin/src/features/exams/workspace/businessStages.ts
+ M apps/web-admin/src/features/paper-import/PaperImportWorkspace.tsx
+ M apps/web-admin/src/pages/ExamPreparationPage.test.ts
+ M apps/web-admin/src/pages/ExamPreparationPage.tsx
+ M apps/web-admin/src/pages/PaperRubricPage.tsx
+ M apps/web-admin/src/styles/features/exam-preparation.css
+ M apps/web-admin/src/styles/features/exam.css
+ M services/api-gateway/internal/grading/scoring_run_process.go
+ M services/api-gateway/internal/grading/scoring_run_start.go
+ M services/api-gateway/internal/paper/template_validation.go
+ M services/api-gateway/internal/paper/types.go
+ M tests/e2e/specs/exam-workspace.spec.ts
+ M tests/e2e/specs/exam-workspace.visual.spec.ts
+ M tests/e2e/specs/exam-workspace.visual.spec.ts-snapshots/exam-paper-empty-1440x900-chromium-win32.png
+ M tests/e2e/specs/exam-workspace.visual.spec.ts-snapshots/exam-workspace-1366x768-chromium-win32.png
+ M tests/e2e/specs/exam-workspace.visual.spec.ts-snapshots/exam-workspace-1440x900-chromium-win32.png
+ M tests/e2e/specs/exam-workspace.visual.spec.ts-snapshots/exam-workspace-1920x1080-chromium-win32.png
+?? .tmp-pg-migration-verify/
+?? apps/web-admin/src/features/exams/preparation/preparationSteps.ts
+?? services/api-gateway/internal/grading/scoring_run_routing.go
+?? services/api-gateway/internal/grading/scoring_runs_manual_only_test.go
+?? services/api-gateway/internal/paper/readiness_advisory_test.go
+?? services/api-gateway/internal/paper/scoring_coverage.go
+?? services/api-gateway/internal/subjective/scoring_coverage_test.go

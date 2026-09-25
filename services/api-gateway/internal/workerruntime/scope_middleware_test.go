@@ -83,6 +83,28 @@ func TestTaskScopeRequiresExactLeaseCapability(t *testing.T) {
 	}
 }
 
+func TestTaskScopeRejectsPageWorkerWithSubjectiveLease(t *testing.T) {
+	store := NewMemoryStore()
+	_, err := store.CreateTask(context.Background(), "tenant-school", "actor-1", CreateTaskInput{
+		TaskType: "ai_grade", QueueName: "subjective-grading", SourceType: "subjective_grading_run", SourceID: "item-1",
+		Payload: map[string]any{"answer_file_asset_id": "file-1"}, PayloadSchemaVersion: "v1", IdempotencyKey: "subjective-1", MaxAttempts: 3,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	claimed, err := store.Claim(context.Background(), "tenant-school", ClaimInput{QueueName: "subjective-grading", WorkerService: "subjective-grading-worker", WorkerInstanceID: "worker-1", Limit: 1, LeaseSeconds: 300})
+	if err != nil || len(claimed) != 1 {
+		t.Fatalf("claim: %v %#v", err, claimed)
+	}
+	handler := TaskScope(store)(RequireTaskFile("id")(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })))
+	req := taskRequest(claimed[0], "file-1")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("page worker with subjective lease expected 403, got %d %s", rec.Code, rec.Body.String())
+	}
+}
+
 func taskRequest(task Task, resourceID string) *http.Request {
 	req := httptest.NewRequest(http.MethodPost, "/resource/"+resourceID, nil)
 	req.SetPathValue("id", resourceID)

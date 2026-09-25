@@ -115,15 +115,6 @@ func (s *AutoManagedAPIConfigService) Create(ctx context.Context, tenantID, acto
 	if err != nil {
 		return ManagedAPIConfig{}, ResolvedManagedProvider{}, ManagedAPIProbeResult{}, err
 	}
-	items, err := s.store.ListManagedAPIConfigs(ctx, tenantID)
-	if err != nil {
-		return ManagedAPIConfig{}, ResolvedManagedProvider{}, ManagedAPIProbeResult{}, err
-	}
-	for _, item := range items {
-		if item.ProviderKey == resolved.Provider.Key && item.ModelName == resolved.ModelName {
-			return ManagedAPIConfig{}, resolved, ManagedAPIProbeResult{}, ErrConflict
-		}
-	}
 	// Resolve once: the exact credential checked by the quick probe must be
 	// encrypted into the new model even if the source rotates concurrently.
 	apiKey, err := s.resolveCredential(ctx, tenantID, input, resolved)

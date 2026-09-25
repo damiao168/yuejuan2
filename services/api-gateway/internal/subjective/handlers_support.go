@@ -99,6 +99,8 @@ func writeStoreError(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_model_output", "model output failed schema validation")
 	case errors.Is(err, ErrIdempotencyConflict):
 		httpx.Error(w, r, http.StatusConflict, "subjective_grade_idempotency_conflict", "same idempotency request produced a different grading fact")
+	case errors.Is(err, ErrBatchCancelled):
+		httpx.Error(w, r, http.StatusConflict, "subjective_grading_batch_cancelled", "subjective grading batch was cancelled")
 	default:
 		httpx.Error(w, r, http.StatusInternalServerError, "subjective_grading_operation_failed", "subjective grading operation failed")
 	}

@@ -57,6 +57,7 @@ export interface GradingWorkbenchMockState {
   draftWrites: string[];
   contextsRead: string[];
   listCursors: string[];
+  fastConfirmTaskIds: Set<string>;
 }
 
 export function createGradingWorkbenchMockState(count = 20): GradingWorkbenchMockState {
@@ -84,7 +85,7 @@ export function createGradingWorkbenchMockState(count = 20): GradingWorkbenchMoc
       subject
     } satisfies FixtureTask;
   });
-  return { tasks, drafts: new Map(), claims: [], submissions: [], draftWrites: [], contextsRead: [], listCursors: [] };
+  return { tasks, drafts: new Map(), claims: [], submissions: [], draftWrites: [], contextsRead: [], listCursors: [], fastConfirmTaskIds: new Set() };
 }
 
 function json(route: Route, body: unknown, status = 200) {
@@ -97,7 +98,7 @@ function requestBody(route: Route): Record<string, unknown> {
   return JSON.parse(body) as Record<string, unknown>;
 }
 
-function contextFor(task: FixtureTask, draft: FixtureDraft | undefined) {
+function contextFor(task: FixtureTask, draft: FixtureDraft | undefined, fastConfirm = false) {
   const { subject } = task;
   return {
     task,
@@ -119,7 +120,7 @@ function contextFor(task: FixtureTask, draft: FixtureDraft | undefined) {
       profile_snapshot: {},
       archetype_snapshot: {},
       rubric_snapshot: {},
-      scoring_policy_snapshot: {},
+      scoring_policy_snapshot: fastConfirm ? { mode: "AI_FAST_CONFIRM", confidence_threshold: 0.95 } : {},
       content_hash: `hash-${task.id}`,
       created_at: now
     },
@@ -142,7 +143,7 @@ function contextFor(task: FixtureTask, draft: FixtureDraft | undefined) {
       // Keyboard/revision flows do not require a rendered image. Keeping this
       // empty also prevents image-fit state from creating an unrelated draft
       // write before either browser window starts the conflict scenario.
-      segment_image_url: ""
+      segment_image_url: fastConfirm ? `/api/v1/review-assets/${task.id}` : ""
     },
     frozen_rubric: {
       id: `rubric-${task.id}`,
@@ -153,6 +154,12 @@ function contextFor(task: FixtureTask, draft: FixtureDraft | undefined) {
       points: []
     },
     ai_candidates: [],
+    ...(fastConfirm ? { ai_second_opinion: {
+      available: true, presentation: "explicit_second_opinion", score_prefill_allowed: true,
+      metadata: { id: `ai-${task.id}`, answer_segment_id: task.answer_segment_id, suggested_score: 7, max_score: 9,
+        confidence: 0.98, matched_points: [], missing_points: [], evidence: [{ type: "text", answer_text: "作答要点与标准答案一致" }],
+        risk_flags: [], mock: false, status: "succeeded", delivery_mode: "teacher_review" }
+    } } : {}),
     scoring_evidence: [],
     claim: {
       owner_id: task.assigned_to,
@@ -245,7 +252,7 @@ export async function installGradingWorkbenchMocks(page: Page, state = createGra
     const task = taskFromPath(path, state.tasks);
     if (task && path.endsWith("/context") && method === "GET") {
       state.contextsRead.push(task.id);
-      return json(route, { context: contextFor(task, state.drafts.get(task.id)) });
+      return json(route, { context: contextFor(task, state.drafts.get(task.id), state.fastConfirmTaskIds.has(task.id)) });
     }
     if (task && path.endsWith("/renew") && method === "POST") return json(route, { renewed: true });
 

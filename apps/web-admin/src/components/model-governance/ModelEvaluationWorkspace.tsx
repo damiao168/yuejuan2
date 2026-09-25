@@ -28,6 +28,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { getUserErrorMessage } from "../../api/client";
 import type { ManagedModelAPIConfig } from "../../api/modelApiConfig";
+import { modelConfigOptionLabel } from "../../features/platform-model-config/lib/modelConfig";
 import {
   addModelEvaluationCandidate,
   completeModelEvaluationRun,
@@ -657,7 +658,7 @@ export function ModelEvaluationWorkspace({
                 <Select
                   options={availableConfigs.map((config) => ({
                     value: config.id,
-                    label: `${config.display_name} · ${config.model_name}`
+                    label: modelConfigOptionLabel(config)
                   }))}
                 />
               </Form.Item>

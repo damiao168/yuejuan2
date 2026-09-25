@@ -70,6 +70,10 @@ export function presetForConfig(config: ManagedModelAPIConfig): SupplierPreset {
   return "custom";
 }
 
+export function modelConfigOptionLabel(config: ManagedModelAPIConfig) {
+  return `${config.display_name} · ${config.model_name} · 密钥 ${config.credential_hint || "已加密"} · ${config.id.slice(0, 8)}`;
+}
+
 export function modelConfigDraftKey(tenantID: string, editingID?: string, credentialSourceID?: string) {
   if (editingID) return `${tenantID}:edit:${editingID}`;
   if (credentialSourceID) return `${tenantID}:reuse:${credentialSourceID}`;

@@ -33,7 +33,13 @@ FROM omr_run o
 JOIN agent_worker_task wt ON wt.tenant_id=o.tenant_id AND wt.id=o.runtime_task_id
 WHERE o.tenant_id=$1::uuid AND o.scoring_run_id=$2::uuid AND o.runtime_task_id IS NOT NULL AND o.deleted_at IS NULL
   AND wt.status IN ('queued','leased','running')
-ORDER BY o.created_at`, tenantID, runID)
+UNION
+SELECT wt.id::text
+FROM subjective_grading_batch batch
+JOIN subjective_grading_run ai_run ON ai_run.tenant_id=batch.tenant_id AND ai_run.batch_id=batch.id AND ai_run.deleted_at IS NULL
+JOIN agent_worker_task wt ON wt.tenant_id=ai_run.tenant_id AND wt.source_type='subjective_grading_run' AND wt.source_id=ai_run.id
+WHERE batch.tenant_id=$1::uuid AND batch.scoring_run_id=$2::uuid AND batch.deleted_at IS NULL
+  AND wt.status IN ('queued','leased','running')`, tenantID, runID)
 	if err != nil {
 		return ScoringRun{}, nil, err
 	}
@@ -88,10 +94,44 @@ WHERE o.tenant_id=$1::uuid AND o.scoring_run_id=$2::uuid AND o.deleted_at IS NUL
 	if active > 0 {
 		return ScoringRun{}, ErrInvalidTransition
 	}
+	if err = tx.QueryRowContext(ctx, `SELECT count(*) FROM subjective_grading_batch batch
+JOIN subjective_grading_run ai_run ON ai_run.tenant_id=batch.tenant_id AND ai_run.batch_id=batch.id AND ai_run.deleted_at IS NULL
+JOIN agent_worker_task wt ON wt.tenant_id=ai_run.tenant_id AND wt.source_type='subjective_grading_run' AND wt.source_id=ai_run.id
+WHERE batch.tenant_id=$1::uuid AND batch.scoring_run_id=$2::uuid AND batch.deleted_at IS NULL
+  AND wt.status IN ('queued','leased','running')`, tenantID, runID).Scan(&active); err != nil {
+		return ScoringRun{}, err
+	}
+	if active > 0 {
+		return ScoringRun{}, ErrInvalidTransition
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE subjective_grading_batch SET status='cancelled',updated_at=now()
+WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND deleted_at IS NULL AND status <> 'cancelled'`, tenantID, runID); err != nil {
+		return ScoringRun{}, err
+	}
 	if _, err = tx.ExecContext(ctx, `UPDATE omr_run SET status='invalidated',completed_at=COALESCE(completed_at,now()),updated_at=now() WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND status IN ('queued','processing','retryable_error','terminal_error') AND deleted_at IS NULL`, tenantID, runID); err != nil {
 		return ScoringRun{}, err
 	}
 	if _, err = tx.ExecContext(ctx, `UPDATE review_task SET status='cancelled',assigned_to=NULL,claimed_at=NULL,claim_expires_at=NULL,return_reason='scoring_run_cancelled',revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND status IN ('pending','assigned','in_progress','returned') AND deleted_at IS NULL`, tenantID, runID); err != nil {
+		return ScoringRun{}, err
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE arbitration_task arb SET status='cancelled',assigned_to=NULL,revision=arb.revision+1,updated_at=now()
+FROM double_mark_session dm JOIN review_task rt ON rt.tenant_id=dm.tenant_id AND rt.id=dm.first_review_task_id
+WHERE arb.tenant_id=$1::uuid AND arb.double_mark_session_id=dm.id AND rt.scoring_run_id=$2::uuid
+AND arb.status IN ('pending','assigned') AND arb.deleted_at IS NULL`, tenantID, runID); err != nil {
+		return ScoringRun{}, err
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE double_mark_session dm SET status='cancelled',updated_at=now()
+FROM review_task rt WHERE dm.tenant_id=$1::uuid AND rt.tenant_id=dm.tenant_id AND rt.id=dm.first_review_task_id
+AND rt.scoring_run_id=$2::uuid AND dm.status IN ('pending','first_submitted','second_submitted','needs_arbitration') AND dm.deleted_at IS NULL`, tenantID, runID); err != nil {
+		return ScoringRun{}, err
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE question_grade SET is_current=false,status='invalidated'
+WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND is_current AND deleted_at IS NULL`, tenantID, runID); err != nil {
+		return ScoringRun{}, err
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE final_grade fg SET deleted_at=now(),updated_at=now()
+FROM double_mark_session dm JOIN review_task rt ON rt.tenant_id=dm.tenant_id AND rt.id=dm.first_review_task_id
+WHERE fg.tenant_id=$1::uuid AND fg.double_mark_session_id=dm.id AND rt.scoring_run_id=$2::uuid AND fg.deleted_at IS NULL AND NOT fg.locked`, tenantID, runID); err != nil {
 		return ScoringRun{}, err
 	}
 	run, err = scanScoringRun(tx.QueryRowContext(ctx, `
@@ -201,7 +241,13 @@ func (s *PostgresStore) refreshScoringRunTx(ctx context.Context, tx *sql.Tx, ten
 	err = tx.QueryRowContext(ctx, `
 SELECT
   (SELECT count(*) FROM omr_run WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND status IN ('queued','processing','retryable_error') AND deleted_at IS NULL),
-  (SELECT count(*) FROM review_task WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND status IN ('pending','assigned','in_progress','returned') AND deleted_at IS NULL),
+  (SELECT count(DISTINCT pending.answer_segment_id) FROM (
+     SELECT answer_segment_id FROM review_task WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND status IN ('pending','assigned','in_progress','returned') AND deleted_at IS NULL
+     UNION ALL
+     SELECT arb.answer_segment_id FROM arbitration_task arb JOIN double_mark_session dm ON dm.tenant_id=arb.tenant_id AND dm.id=arb.double_mark_session_id
+       JOIN review_task rt ON rt.tenant_id=dm.tenant_id AND rt.id=dm.first_review_task_id
+       WHERE arb.tenant_id=$1::uuid AND rt.scoring_run_id=$2::uuid AND arb.status IN ('pending','assigned') AND arb.deleted_at IS NULL
+   ) pending),
   (SELECT count(*) FROM omr_run WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND status='terminal_error' AND deleted_at IS NULL),
   (SELECT count(*) FROM question_grade WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND source='rule_confirmed' AND is_current AND status='confirmed' AND deleted_at IS NULL),
   (SELECT count(*) FROM question_grade WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND source='human' AND is_current AND status='confirmed' AND deleted_at IS NULL)

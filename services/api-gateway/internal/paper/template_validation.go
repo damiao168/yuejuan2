@@ -205,7 +205,45 @@ func buildReadinessForScope(total float64, classIDs, candidateIDs []string, pape
 		}
 	}
 	configuration := newReadinessConfigurationSnapshot(total, classIDs, candidateIDs, papers, questions, locked)
-	return ReadinessResult{Ready: ready, ConfigurationHash: stableContentHash(configuration), Checks: checks}
+	return ReadinessResult{Ready: ready, ConfigurationHash: stableContentHash(configuration), Checks: checks, Advisories: buildReadinessAdvisories(questions)}
+}
+
+func buildReadinessAdvisories(questions []Question) []ReadinessAdvisory {
+	advisories := []ReadinessAdvisory{}
+	manualOnly := []ReadinessAdvisoryQuestion{}
+	manualOnlyScore := 0.0
+	for _, question := range questions {
+		if HasAutomatedScoringPath(question.QuestionType) {
+			continue
+		}
+		manualOnly = append(manualOnly, ReadinessAdvisoryQuestion{QuestionID: question.ID, QuestionNo: question.QuestionNo, QuestionType: question.QuestionType, Score: question.Score})
+		manualOnlyScore += question.Score
+	}
+	if len(manualOnly) == 0 {
+		return advisories
+	}
+	return append(advisories, ReadinessAdvisory{
+		Code:      "manual_only_question_types",
+		Label:     "全人工评阅题目",
+		Severity:  "warning",
+		Section:   "questions",
+		Message:   fmt.Sprintf("%d 道题（%s）的题型没有自动评分能力，合计 %.2f 分将 100%% 由人工评阅，阅卷开始后每份答卷都会生成人工任务。", len(manualOnly), summarizeAdvisoryQuestions(manualOnly), manualOnlyScore),
+		Score:     manualOnlyScore,
+		Questions: manualOnly,
+	})
+}
+
+func summarizeAdvisoryQuestions(questions []ReadinessAdvisoryQuestion) string {
+	const maxListed = 8
+	labels := []string{}
+	for index, question := range questions {
+		if index == maxListed {
+			labels = append(labels, fmt.Sprintf("等 %d 道", len(questions)))
+			break
+		}
+		labels = append(labels, fmt.Sprintf("%s·%s", question.QuestionNo, question.QuestionType))
+	}
+	return strings.Join(labels, "、")
 }
 
 func compactQuestionNumbers(values []string) string {

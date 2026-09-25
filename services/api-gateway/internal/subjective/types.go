@@ -25,6 +25,7 @@ var (
 	ErrRubricMissing           = errors.New("question has no rubric")
 	ErrInvalidModelOutput      = errors.New("invalid model output")
 	ErrIdempotencyConflict     = errors.New("subjective grading idempotency conflict")
+	ErrBatchCancelled          = errors.New("subjective grading batch cancelled")
 	ErrMathHumanReviewRequired = errors.New("math evidence requires human review")
 )
 
@@ -271,6 +272,7 @@ type GradingBatch struct {
 	ID              string    `json:"id"`
 	TenantID        string    `json:"tenant_id"`
 	IdempotencyKey  string    `json:"idempotency_key"`
+	ScoringRunID    string    `json:"scoring_run_id,omitempty"`
 	Status          string    `json:"status"`
 	SegmentIDs      []string  `json:"segment_ids"`
 	TotalCount      int       `json:"total_count"`
@@ -286,6 +288,7 @@ type GradingBatch struct {
 type CreateBatchInput struct {
 	IdempotencyKey string   `json:"idempotency_key"`
 	SegmentIDs     []string `json:"segment_ids"`
+	ScoringRunID   string   `json:"scoring_run_id,omitempty"`
 }
 
 type UpdateBatchInput struct {
@@ -327,6 +330,8 @@ type Store interface {
 	UpdateRun(ctx context.Context, tenantID string, runID string, input UpdateRunInput) (GradingRun, error)
 	CreateBatch(ctx context.Context, tenantID string, actorID string, input CreateBatchInput) (GradingBatch, error)
 	GetBatch(ctx context.Context, tenantID string, batchID string) (GradingBatch, error)
+	ListScoringRunBatches(ctx context.Context, tenantID string, scoringRunID string) ([]GradingBatch, error)
+	FailedBatchSegments(ctx context.Context, tenantID string, batchID string) ([]string, error)
 	RefreshBatch(ctx context.Context, tenantID string, batchID string) (GradingBatch, error)
 	UpdateBatch(ctx context.Context, tenantID string, batchID string, input UpdateBatchInput) (GradingBatch, error)
 }

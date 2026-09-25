@@ -14,11 +14,11 @@ export interface SubjectiveGradingBatchEnqueueResult {
   }>;
 }
 
-export async function createSubjectiveGradingBatch(idempotencyKey: string, segmentIds: string[]) {
+export async function createSubjectiveGradingBatch(idempotencyKey: string, segmentIds: string[], scoringRunId?: string) {
   return apiClient.request<{ batch: SubjectiveGradingBatch }>("/api/v1/subjective-grading-batches", {
     method: "POST",
     headers: { "Idempotency-Key": idempotencyKey },
-    body: JSON.stringify({ idempotency_key: idempotencyKey, segment_ids: segmentIds })
+    body: JSON.stringify({ idempotency_key: idempotencyKey, segment_ids: segmentIds, scoring_run_id: scoringRunId })
   });
 }
 
@@ -32,6 +32,14 @@ export async function enqueueSubjectiveGradingBatch(batchId: string) {
 
 export async function getSubjectiveGradingBatch(batchId: string, signal?: AbortSignal) {
   return apiClient.request<{ batch: SubjectiveGradingBatch }>(`/api/v1/subjective-grading-batches/${encodeURIComponent(batchId)}`, { signal });
+}
+
+export async function getScoringRunAIBatches(runId: string) {
+  return apiClient.request<{ batches: SubjectiveGradingBatch[] }>(`/api/v1/scoring-runs/${encodeURIComponent(runId)}/ai-batches`);
+}
+
+export async function getFailedSubjectiveBatchSegments(batchId: string) {
+  return apiClient.request<{ segment_ids: string[] }>(`/api/v1/subjective-grading-batches/${encodeURIComponent(batchId)}/failed-segments`);
 }
 
 export async function recoverSubjectiveBatchCommand(commandId: string) {

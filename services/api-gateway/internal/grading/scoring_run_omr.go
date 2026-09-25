@@ -407,6 +407,25 @@ func (s *PostgresStore) ConfirmRuleGrade(ctx context.Context, tenantID, segmentI
 		return QuestionGrade{}, err
 	}
 	defer tx.Rollback()
+	// Lock the parent run before the segment. Cancellation takes the same run
+	// lock, so a late rule result cannot write into a cancelling/cancelled run.
+	var expectedRunID sql.NullString
+	err = tx.QueryRowContext(ctx, `SELECT scoring_run_id::text FROM answer_candidate WHERE tenant_id=$1::uuid AND answer_segment_id=$2::uuid AND is_current AND decision='confirmed' AND deleted_at IS NULL`, tenantID, segmentID).Scan(&expectedRunID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return QuestionGrade{}, ErrNotFound
+	}
+	if err != nil {
+		return QuestionGrade{}, err
+	}
+	if expectedRunID.Valid {
+		var runStatus string
+		if err = tx.QueryRowContext(ctx, `SELECT status FROM scoring_run WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, expectedRunID.String).Scan(&runStatus); err != nil {
+			return QuestionGrade{}, err
+		}
+		if runStatus != "queued" && runStatus != "processing" && runStatus != "needs_review" && runStatus != "failed" {
+			return QuestionGrade{}, ErrInvalidTransition
+		}
+	}
 	var examID, submissionID, questionID, candidateID, ruleID, runID string
 	err = tx.QueryRowContext(ctx, `
 SELECT sub.exam_id::text, seg.submission_id::text, seg.question_id::text,
@@ -422,6 +441,9 @@ FOR UPDATE OF seg`, tenantID, segmentID).Scan(&examID, &submissionID, &questionI
 	}
 	if err != nil {
 		return QuestionGrade{}, err
+	}
+	if (expectedRunID.Valid && runID != expectedRunID.String) || (!expectedRunID.Valid && runID != "") {
+		return QuestionGrade{}, ErrRevisionConflict
 	}
 	var existing QuestionGrade
 	var existingEvidence []byte

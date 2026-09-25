@@ -2,6 +2,7 @@ package grading
 
 import (
 	"context"
+	"errors"
 )
 
 func (s *PostgresStore) ProcessRuleCandidates(ctx context.Context, tenantID, runID, actorID string, engine *Engine) error {
@@ -38,27 +39,60 @@ func (s *PostgresStore) ProcessRuleCandidates(ctx context.Context, tenantID, run
 		if loadErr != nil {
 			return loadErr
 		}
+		source, reason := reviewSourceRuleReview, reviewReasonRuleNotConfirmed
 		grade, gradeErr := engine.Grade(contextValue)
-		if gradeErr != nil {
-			return gradeErr
-		}
-		if grade.AutoPass && !grade.NeedsHumanReview {
+		switch {
+		case gradeErr != nil:
+			route, routable := manualReviewRouteForGradeError(gradeErr, contextValue.Question.QuestionType)
+			if !routable {
+				return gradeErr
+			}
+			source, reason = route.Source, route.Reason
+		case grade.AutoPass && !grade.NeedsHumanReview:
 			if _, confirmErr := s.ConfirmRuleGrade(ctx, tenantID, segmentID, actorID, grade); confirmErr != nil {
+				if errors.Is(confirmErr, ErrInvalidTransition) {
+					return nil
+				}
 				return confirmErr
 			}
 			continue
 		}
-		result, insertErr := s.db.ExecContext(ctx, `INSERT INTO review_task(tenant_id,exam_id,question_id,question_no,answer_segment_id,submission_id,anonymous_code,source,status,priority,grade_round,reason_code,scoring_run_id,created_by) SELECT seg.tenant_id,sub.exam_id,q.id,q.question_no,seg.id,sub.id,COALESCE(NULLIF(sub.candidate_no,''),seg.id::text),'rule_review_required','pending',60,'single','rule_not_auto_confirmed',$3::uuid,$4::uuid FROM answer_segment seg JOIN submission sub ON sub.tenant_id=seg.tenant_id AND sub.id=seg.submission_id JOIN question q ON q.tenant_id=seg.tenant_id AND q.id=seg.question_id WHERE seg.tenant_id=$1::uuid AND seg.id=$2::uuid ON CONFLICT (tenant_id,answer_segment_id,source,grade_round) WHERE status IN ('pending','assigned','in_progress','returned') AND deleted_at IS NULL AND source <> 'ai_panel_disagreement' DO NOTHING`, tenantID, segmentID, runID, actorID)
-		if insertErr != nil {
-			return insertErr
-		}
-		count, _ := result.RowsAffected()
-		if count == 1 {
-			if _, err = s.db.ExecContext(ctx, `UPDATE scoring_run SET review_count=review_count+1,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, runID); err != nil {
-				return err
+		if err := s.createRuleReviewTask(ctx, tenantID, segmentID, runID, actorID, source, reason); err != nil {
+			if errors.Is(err, ErrInvalidTransition) {
+				return nil
 			}
+			return err
 		}
 	}
 	_, err = s.RefreshScoringRun(ctx, tenantID, runID)
 	return err
+}
+
+func (s *PostgresStore) createRuleReviewTask(ctx context.Context, tenantID, segmentID, runID, actorID, source, reason string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var status string
+	if err := tx.QueryRowContext(ctx, `SELECT status FROM scoring_run WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, runID).Scan(&status); err != nil {
+		return err
+	}
+	if status != "queued" && status != "processing" && status != "needs_review" && status != "failed" {
+		return ErrInvalidTransition
+	}
+	result, err := tx.ExecContext(ctx, `INSERT INTO review_task(tenant_id,exam_id,question_id,question_no,answer_segment_id,submission_id,anonymous_code,source,status,priority,grade_round,reason_code,scoring_run_id,created_by) SELECT seg.tenant_id,sub.exam_id,q.id,q.question_no,seg.id,sub.id,COALESCE(NULLIF(sub.candidate_no,''),seg.id::text),$5,'pending',60,'single',$6,$3::uuid,$4::uuid FROM answer_segment seg JOIN submission sub ON sub.tenant_id=seg.tenant_id AND sub.id=seg.submission_id JOIN question q ON q.tenant_id=seg.tenant_id AND q.id=seg.question_id WHERE seg.tenant_id=$1::uuid AND seg.id=$2::uuid ON CONFLICT (tenant_id,answer_segment_id,source,grade_round) WHERE status IN ('pending','assigned','in_progress','returned') AND deleted_at IS NULL AND source <> 'ai_panel_disagreement' DO NOTHING`, tenantID, segmentID, runID, actorID, source, reason)
+	if err != nil {
+		return err
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 1 {
+		if _, err := tx.ExecContext(ctx, `UPDATE scoring_run SET review_count=review_count+1,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, runID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }

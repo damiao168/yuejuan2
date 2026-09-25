@@ -107,6 +107,23 @@ export interface ReadinessCheck {
   section: string;
 }
 
+export interface ReadinessAdvisoryQuestion {
+  question_id: string;
+  question_no: string;
+  question_type: string;
+  score: number;
+}
+
+export interface ReadinessAdvisory {
+  code: string;
+  label: string;
+  severity: "warning" | "info";
+  message: string;
+  section: string;
+  score: number;
+  questions: ReadinessAdvisoryQuestion[];
+}
+
 export interface ExamReadiness {
   ready: boolean;
   confirmed: boolean;
@@ -114,6 +131,7 @@ export interface ExamReadiness {
   snapshot_id?: string;
   import_snapshot_available: boolean;
   checks: ReadinessCheck[];
+  advisories?: ReadinessAdvisory[];
   confirmed_at?: string;
   confirmed_by?: string;
 }

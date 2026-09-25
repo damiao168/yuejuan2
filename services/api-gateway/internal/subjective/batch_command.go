@@ -27,7 +27,7 @@ func batchRequestHash(segments []string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-const batchCommandSelect = `SELECT id::text,tenant_id::text,idempotency_key,status,segment_ids,total_count,queued_count,processing_count,succeeded_count,failed_count,created_by::text,created_at,updated_at FROM subjective_grading_batch`
+const batchCommandSelect = `SELECT id::text,tenant_id::text,idempotency_key,COALESCE(scoring_run_id::text,''),status,segment_ids,total_count,queued_count,processing_count,succeeded_count,failed_count,created_by::text,created_at,updated_at FROM subjective_grading_batch`
 
 func (s *PostgresStore) RecoverBatchCommand(ctx context.Context, tenantID, actorID, commandID string) (BatchCommandRecovery, error) {
 	result := BatchCommandRecovery{CommandID: commandID, Status: "not_accepted"}

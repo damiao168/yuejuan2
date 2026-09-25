@@ -75,6 +75,14 @@ POST /api/v1/answer-segments/{id}/subjective-ai-grade
 
 普通系统日志只记录 request id、状态、尝试次数、耗时和错误码，不记录完整答案、学生身份或最终成绩。
 
+## 评分轮次中的 AI 建议批次
+
+`POST /api/v1/subjective-grading-batches` 可选传 `scoring_run_id`，与 `idempotency_key`、`segment_ids` 一起建立持久关联。关联批次只接受本轮仍待人工处理且冻结模式为 `AI_ASSIST` 或 `AI_FAST_CONFIRM` 的片段；无 `scoring_run_id` 的历史独立批次保持原语义。相同幂等键不能改换轮次或片段。
+
+`GET /api/v1/scoring-runs/{runId}/ai-batches` 返回本轮批次，前端据此在刷新或换浏览器后恢复进度。`POST /api/v1/subjective-grading-batches/{batchId}/enqueue` 对已取消批次返回 `409 subjective_grading_batch_cancelled`。取消评分轮次时，关联的活跃 AI worker task 一起取消，批次变为 `cancelled`；数据库禁止取消开始后新建该轮次的 AI worker task。
+
+批次的 `completed` 只表示建议生成结束。教师仍须在人工任务中审阅原答题证据和 Rubric，明确提交分数。详细交互见 [评分轮次与 AI 辅助阅卷方案](../architecture/scoring-run-ai-assisted-workflow-2026-09-25.md)。
+
 ## 三智能体 Panel 影子能力
 
 `subjective_grading_panel`（迁移 `000155`）以答案版本和 Rubric 版本为冻结边界，将 A/B/C 三次独立 `subjective_grading_run` 关联起来；原有单智能体 HTTP 路由和最终成绩发布流程未改变。Panel 尚未接入公开路由或自动发布，仅可由受治理的服务端调用。

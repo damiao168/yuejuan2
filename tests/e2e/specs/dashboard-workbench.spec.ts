@@ -78,7 +78,7 @@ test("首页主动作完成单页新建考试并进入考试准备", async ({ pa
   await page.getByRole("button", { name: /系统通用高中考试方案/ }).click();
   await expect(page.getByText("已套用试卷结构")).toHaveCount(3);
   await page.locator(".exam-composer-submit").getByRole("button", { name: "使用方案创建考试" }).click();
-  await expect(page).toHaveURL(/#\/admin\/exams\/exam-created-math\/settings/);
+  await expect(page).toHaveURL(/#\/admin\/exams\/exam-created-math\/students/);
 
   await page.goto("/#/admin/dashboard");
   await page.getByRole("row", { name: /主观题等待确认/ }).getByRole("button", { name: "继续阅卷" }).click();

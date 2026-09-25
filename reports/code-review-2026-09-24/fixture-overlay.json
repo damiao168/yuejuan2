@@ -1,0 +1,6 @@
+{
+  "Replace": {
+    "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\e2e_math_rubric_score_test.go": "D:\\project\\yuejuan\\reports\\code-review-2026-09-24\\math_fixture_diagnostic.go",
+    "D:\\project\\yuejuan\\services\\api-gateway\\internal\\server\\e2e_auth_security_test.go": "D:\\project\\yuejuan\\reports\\code-review-2026-09-24\\auth_fixture_diagnostic.go"
+  }
+}

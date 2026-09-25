@@ -310,7 +310,7 @@ jobs:
           EDUGRADE_E2E_DATABASE_URL: postgres://edugrade:edugrade@127.0.0.1:5432/edugrade_e2e?sslmode=disable
         run: |
           test -n "${EDUGRADE_E2E_DATABASE_URL}"
-          go test ./internal/server -run 'PostgresTestDatabase|PostgresMigrationUpgrade|PostgresManagedConfig|Story056.*E2E|Reliability.*Postgres' -count=1 -v
+          go test ./internal/server -run 'PostgresTestDatabase|PostgresMigrationUpgrade|PostgresManagedConfig|Story056.*E2E|Reliability.*Postgres|TestTeacherAccountSecurityE2EWithPostgres|TestPostgresMathRubricScoreUsesOnlyFrozenExamRubric|TestCancelledScoringRunCannotReassignOrSubmitReview|TestRuleConfirmationWaitsForConcurrentCancellation|TestScoringAIBatchCancellationBlocksNewTasks|TestFailedScoringAIBatchSegmentsRequireOpenTeacherTask|TestReleaseFeedbackUsesFinalArbitrationAndFreezesIt' -count=1 -v
 
       - name: Authorization contract against migrated PostgreSQL
         env:

@@ -125,6 +125,26 @@
         }
       }
     },
+    "/api/v1/scoring-runs/{runId}/ai-batches": {
+      "get": {
+        "tags": ["Grading"], "operationId": "listScoringRunAIBatches", "summary": "List durable AI suggestion batches for a scoring run",
+        "parameters": [{ "name": "runId", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1 } }],
+        "responses": {
+          "200": { "description": "AI suggestion batches", "content": { "application/json": { "schema": { "type": "object", "required": ["batches"], "properties": { "batches": { "type": "array", "items": { "$ref": "#/components/schemas/SubjectiveGradingBatch" } } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/subjective-grading-batches/{batchId}/failed-segments": {
+      "get": {
+        "tags": ["Grading"], "operationId": "getFailedSubjectiveBatchSegments", "summary": "List failed AI suggestions eligible for a new attempt",
+        "parameters": [{ "name": "batchId", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1 } }],
+        "responses": {
+          "200": { "description": "Failed segments with an open teacher task", "content": { "application/json": { "schema": { "type": "object", "required": ["segment_ids"], "properties": { "segment_ids": { "type": "array", "items": { "type": "string" } } } } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/api/v1/scoring-runs/{runId}/cancel": {
       "post": {
         "tags": ["Grading"], "operationId": "cancelScoringRun", "summary": "Cancel a scoring run and its active worker tasks",
@@ -30778,6 +30798,10 @@
           "idempotency_key": {
             "type": "string"
           },
+          "scoring_run_id": {
+            "type": "string",
+            "description": "Optional scoring run that owns this AI suggestion batch."
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -30842,6 +30866,10 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 128
+          },
+          "scoring_run_id": {
+            "type": "string",
+            "description": "When set, all segments must be open AI-mode review tasks in this scoring run."
           },
           "segment_ids": {
             "type": "array",
