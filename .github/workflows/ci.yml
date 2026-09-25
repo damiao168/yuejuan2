@@ -573,6 +573,26 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - name: Preflight real E2E infrastructure images
+        run: |
+          set -euo pipefail
+          images="$(docker compose -f infra/docker-compose/docker-compose.story060-e2e.yml config --format json |
+            jq -er '[.services.minio.image, .services["minio-init"].image] | unique[]')"
+          while IFS= read -r image; do
+            success=0
+            for attempt in 1 2 3; do
+              if docker pull "$image"; then
+                success=1
+                break
+              fi
+              echo "Pull failed: $image (attempt $attempt/3)"
+              if [ "$attempt" -lt 3 ]; then sleep "$((attempt * 5))"; fi
+            done
+            if [ "$success" -ne 1 ]; then
+              echo "::error::Unable to pull required E2E image: $image"
+              exit 1
+            fi
+          done <<< "$images"
       - name: Start real isolated system stack
         run: docker compose -f infra/docker-compose/docker-compose.story060-e2e.yml up -d --build --wait --wait-timeout 300 browser-gateway subjective-grading-worker
       - name: Verify real grading-agent and PostgreSQL persistence

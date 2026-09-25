@@ -26,7 +26,8 @@ services:
       retries: 60
 
   minio:
-    image: ${EDUGRADE_MINIO_IMAGE:-quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z}
+    # Same upstream image digest; the historical MinIO image includes mc.
+    image: ${EDUGRADE_MINIO_IMAGE:-ghcr.io/l33tlamer/minio-backup@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e}
     command: ["server", "/data"]
     environment:
       MINIO_ROOT_USER: story060e2e
@@ -74,7 +75,7 @@ services:
     restart: "no"
 
   minio-init:
-    image: ${EDUGRADE_MINIO_MC_IMAGE:-quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z}
+    image: ${EDUGRADE_MINIO_MC_IMAGE:-ghcr.io/l33tlamer/minio-backup@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e}
     depends_on:
       minio:
         condition: service_healthy
