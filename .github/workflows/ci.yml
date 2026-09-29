@@ -562,7 +562,7 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
       - name: Upload SBOM evidence
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: edugrade-sboms
           path: sbom-*.cdx.json
@@ -625,7 +625,7 @@ jobs:
         run: docker compose -f infra/docker-compose/docker-compose.story060-e2e.yml logs --no-color --tail 300
       - name: Upload real browser evidence
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: real-system-e2e-evidence
           path: output/playwright/real-test-results
