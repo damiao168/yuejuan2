@@ -27,6 +27,7 @@ export function collectFineTuningEvidence(paths = {}) {
     privacy_approved: realManifest?.privacy_approved === true,
     grouped_split_verified: realManifest?.leakage_audit?.passed === true,
     frozen_test_set: realManifest?.test_set_frozen === true,
+    // 从最新记录往回数连续没有实质改善的迭代，不能用历史累计次数代替平台期。
     prompt_plateau_iterations: promptHistory.iterations.slice().reverse()
       .findIndex((iteration) => iteration.material_improvement === true) < 0
       ? promptHistory.iterations.length

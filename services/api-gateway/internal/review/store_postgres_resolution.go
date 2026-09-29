@@ -71,6 +71,7 @@ FOR UPDATE
 		return nil, nil, nil, err
 	}
 	if !firstOK || !secondOK {
+		// 先到的一份只更新进度；另一份未提交前，不能生成终分或仲裁任务。
 		status := "pending"
 		if firstOK {
 			status = "first_submitted"
@@ -90,6 +91,7 @@ WHERE tenant_id = $1 AND id::text = $2
 	}
 	diff := math.Abs(first.Score - second.Score)
 	session.ScoreDifference = floatPtr(diff)
+	// 阈值单位是分，等于阈值也自动合分；使用会话创建时保存的规则。
 	if diff <= session.Threshold {
 		score, err := resolveScore(session.ResolutionStrategy, first.Score, second.Score)
 		if err != nil {
@@ -113,6 +115,7 @@ WHERE tenant_id = $1 AND id::text = $2
 		session.FinalGradeID = finalGrade.ID
 		return &session, &finalGrade, nil, nil
 	}
+	// 是否允许原阅卷人参与仲裁取创建仲裁时的策略，并保存到仲裁任务中。
 	policy, _ := s.effectivePolicyTx(ctx, tx, tenantID, session.ExamID, session.QuestionID)
 	reason := fmt.Sprintf("score difference %.2f exceeds threshold %.2f", diff, session.Threshold)
 	arbitrationTask, err := s.createArbitrationTaskTx(ctx, tx, tenantID, actorID, session, first, second, reason, "", policy.AllowSameArbitrator)

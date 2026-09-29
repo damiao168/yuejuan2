@@ -96,9 +96,8 @@ func validateFrozenRubric(frozen FrozenRubric) error {
 	return nil
 }
 
-// ScoreFrozenRubric is advisory and side-effect free. Only canonical server
-// facts can settle a point; legacy unsupported and model candidates cannot
-// become zeroes. Persisting an ai_grade is left to the gated MATH-13 workflow.
+// ScoreFrozenRubric 按考试冻结的量规计算教师建议，不保存成绩。
+// 模型候选只补充待复核线索，不能代替证据决定得分或零分。
 func ScoreFrozenRubric(frozen FrozenRubric, effective EffectiveArtifact, candidates []CriterionCandidate) (RubricScore, error) {
 	if err := validateFrozenRubric(frozen); err != nil {
 		return RubricScore{}, err
@@ -215,6 +214,7 @@ func ScoreFrozenRubric(frozen FrozenRubric, effective EffectiveArtifact, candida
 	out.VerifiedScore = float64(verified) / 10000
 	out.UnresolvedScore = float64(unresolvedUnits) / 10000
 	out.ScoreRange = ScoreRange{Min: out.VerifiedScore, Max: float64(verified+unresolvedUnits) / 10000}
+	// 仍有未决分值时只给出分数范围；不能把这些分值默认当成零分凑成建议总分。
 	if unresolvedUnits == 0 {
 		value := out.VerifiedScore
 		out.SuggestedScore = &value

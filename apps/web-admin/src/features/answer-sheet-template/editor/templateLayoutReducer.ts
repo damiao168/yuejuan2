@@ -25,6 +25,7 @@ export function templateLayoutReducer(layout: TemplateLayout, action: TemplateLa
       case "updateRegion": return page.question_regions.some((region) => region.id === action.regionId)
         ? { ...page, question_regions: page.question_regions.map((region) =>
           region.id === action.regionId ? { ...region, ...action.patch } : region) } : page;
+      // 拖到其他页时同时移除原页同题区域，避免同一题被两个区域重复覆盖。
       case "replaceQuestionRegion": return page.page_no === action.pageNo
         || page.question_regions.some((region) => region.question_id === action.questionId)
         ? { ...page, question_regions: page.question_regions
@@ -46,6 +47,7 @@ export function templateLayoutReducer(layout: TemplateLayout, action: TemplateLa
           region.id === action.regionId ? { ...region, option_regions: (region.option_regions ?? []).filter((option) =>
             option.id !== action.optionId) } : region) } : page;
       case "suggestRegions": {
+        // 识别建议只替换命中题目的区域，未命中的人工标注必须保留。
         const suggestions = action.pages.get(page.page_no) ?? [];
         if (!suggestions.length) return page;
         const matchedIDs = new Set(suggestions.map((region) => region.question_id));

@@ -15,6 +15,7 @@ export interface ClientBounds {
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
 export function clientPointToCanonical(point: ClientPoint, bounds: ClientBounds): ClientPoint {
+  // 输入是浏览器视口像素，输出是原图左上角起算的 0～1 比例；bounds 必须对应实际图像区域。
   if (bounds.width <= 0 || bounds.height <= 0) {
     return { x: 0, y: 0 };
   }
@@ -56,5 +57,6 @@ export function geometryStyle(geometry: CanonicalImageGeometry) {
 }
 
 export function hasDrawableArea(geometry: CanonicalImageGeometry, minimum = 0.003) {
+  // 最小边长按图像比例计算，0.003 为宽高各 0.3%，不是固定屏幕像素。
   return geometry.width >= minimum && geometry.height >= minimum;
 }

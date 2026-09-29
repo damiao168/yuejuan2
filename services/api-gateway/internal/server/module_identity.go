@@ -19,6 +19,7 @@ type IdentityModule struct {
 }
 
 func NewIdentityModule(cfg config.Config, stores IdentityStores, loginGuard auth.LoginAttemptGuard) *IdentityModule {
+	// 认证和组织 handler 共享同一组租户存储；登录风控参数统一从配置传入，避免测试或生产走不同的身份边界。
 	return &IdentityModule{
 		AuthStore: stores.Auth,
 		OrgStore:  stores.Org,

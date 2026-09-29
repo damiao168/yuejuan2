@@ -20,6 +20,7 @@ func (h *Handler) RecoverCommand(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
+	// 盲测样本沿用普通复核入口，但回执由 seedHook 保存；普通回执不存在时再查它。
 	if result.Status == "not_accepted" && h.seedHook != nil {
 		result, err = h.seedHook.RecoverCommand(r.Context(), user.TenantID, user.ID, r.PathValue("commandId"))
 		if err != nil {

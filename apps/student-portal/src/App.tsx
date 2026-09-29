@@ -27,6 +27,7 @@ import { applyReadingSize, readReadingSize } from "@edugrade/design-tokens";
 
 type Page = { kind: "home" } | { kind: "exam"; examID: string };
 
+// 只从 hash 读取考试 ID，解码失败时回到首页，避免坏链接阻塞学生端。
 function readPage(): Page {
   const value = window.location.hash.replace(/^#/, "");
   const match = value.match(/^\/exams\/([^/?#]+)$/);
@@ -75,7 +76,8 @@ export default function App() {
   if (!user) {
     return <LoginScreen onLoggedIn={setUser} />;
   }
-  const eligible = user.roles.includes("student") && user.permissions.includes("student:grade:read");
+  // 学生端同时校验角色和成绩读取权限；登录成功不代表可以查看成绩。
+const eligible = user.roles.includes("student") && user.permissions.includes("student:grade:read");
   if (!eligible) {
     return <AccessDenied user={user} onLogout={() => void logout().finally(() => setUser(null))} />;
   }

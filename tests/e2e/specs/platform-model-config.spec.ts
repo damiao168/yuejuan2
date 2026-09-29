@@ -9,6 +9,7 @@ test("切换学校后忽略过期配置响应，并保留新学校的配置", as
       { id: "school-b", code: "B", name: "乙学校", status: "active" }], has_more: false
   } }));
   let releaseA!: () => void;
+  // 挂起甲校请求，乙校显示后再释放；不依赖固定 sleep 来碰运气触发响应乱序。
   const pendingA = new Promise<void>(resolve => { releaseA = resolve; });
   let startedA = false;
   let finishedA = false;

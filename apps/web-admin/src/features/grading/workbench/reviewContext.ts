@@ -26,6 +26,7 @@ export function normalizeRubricPoint(value: unknown, index: number): RubricPoint
 }
 
 export function frozenRubricFromContext(context: ReviewTaskContext): Rubric {
+  // 阅卷只能使用任务冻结的细则，不能回查当前可编辑题库并替换历史评分依据。
   const source = context.frozen_rubric;
   return {
     id: asString(source.id, `snapshot-${context.question_snapshot.id}`),
@@ -49,6 +50,7 @@ export function questionFromContext(context: ReviewTaskContext): Question {
     question_type: source.question_type,
     score: source.score,
     stem: source.stem,
+    options: [],
     knowledge_points: source.knowledge_points ?? [],
     sort_order: 0,
     status: "ready",

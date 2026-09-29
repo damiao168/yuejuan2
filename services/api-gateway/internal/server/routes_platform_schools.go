@@ -2,6 +2,7 @@ package server
 
 import "net/http"
 
+// 平台学校汇总接口统一由平台管理员 guard 保护，路径中的 tenant_id 只作为受控查询条件。
 func registerPlatformSchoolRoutes(mux *http.ServeMux, ctx routerContext) {
 	handler := ctx.modules.PlatformSchools
 	mux.Handle("GET /api/v1/platform/schools", ctx.guards.requirePlatformSchoolRead(handler.List))

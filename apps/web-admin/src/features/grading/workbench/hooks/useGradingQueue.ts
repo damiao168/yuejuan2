@@ -133,6 +133,7 @@ export function useGradingQueue({ canManageTasks, canWork, currentUserId, initia
   }, [canManageTasks, canWork, currentUserId, initialExamId, personalScope, queueScope]);
 
   const loadMoreTasks = useCallback((): Promise<ReviewTask[]> => {
+    // 自动续页和手动翻页共享同一在途请求，避免同一游标并发追加两次。
     if (pendingPageRef.current) return pendingPageRef.current;
     if (!hasMoreTasks) return Promise.resolve([]);
     if (!nextTaskCursor) { setPageError("后续任务缺少分页位置，请刷新任务列表"); return Promise.resolve([]); }
@@ -178,6 +179,7 @@ export function useGradingQueue({ canManageTasks, canWork, currentUserId, initia
   useEffect(() => {
     if (hasMoreTasks && !loadingTasks && !loadingMoreTasks && !pageError) void loadMoreTasks();
   }, [hasMoreTasks, loadingTasks, loadingMoreTasks, pageError, loadMoreTasks]);
+  // 仍有后续页时不回绕队首，先补齐队列再判断下一份可处理任务。
   const nextTask = useMemo(() => followingVisibleActionableTask(tasks, selectedTaskId,
     { canManageTasks, initialExamId, keyword, taskFilter }, !hasMoreTasks),
     [canManageTasks, hasMoreTasks, initialExamId, keyword, selectedTaskId, taskFilter, tasks]);

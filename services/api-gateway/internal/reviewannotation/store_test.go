@@ -27,6 +27,7 @@ func TestCanonicalGeometryJSONRoundTrip(t *testing.T) {
 	}
 }
 
+// 覆盖租户隔离和乐观锁：旧 revision 的保存必须失败，不能静默覆盖最新批注。
 func TestMemoryAnnotationTenantIsolationAndOptimisticLock(t *testing.T) {
 	ctx := context.Background()
 	store := NewMemoryStore()

@@ -56,6 +56,7 @@ func (h *Handler) RuleGrade(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
+	// 这里保存规则引擎的建议记录；正式 question_grade 由评分编排中的确认流程写入。
 	grade, err := h.store.CreateGrade(r.Context(), user.TenantID, user.ID, evaluation)
 	if err != nil {
 		writeStoreError(w, r, err)
@@ -355,6 +356,7 @@ func (h *Handler) CancelScoringRun(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
+	// 先将评分任务置为 cancelling，再取消外部 worker；中途失败保留该状态，供再次取消时接续。
 	for _, taskID := range taskIDs {
 		task, getErr := h.runtime.Get(r.Context(), user.TenantID, taskID)
 		if getErr != nil {
@@ -403,6 +405,7 @@ func (h *Handler) RetryFailedScoringRun(w http.ResponseWriter, r *http.Request) 
 			skipped++
 			continue
 		}
+		// 数据库重试准备和 runtime 入队分开提交；入队失败时尽力恢复，不能视为原子操作。
 		if _, requeueErr := h.runtime.Requeue(r.Context(), user.TenantID, prepared.RuntimeTaskID); requeueErr != nil {
 			_ = store.RestoreOMRRetry(r.Context(), user.TenantID, prepared.OMRRunID)
 			skipped++
@@ -467,6 +470,7 @@ func (h *Handler) CompleteOMR(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	overlay, err := h.files.Get(r.Context(), user.TenantID, input.OverlayFileAssetID)
+	// 叠加图必须属于当前 OMR 运行且哈希一致，避免把其他考试的识别产物写入本题。
 	if err != nil || overlay.ExamID != run.ExamID || overlay.OwnerType != "omr_evidence" || overlay.OwnerID != run.ID || overlay.HashSHA256 != input.OverlaySHA256 {
 		httpx.Error(w, r, http.StatusBadRequest, "omr_overlay_invalid", "OMR overlay has an invalid owner, hash, or exam")
 		return
@@ -610,6 +614,7 @@ func decorateOMRCalibrationDetail(detail OMRCalibrationDetail) OMRCalibrationDet
 	return detail
 }
 
+// 路由必须先经过认证和权限中间件；这里仅取上下文身份，不再次认证。
 func mustUser(r *http.Request) auth.User {
 	user, _ := auth.UserFromContext(r.Context())
 	return user

@@ -227,6 +227,7 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusBadGateway, "object_storage_failed", "failed to write object storage")
 		return
 	}
+	// 对象写入成功仍须回读验证大小和哈希，验证通过后才能把元数据标记为 active。
 	if err := h.verifyStoredObject(r, input.StorageBucket, storageKey, header.Size, hashSHA256); err != nil {
 		if hasLifecycle && asset.Lifecycle == LifecyclePendingUpload {
 			_, _ = lifecycle.MarkUploadFailed(r.Context(), user.TenantID, asset.ID, asset.Revision, "object_verification_failed")
@@ -332,6 +333,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
+	// 数据库与对象存储不共用事务；先记录待删状态，清理失败后保留可重试的进度。
 	asset, err := lifecycle.BeginDelete(r.Context(), scope, current.ID, current.Revision)
 	if err != nil {
 		writeStoreError(w, r, err)

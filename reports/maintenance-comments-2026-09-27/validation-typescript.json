@@ -1,0 +1,1387 @@
+{
+  "method": "TypeScript parser + printer(removeComments); directive lines unchanged",
+  "checked": 230,
+  "passed": true,
+  "files": [
+    {
+      "path": "apps/desktop-client/scripts/check-security-config.mjs",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/api/captureUploads.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/api/client.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/api/files.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/api/review.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/api/userError.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/components/OfflineWorkbench.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/features/capture/useExamCaptureContext.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/features/quality/useSubmissionQuality.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/features/runtime/useLocalLogs.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/features/runtime/useRuntimeDiagnostics.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/features/scan-queue/useScanQueue.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/features/scanner/useScannerController.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/features/session/useDesktopSession.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/features/tasks/useReviewTasks.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/features/upload/useUploadSync.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/lib/durableStore.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/lib/incrementalSha256.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/lib/localRuntime.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/lib/offlineStore.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/lib/scanFiles.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/lib/scanQueueWorkflow.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/lib/scannerProfile.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/desktop-client/src/main.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/student-portal/src/App.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/student-portal/src/features/questions/AnswerReview.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/student-portal/src/features/results/SubjectPerformance.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/scripts/check-production-routes.mjs",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/AppShell.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/api/client.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/api/files.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/api/platformSchools.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/api/query.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/api/reports.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/api/scoringAssurance.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/api/subjectiveGrading.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/api/userError.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/api/users.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/auth/capabilities.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/auth/session.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/auth/stepUpContext.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/components/AppLayout.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/components/MathMarkdown.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/components/OcrWorkerAlert.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/components/PendingBusinessCommands.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/components/ProcessingOperationsPanel.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealWorkspace.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/components/RegistrationCorrectionWorkspace.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/components/ScoringPaperMonitor.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/components/TOTPManagement.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/components/features/assessment/AssessmentProfileEditor.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/components/features/review-annotation/ReviewAnnotationWorkspace.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/components/features/review-annotation/geometry.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/components/features/review-annotation/useReviewAnnotations.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ModelApprovalWorkspace.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/calibration/useOMRCalibration.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/templateLayoutReducer.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useRegionEditor.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useRegionSuggestion.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateEditor.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateLifecycle.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplatePreview.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/printing/useStudentPrinting.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/calibrationPresentation.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/ImageQualityWorkspace.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/captureQueries.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/captureWorkflow.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/imageQualityModel.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/submissionColumns.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/submissionPresentation.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/useCaptureBatchDetail.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/createExamDraft.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/createExamValidation.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/examCreateCommand.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/examGroups.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/workspace/businessStages.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/gold-papers/GoldCoverageGaps.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/AIContextPanel.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/MathEvidenceInspector.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/AnswerEvidencePane.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/FastConfirmDrawer.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/gradingTaskContext.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/gradingWorkbench.model.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/scoringCommand.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/taskDraftSaveQueue.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useAnswerViewer.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useExamScoring.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingKeyboard.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingMathActions.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingQueue.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingQueueActions.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingScoreShortcuts.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/mathWorkbenchEvidence.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/reviewContext.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/scoringAIBatches.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/scoringPlan.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/taskPaging.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/members/classes/ClassManagementPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/members/students/studentImport.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/onboarding/OnboardingGate.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperImportReviewPanel.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperImportWorkspace.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/RubricReviewEditor.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/answerShape.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/materials.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/usePaperConfigData.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/usePaperImportWorkflow.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/useScoringRules.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/hooks/useQuestionEditor.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/hooks/useRubricEditor.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/hooks/useModelConfigDrafts.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/lib/modelConfig.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolActivityTab.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolManagementToolbar.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolMembersTab.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolModelsTab.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolUsageTab.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/BankQuestionPicker.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/HistoryQuestionImporter.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/ScoringEditor.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/scoreWorkspaceState.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/useRegradeWorkflow.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/useScoreReleaseWorkflow.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/useScoreWorkspaceData.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/scorePresentation.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/ActivationPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/AdminGradingOperationsPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/AppealCenterPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/ArbitrationPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/AuditLogPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/CaptureBatchPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/ExamManagementPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/LearningReportsPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/LoginPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/OrganizationSetupPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/PanelModelBindingsSection.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/PaperRubricPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/PlatformModelConfigPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/PlatformSchoolsPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/QualityDashboardPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/RecoveryPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/SchoolAIChatPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/ScoreManagementPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/StudentManagementPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/SubjectiveGradingBatchPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/SubmissionCapturePage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/TeacherDashboardPage.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/learningReports.model.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/pages/schoolAiChatMessages.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/query/client.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/router/appRouter.tsx",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "apps/web-admin/src/router/experience.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/scripts/annotation-workflow.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/scripts/build-gold-dataset.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/scripts/build-pilot-package.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/scripts/check-local-runtime.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/scripts/govern-dataset.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/scripts/import-jorgpt.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/scripts/run-annotation-workflow-demo.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/scripts/run-calibration-fairness.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/scripts/run-graduation-audit.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/scripts/run-model-selection.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/scripts/run-regression.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/adapters/index.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/adapters/localModelAdapter.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/adapters/mockAdapter.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/adversaries/index.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/annotations/gold.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/annotations/workflow.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/capabilities.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/datasets/governance.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/datasets/jorgpt.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/evaluators/adversarial.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/evaluators/calibration.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/evaluators/fairness.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/evaluators/gateChecker.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/evaluators/metrics.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/evaluators/modelSelection.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/evaluators/runEval.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/evidenceVerifier.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/graders.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/guardrails/promptInjection.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/humanLabels.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/prompts/registry.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/release/pilot.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/rubric.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/runtime/localRuntime.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/runtime/modelCandidates.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/schemas/gradingSchema.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/src/training/decision.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/tests/annotation-workflow.test.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/tests/eval-gate.test.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/tests/jorgpt-dataset.test.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "lab/tests/local-adapter.test.js",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "packages/sdk/src/runtime.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "packages/shared-types/src/index.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "playwright.real.config.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "scripts/check-architecture-boundaries.mjs",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "scripts/check-authorization-contract.mjs",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "scripts/check-lab-integration.mjs",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "scripts/check-openapi-breaking.mjs",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "scripts/check-openapi-route-debt.mjs",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "scripts/check-story057-grading-contract.mjs",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "scripts/check-story063-subjective-grading.mjs",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "scripts/check-user-facing-copy.mjs",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "scripts/ci/check-go-coverage.mjs",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "scripts/ci/exam-command-client.mjs",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "scripts/ci/schema-version.mjs",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "scripts/ci/shared-client-contract.mjs",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "scripts/lib/openapi-sdk.mjs",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "scripts/update-api-route-coverage.mjs",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "scripts/update-openapi-baseline.mjs",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "tests/e2e/fixtures/apiMocks.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "tests/e2e/real/school-admin-real.spec.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "tests/e2e/specs/business-command-recovery.spec.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "tests/e2e/specs/capture-command-recovery.spec.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "tests/e2e/specs/exam-command-recovery.spec.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "tests/e2e/specs/exam-create.visual.spec.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "tests/e2e/specs/paper-import-progress.spec.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "tests/e2e/specs/platform-model-config.spec.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "tests/e2e/specs/quality-dashboard.spec.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "tests/e2e/specs/scoring-ai-plan.spec.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    },
+    {
+      "path": "tests/integration/shared-client-contract.ts",
+      "equivalent": true,
+      "directives_unchanged": true,
+      "diagnostics": []
+    }
+  ]
+}

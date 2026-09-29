@@ -15,6 +15,7 @@ func NewEngine() *Engine {
 	return &Engine{MinOCRConfidence: 0.8}
 }
 
+// 这里只验证 AI 结果是否能被来源事实支持；验证失败或 OCR 置信度不足时标记人工复核，不直接改成绩。
 func (e *Engine) Verify(ctx Context) VerificationResult {
 	result := VerificationResult{
 		Passed:         true,
@@ -33,6 +34,7 @@ func (e *Engine) Verify(ctx Context) VerificationResult {
 		result.CorrectedFlags = appendFlag(result.CorrectedFlags, "low_ocr_confidence")
 		result.NeedsHumanReview = true
 	}
+	// rubric 只允许引用已存在的评分点；匹配分数还要与建议总分一致，避免证据和分数各说一套。
 	rubricPoints := rubricPointScores(ctx.Rubric)
 	if len(rubricPoints) == 0 && (len(ctx.Grade.MatchedPoints) > 0 || len(ctx.Grade.MissingPoints) > 0) {
 		result.fail("rubric_missing", "rubric points are required when grade references matched or missing points")
@@ -51,6 +53,7 @@ func (e *Engine) Verify(ctx Context) VerificationResult {
 	if math.Abs(matchedTotal-ctx.Grade.SuggestedScore) > 0.0001 {
 		result.fail("matched_score_mismatch", "suggested_score does not equal matched_points score total")
 	}
+	// 文本校验只做大小写和空白归一化，不把未出现在答卷中的证据当成有效依据。
 	answerText := normalizeText(ctx.AnswerText)
 	for _, evidence := range ctx.Grade.Evidence {
 		if strings.TrimSpace(evidence.AnswerText) == "" {
@@ -95,6 +98,7 @@ func normalizeText(value string) string {
 	return strings.ToLower(strings.Join(strings.Fields(value), ""))
 }
 
+// 坐标按 x、y、width、height 解释；内框四条边都必须落在答题区域内。
 func bboxInside(inner []float64, outer []float64) bool {
 	if len(inner) != 4 || len(outer) != 4 {
 		return false

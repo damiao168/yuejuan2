@@ -104,6 +104,7 @@ func buildImportedFacts(question frozenImportQuestion, assessment importAssessme
 	metadata := bankContent.Metadata
 	metadata.SubjectCode = assessment.SubjectCode
 	metadata.EducationStage = assessment.EducationStage
+	// 历史快照可能没有题库所需的年级、版权等信息；保留缺失标记，导入后补全才能发布。
 	if metadata.GradeScope == "" {
 		metadata.GradeScope = "unmapped"
 	}
@@ -221,6 +222,7 @@ func importIssues(content Content, scoring Scoring, schema MetadataSchema, itemC
 		}
 	}
 	copyForScoring := content
+	// 版权问题上面已单独报告；临时副本跳过这一项，只用于检查答案和评分规则，不回写内容。
 	if copyForScoring.Metadata.Copyright == "unknown" {
 		copyForScoring.Metadata.Copyright = "owned"
 	}

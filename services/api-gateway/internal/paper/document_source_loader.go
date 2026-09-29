@@ -54,6 +54,7 @@ func (l storedDocumentSourceLoader) Load(ctx context.Context, tenantID, id strin
 		} else {
 			text = strings.TrimPrefix(string(data), "\uFEFF")
 		}
+	// 图片和缺少可提取文字的 PDF 留给 OCR 流程，本加载器不尝试把二进制当正文。
 	case strings.HasPrefix(asset.ContentType, "image/"):
 		return "", errDocumentOCRRequired
 	default:

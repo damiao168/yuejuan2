@@ -116,6 +116,7 @@ func (e *Engine) gradeMultipleChoice(ctx Context) Grade {
 		grade.MatchedPoints = append(grade.MatchedPoints, point("multiple_choice_all_correct", "all selected options match answer key", ctx.Question.Score))
 		return finalize(grade)
 	}
+	// 错选先按每个正确项得分减去每个错误项罚分；allow_partial 只控制后面的纯漏选分支。
 	if hasWrongOption(expected, actual) {
 		penalty := floatConfig(ctx.AnswerKey.Tolerance, "wrong_option_penalty", ctx.Question.Score)
 		if penalty < 0 {
@@ -182,6 +183,7 @@ func (e *Engine) gradeNumeric(ctx Context) Grade {
 		tolerance = floatConfig(ctx.AnswerKey.Tolerance, "value", 0)
 	}
 	relative := floatConfig(ctx.AnswerKey.Tolerance, "relative", 0)
+	// 绝对误差与相对误差取较宽者，相对误差以标准答案绝对值为基准，不相加。
 	allowedDifference := tolerance
 	if relative > 0 {
 		allowedDifference = math.Max(allowedDifference, math.Abs(expected)*relative)
@@ -307,6 +309,7 @@ func hasWrongOption(expected []string, actual []string) bool {
 	return false
 }
 
+// 默认只做首尾空白及 NFKC 归一化；忽略大小写、内部空白、标点都需要规则显式开启。
 func normalizeFill(value string, tolerance any) string {
 	value = norm.NFKC.String(strings.TrimSpace(value))
 	if boolConfig(tolerance, "ignore_case", false) {
@@ -387,6 +390,7 @@ func matchingOptionCount(expected []string, actual []string) int {
 	return count
 }
 
+// 规则匹配的置信度不能高于输入置信度；机器答案缺少置信度会转人工，任意来源低于 0.9 也会留下复核风险。
 func applyInputConfidence(ctx Context, grade Grade) Grade {
 	if ctx.Answer.Confidence == nil {
 		if ctx.Answer.Source != "manual_entry" && ctx.Answer.Source != "imported_answer" {

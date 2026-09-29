@@ -42,6 +42,7 @@ func (h *Handler) GetTaskContext(w http.ResponseWriter, r *http.Request) {
 		contextValue.AnswerArtifact.OriginalImageURL = ""
 	}
 	contextValue.Claim.CanRenew = contextValue.Claim.CanRenew && contextValue.Task.AssignedTo == user.ID
+	// 管理员可查看任务，但这里也只附带当前登录者本人负责的草稿。
 	if contextValue.Task.AssignedTo == user.ID {
 		draft, draftErr := h.store.(DraftStore).GetDraft(r.Context(), user.TenantID, contextValue.Task.ID, user.ID)
 		switch {

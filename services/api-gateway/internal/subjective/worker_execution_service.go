@@ -80,6 +80,7 @@ func NewWorkerExecutionService(store workerExecutionStore, runtime workerExecuti
 // Prepare owns the shared ExecuteWorker/CompleteWorker admission path. Its
 // mutation order intentionally matches the former handlers: the run is marked
 // processing before result-version, context, evidence, and eligibility checks.
+// worker 准备阶段先确认租约并标记 processing，再检查版本、证据和准入；失败路径会同步结束任务和运行。
 func (s *WorkerExecutionService) Prepare(ctx context.Context, input WorkerPrepareInput) (WorkerExecutionContext, error) {
 	prepared := WorkerExecutionContext{}
 	run, err := s.store.GetRun(ctx, input.TenantID, input.RunID)

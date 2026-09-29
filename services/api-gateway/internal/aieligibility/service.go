@@ -190,6 +190,7 @@ func validQuality(value *float64) bool { return value == nil || validRate(*value
 func validEvidence(value EvaluationEvidence) bool {
 	return value.SampleCount >= 0 && validRate(value.SevereErrorRate)
 }
+// 缺失质量数据不等于零阈值已达标；即使策略阈值为 0，未知质量也必须阻止调用。
 func qualityBelow(value *float64, threshold float64) bool { return value == nil || *value < threshold }
 func containsMode(values []assessment.ScoringMode, target assessment.ScoringMode) bool {
 	for _, value := range values {

@@ -18,6 +18,7 @@ func NewPostgresStore(db *sql.DB) *PostgresStore {
 }
 
 func (s *PostgresStore) LoadContext(ctx context.Context, tenantID string, gradeID string) (Context, error) {
+	// 查询同时带租户和成绩删除状态，避免验证任务跨租户读取已删除的答卷或评分依据。
 	row := s.db.QueryRowContext(ctx, `
 SELECT
   g.id::text, g.tenant_id::text, g.answer_segment_id::text, g.question_id::text, g.question_no, g.question_type,
@@ -101,6 +102,7 @@ WHERE g.tenant_id = $1 AND g.id::text = $2 AND g.deleted_at IS NULL AND seg.dele
 }
 
 func (s *PostgresStore) CreateJob(ctx context.Context, tenantID string, actorID string, gradeID string, result VerificationResult) (AgentJob, error) {
+	// 验证结果作为审计快照落库；状态只由结果决定，后续人工处理不改变原始 AI 成绩。
 	raw, _ := json.Marshal(result)
 	row := s.db.QueryRowContext(ctx, `
 INSERT INTO agent_job (tenant_id, job_type, target_type, target_id, status, result, needs_human_review, created_by)

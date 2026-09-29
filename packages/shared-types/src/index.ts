@@ -30,6 +30,7 @@ export interface AiGradeEvidence {
 export interface AiGradeResult {
   answerId: string;
   questionId: string;
+  // 模型建议值；是否采纳及最终发布由评分工作流决定，类型本身不校验分数范围。
   suggestedScore: number;
   maxScore: number;
   confidence: number;

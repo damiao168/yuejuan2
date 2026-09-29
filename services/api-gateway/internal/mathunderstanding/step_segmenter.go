@@ -13,9 +13,8 @@ type stepBlockGroup struct {
 	attachments     int
 }
 
-// SegmentSolutionSteps turns fine-grained mixed-perception blocks into visual
-// lines before mathematical dependency edges are built. Geometry only groups
-// local evidence; it never asserts mathematical correctness.
+// SegmentSolutionSteps 把同一行中靠近的文字和公式合成步骤，保留各自的原始块 ID。
+// 划掉的块和连接符不作为步骤；这种几何分组不判断数学正误。
 func SegmentSolutionSteps(blocks []MathAnswerBlock, formulaByBlock map[string][]string) ([]SolutionStep, map[string]string) {
 	active := make([]MathAnswerBlock, 0, len(blocks))
 	for _, block := range blocks {

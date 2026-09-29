@@ -24,6 +24,7 @@ func NewHandler(store Store, audit auth.Store) *Handler {
 	return &Handler{store: store, audit: audit}
 }
 
+// 租户创建只允许平台管理员；后续写入都沿用当前用户的租户和资源范围。
 func (h *Handler) CreateTenant(w http.ResponseWriter, r *http.Request) {
 	if !isPlatformTenant(r) {
 		httpx.Error(w, r, http.StatusForbidden, "platform_tenant_required", "tenant administration requires the platform tenant")
@@ -442,6 +443,7 @@ func (h *Handler) ListStudentEnrollments(w http.ResponseWriter, r *http.Request)
 	httpx.JSON(w, http.StatusOK, map[string]any{"enrollments": out})
 }
 
+// CSV 导入逐行报告错误并继续处理，已成功的行不因单行格式问题回滚。
 func (h *Handler) ImportStudentsCSV(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	reader := csv.NewReader(r.Body)

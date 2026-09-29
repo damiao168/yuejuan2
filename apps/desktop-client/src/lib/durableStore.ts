@@ -46,6 +46,7 @@ export function hasDurableDesktopStore() {
 }
 
 let activeSessionId: string | null = null;
+// 原生绑定按顺序执行，版本号只允许最后一次登录接管当前会话，避免快速切换账号时串用本地数据。
 let transitionVersion = 0;
 let sessionTransition: Promise<void> = Promise.resolve();
 
@@ -108,6 +109,7 @@ export async function spoolScanAsset(input: SpoolAssetInput, expectedSessionId?:
   }, sessionId);
   if (session.item) return session.item;
   let offset = session.confirmedOffset;
+  // 续写位置以原生存储已确认的偏移为准；只有完整写入后才把扫描原件加入队列。
   while (offset < input.file.size) {
     const end = Math.min(offset + session.chunkSize, input.file.size);
     const bytes = Array.from(new Uint8Array(await input.file.slice(offset, end).arrayBuffer()));
@@ -195,6 +197,7 @@ export interface DurableDraftEnvelope {
 }
 
 function withoutPreview(item: SyncQueueItem): SyncQueueItem {
+  // Blob 预览地址只在当前 WebView 有效，不能作为重启后可恢复的数据保存。
   const { previewUrl: _previewUrl, ...stored } = item;
   return stored;
 }

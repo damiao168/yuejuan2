@@ -303,6 +303,7 @@ func (s *PostgresStore) Publish(ctx context.Context, tenantID, id, actorID strin
 		return Release{}, err
 	}
 	if release.Source == SourceRegrade && release.SourceReleaseID != "" && release.SourceReleaseID != supersedes.String {
+		// 其他版本已先发布时，旧基础上的重评草稿必须重建，不能覆盖期间发布的更正。
 		return Release{}, ErrStaleSource
 	}
 	now := s.now().UTC()
@@ -483,6 +484,7 @@ WHERE target.tenant_id=$1::uuid AND target.id=$2::uuid AND target.deleted_at IS 
 }
 
 func (s *PostgresStore) studentSubjectBalance(ctx context.Context, tenantID, examID, studentID string) ([]StudentSubjectBalance, error) {
+	// 同一考次中每科只取最新且允许展示统计的发布版本；人数不足的科目直接省略。
 	rows, err := s.db.QueryContext(ctx, `
 WITH target AS (
   SELECT id,exam_session_id FROM exam WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL
@@ -697,11 +699,17 @@ ORDER BY seg.updated_at DESC,seg.id DESC LIMIT 1
 		}
 		return source, err
 	}
+	// 整页图片同样以发布题目清单为范围；仅有答题分段不能证明题目已发布。
 	var source StudentQuestionImageSource
 	err := s.db.QueryRowContext(ctx, `
 SELECT seg.id::text FROM score_release_current current_release
   JOIN score_release release ON release.tenant_id=current_release.tenant_id AND release.id=current_release.release_id AND release.status='published'
 JOIN score_release_item item ON item.tenant_id=release.tenant_id AND item.release_id=release.id AND item.student_id=$3::uuid
+JOIN score_release_question release_question
+  ON release_question.tenant_id=item.tenant_id
+ AND release_question.release_id=item.release_id
+ AND release_question.submission_id=item.submission_id
+ AND release_question.question_id=$4::uuid
 JOIN answer_segment seg ON seg.tenant_id=item.tenant_id AND seg.submission_id=item.submission_id AND seg.question_id=$4::uuid AND seg.deleted_at IS NULL
 WHERE current_release.tenant_id=$1::uuid AND current_release.exam_id=$2::uuid
   AND COALESCE((release.visibility_policy->>'show_question_scores')::boolean,false)
@@ -714,6 +722,7 @@ ORDER BY seg.updated_at DESC,seg.id DESC LIMIT 1
 }
 
 func (s *PostgresStore) currentFactsTx(ctx context.Context, tx *sql.Tx, tenantID, examID string) ([]SubmissionFact, error) {
+	// 单评反馈只采用终评分数、满分一致且时间来源唯一的记录；无法对应时留空，避免错贴评语。
 	rows, err := tx.QueryContext(ctx, `
 SELECT sg.student_id::text, sg.submission_id::text, sg.total_score::float8, sg.max_score::float8, sg.status,
   fg.question_id::text, fg.question_no, fg.id::text, fg.score::float8, fg.max_score::float8, fg.source,
@@ -848,6 +857,7 @@ VALUES ($1, $2::uuid, $3::uuid, $4::uuid, $5, $6::uuid, $7, $8, $9, NULLIF($10, 
 	return nil
 }
 
+// nextVersionTx 依赖调用方持有考试事务锁；单独计算 MAX+1 不能防止并发分配同一版本号。
 func (s *PostgresStore) nextVersionTx(ctx context.Context, tx *sql.Tx, tenantID, examID string) (int, error) {
 	var version int
 	err := tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(version), 0) + 1 FROM score_release WHERE tenant_id = $1 AND exam_id = $2::uuid`, tenantID, examID).Scan(&version)

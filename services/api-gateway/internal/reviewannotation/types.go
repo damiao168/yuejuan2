@@ -43,9 +43,7 @@ func (kind AnnotationType) Valid() bool {
 	}
 }
 
-// ImageGeometry is always measured against the orientation-corrected original
-// page image. Values are normalized to [0,1], so annotations survive rendition
-// and viewport size changes without storing display pixels.
+// 坐标相对于方向校正后的原图，并归一化到 [0,1]；显示尺寸变化时无需保存像素坐标。
 type ImageGeometry struct {
 	CoordinateSpace string  `json:"coordinate_space"`
 	X               float64 `json:"x"`
@@ -56,6 +54,7 @@ type ImageGeometry struct {
 
 const CanonicalImageNormalized = "canonical_image_normalized"
 
+// 坐标必须属于校正后的原图比例；前端显示尺寸变化时仍能落回同一位置。
 func (geometry ImageGeometry) Valid() bool {
 	return geometry.CoordinateSpace == CanonicalImageNormalized &&
 		geometry.X >= 0 && geometry.X <= 1 && geometry.Y >= 0 && geometry.Y <= 1 &&
@@ -81,9 +80,8 @@ type Annotation struct {
 	UpdatedAt        time.Time      `json:"updated_at"`
 }
 
-// StudentAnnotation intentionally has no tenant, actor, revision, payload, or
-// visibility field. In particular, a private annotation cannot be represented
-// by this DTO and filtering happens before conversion.
+// 学生 DTO 刻意不包含租户、操作者、版本、payload 和可见性字段；
+// 私有批注无法由该类型表达，转换前必须先完成可见性过滤。
 type StudentAnnotation struct {
 	ID               string         `json:"id"`
 	AnswerSegmentID  string         `json:"answer_segment_id"`
@@ -95,6 +93,7 @@ type StudentAnnotation struct {
 	UpdatedAt        time.Time      `json:"updated_at"`
 }
 
+// 先按公开可见性过滤，再转换为不含租户、操作者、版本和 payload 的学生 DTO。
 func StudentAnnotations(items []Annotation) []StudentAnnotation {
 	out := make([]StudentAnnotation, 0, len(items))
 	for _, item := range items {
@@ -165,10 +164,8 @@ type Store interface {
 	UpdateAnnotation(context.Context, string, string, string, UpdateAnnotationInput) (Annotation, error)
 	DeleteAnnotation(context.Context, string, string, string, int64) error
 	ListStudentAnnotations(context.Context, string, string) ([]StudentAnnotation, error)
-	// ListStudentQuestionAnnotations resolves the student's answer only through
-	// the current immutable published release. It deliberately takes the
-	// student and question scope rather than a caller-supplied submission ID so
-	// a student cannot enumerate another student's annotations.
+	// 学生查询必须沿当前不可变发布版本解析答案，并使用学生和题目范围；
+	// 不接收调用方提交 ID，避免枚举他人批注。
 	ListStudentQuestionAnnotations(context.Context, string, string, string, string) ([]StudentAnnotation, error)
 
 	CreateCommentTemplate(context.Context, string, string, CreateCommentTemplateInput) (CommentTemplate, error)
@@ -179,6 +176,7 @@ type Store interface {
 	UseCommentTemplate(context.Context, string, string, string) (CommentTemplate, error)
 }
 
+// 缺省坐标系和可见性只在输入层补齐；存储层仍会校验最终值，避免写入未定义坐标。
 func normalizeAnnotationInput(input CreateAnnotationInput) CreateAnnotationInput {
 	input.Content = strings.TrimSpace(input.Content)
 	if input.Geometry.CoordinateSpace == "" {
@@ -200,6 +198,7 @@ func validateAnnotationInput(input CreateAnnotationInput) error {
 	return nil
 }
 
+// 快捷键统一去空格并转小写，创建、更新和使用必须共享同一规范化规则。
 func normalizeTemplate(title, content, shortcut string) (string, string, string) {
 	return strings.TrimSpace(title), strings.TrimSpace(content), strings.ToLower(strings.TrimSpace(shortcut))
 }
@@ -217,6 +216,7 @@ func validateTemplate(title, content, shortcut string) error {
 	return nil
 }
 
+// 返回新的顶层 map，避免调用方修改批注时直接改动存储中的 map；嵌套值按输入类型原样保留。
 func clonePayload(value map[string]any) map[string]any {
 	if value == nil {
 		return map[string]any{}

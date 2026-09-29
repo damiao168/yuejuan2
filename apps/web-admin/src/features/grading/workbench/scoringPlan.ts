@@ -48,6 +48,7 @@ export async function loadScoringPlan(examId: string, questions: ScoringQuestion
   const settled = await Promise.allSettled(questions.map((question) => getQuestionAssessmentSnapshot(examId, question.question_id)));
   const planned = questions.map((question, index) => {
     const result = settled[index];
+    // 策略快照读取失败时保守转人工，不能依据当前可编辑配置猜测考试冻结时的授权策略。
     if (result.status !== "fulfilled") return planQuestion(question, "SNAPSHOT_UNAVAILABLE", "-");
     const snapshot = result.value.assessment_snapshot;
     return planQuestion(question, snapshot.scoring_policy_snapshot.mode, snapshot.risk_tier);

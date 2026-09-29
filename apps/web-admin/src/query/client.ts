@@ -17,6 +17,7 @@ export function createAppQueryClient(): QueryClient {
         retry: shouldRetryQuery,
         refetchOnWindowFocus: false
       },
+      // 写操作不自动重试，避免响应丢失时重复产生业务变更。
       mutations: {
         retry: false
       }

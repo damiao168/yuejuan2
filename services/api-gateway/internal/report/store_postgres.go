@@ -60,20 +60,16 @@ func (s *PostgresStore) GradingQuality(ctx context.Context, tenantID string, exa
 func (s *PostgresStore) Export(ctx context.Context, tenantID string, examID string, actorID string) (ExportResult, error) {
 	result, err := s.exportOnce(ctx, tenantID, examID, actorID)
 	if err != nil && commandreceipt.ID(ctx) != "" && isUniqueViolation(err) {
-		// Under Repeatable Read, a concurrent transaction can take its snapshot
-		// before waiting for the same-command advisory lock. Its receipt INSERT
-		// then detects the winner through the unique index even though the old
-		// snapshot cannot see that row. The failed transaction has rolled back,
-		// so one fresh snapshot can safely return the winner's immutable receipt.
+		// 可重复读事务可能先建立快照，再等待同一命令的 advisory lock；旧快照看不到胜者回执，
+		// 但唯一索引会使插入失败。事务已回滚后重新取一次快照即可安全返回不可变回执。
 		return s.exportOnce(ctx, tenantID, examID, actorID)
 	}
 	return result, err
 }
 
 func (s *PostgresStore) exportOnce(ctx context.Context, tenantID string, examID string, actorID string) (ExportResult, error) {
-	// The CSV and its durable command receipt describe one database snapshot.
-	// Every read below must use this transaction; using s.db here can deadlock a
-	// single-connection pool and can mix data from different commit points.
+	// CSV 和持久回执必须描述同一数据库快照；下面所有读取都使用此事务，不能改用 s.db，
+	// 否则单连接池可能死锁，也会把不同提交点的数据拼在一起。
 	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead})
 	if err != nil {
 		return ExportResult{}, err
@@ -150,9 +146,8 @@ WHERE current_release.tenant_id = $1 AND current_release.exam_id::text = $2
 ORDER BY sub.candidate_no, sub.id
 `
 	if !hasRelease {
-		// Older examinations publish through submission_grade without a score
-		// release. Keep their scores available, but do not attach later AI or
-		// human feedback to those published facts.
+		// 旧考试通过 submission_grade 发布，没有 score_release 快照；保留已发布分数，
+		// 但不能把之后新增的 AI 或人工评语挂到这些已发布事实。
 		subQuery = `
 SELECT sg.submission_id::text, COALESCE(sg.student_id::text, ''), COALESCE(st.class_id::text, ''),
   COALESCE(sc.name, ''), sg.anonymous_code, sg.total_score::float8, sg.max_score::float8
@@ -177,6 +172,7 @@ ORDER BY sg.anonymous_code`
 	if err := subRows.Err(); err != nil {
 		return dataset{}, err
 	}
+	// 对学生展示的反馈取发布快照，并受该次发布的 show_feedback 控制；不能读取后来改写的原始批阅意见。
 	gradeQuery := `
 SELECT released_question.submission_id::text, COALESCE(item.student_id::text, ''), COALESCE(st.class_id::text, ''),
   COALESCE(sc.name, ''), released_question.question_id::text, released_question.question_no, q.question_type, fg.answer_segment_id::text,

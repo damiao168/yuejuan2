@@ -36,6 +36,7 @@ func (s *MemoryStore) SaveDraft(_ context.Context, tenantID, taskID, reviewerID 
 	}
 	draftID := draftKey(tenantID, taskID, reviewerID)
 	current, exists := s.drafts[draftID]
+	// 首次保存传 0；已有草稿必须带上读到的草稿版本，避免多个窗口互相覆盖。
 	if !exists && input.ExpectedRevision != 0 || exists && current.Revision != input.ExpectedRevision {
 		return ReviewDraft{}, ErrRevisionConflict
 	}

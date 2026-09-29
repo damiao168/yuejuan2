@@ -32,6 +32,7 @@ const { plan, packets } = buildBlindAnnotationPlan({
   seed: policy.workflow.assignment_seed
 });
 const bundleBySample = new Map(sourceBundles.map((bundle) => [bundle.sample.sample_id, bundle]));
+// 演示复用合成标签模拟教师提交；authenticated_actor_id 在真实接入时必须来自可信身份。
 const teacherSubmissions = plan.assignments.map((assignment) => {
   const source = bundleBySample.get(assignment.sample_id);
   const label = source.labels.find((item) => item.labeler_id === assignment.labeler_id);

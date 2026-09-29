@@ -28,6 +28,7 @@ func normalizePaperImportSourceInputs(input CreatePaperImportInput) []CreatePape
 	return out
 }
 
+// 导入学科必须与考试权威学科归一化后一致，不能仅凭请求值切换识别策略。
 func normalizePaperImportSubject(authoritative, requested string) (string, error) {
 	authoritativeCode, authoritativeOK := assessment.NormalizeSubjectCode(authoritative)
 	requestedCode, requestedOK := assessment.NormalizeSubjectCode(requested)

@@ -51,6 +51,7 @@ $requiredKeys = @(
   "EDUGRADE_POSTGRES_APP_PASSWORD",
   "EDUGRADE_POSTGRES_ADMIN_DSN",
   "EDUGRADE_POSTGRES_DSN",
+  "EDUGRADE_POSTGRES_TENANT_RLS",
   "EDUGRADE_REDIS_USERNAME",
   "EDUGRADE_REDIS_PASSWORD",
   "EDUGRADE_REDIS_TLS_ENABLED",
@@ -81,6 +82,11 @@ foreach ($key in $requiredKeys) {
     throw "Required deployment setting is missing: $key"
   }
 }
+# The Compose application login is NOINHERIT even in local deployments; its
+# grants are activated by the tenant connector's SET ROLE on each connection.
+if ($envValues["EDUGRADE_POSTGRES_TENANT_RLS"] -ne "true") {
+  throw "PostgreSQL tenant RLS must be enabled for the Compose application login. Set EDUGRADE_POSTGRES_TENANT_RLS=true in the deployment env file before starting or upgrading."
+}
 $promptManifestPath = Resolve-DeploymentPath "../../../ai-services/prompts/manifest.json"
 $promptManifest = Get-Content -LiteralPath $promptManifestPath -Raw -Encoding utf8 | ConvertFrom-Json
 $manifestPromptVersion = [string]$promptManifest.prompt_version
@@ -105,6 +111,8 @@ if ($envValues["EDUGRADE_QDRANT_API_KEY"].Length -lt 32) {
 
 $localEnvironments = @("local", "development", "dev", "test")
 $environment = $envValues["EDUGRADE_ENV"].ToLowerInvariant()
+
+# 只有明确列出的本地环境可以放宽要求，未知环境名按生产级约束检查。
 $productionLike = $localEnvironments -notcontains $environment
 if ($productionLike) {
   $problems = @()
@@ -140,7 +148,6 @@ if ($productionLike) {
   if ($envValues["EDUGRADE_BARCODE_HMAC_KEYS"] -match "replace_with|change_me") { $problems += "barcode example HMAC key must be replaced" }
   if ($envValues["EDUGRADE_GRAFANA_ADMIN_PASSWORD"] -match "change_me" -or $envValues["EDUGRADE_GRAFANA_ADMIN_PASSWORD"] -eq "admin") { $problems += "Grafana example password must be replaced" }
   if ($envValues.ContainsKey("EDUGRADE_INTERNAL_BIND_HOST") -and $envValues["EDUGRADE_INTERNAL_BIND_HOST"] -eq "0.0.0.0") { $problems += "internal service ports must not bind to 0.0.0.0 in production" }
-  if (-not $envValues.ContainsKey("EDUGRADE_POSTGRES_TENANT_RLS") -or $envValues["EDUGRADE_POSTGRES_TENANT_RLS"] -ne "true") { $problems += "PostgreSQL tenant RLS must be enabled" }
 
   $immutableImageKeys = @(
     "EDUGRADE_POSTGRES_IMAGE",
@@ -198,6 +205,7 @@ if ($LASTEXITCODE -ne 0) { throw "Docker Compose is not available." }
 
 Push-Location $composeDir
 try {
+  # 只校验配置并隐藏展开结果，避免将解析后的凭据输出到终端。
   docker compose --env-file $envPath -f $composePath --profile tools --profile ocr --profile quality --profile processing --profile observability config --quiet
   if ($LASTEXITCODE -ne 0) { throw "Docker Compose configuration is invalid." }
 } finally {

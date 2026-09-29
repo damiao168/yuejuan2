@@ -121,6 +121,7 @@ def extract_marks(
     else:
         decision = "ambiguous"
 
+    # 该值由填涂强度与间隔计算，是规则强度指标，不是经样本校准的正确概率。
     confidence = _confidence(decision, top, second, profile)
     return {
         "decision": decision,
@@ -271,6 +272,7 @@ def _pixel_region(region: dict[str, Any], width: int, height: int) -> tuple[int,
     x, y, w, h = values
     if not all(math.isfinite(value) for value in values):
         raise OMRExtractionError("omr_option_region_invalid")
+    # 全部坐标不大于 1 时按当前题目裁剪的比例解释，否则按该裁剪内的像素解释。
     normalized = max(values) <= 1.0
     if normalized:
         x, w = x * width, w * width

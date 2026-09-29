@@ -340,6 +340,7 @@ class PromptRegistry:
                 for (subject, question_type), filename in self.SUBJECT_FILES.items()
             },
         }
+        # 启动时逐文件验证 manifest 哈希；版本名相同也不能接受被悄悄改动的提示词。
         for name, filename in all_files.items():
             path = self.root / filename
             content = path.read_bytes()
@@ -469,6 +470,7 @@ class LocalLlamaCppAdapter:
         self.transport = transport or _default_transport
         self.ready_transport = ready_transport
         self._semaphore = threading.BoundedSemaphore(value=1)
+        # 用量保存在请求线程上下文，避免并行 HTTP 请求读取另一请求的供应商统计。
         self._usage = threading.local()
 
     def last_usage(self):

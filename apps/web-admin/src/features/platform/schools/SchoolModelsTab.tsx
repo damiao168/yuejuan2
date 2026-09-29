@@ -11,6 +11,7 @@ export function SchoolModelsTab({ tenantId }: { tenantId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   useEffect(() => {
+    // 每轮请求独立持有有效标记，学校切换后旧健康检查结果不能覆盖当前学校。
     let active = true;
     setLoading(true); setError(false);
     void getPlatformSchoolModelHealth(tenantId).then((result) => { if (active) setData(result); }).catch(() => { if (active) setError(true); }).finally(() => { if (active) setLoading(false); });

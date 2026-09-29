@@ -1,0 +1,21 @@
+Fresh schema created by the actual Compose db-migrate script, PostgreSQL 16.
+         rolname         | rolinherit | rolsuper | rolbypassrls 
+-------------------------+------------+----------+--------------
+ edugrade_tenant_runtime | f          | f        | f
+ review_app              | f          | f        | f
+(2 rows)
+
+         roleid          |   member   | inherit_option | set_option 
+-------------------------+------------+----------------+------------
+ edugrade_tenant_runtime | review_app | f              | t
+(1 row)
+
+ERROR:  permission denied for table tenant
+Direct connection exit=1
+SET
+ count 
+-------
+     2
+(1 row)
+
+Explicit SET ROLE exit=0

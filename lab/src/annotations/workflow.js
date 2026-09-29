@@ -3,6 +3,7 @@ import { labelsRequireAdjudication, validateAnnotationBundle, validateAnnotation
 import { SUBJECTS } from "../schemas/gradingSchema.js";
 
 const WORKER_ROLES = new Set(["teacher", "adjudicator"]);
+// 盲标包采用白名单，只发送作答所需内容，排除已有人工分数、理由和模型结果。
 const SAMPLE_PACKET_FIELDS = Object.freeze([
   "sample_id",
   "synthetic",
@@ -104,6 +105,7 @@ function chooseTeacherPair(sample, roster, workloads, pairCounts, seed) {
   for (let left = 0; left < teachers.length; left += 1) {
     for (let right = left + 1; right < teachers.length; right += 1) {
       const ids = [teachers[left].worker_id, teachers[right].worker_id].sort();
+      // 派双评前就预留独立仲裁资格，防止出现争议后无人可合法接手。
       const independentAdjudicatorExists = roster.workers.some((worker) =>
         workerQualified(worker, sample, "adjudicator") && !ids.includes(worker.worker_id));
       if (!independentAdjudicatorExists) continue;
@@ -111,6 +113,7 @@ function chooseTeacherPair(sample, roster, workloads, pairCounts, seed) {
       candidates.push({
         ids,
         pairKey,
+        // 先平衡最大负担，再看总负担和配对次数；带种子的哈希只用于稳定打破平局。
         rank: [
           Math.max((workloads.get(ids[0]) ?? 0) + 1, (workloads.get(ids[1]) ?? 0) + 1),
           (workloads.get(ids[0]) ?? 0) + (workloads.get(ids[1]) ?? 0),
@@ -216,6 +219,7 @@ export function buildBlindAnnotationPlan({ samples, roster, dataset, rosterSha25
   return { plan, packets };
 }
 
+// 合并时重新核对数据与人员清单绑定及双评分配，不能只相信已落盘计划的结构。
 function assertPlanBinding(plan, samples, roster, datasetSha256, rosterSha256) {
   if (plan?.schema_version !== "blind-annotation-plan-v1" || plan.blind !== true) throw new Error("invalid or non-blind annotation plan");
   if (plan.dataset?.sha256 !== datasetSha256) throw new Error("annotation plan dataset hash mismatch");
@@ -278,6 +282,7 @@ export function mergeTeacherSubmissions({ plan, samples, roster, datasetSha256, 
     if (submission.plan_id !== plan.plan_id || submission.bundle_id !== assignment.bundle_id || submission.sample_id !== assignment.sample_id) {
       errors.push(`${path} identity does not match assignment`);
     }
+    // 调用方负责提供可信身份；这里仅检查身份、标注者和任务归属是否一致。
     if (submission.authenticated_actor_id !== assignment.labeler_id || submission.label?.labeler_id !== assignment.labeler_id) {
       errors.push(`${path} actor or labeler does not own assignment`);
     }
@@ -300,6 +305,7 @@ export function mergeTeacherSubmissions({ plan, samples, roster, datasetSha256, 
   for (const sample of [...samples].sort((left, right) => left.sample_id.localeCompare(right.sample_id))) {
     const assignments = plan.assignments.filter((assignment) => assignment.sample_id === sample.sample_id).sort((left, right) => left.slot.localeCompare(right.slot));
     const sampleSubmissions = assignments.map((assignment) => submissionByAssignment.get(assignment.assignment_id)).filter(Boolean);
+    // 两份独立提交齐全才判定一致或派仲裁；部分提交继续保留在待办清单。
     if (sampleSubmissions.length !== 2) continue;
     const minimizedSample = minimizeSampleForAnnotation(sample);
     const labels = sampleSubmissions.map((submission) => structuredClone(submission.label));
@@ -426,6 +432,7 @@ export function finalizeAdjudications({ state, roster, datasetSha256, rosterSha2
   const bundles = [...state.completed_bundles.map((bundle) => structuredClone(bundle)), ...adjudicatedBundles]
     .sort((left, right) => left.sample.sample_id.localeCompare(right.sample.sample_id));
   if (bundles.length !== state.dataset.records) throw new Error(`final bundle count ${bundles.length} does not match dataset ${state.dataset.records}`);
+  // 数量相等不代表样本相同，最终还需核对去重后的完整 ID 集合哈希。
   const finalSampleIds = bundles.map((bundle) => bundle.sample.sample_id);
   if (new Set(finalSampleIds).size !== finalSampleIds.length) throw new Error("final bundles contain duplicate sample IDs");
   if (sha256([...finalSampleIds].sort().join("\n")) !== state.dataset.sample_ids_sha256) throw new Error("final bundle sample ID set does not match annotation plan");

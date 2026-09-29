@@ -105,6 +105,7 @@ FOR UPDATE
 	return s.Get(ctx, tenantID, goldID)
 }
 
+// 审批事务同时锁 Gold 主记录和目标版本，保证 active_version 与 approved_at 不会被并发请求拆开。
 func (s *PostgresStore) Approve(ctx context.Context, tenantID, goldID, actorID string, versionNumber int) (GoldPaper, error) {
 	if tenantID == "" || goldID == "" || actorID == "" || versionNumber <= 0 {
 		return GoldPaper{}, ErrInvalidInput

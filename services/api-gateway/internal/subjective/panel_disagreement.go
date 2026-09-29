@@ -18,6 +18,7 @@ type PanelDisagreementDecision struct {
 	PrimaryConsensus    bool
 }
 
+// 分歧按分数、量规判定、证据、置信度和硬风险分别计算；证据冲突即使分数相同也不能直接达成共识。
 func ComparePrimaryGrades(left, right Grade, rubric paper.Rubric, config PanelDecisionConfig) PanelDisagreementDecision {
 	config = NormalizePanelDecisionConfig(config)
 	facts := gradingdisagreement.Compare(panelObservation(left, rubric), panelObservation(right, rubric))

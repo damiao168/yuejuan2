@@ -30,6 +30,7 @@ func (s *PostgresStore) CreateTask(ctx context.Context, tenantID string, submiss
 	return task, tx.Commit()
 }
 
+// 插入失败后按幂等键锁读已有任务，确保并发创建只产生一个源任务且参数一致。
 func createSourceTaskInTx(ctx context.Context, tx *sql.Tx, tenantID string, submissionID string, actorID string, input CreateTaskInput) (Task, error) {
 	if tx == nil || tenantID == "" || submissionID == "" || actorID == "" {
 		return Task{}, ErrInvalidInput
@@ -242,6 +243,7 @@ func (s *PostgresStore) CompleteTask(ctx context.Context, tenantID string, id st
 	return out, tx.Commit()
 }
 
+// 行锁覆盖结果写入和状态更新；重复完成比较完整载荷，避免只按状态返回错误结果。
 func completeSourceTaskInTx(ctx context.Context, tx *sql.Tx, tenantID string, id string, input CompleteTaskInput) (Task, error) {
 	if tx == nil || len(input.Results) == 0 || input.DurationMS < 0 {
 		return Task{}, ErrInvalidInput

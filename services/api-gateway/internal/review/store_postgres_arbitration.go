@@ -174,7 +174,7 @@ func (s *PostgresStore) SubmitArbitration(ctx context.Context, tenantID string, 
 	if found, err := commandreceipt.Load(ctx, tx, tenantID, arbitratorID, "review.arbitrate", id, input, &replay); err != nil || found {
 		return replay.Task, replay.Grade, err
 	}
-	// Match scoring cancellation's lock order before locking the task.
+	// 先按评分取消流程的锁序锁住父运行，再锁仲裁任务，避免取消与提交交叉写入。
 	scoringRunID, err := lockScoringRunForArbitrationTx(ctx, tx, tenantID, id)
 	if err != nil {
 		return ArbitrationTask{}, FinalGrade{}, err
@@ -192,6 +192,7 @@ FOR UPDATE
 	if task.Revision != input.ExpectedRevision {
 		return ArbitrationTask{}, FinalGrade{}, ErrRevisionConflict
 	}
+	// 必须先显式分配，再检查是否允许原阅卷人仲裁；有仲裁角色本身不等于拥有这项任务。
 	if task.AssignedTo == "" || task.AssignedTo != arbitratorID {
 		return ArbitrationTask{}, FinalGrade{}, ErrForbidden
 	}
@@ -248,6 +249,7 @@ WHERE tenant_id = $1 AND id::text = $2
 			return ArbitrationTask{}, FinalGrade{}, err
 		}
 	}
+	// 回执与终分、任务状态同一事务提交；响应丢失后可按命令 ID 找回本次结果。
 	if err := commandreceipt.Save(ctx, tx, tenantID, arbitratorID, "review.arbitrate", id, input, ArbitrationSubmitResult{Task: task, Grade: finalGrade}); err != nil {
 		return ArbitrationTask{}, FinalGrade{}, err
 	}

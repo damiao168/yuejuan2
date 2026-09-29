@@ -1,0 +1,19 @@
+{
+  "missing_minio_error": "Cannot find path 'C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-recovery-review-39c9b8a1cab34435b9ebbf7f456eb6ae\\directory-does-not-exist' because it does not exist.",
+  "test_type": "synthetic local file validation with all Docker calls mocked; no actual dump/restore tested",
+  "unlisted_dump_selected": true,
+  "alternate_calls": [
+    "compose --env-file C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-recovery-review-39c9b8a1cab34435b9ebbf7f456eb6ae\\fixture.env -f C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-recovery-review-39c9b8a1cab34435b9ebbf7f456eb6ae\\compose.yml ps -q postgres",
+    "cp C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-recovery-review-39c9b8a1cab34435b9ebbf7f456eb6ae\\backup\\postgres-from-another-backup.dump fixture-container:/tmp/restore-4a4e46725aae46eda552823fbd63f3db.dump",
+    "compose --env-file C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-recovery-review-39c9b8a1cab34435b9ebbf7f456eb6ae\\fixture.env -f C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-recovery-review-39c9b8a1cab34435b9ebbf7f456eb6ae\\compose.yml exec -T postgres pg_restore --list /tmp/restore-4a4e46725aae46eda552823fbd63f3db.dump",
+    "compose --env-file C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-recovery-review-39c9b8a1cab34435b9ebbf7f456eb6ae\\fixture.env -f C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-recovery-review-39c9b8a1cab34435b9ebbf7f456eb6ae\\compose.yml exec -T postgres sh -ec dropdb -U \"$POSTGRES_USER\" --if-exists 'isolated_fixture'; createdb -U \"$POSTGRES_USER\" 'isolated_fixture'",
+    "compose --env-file C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-recovery-review-39c9b8a1cab34435b9ebbf7f456eb6ae\\fixture.env -f C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-recovery-review-39c9b8a1cab34435b9ebbf7f456eb6ae\\compose.yml exec -T postgres sh -ec pg_restore -U \"$POSTGRES_USER\" -d 'isolated_fixture' --clean --if-exists '/tmp/restore-4a4e46725aae46eda552823fbd63f3db.dump'",
+    "compose --env-file C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-recovery-review-39c9b8a1cab34435b9ebbf7f456eb6ae\\fixture.env -f C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-recovery-review-39c9b8a1cab34435b9ebbf7f456eb6ae\\compose.yml exec -T postgres rm -f /tmp/restore-4a4e46725aae46eda552823fbd63f3db.dump",
+    "compose --env-file C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-recovery-review-39c9b8a1cab34435b9ebbf7f456eb6ae\\fixture.env -f C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-recovery-review-39c9b8a1cab34435b9ebbf7f456eb6ae\\compose.yml --profile tools run --rm -v C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-recovery-review-39c9b8a1cab34435b9ebbf7f456eb6ae:/backup:ro --entrypoint /bin/sh minio-init -ec scheme=http; if [ \"$EDUGRADE_MINIO_USE_SSL\" = \"true\" ]; then scheme=https; fi; mc alias set edugrade \"$scheme://minio:9000\" \"$EDUGRADE_MINIO_ROOT_USER\" \"$EDUGRADE_MINIO_ROOT_PASSWORD\"; mc mb --ignore-existing \"edugrade/fixture-target\"; mc mirror --overwrite \"/backup/minio-from-another-backup\" \"edugrade/fixture-target\"",
+    "compose --env-file C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-recovery-review-39c9b8a1cab34435b9ebbf7f456eb6ae\\fixture.env -f C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-recovery-review-39c9b8a1cab34435b9ebbf7f456eb6ae\\compose.yml exec -T postgres psql -U fixture -d isolated_fixture -Atc SELECT count(*) FROM schema_migration"
+  ],
+  "manifest_valid": true,
+  "fixture": "C:\\Users\\pc\\AppData\\Local\\Temp\\edugrade-recovery-review-39c9b8a1cab34435b9ebbf7f456eb6ae",
+  "unrelated_minio_selected": true,
+  "target_replacement_invoked_before_missing_minio_error": true
+}

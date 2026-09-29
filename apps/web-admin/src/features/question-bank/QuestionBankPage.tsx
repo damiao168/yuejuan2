@@ -151,6 +151,7 @@ export function QuestionBankPage({ user }: { user: SessionUser }) {
 			}),
 		enabled: Boolean(bankId),
 	});
+	// 版本内容按创建时绑定的 schema 解析；题库后来升级规则时，旧版本仍必须按原 schema 读取。
 	const boundSchema = useQuery({
 		queryKey: [...prefix, "metadata-schema", bankId, selected?.schema_version],
 		queryFn: ({ signal }) =>

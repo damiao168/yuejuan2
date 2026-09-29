@@ -34,8 +34,7 @@ func (s *PostgresCorrectionStore) CreateCorrection(ctx context.Context, tenantID
 	if !artifact.IsCurrent || artifact.Version != input.ExpectedArtifactVersion || !correctionMatchesArtifact(input.CorrectedContract, artifact) {
 		return Correction{}, ErrRevisionConflict
 	}
-	// Read the revision after acquiring the artifact lock: a waiter must see a
-	// correction committed by the previous lock holder, not an earlier snapshot.
+	// 等到基础证据的行锁后再读取修订号，才能看到前一个保存事务提交的修订，拒绝旧表单覆盖。
 	var revision int64
 	if err = tx.QueryRowContext(ctx, `SELECT COALESCE(max(revision),0) FROM math_understanding_correction WHERE tenant_id=$1::uuid AND artifact_id=$2::uuid`, tenantID, artifactID).Scan(&revision); err != nil {
 		return Correction{}, err
@@ -65,6 +64,8 @@ func (s *PostgresCorrectionStore) CreateCorrection(ctx context.Context, tenantID
 func (s *PostgresCorrectionStore) ListCorrections(ctx context.Context, tenantID, artifactID string) ([]Correction, error) {
 	return s.list(ctx, tenantID, "artifact_id=$2::uuid", artifactID, 500)
 }
+
+// GetLatestCorrection 直接按修订号取最新项；历史列表最多返回 500 项，不能用列表末项代替。
 func (s *PostgresCorrectionStore) GetLatestCorrection(ctx context.Context, tenantID, artifactID string) (Correction, error) {
 	return s.getCorrection(ctx, tenantID, artifactID, 0)
 }
@@ -97,6 +98,7 @@ func (s *PostgresCorrectionStore) getCorrection(ctx context.Context, tenantID, a
 	}
 	return item, nil
 }
+
 func (s *PostgresCorrectionStore) ExportCorrections(ctx context.Context, tenantID, subject string, limit int) ([]Correction, error) {
 	if limit <= 0 || limit > 5000 {
 		limit = 1000

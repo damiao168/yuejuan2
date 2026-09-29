@@ -86,6 +86,7 @@ export function useScoreReleaseWorkflow({
       message.error("发布门禁尚未通过，请先处理阻断项");
       return;
     }
+    // 正式发布展示草稿版本已冻结的策略，不能读取仍可编辑的新建发布表单。
     const visibleItems = (Object.keys(releaseVisibilityLabels) as Array<keyof typeof releaseVisibilityLabels>)
       .filter((key) => release.visibility_policy[key])
       .map((key) => releaseVisibilityLabels[key])

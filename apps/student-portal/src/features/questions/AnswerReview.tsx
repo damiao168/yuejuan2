@@ -9,6 +9,7 @@ export function AnswerReview({ question, annotations, imageURL }: {
   const [activeAnnotation, setActiveAnnotation] = useState<string | null>(annotations[0]?.id ?? null);
   const [imageAvailable, setImageAvailable] = useState(true);
   const rate = Math.round((question.score_rate ?? (question.max_score > 0 ? question.score / question.max_score : 0)) * 100);
+  // 批注坐标是相对图片的比例，转成百分比后随原图一同缩放，不能直接当像素使用。
   return <div className="answer-review">
     <section className="answer-canvas" aria-label="我的原始答卷">
       <div className="answer-canvas-header"><strong>我的原始答卷</strong><span>{annotations.length ? `${annotations.length} 条教师批注` : "原卷"}</span></div>

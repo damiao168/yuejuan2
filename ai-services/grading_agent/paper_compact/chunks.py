@@ -95,6 +95,7 @@ def _direct_text_chunks(document):
         return []
     chunks = []
     start = 0
+    # 文本范围按 Python 字符索引记录为 [start, end)，分片不重置原文偏移。
     while start < len(content):
         end = min(len(content), start + MAX_DIRECT_TEXT_CHARS_PER_CHUNK)
         if end < len(content):
@@ -133,6 +134,7 @@ def _direct_text_chunks(document):
 
 
 def _split_block_groups(blocks):
+    # 优先以题号和章节形成逻辑组；超预算的单组仍需拆分，不能无限放大模型上下文。
     logical_groups = []
     current = []
     has_question = False

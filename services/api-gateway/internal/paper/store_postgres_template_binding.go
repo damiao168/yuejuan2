@@ -43,6 +43,7 @@ func (s *PostgresStore) BindExamTemplate(ctx context.Context, tenantID, examID, 
 	if templateStatus != "locked" {
 		return ExamTemplateBinding{}, ErrTemplateNotLocked
 	}
+	// 绑定有独立修订号：首次绑定期望 0，后续替换需匹配当前值；不改变模板本身的锁定状态。
 	var currentRevision int
 	err = tx.QueryRowContext(ctx, `SELECT revision FROM exam_answer_sheet_template_binding WHERE tenant_id=$1::uuid AND exam_id=$2::uuid FOR UPDATE`, tenantID, examID).Scan(&currentRevision)
 	switch {

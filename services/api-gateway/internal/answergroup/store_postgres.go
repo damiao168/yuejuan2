@@ -64,6 +64,7 @@ func (s *PostgresStore) Build(ctx context.Context, tenantID, examID, questionID,
 		return nil, err
 	}
 	defer tx.Rollback()
+	// 同一租户题目的构建在事务内串行化，并在锁后再次查重，避免并发请求生成两批组。
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, tenantID+"/"+examID+"/"+questionID+"/"+inputHash); err != nil {
 		return nil, err
 	}
@@ -358,6 +359,7 @@ WHERE tenant_id=$1::uuid AND group_id=$2::uuid AND revision=$3 AND confirmed_at 
 	if count, countErr := result.RowsAffected(); countErr != nil || count != 1 {
 		return Group{}, nil, ErrRevisionConflict
 	}
+	// 确认只发布可追溯的分组候选；候选仍需下游人工评分流程处理，不代表最终成绩。
 	if _, err = tx.ExecContext(ctx, `UPDATE answer_group SET status='confirmed',updated_at=$3 WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, groupID, now); err != nil {
 		return Group{}, nil, err
 	}

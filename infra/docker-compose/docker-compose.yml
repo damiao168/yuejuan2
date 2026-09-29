@@ -118,6 +118,7 @@ services:
     logging: *default-logging
     restart: unless-stopped
 
+  # 迁移任务用数据库锁串行执行，并把每份 SQL 与其校验记录放在同一事务；历史文件不得改写。
   db-migrate:
     image: ${EDUGRADE_POSTGRES_IMAGE:-postgres:16-alpine}
     container_name: edugrade-db-migrate
@@ -272,7 +273,7 @@ services:
         BUILD_TIME: ${EDUGRADE_BUILD_TIME:-unknown}
         IMAGE_DIGEST: ${EDUGRADE_IMAGE_DIGEST:-unknown}
         RELEASE_ID: ${EDUGRADE_RELEASE_ID:-local}
-        SCHEMA_VERSION: ${EDUGRADE_SCHEMA_VERSION:-000178}
+        SCHEMA_VERSION: ${EDUGRADE_SCHEMA_VERSION:-000180}
         GOPROXY: ${EDUGRADE_GO_PROXY:-}
     image: ${EDUGRADE_API_GATEWAY_IMAGE:-edugrade/api-gateway:local}
     container_name: edugrade-api-gateway
@@ -319,7 +320,7 @@ services:
       EDUGRADE_CORS_ALLOWED_HEADERS: ${EDUGRADE_CORS_ALLOWED_HEADERS}
       EDUGRADE_POSTGRES_DSN: ${EDUGRADE_POSTGRES_DSN}
       EDUGRADE_POSTGRES_DSN_FILE: ${EDUGRADE_POSTGRES_DSN_FILE:-}
-      EDUGRADE_POSTGRES_TENANT_RLS: ${EDUGRADE_POSTGRES_TENANT_RLS:-}
+      EDUGRADE_POSTGRES_TENANT_RLS: ${EDUGRADE_POSTGRES_TENANT_RLS:-true}
       EDUGRADE_POSTGRES_MAX_OPEN_CONNS: ${EDUGRADE_POSTGRES_MAX_OPEN_CONNS:-10}
       EDUGRADE_POSTGRES_MAX_IDLE_CONNS: ${EDUGRADE_POSTGRES_MAX_IDLE_CONNS:-5}
       EDUGRADE_POSTGRES_CONN_MAX_LIFETIME: ${EDUGRADE_POSTGRES_CONN_MAX_LIFETIME:-30m}
@@ -531,6 +532,7 @@ services:
     logging: *default-logging
     restart: unless-stopped
 
+  # 与普通 OCR 共用镜像，但只领取数学识别任务；缓存目录相同，进程和资源额度独立。
   math-recognition-worker:
     image: ${EDUGRADE_OCR_WORKER_IMAGE:-edugrade/ocr-worker:local}
     container_name: edugrade-math-recognition-worker
@@ -572,6 +574,7 @@ services:
     logging: *default-logging
     restart: unless-stopped
 
+  # 试卷公式单独消费任务并使用更长租约；主模型与回退模型都可能占用本容器内存。
   paper-formula-worker:
     image: ${EDUGRADE_PAPER_FORMULA_WORKER_IMAGE:-${EDUGRADE_OCR_WORKER_IMAGE:-edugrade/ocr-worker:local}}
     container_name: edugrade-paper-formula-worker

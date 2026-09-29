@@ -51,6 +51,7 @@
 .paper-import-review-pagination > span { white-space: nowrap; font-size: var(--eg-font-caption); font-variant-numeric: tabular-nums; }
 .paper-import-review-pagination > span strong { color: var(--text); }
 .paper-import-review-pagination[aria-busy="true"] { opacity: .7; }
+/* 长试卷延迟绘制离屏题目；预估块高减少初次滚动时的布局跳动。 */
 .paper-import-question-review { contain: layout paint style; content-visibility: auto; contain-intrinsic-block-size: auto 760px; border: 1px solid var(--ant-color-border-secondary, #e5e7eb); border-radius: 8px; padding: 12px; display: grid; gap: 10px; background: #fff; }
 .paper-import-model-usage { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 9px 12px; border: 1px solid #dce7f2; border-radius: 8px; background: #f8fbff; color: #526174; font-size: var(--eg-font-caption); }
 .paper-import-model-usage > strong { color: #172033; }
@@ -65,6 +66,14 @@
 .paper-import-question-type-heading > span { color: #526174; font-size: 14px; font-weight: 500; }
 .paper-import-review-grid { display: grid; grid-template-columns: 110px minmax(180px, 1fr) 110px; gap: 10px; align-items: end; }
 .paper-import-rubric-editor { display: grid; gap: 8px; margin-top: 6px; }
+.paper-import-rubric-review { display: grid; gap: 10px; min-width: 0; }
+.paper-import-rubric-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.paper-import-rubric-suggestion { display: grid; gap: 8px; padding: 14px; border: 1px solid #bfd7f6; border-radius: 8px; background: #f7faff; }
+.paper-import-rubric-suggestion > p { margin: 0; color: #526174; }
+.paper-import-rubric-suggestion ol { display: grid; gap: 8px; margin: 0; padding-left: 22px; }
+.paper-import-rubric-suggestion li { display: grid; grid-template-columns: minmax(0, 1fr) 100px; align-items: center; gap: 4px 12px; }
+.paper-import-rubric-suggestion li small { grid-column: 1 / -1; color: #526174; }
+.paper-import-rubric-suggestion > .ant-btn { justify-self: start; }
 .paper-import-rubric-point { display: grid; grid-template-columns: minmax(240px, 1fr) 90px auto auto 34px; gap: 8px; align-items: center; }
 .paper-import-field-with-source { display: grid; gap: 2px; }
 .paper-import-field-with-source > .ant-btn { justify-self: start; padding-inline: 0; }

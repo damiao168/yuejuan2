@@ -26,6 +26,7 @@ func (s *MemoryStore) GetExamTemplate(ctx context.Context, scope auth.AccessScop
 }
 
 func defaultExamTemplates() []ExamTemplate {
+	// 内存实现只有共享的系统模板，没有学校私有模板的持久化数据。
 	section := func(id, title, kind string, count int, score float64, order int) ExamTemplateSection {
 		return ExamTemplateSection{ID: id, Title: title, QuestionType: kind, QuestionCount: count, ScorePerQuestion: score, SortOrder: order}
 	}

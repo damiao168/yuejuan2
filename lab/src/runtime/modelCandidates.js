@@ -27,6 +27,7 @@ export function validateModelCandidates(registry) {
     if (!/^https:\/\//.test(candidate.url ?? "")) errors.push(`${label}.url must use https`);
     if (!Number.isInteger(candidate.expected_bytes) || candidate.expected_bytes <= 0) errors.push(`${label}.expected_bytes must be positive`);
     if (!/^[a-f0-9]{64}$/.test(candidate.expected_sha256 ?? "")) errors.push(`${label}.expected_sha256 is required`);
+    // 解析规范化相对路径后再判定范围；下载目标约定在 lab 内，不能只查字符串前缀。
     const modelPath = resolve(LAB_ROOT, candidate.model_path ?? "");
     const rel = relative(LAB_ROOT, modelPath);
     if (!candidate.model_path || isAbsolute(candidate.model_path) || rel.startsWith("..") || isAbsolute(rel)) {

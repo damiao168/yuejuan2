@@ -3,20 +3,35 @@ package exam
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
 
-// refreshExamCandidateSnapshot is only called while an exam's core settings
-// are editable. Once the exam leaves preparation, UpdateExam rejects changes
-// and this identity snapshot remains immutable for the historical workflow.
+// refreshExamCandidateSnapshot 随考试创建或班级修改重建名册，事务由调用方持有。
+// RebuildCandidateSnapshot 会在同一事务内锁定考试并检查阶段，避免新入口遗漏冻结约束。
 func (s *PostgresStore) refreshExamCandidateSnapshot(ctx context.Context, tx *sql.Tx, tenantID, examID string) error {
 	return RebuildCandidateSnapshot(ctx, tx, tenantID, examID)
 }
 
-// RebuildCandidateSnapshot is shared with the readiness confirmation flow so
-// the final roster refresh and the transition to ready commit atomically.
+// RebuildCandidateSnapshot 在调用方事务中锁定考试行并只允许 draft/configured。
+// 它与准备确认共享事务，阶段不允许时返回 ErrCandidatesFrozen；快照复制当时的学籍信息。
 func RebuildCandidateSnapshot(ctx context.Context, tx *sql.Tx, tenantID, examID string) error {
+	var status string
+	if err := tx.QueryRowContext(ctx, `
+SELECT status
+FROM exam
+WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL
+FOR UPDATE
+`, tenantID, examID).Scan(&status); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+	if !CanChangeCandidateRoster(status) {
+		return ErrCandidatesFrozen
+	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM exam_candidate_snapshot WHERE tenant_id=$1 AND exam_id=$2::uuid`, tenantID, examID); err != nil {
 		return err
 	}
@@ -56,7 +71,7 @@ func (s *PostgresStore) RefreshCandidateSnapshot(ctx context.Context, scope auth
 	if err != nil {
 		return CandidateRefreshResult{}, err
 	}
-	if current.Status != "draft" && current.Status != "configured" {
+	if !CanChangeCandidateRoster(current.Status) {
 		return CandidateRefreshResult{}, ErrCandidatesFrozen
 	}
 

@@ -33,6 +33,7 @@ type UsageLedger interface {
 	RecordModelUsage(context.Context, ModelUsageEvent) error
 }
 
+// 用租户、请求和功能做幂等键，重试不会重复计费；缺失的 token 总数由输入和输出补齐。
 func (s *PostgresStore) RecordModelUsage(ctx context.Context, event ModelUsageEvent) error {
 	if event.RequestCount <= 0 {
 		event.RequestCount = 1

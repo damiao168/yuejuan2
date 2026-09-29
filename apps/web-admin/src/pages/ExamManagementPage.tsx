@@ -88,6 +88,7 @@ function labelFrom(options: { label: string; value: string }[], value: string) {
   return options.find((item) => item.value === value)?.label ?? "其他类型";
 }
 
+// 准备确认、开始采集和成绩发布有独立校验流程，列表不直接跨过这三个状态边界。
 function nextStatus(status: string) {
   if (status === "configured" || status === "ready" || status === "finalized") {
     return null;

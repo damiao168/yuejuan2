@@ -13,6 +13,7 @@ func NewPostgresPilotGateStore(db *sql.DB) *PostgresPilotGateStore {
 	return &PostgresPilotGateStore{db: db}
 }
 
+// CreatePilotGate 将指标、阈值和本次判断一起保存；以后调整阈值时，历史评估仍按当时的依据解释。
 func (s *PostgresPilotGateStore) CreatePilotGate(ctx context.Context, tenantID, subject, benchmarkRef string, metrics PilotMetrics, policy PilotPolicy, actorID string) (PilotGateEvaluation, error) {
 	if err := validatePilotGateInput(tenantID, subject, benchmarkRef, metrics, policy, actorID); err != nil {
 		return PilotGateEvaluation{}, err

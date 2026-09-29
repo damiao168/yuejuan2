@@ -44,6 +44,7 @@ func (h *Handler) runtimeStatus() RuntimeStatus {
 	return RuntimeStatus{Enabled: true, Available: true, Mode: "custom"}
 }
 
+// 可用性检查只控制外部模型入口；不可用时返回人工复核提示，已有运行和查询接口仍可工作。
 func (h *Handler) requireAvailable(w http.ResponseWriter, r *http.Request) bool {
 	status := h.runtimeStatus()
 	if status.Available {
@@ -61,6 +62,7 @@ func (h *Handler) requireAvailable(w http.ResponseWriter, r *http.Request) bool 
 	return false
 }
 
+// 请求体禁止未知字段且只能包含一个 JSON 值，尽早拒绝拼接内容，避免调用层误读部分请求。
 func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
 	if r.Body == nil {
 		return true

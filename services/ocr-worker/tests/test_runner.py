@@ -320,6 +320,7 @@ class RunnerTests(unittest.TestCase):
         self.assertGreaterEqual(len(api.heartbeats), 2)
         self.assertEqual(len(api.completed), 1)
 
+    # 故意让第二次心跳阻塞而推理结束，验证终态写入会等待在途心跳退出。
     def test_heartbeat_stops_before_terminal_completion(self):
         class BlockingHeartbeatAPI(FakeAPI):
             def __init__(self):

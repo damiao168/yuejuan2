@@ -40,6 +40,7 @@ export function useUploadSync({
   onlineRef.current = isOnline;
   const scopeRef = useRef(durableScopeKey);
   const activeUploads = useRef(new Set<AbortController>());
+  // 账号作用域变化时立即中止旧上传；异步回调还会再次核对作用域，防止迟到结果写入新账号。
   if (scopeRef.current !== durableScopeKey) {
     for (const controller of activeUploads.current) controller.abort();
     activeUploads.current.clear();
@@ -127,6 +128,7 @@ export function useUploadSync({
         });
         updateQueue((current) => current.map((candidate) => candidate.id === id ? nextItem : candidate));
         if (hasDurableDesktopStore()) {
+          // 本次进度必须排在此前队列写入之后，并等待落盘成功，才能允许续传下一块。
           const persisted = durablePersistenceRef.current
             .catch(() => undefined)
             .then(() => persistDurableScanQueueItem(nextItem, scope));

@@ -123,6 +123,7 @@ class ManagedPaperModelTests(unittest.TestCase):
                     public_json_transport("https://example.test/v1", {}, {}, 1)
                 connect.assert_not_called()
 
+    # DNS 和连接均为替身；此处验证固定解析地址与禁止重定向的调用边界。
     def test_public_transport_pins_ip_and_never_follows_redirect(self):
         response = Mock(status=302)
         connection = Mock()

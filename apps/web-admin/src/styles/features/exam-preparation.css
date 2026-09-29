@@ -154,6 +154,7 @@
   cursor: default;
 }
 
+/* 页面图像必须铺满已确定比例的画布；contain 留白会改变显示矩形，使归一化题框坐标看起来偏移。 */
 .template-canvas > img {
   width: 100%;
   height: 100%;

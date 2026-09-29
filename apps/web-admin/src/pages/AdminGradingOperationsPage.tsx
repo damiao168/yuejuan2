@@ -57,6 +57,7 @@ export function AdminGradingOperationsPage({ onNavigate }: { onNavigate: (path: 
     try {
       const examResult = await listExams();
       const gradingExams = examResult.exams.filter(isAdminGradingExam);
+      // 单场进度失败不影响考试列表；404 表示尚未生成评分任务，不计入刷新警告。
       const summaries = await Promise.allSettled(gradingExams.map((exam) => getScoringSummary(exam.id)));
       setOperations(gradingExams.map((exam, index) => ({
         exam,

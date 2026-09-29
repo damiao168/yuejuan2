@@ -85,6 +85,7 @@ func validPanelStatus(status string) bool {
 	return activePanelStatus(status) || status == PanelResolved || status == PanelFailed
 }
 
+// 面板状态只能沿允许的单向路径推进；终态不能被普通更新重新打开，人工复核只能最终收敛为已解决。
 func validPanelTransition(from, to string) bool {
 	if from == to {
 		return true

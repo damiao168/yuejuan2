@@ -75,6 +75,7 @@ function collectSensitiveFindings(sample) {
   return findings;
 }
 
+// 以题目和量规版本组成隔离组；按记录随机拆分会让同题作答跨越训练与测试集。
 export function questionGroupKey(sample) {
   const rubricVersion = sample.rubric_version ?? sample.rubric?.rubric_version;
   if (!rubricVersion) throw new Error(`sample ${sample.sample_id ?? "unknown"} lacks rubric_version`);
@@ -128,10 +129,12 @@ export function splitByQuestionGroup(samples, options = {}) {
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(sample);
   }
+  // 哈希排序让分组顺序只依赖 seed 与组键，不受输入记录排列影响。
   const ordered = [...groups.entries()].sort(([left], [right]) => hashOrder(seed, left).localeCompare(hashOrder(seed, right)));
   const groupCount = ordered.length;
   let validationCount = Math.round(groupCount * ratios.validation);
   let testCount = Math.round(groupCount * ratios.test);
+  // 比例按组数取整；至少三组时给验证、测试各留一组，实际比例可偏离请求比例。
   if (groupCount >= 3) {
     validationCount = Math.max(1, validationCount);
     testCount = Math.max(1, testCount);

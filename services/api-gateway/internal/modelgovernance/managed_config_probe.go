@@ -47,6 +47,7 @@ func NewHTTPManagedAPIProber(timeout time.Duration) *HTTPManagedAPIProber {
 	return prober
 }
 
+// 同一配置和能力版本的并发探测合并为一次请求，避免管理员重复点击造成重复生成和费用。
 func (p *HTTPManagedAPIProber) Probe(ctx context.Context, connection ManagedAPIConnection) (result ManagedAPIProbeResult) {
 	value, _, shared := p.capabilityFlights.Do(managedCapabilityFlightKey(connection), func() (any, error) {
 		return p.probeCapability(ctx, connection), nil
@@ -139,6 +140,7 @@ func (p *HTTPManagedAPIProber) ListModels(ctx context.Context, connection Manage
 	return list, result
 }
 
+// 兼容接口先列模型确认密钥和模型，再发送固定 JSON 能力样例；能力请求失败不能被当成连接成功。
 func (p *HTTPManagedAPIProber) probeOpenAICompatible(ctx context.Context, client *http.Client, connection ManagedAPIConnection, result ManagedAPIProbeResult) ManagedAPIProbeResult {
 	modelsEndpoint, err := managedModelsEndpoint(connection.Config.BaseURL)
 	if err != nil {
@@ -711,6 +713,7 @@ func managedEndpoint(baseURL, suffix string) (string, error) {
 	return parsed.String(), nil
 }
 
+// DNS 返回的每个地址都必须是公网地址；混合公网和内网结果整体拒绝，防止回退路径绕过 SSRF 防护。
 func safePublicDialContext(ctx context.Context, network, address string) (net.Conn, error) {
 	host, port, err := net.SplitHostPort(address)
 	if err != nil {

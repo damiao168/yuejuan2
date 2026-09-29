@@ -138,6 +138,7 @@ func (h *Handler) Complete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) allowsExam(r *http.Request, examID string) bool {
+	// 后续分块/完成请求使用已保存会话的考试授权，不能由客户端另报考试来扩大范围。
 	user := mustUser(r)
 	scope, ok := auth.AccessScopeFromContext(r.Context())
 	return ok && scope.TenantID == user.TenantID && (scope.IsPlatform || scope.AllowsExam(examID))

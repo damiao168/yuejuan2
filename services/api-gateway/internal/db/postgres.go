@@ -21,6 +21,8 @@ type QueryObserver struct {
 	LogSlow       func(ctx context.Context, operation string, duration time.Duration, queryErr error)
 }
 
+// OpenPostgres 创建连接池；启用租户隔离时，每次数据库操作都会绑定上下文中的租户。
+// 返回的清理函数可重复调用，并负责释放 pgx 注册配置；创建连接池本身不验证连通性。
 func OpenPostgres(cfg config.PostgresConfig, observers ...QueryObserver) (*sql.DB, func() error, error) {
 	connConfig, err := newPostgresConnConfig(cfg, observers...)
 	if err != nil {
@@ -93,6 +95,7 @@ type queryTracer struct {
 }
 
 func (t queryTracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
+	// 租户设置属于连接管理开销，排除它可避免把一次业务查询重复计入指标。
 	if strings.Contains(data.SQL, "set_config('edugrade.tenant_id'") || strings.EqualFold(strings.TrimSpace(data.SQL), "SET ROLE "+tenantRuntimeRole) {
 		return context.WithValue(ctx, queryTraceKey{}, queryTraceState{skip: true})
 	}
@@ -124,6 +127,7 @@ func (t queryTracer) TraceQueryEnd(ctx context.Context, _ *pgx.Conn, data pgx.Tr
 	}
 }
 
+// 指标只保留操作类别，避免把 SQL 正文中的业务数据带入监控标签。
 func sqlOperation(statement string) string {
 	fields := strings.Fields(statement)
 	if len(fields) == 0 {

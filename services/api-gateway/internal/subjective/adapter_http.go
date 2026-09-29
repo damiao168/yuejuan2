@@ -130,6 +130,7 @@ func (a *HTTPAdapter) RuntimeStatus() RuntimeStatus {
 	}
 }
 
+// 每次重试复用同一个请求 ID 和请求体，保证服务端幂等；只有明确可重试的代理错误才会再次发送。
 func (a *HTTPAdapter) Grade(ctx context.Context, input AdapterInput) (result AdapterOutput, gradeErr error) {
 	attempted := false
 	defer func() {
@@ -286,6 +287,7 @@ func gradingAgentContractRole(role string) string {
 	}
 }
 
+// 外部响应受大小和 JSON 结构双重限制；解析失败只返回脱敏错误，不把模型原文直接暴露给接口调用者。
 func (a *HTTPAdapter) request(ctx context.Context, requestID string, body []byte) (gradingAgentResponse, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.baseURL+"/grading/grade", bytes.NewReader(body))
 	if err != nil {

@@ -64,6 +64,7 @@ func (s *PostgresStore) GetPolicy(ctx context.Context, tenantID, examID, questio
 WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND question_id=$3::uuid`, tenantID, examID, questionID))
 }
 
+// 策略、阅卷人游标和待处理任务在同一事务内检查和更新，确保并发请求最多创建一个 Seed 任务。
 func (s *PostgresStore) AdvanceAndMaybeCreate(ctx context.Context, tenantID string, decision IssueDecision) (Task, bool, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -170,6 +171,7 @@ func (s *PostgresStore) GetTask(ctx context.Context, tenantID, id string) (Task,
 	return scanTask(s.db.QueryRowContext(ctx, seedTaskSelect+` WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, id))
 }
 
+// 提交事务先处理命令幂等记录，再锁定任务并写观察结果，网络重试不会重复计入质量样本。
 func (s *PostgresStore) CompleteTask(ctx context.Context, tenantID, taskID, graderID string, input SubmitInput, observation Observation) (Task, Observation, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {

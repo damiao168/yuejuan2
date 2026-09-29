@@ -49,6 +49,7 @@ func (h *Handler) CreateBatch(w http.ResponseWriter, r *http.Request) {
 	if input.IdempotencyKey == "" {
 		input.IdempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	}
+	// 非采集阶段只允许恢复已成功接受的同键命令，不能借恢复接口新建批次。
 	if current.Status != "collecting" {
 		recovery, recoveryErr := h.store.RecoverBatchCommand(r.Context(), user.TenantID, examID, user.ID, input.IdempotencyKey)
 		if recoveryErr != nil || recovery.Status != "succeeded" {
@@ -590,6 +591,7 @@ func (h *Handler) CompleteFile(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusConflict, "capture_task_mismatch", "worker task does not belong to this capture file")
 		return
 	}
+	// 先核对任务归属和每个产物的考试、哈希，再把解码页面写入数据库。
 	for _, page := range input.Pages {
 		asset, assetErr := h.files.Get(r.Context(), user.TenantID, page.FileAssetID)
 		if assetErr != nil || asset.ExamID != sourceAsset.ExamID || asset.HashSHA256 != page.SHA256 {
@@ -790,6 +792,7 @@ func (h *Handler) CompleteTemplateMatch(w http.ResponseWriter, r *http.Request) 
 		writeTemplateMatchCommandError(w, r, err)
 		return
 	}
+	// 生产存储已在同一事务完成任务租约；内存替身才在这里补做任务完成调用。
 	if _, ok := h.store.(TransactionalTemplateMatchStore); !ok {
 		result := map[string]any{"template_match_run_id": runID, "result_version": input.ResultVersion, "decision": out.Decision, "selected_template_id": out.SelectedTemplateID, "score": out.Score, "margin": out.Margin}
 		if _, err = h.runtime.Complete(r.Context(), user.TenantID, input.TaskID, workerruntime.CompleteInput{LeaseToken: input.LeaseToken, ResultSchemaVersion: "page-template-match-result-v1", Result: result, DurationMS: input.DurationMS}); err != nil {
@@ -886,6 +889,7 @@ func (h *Handler) setStatus(w http.ResponseWriter, r *http.Request, status strin
 	httpx.JSON(w, http.StatusOK, map[string]any{"batch": out})
 }
 
+// 请求体限制为 1 MiB、禁止未知字段且只能包含一个 JSON 值，避免 worker 回调夹带未审计输入。
 func decodeStrict(w http.ResponseWriter, r *http.Request, target any) bool {
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
 	decoder.DisallowUnknownFields()

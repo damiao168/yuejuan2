@@ -9,6 +9,7 @@ if (-not (Test-Path $PidFile)) {
 $ServerPid = [int](Get-Content -Raw $PidFile)
 $Process = Get-Process -Id $ServerPid -ErrorAction SilentlyContinue
 if ($Process) {
+    # PID 可能被系统复用，停止前还要核对进程路径；不能只凭残留 PID 文件终止进程。
     $ExpectedRoot = (Resolve-Path (Join-Path $LabRoot ".runtime")).Path
     if (-not $Process.Path.StartsWith($ExpectedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
         throw "refusing to stop PID $ServerPid because it is outside the lab runtime"

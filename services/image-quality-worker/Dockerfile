@@ -14,6 +14,7 @@ RUN python -m pip install --no-cache-dir --timeout 180 --retries 10 \
       "numpy==2.4.6" "opencv-python-headless==5.0.0.93" "pillow==12.3.0"
 
 COPY services/image-quality-worker/image_quality ./image_quality
+# 图像依赖已在上一层固定安装；此处只装共享运行时与业务包，保持镜像依赖可追溯。
 RUN python -m pip install --no-cache-dir --no-deps /tmp/worker-runtime-python .
 
 USER nobody

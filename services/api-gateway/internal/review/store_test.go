@@ -96,6 +96,7 @@ func TestSubmitAndReturnAreLinearizable(t *testing.T) {
 			t.Fatalf("iteration %d create task: %v", iteration, err)
 		}
 
+		// 两个操作拿同一旧版本同时出发；只允许一个成功，成绩记录必须与胜出的状态一致。
 		start := make(chan struct{})
 		submitResult := make(chan error, 1)
 		returnResult := make(chan error, 1)

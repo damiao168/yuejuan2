@@ -11,6 +11,7 @@ const requiredRoles = [
 ];
 const scopes = new Set(["platform", "tenant", "school", "class", "exam_task", "self", "service"]);
 
+// 这里只检查角色矩阵结构和角色边界；数据库实际授予的权限由迁移集成测试另行核对。
 export function checkAuthorizationContract(matrix) {
   assert.ok(matrix && typeof matrix === "object" && !Array.isArray(matrix), "role matrix must be an object");
   assert.deepEqual(Object.keys(matrix).sort(), [...requiredRoles].sort(), "role matrix must list every canonical role exactly once");

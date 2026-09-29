@@ -114,6 +114,7 @@ class ApplicationV2Tests(unittest.TestCase):
         self.assertEqual(sorted(replayed for _, replayed in results), [False, True])
         self.assertEqual(len(adapter.calls), 1)
 
+    # 两个不同请求各执行一次；fixture seam 的并发上限与同键幂等合并是两条独立规则。
     def test_distinct_v2_requests_are_serialized_to_one_inference(self):
         first = fixture("valid-request.json")
         second = copy.deepcopy(first)

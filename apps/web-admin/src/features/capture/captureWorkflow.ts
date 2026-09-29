@@ -1,4 +1,5 @@
 export class LatestRequestGate {
+  // 只判断回填是否过期，不会取消网络请求；切换作用域或重新加载时需主动使旧序号失效。
   private revision = 0;
 
   begin() {
@@ -16,6 +17,7 @@ export class LatestRequestGate {
 }
 
 export class ExclusiveCommandGate {
+  // 这是当前页面实例内的同步互斥，跨刷新和跨设备的幂等性仍由业务命令键与服务端负责。
   private readonly active = new Set<string>();
 
   enter(key: string) {

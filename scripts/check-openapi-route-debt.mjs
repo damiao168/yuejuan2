@@ -38,6 +38,7 @@ export function findRouteDebtFailures(budget, coverage) {
     if (Number.isSafeInteger(maximum) && actual > maximum) failures.push(`${name} increased to ${actual} (budget ${maximum})`);
   }
 
+  // 总缺口未增长也可能出现新写接口缺口，因此按方法和路径再核对逐项批准的例外。
   const approvedCommands = new Set(budget.allowed_public_command_gaps);
   for (const key of publicCommandGaps(coverage.routes)) {
     if (!approvedCommands.has(key)) failures.push(`new public command exception requires OpenAPI coverage: ${key}`);

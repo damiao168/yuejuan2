@@ -103,6 +103,7 @@ func (s *MemoryStore) CreateVersion(_ context.Context, tenantID, goldID, actorID
 	return cloneGold(item), nil
 }
 
+// 审批在锁内把版本标为 active；已批准版本不可重复审批，退休 Gold 也不能重新启用。
 func (s *MemoryStore) Approve(_ context.Context, tenantID, goldID, actorID string, versionNumber int) (GoldPaper, error) {
 	if tenantID == "" || goldID == "" || actorID == "" || versionNumber <= 0 {
 		return GoldPaper{}, ErrInvalidInput

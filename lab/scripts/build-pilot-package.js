@@ -69,6 +69,7 @@ const evidence = {
     operational_latency_passed: `p95=${modelSelection4b.operations.latency_ms_p95}ms ceiling=120000ms`
   }
 };
+// 冻结包也记录 NOT_READY 和阻塞原因；生成成功本身不代表获准开展试点。
 const readiness = evaluatePilotReadiness(evidence);
 const regressionRecords = readFileSync(join(LAB_ROOT, "evals/regression/prompt-rubric-v2.jsonl"), "utf8")
   .split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));

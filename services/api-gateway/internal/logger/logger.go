@@ -78,6 +78,7 @@ func (l *Logger) write(ctx context.Context, level string, message string, fields
 	_, _ = l.out.Write(append(encoded, '\n'))
 }
 
+// 脱敏依赖字段名，仅递归处理 map[string]any 和 []any；调用方不能把秘密藏在自由文本或自定义结构中。
 func sanitizeField(key string, value any) any {
 	if isSensitiveKey(key) {
 		return "[REDACTED]"

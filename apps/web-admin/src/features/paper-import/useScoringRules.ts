@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { App } from "antd";
 import { getUserErrorMessage } from "../../api/client";
 import {
@@ -22,13 +22,20 @@ export function useScoringRules({
   const [scoringRules, setScoringRules] = useState<Awaited<ReturnType<typeof listScoringRules>>["scoring_rules"]>([]);
   const [scoringRuleConfig, setScoringRuleConfig] = useState<Record<string, unknown>>({});
   const [savingScoringRule, setSavingScoringRule] = useState(false);
+  const [scoringRuleDirty, setScoringRuleDirty] = useState(false);
+  const loadedQuestionKey = useRef<string | null>(null);
 
   useEffect(() => {
+    const questionKey = selectedQuestion?.id ?? null;
+    // 同一题的未保存编辑优先保留；换题后重新加载，避免把上题草稿带入新题。
+    if (scoringRuleDirty && loadedQuestionKey.current === questionKey) return;
+    loadedQuestionKey.current = questionKey;
     let active = true;
     async function loadRules() {
       if (!selectedQuestion || !objectiveRuleType) {
         setScoringRules([]);
         setScoringRuleConfig({});
+        setScoringRuleDirty(false);
         return;
       }
       try {
@@ -38,15 +45,17 @@ export function useScoringRules({
         const editable = result.scoring_rules.find((rule) => rule.status === "draft")
           ?? result.scoring_rules.find((rule) => rule.status === "published");
         setScoringRuleConfig(editable?.config ?? {});
+        setScoringRuleDirty(false);
       } catch (error) {
         if (active) message.error(getUserErrorMessage(error, "操作失败，请稍后重试"));
       }
     }
     void loadRules();
     return () => { active = false; };
-  }, [message, objectiveRuleType, selectedQuestion]);
+  }, [message, objectiveRuleType, scoringRuleDirty, selectedQuestion]);
 
   const setRuleConfig = (key: string, value: unknown) => {
+    setScoringRuleDirty(true);
     setScoringRuleConfig((current) => ({ ...current, [key]: value }));
   };
 
@@ -69,9 +78,12 @@ export function useScoringRules({
       const editable = result.scoring_rules.find((rule) => rule.status === "draft")
         ?? result.scoring_rules.find((rule) => rule.status === "published");
       setScoringRuleConfig(editable?.config ?? {});
+      setScoringRuleDirty(false);
       onChanged?.();
+      return true;
     } catch (error) {
       message.error(getUserErrorMessage(error, "操作失败，请稍后重试"));
+      return false;
     } finally {
       setSavingScoringRule(false);
     }
@@ -80,6 +92,8 @@ export function useScoringRules({
   return {
     scoringRules,
     scoringRuleConfig,
+    scoringRuleDirty,
+    discardScoringRuleDraft: () => setScoringRuleDirty(false),
     savingScoringRule,
     draftScoringRule: scoringRules.find((rule) => rule.status === "draft"),
     publishedScoringRule: scoringRules.find((rule) => rule.status === "published"),

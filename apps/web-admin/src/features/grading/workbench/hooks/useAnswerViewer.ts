@@ -140,6 +140,7 @@ export function useAnswerViewer({ context, canViewOriginalImage, prefetchedPrevi
     setAutoFit(true);
     try {
       const imagePath = mode === "segment" ? context.segmentImageUrl : context.originalImageUrl!;
+      // 标注内容已有修订时必须重取图片；按任务预取的旧图不含这个修订。
       const cachedPreview = mode === "segment" && !contentRevision ? prefetchedPreviewRef.current.get(context.task.id) : undefined;
       if (mode === "segment") prefetchedPreviewRef.current.delete(context.task.id);
       const file = (cachedPreview ? await cachedPreview : null) ?? await downloadReviewWorkspaceImage(imagePath);

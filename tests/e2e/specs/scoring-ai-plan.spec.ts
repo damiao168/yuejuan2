@@ -88,6 +88,7 @@ test("AI assisted question follows the visible plan into an idempotent suggestio
   await expect(page.getByText("AI 辅助建议", { exact: true })).toBeVisible({ timeout: 15_000 });
 });
 
+// 预置已接受的评分 run，却暂时不给 AI 批次，模拟跨步骤中断；刷新后只能补建一次。
 test("an accepted scoring run without AI batches resumes after opening the workbench", async ({ page }) => {
   await installApiMocks(page, { initiallyAuthenticated: true });
   const run = { id: "run-ai", exam_id: "exam-1", status: "needs_review", total_count: 1, queued_count: 0, auto_confirmed_count: 0, human_confirmed_count: 0, review_count: 1, failed_count: 0 };

@@ -53,6 +53,7 @@ export function useRegionEditor({
   } : undefined;
 
   const point = (event: ReactPointerEvent) => {
+    // 用当前显示矩形换算 0～1 页面比例，缩放预览不会改变最终保存坐标。
     const bounds = canvasRef.current?.getBoundingClientRect();
     if (!bounds) return { x: 0, y: 0 };
     return { x: clamp((event.clientX - bounds.left) / bounds.width),
@@ -84,6 +85,7 @@ export function useRegionEditor({
     }
     const dx = position.x - interaction.startX;
     const dy = position.y - interaction.startY;
+    // 每次移动相对按下时的原始框计算，避免连续事件累加位移造成漂移。
     updateRegion(interaction.regionId, interaction.kind === "move"
       ? { x: clamp(interaction.original.x + dx, 0, 1 - interaction.original.width),
           y: clamp(interaction.original.y + dy, 0, 1 - interaction.original.height) }

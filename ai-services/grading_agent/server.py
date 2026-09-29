@@ -9,6 +9,7 @@ from .app import GradingAgentApplication
 from .config import Settings
 from .errors import AgentError
 from .managed_model import paper_model
+from .math_rubric_draft import MathRubricDraftGenerator
 from .paper_parser import PaperParser
 
 
@@ -76,7 +77,7 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
         self._error(AgentError("invalid_request", "route not found", status=404))
 
     def do_POST(self):
-        if self.path not in {"/grading/grade", "/grading/grade-v2", "/paper/parse"}:
+        if self.path not in {"/grading/grade", "/grading/grade-v2", "/paper/parse", "/paper/rubric-draft"}:
             self._error(AgentError("invalid_request", "route not found", status=404))
             return
         try:
@@ -89,6 +90,21 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
                     self._paper_parse_stream(parser, payload)
                     return
                 self._json(200, parser.parse(payload))
+                return
+            if self.path == "/paper/rubric-draft":
+                if not isinstance(payload, dict) or set(payload) - {
+                    "request_id", "subject", "question_candidate", "answer_candidate", "solution_candidate", "managed_model"
+                } or payload.get("subject") not in {"数学", "mathematics"}:
+                    raise AgentError("invalid_request", "math rubric draft request is invalid", status=400, request_id=request_id)
+                if not isinstance(request_id, str) or not 8 <= len(request_id) <= 128:
+                    raise AgentError("invalid_request", "request_id is invalid", status=400)
+                draft = MathRubricDraftGenerator(paper_model(self.server.application, payload)).generate(
+                    request_id,
+                    payload.get("question_candidate"),
+                    payload.get("answer_candidate"),
+                    payload.get("solution_candidate"),
+                )
+                self._json(200, draft)
                 return
             idempotency_key = self.headers.get("Idempotency-Key", "").strip()
             if not idempotency_key:
@@ -146,6 +162,7 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
 
         try:
             result = parser.parse(payload, progress=lambda value: emit("progress", value))
+            # 流式 HTTP 200 只表示连接已建立，只有 result 事件代表完整解析成功。
             emit("result", result)
         except AgentError as exc:
             print(
@@ -213,6 +230,8 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
                 self.server.application.settings.max_request_bytes,
                 48 * 1024 * 1024,
             )
+        elif self.path == "/paper/rubric-draft":
+            max_bytes = min(self.server.application.settings.max_request_bytes, 2 * 1024 * 1024)
         else:
             max_bytes = self.server.application.settings.max_request_bytes
         if length <= 0 or length > max_bytes:

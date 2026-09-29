@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+// 按仓库固定的字面量注册写法扫描，遇到动态路由或其他注册方式时需扩展检测。
 const routePattern = /\b(?:mux|[A-Za-z_]\w*Mux)\.Handle\("(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS) ([^" ]+)"/g;
 
 function walk(directory) {
@@ -70,6 +71,7 @@ export function buildRouteCoverage({ root, gatewayRoot, openapiPath, exceptionsP
   routes.sort((left, right) => left.path.localeCompare(right.path) || left.method.localeCompare(right.method));
   const duplicates = routes.filter((route, index) => index > 0 && route.method === routes[index - 1].method && route.path === routes[index - 1].path);
   if (duplicates.length) throw new Error(`duplicate registered routes: ${duplicates.map((route) => `${route.method} ${route.path}`).join(", ")}`);
+  // 路由移除或纳入契约后必须删掉旧例外，避免它将来被相同路径重新利用。
   const stale = [...approved.keys()].filter((key) => !usedApprovals.has(key)).sort();
   if (stale.length) throw new Error(`stale registered-gap approvals (route removed or now contracted): ${stale.join(", ")}`);
 

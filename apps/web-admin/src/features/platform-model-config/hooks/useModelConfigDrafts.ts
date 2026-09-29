@@ -3,6 +3,7 @@ import type { FormInstance } from "antd";
 import { MODEL_CONFIG_DRAFT_TTL_MS, type ConfigFormValues, type ModelConfigDraft } from "../lib/modelConfig";
 
 export function useModelConfigDrafts(form: FormInstance<ConfigFormValues>) {
+  // 模型表单可能包含 API Key，草稿只留在当前组件内存中，超时和卸载都会丢弃，不写浏览器存储。
   const draftsRef = useRef(new Map<string, ModelConfigDraft>());
   const timersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 

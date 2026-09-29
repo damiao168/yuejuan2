@@ -6,6 +6,8 @@ import (
 	"unicode"
 )
 
+// NormalizePhone 将支持的手机号格式归一为国际号码；未带区号的中国大陆手机号补 +86。
+// 这里只验证格式，不证明号码存在或归调用者所有。
 func NormalizePhone(value string) (string, error) {
 	var builder strings.Builder
 	for index, char := range strings.TrimSpace(value) {

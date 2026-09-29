@@ -1,0 +1,129 @@
+{
+  "files": [
+    {
+      "path": "services/api-gateway/internal/capture/barcode.go",
+      "status": "existing_sufficient",
+      "reason": "已完整审读；版本 1/2 条码声明、签名验证和版本字段边界已有准确说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/barcode_test.go",
+      "status": "existing_sufficient",
+      "reason": "已完整审读；测试名称及兼容性、伪造身份说明已覆盖关键场景。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/barcode_store.go",
+      "status": "annotated",
+      "reason": "已审读签发、幂等、观测去重和归属校验；补充锁定模板、多个可信身份转人工的维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/batch_command_postgres.go",
+      "status": "annotated",
+      "reason": "已审读命令恢复、事务锁和考试状态顺序；补充恢复已接受命令的边界说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/batch_command.go",
+      "status": "annotated",
+      "reason": "已审读幂等哈希；补充命令键与实际请求内容绑定的原因。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/correction_apply_store_postgres.go",
+      "status": "annotated",
+      "reason": "已审读校正应用与撤销事务；补充快照保存和页版本保护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/correction_geometry_test.go",
+      "status": "annotated",
+      "reason": "已审读几何边界测试；补充测试覆盖的退化和点序场景。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/correction_geometry.go",
+      "status": "annotated",
+      "reason": "已审读归一化坐标和四边形校验；补充方向与最小面积约束。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/correction_store_postgres.go",
+      "status": "annotated",
+      "reason": "已审读校正上下文、预览租约和重试；补充最新运行及尝试键约束。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/handlers.go",
+      "status": "annotated",
+      "reason": "已审读回调资产核对、命令恢复和严格 JSON 解码；补充失败边界说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/matching_store_postgres.go",
+      "status": "annotated",
+      "reason": "已审读冻结名册绑定和人工改页；补充名册来源与旧配准失效原因。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/organization_store_postgres.go",
+      "status": "annotated",
+      "reason": "已审读拆分合并、重排和失效处理；补充身份与旧切片不能沿用的原因。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/print_context_store.go",
+      "status": "annotated",
+      "reason": "已审读冻结名册与活动纸张查询；补充模板内容哈希和最新未撤销纸张边界。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/print_package_pdf_test.go",
+      "status": "annotated",
+      "reason": "已审读打印包确定性和页数测试；补充不可变台账的验证目的。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/print_package_pdf.go",
+      "status": "annotated",
+      "reason": "已审读 PDF 元数据、二维码和归一坐标映射；补充字节稳定性与毫米映射说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/print_package_store.go",
+      "status": "annotated",
+      "reason": "已审读打印台账读取、状态和数量校验；补充组装前的数量边界。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/registration_review_store_postgres.go",
+      "status": "annotated",
+      "reason": "已审读处理汇总按最新未失效运行统计；补充旧运行不能掩盖阻塞的原因。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/registration_store_postgres.go",
+      "status": "annotated",
+      "reason": "已审读模板路由、候选模板、任务和低置信度结果；补充路由优先级及候选建议边界。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/sheet_identity_store.go",
+      "status": "annotated",
+      "reason": "已审读撤销、重印、重复扫描协调；补充纸张状态与页面聚合需同事务重算。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/store_memory.go",
+      "status": "annotated",
+      "reason": "已审读内存替身、摘要和文件幂等行为；补充其模拟边界及哈希重复语义。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/store_memory_test.go",
+      "status": "annotated",
+      "reason": "已审读采集、质检、版本冲突和重试测试；补充质检通过仍需配准的时序说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/store_postgres.go",
+      "status": "annotated",
+      "reason": "已审读队列事务、质检聚合、页面版本和 JSON 扫描；补充锁顺序、坐标失效和空集合约束。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/template_match_store_postgres.go",
+      "status": "annotated",
+      "reason": "已审读模板候选、自动绑定并发和 worker 租约；补充无候选转人工及事务边界。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/types.go",
+      "status": "annotated",
+      "reason": "已审读采集、配准和切片数据契约；补充计数来源、版本语义、运行历史和坐标框说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/validation.go",
+      "status": "annotated",
+      "reason": "已审读来源、文件和批次状态校验；补充持久化枚举及完成/重开边界。"
+    }
+  ]
+}

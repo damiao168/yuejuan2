@@ -18,6 +18,7 @@ function hasRole(user: SessionUser, roles: readonly string[]) {
   return roles.some((role) => user.roles.includes(role));
 }
 
+// 产品入口按角色分配；持有某个业务权限本身不能获得管理端身份。
 export function availableExperiences(user: SessionUser): ProductExperience[] {
   const experiences: ProductExperience[] = [];
   if (hasRole(user, ADMIN_ROLES)) experiences.push("admin");

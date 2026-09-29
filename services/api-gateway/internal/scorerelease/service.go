@@ -92,6 +92,7 @@ func (s *Service) Publish(ctx context.Context, tenantID, id, actorID string) (Re
 		if s.highScorePaper == nil {
 			return Release{}, ErrAnonymousPaperUnavailable
 		}
+		// 匿名高分卷必须先生成并校验派生资产；生成失败时保留草稿，避免发布后才发现图片不可用。
 		if err := s.highScorePaper.Prepare(ctx, tenantID, id, actorID); err != nil {
 			return Release{}, err
 		}
@@ -237,6 +238,7 @@ func oneOf(value string, values ...string) bool {
 	return false
 }
 
+// 申诉窗口包含开始时刻、不包含结束时刻；未设置的端点不限制该方向的时间。
 func appealView(window AppealWindow, now time.Time) StudentAppealView {
 	view := StudentAppealView{}
 	if !window.Enabled {

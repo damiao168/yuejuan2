@@ -5,6 +5,7 @@ export function compareModelSelectionReports(reports) {
       new Set(candidateIds).size !== candidateIds.length) {
     throw new Error("model selection reports require unique non-empty candidate ids");
   }
+  // 数据内容、来源和证据用途必须一致，避免把不同难度或用途的报告直接排名。
   const datasetHashes = new Set(reports.map((report) => report.dataset?.sha256));
   if (datasetHashes.size !== 1 || datasetHashes.has(undefined)) throw new Error("model selection reports must use the same dataset hash");
   const scopes = new Set(reports.map((report) => report.evidence_scope ?? report.dataset?.evidence_scope ??
@@ -25,6 +26,7 @@ export function compareModelSelectionReports(reports) {
     const isModel = report.model_info?.mock === false;
     const metricsValid = Number.isFinite(report.quality.mae) && report.quality.mae >= 0 &&
       Number.isFinite(report.operations.latency_ms_p95) && report.operations.latency_ms_p95 >= 0;
+    // 质量指标只覆盖已完成样本，因此完成率和失败数单独作为候选资格门槛。
     const eligible = isModel && report.dataset?.complete_dataset !== false && completionRate === 1 && report.operations.failed === 0 &&
       report.quality.schema_validity_rate === 1 && report.quality.evidence_validity_rate === 1 && metricsValid;
     return {
@@ -72,6 +74,7 @@ export function selectDiverseBenchmarkSamples(samples, limit) {
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(sample);
   }
+  // 按题目与量规版本分组轮流取样，避免截取文件前几行导致题型集中。
   const queues = [...groups.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, records]) => [...records]);
   const selected = [];
   while (selected.length < limit) {

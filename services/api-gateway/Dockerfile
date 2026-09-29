@@ -24,6 +24,7 @@ COPY services/api-gateway/go.mod services/api-gateway/go.sum ./
 RUN GOPROXY=${GOPROXY:-https://proxy.golang.org,direct} go mod download
 
 COPY services/api-gateway/ ./
+# 构建信息由发布流水线注入，运行时可用它核对镜像、代码和数据库版本是否匹配。
 RUN GOPROXY=${GOPROXY:-https://proxy.golang.org,direct} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags "-s -w \
       -X edugrade-enterprise/services/api-gateway/internal/buildinfo.Version=${APP_VERSION} \
@@ -37,6 +38,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o /out/file
 
 FROM ${API_RUNTIME_IMAGE}
 
+# 固定非 root 身份，挂载目录的权限需要允许该 UID 读写所需文件。
 RUN apk add --no-cache ca-certificates tzdata wget \
     && addgroup -S -g 10001 edugrade \
     && adduser -S -D -H -u 10001 -G edugrade edugrade

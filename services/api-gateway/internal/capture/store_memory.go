@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// MemoryStore 只模拟采集状态流转；条码打印、配准校正等需要真实台账的能力明确返回不支持。
 type MemoryStore struct {
 	mu              sync.RWMutex
 	batches         map[string]Batch
@@ -264,6 +265,7 @@ func (s *MemoryStore) ListProcessingSummaries(_ context.Context, tenantID, batch
 	return out, nil
 }
 
+// 内存实现按页面和最近配准运行生成展示用阻塞摘要；它只模拟状态，不替代数据库聚合。
 func (s *MemoryStore) processingSummaryLocked(tenantID, submissionID string) (ProcessingSummary, error) {
 	out := ProcessingSummary{SubmissionID: submissionID, Blockers: []ProcessingBlocker{}}
 	pages := make([]Page, 0)
@@ -500,6 +502,7 @@ func (s *MemoryStore) GetBatch(_ context.Context, tenantID, batchID string) (Bat
 	return x, nil
 }
 
+// 同一批次内按幂等键复用注册结果，活动文件的哈希重复则标为 duplicate；失败文件可再次上传。
 func (s *MemoryStore) RegisterFile(_ context.Context, tenantID, batchID, actorID string, input RegisterFileInput, asset FileAssetSnapshot) (File, error) {
 	if validateRegisterFile(&input, asset) != nil {
 		return File{}, ErrInvalidInput
@@ -612,6 +615,7 @@ func (s *MemoryStore) QueueBatch(_ context.Context, tenantID, batchID, actorID s
 	return batch, nil
 }
 
+// 解码结果一次性物化为同一提交的页面，页面先进入质检等待，不直接视为可配准。
 func (s *MemoryStore) ApplyFileResult(_ context.Context, tenantID, fileID string, inputs []DecodedPageInput) (File, error) {
 	if len(inputs) == 0 {
 		return File{}, ErrInvalidInput

@@ -128,6 +128,7 @@ def test_runner_uses_verified_template_reference_for_difference_profile() -> Non
     assert result["measurements"][0]["foreground_delta"] == 0
 
 
+# 人为增加参考图一个像素，保护配准取整差异不会把印刷痕迹误当作学生填涂。
 def test_runner_aligns_minor_reference_crop_rounding_difference() -> None:
     source = _sheet("B", printed="A")
     with Image.open(io.BytesIO(_sheet(None, printed="A"))) as image:

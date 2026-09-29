@@ -26,6 +26,7 @@ export function validateCreateExam(draft: CreateExamDraft): CreateExamValidation
     if (subject.candidateRule === "subject_selected_classes" && !subject.classIds.length) {
       issues.push({ field: `${prefix}.classIds`, message: "请为该科目选择参考班级" });
     }
+    // 先上传资料的流程允许稍后补题目；已有模板分区时，才要求分区合计与满分一致。
     if (subject.sections.length > 0) {
       for (const section of subject.sections) {
         if (!section.title.trim() || !section.questionType || section.questionCount <= 0 || section.scorePerQuestion <= 0) {

@@ -70,6 +70,7 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusInternalServerError, "password_hash_failed", "failed to update password")
 		return
 	}
+	// 传入刚验证的旧哈希供存储层比较，避免覆盖验证期间发生的另一次改密。
 	updated, revoked, err := h.store.UpdatePasswordAndRevokeSessions(r.Context(), user.TenantID, user.ID, currentPasswordHash, newHash)
 	if err != nil {
 		httpx.Error(w, r, http.StatusInternalServerError, "password_change_failed", "failed to update password")

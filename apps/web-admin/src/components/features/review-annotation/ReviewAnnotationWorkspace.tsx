@@ -91,6 +91,7 @@ export function ReviewAnnotationWorkspace({
       .slice(0, 5);
   }, [trailingShortcut, workspace.templates]);
 
+  // 以图片当前显示矩形换算归一化坐标；保存的是图片位置而不是屏幕像素，重新缩放后仍指向同一处。
   const canonicalEventPoint = (event: ReactPointerEvent) => {
     const image = imageRef.current;
     if (!image) return undefined;

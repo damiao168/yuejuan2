@@ -64,6 +64,7 @@ type ApplicationStores struct {
 	Idempotency     idempotency.Store
 }
 
+// 内存图必须把所有模块接到可工作的替身，路由测试才不会因缺少旁路存储而误判生产装配。
 func NewMemoryApplicationStores() ApplicationStores {
 	mathStore := mathunderstanding.NewMemoryStore()
 	stores := ApplicationStores{
@@ -107,6 +108,7 @@ func NewMemoryApplicationStores() ApplicationStores {
 // NewPostgresApplicationStores is the single production persistence graph.
 // Integration tests use this factory too, so adding a new application store
 // cannot silently leave the production-style suite backed by memory.
+// 生产图统一从同一个数据库构造存储；新增模块若漏接这里，会在事务路由中悄悄退回内存或空实现。
 func NewPostgresApplicationStores(infra *Infrastructure) (ApplicationStores, error) {
 	assessmentStore := assessment.NewPostgresStore(infra.DB)
 	gradingStores := GradingQualityStores{
@@ -177,6 +179,7 @@ func NewPostgresApplicationStores(infra *Infrastructure) (ApplicationStores, err
 	return stores, nil
 }
 
+// 递归检查只验证持久化接口已装配；OCRQueue 是由 durable worker runtime 取代的历史兼容槽位。
 func validatePostgresStoreGraph(stores ApplicationStores) error {
 	return validatePostgresStoreValue(reflect.ValueOf(stores), "stores")
 }

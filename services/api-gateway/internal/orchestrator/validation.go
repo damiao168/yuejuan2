@@ -77,6 +77,7 @@ func CanFail(status string) bool {
 	return status == "queued" || status == "running"
 }
 
+// 只有失败任务且尚未达到最大尝试次数才能重试，避免无限重跑同一输入。
 func CanRetry(status string, attemptNo int, maxAttempts int) bool {
 	return status == "failed" && attemptNo < maxAttempts
 }

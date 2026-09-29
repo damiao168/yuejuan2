@@ -73,6 +73,8 @@ func normalizeHeartbeatInput(input HeartbeatInput) HeartbeatInput {
 	return input
 }
 
+// 队列只传资源引用，正文和凭据应通过受控接口读取；嵌套对象也要检查，不能只过滤顶层。
+// 这里只识别明确列出的字段名，并不替代调用方对其他敏感内容的审核。
 func containsSensitivePayloadKey(value any) bool {
 	sensitive := map[string]bool{
 		"student_id": true, "candidate_no": true, "student_answer": true,

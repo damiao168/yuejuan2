@@ -21,6 +21,7 @@ export function GoldCoverageGaps({ examId }: { examId?: string }) {
         catch { return null; }
       }));
       setUnavailableCount(results.filter((item) => item === null).length);
+      // 读取失败的题目单独计为无法判断，不能和没有覆盖缺口的题目混为一谈。
       setItems(results.flatMap((item) => item && item.coverage.gaps.length ? [item] : []));
     } catch { setFailed(true); setUnavailableCount(0); }
     finally { setLoading(false); }

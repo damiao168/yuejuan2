@@ -1,0 +1,1286 @@
+{
+  "scope": "services/api-gateway/**/*.go and Dockerfile",
+  "method": "逐文件读取关键实现和现有注释；仅列实际审读文件，其他均待审读。",
+  "entries": [
+    {
+      "path": "services/api-gateway/Dockerfile",
+      "status": "annotated",
+      "reason": "发布版本注入目的及非root挂载权限"
+    },
+    {
+      "path": "services/api-gateway/internal/aieligibility/handlers.go",
+      "status": "existing_sufficient",
+      "reason": "HTTP不接受客户端伪造准入证据，进程内Gate执行已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/aieligibility/service.go",
+      "status": "annotated",
+      "reason": "缺失质量即阻断，不能以零阈值放行"
+    },
+    {
+      "path": "services/api-gateway/internal/aieligibility/service_test.go",
+      "status": "self_explanatory",
+      "reason": "风险题型、质量证据、规则优先及运行项冻结断言具体"
+    },
+    {
+      "path": "services/api-gateway/internal/aieligibility/store_memory.go",
+      "status": "annotated",
+      "reason": "运行项准入决定不可重算"
+    },
+    {
+      "path": "services/api-gateway/internal/aieligibility/store_postgres.go",
+      "status": "annotated",
+      "reason": "并发只保留首次写入的历史决定"
+    },
+    {
+      "path": "services/api-gateway/internal/aieligibility/types.go",
+      "status": "existing_sufficient",
+      "reason": "准入与评分执行分离、模型不能决定最终分及证据最小化已有注释"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/handlers.go",
+      "status": "annotated",
+      "reason": "解释工作分派和学生绑定必须覆盖客户端查询范围，完整审读响应与裁决入口。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/handlers_test.go",
+      "status": "existing_sufficient",
+      "reason": "已有账号范围及跨学生夹具注释准确，断言清楚覆盖列表与详情权限。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_handlers.go",
+      "status": "existing_sufficient",
+      "reason": "已有注释说明学生与员工形状、受派教师匿名信息及裁剪图像授权代理。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_service.go",
+      "status": "existing_sufficient",
+      "reason": "已有注释准确解释发布事实来源和归一化图像选区，校验逻辑直接可读。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_service_test.go",
+      "status": "existing_sufficient",
+      "reason": "已有夹具变更注释解释申诉冻结原发布事实，其他归一选区、私有字段和窗口测试直观。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_store_memory.go",
+      "status": "annotated",
+      "reason": "补充申诉窗口起止包含规则及原因白名单空值含义，完整审读快照与重评状态。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_store_postgres.go",
+      "status": "annotated",
+      "reason": "说明状态事件共事务、重评任务原发布版本绑定及结案新版本必须包含原答卷原题。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_types.go",
+      "status": "existing_sufficient",
+      "reason": "已有注释完整说明不可变发布事实、学生视图、私有字段及禁止直接改分的契约。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/store_memory.go",
+      "status": "annotated",
+      "reason": "说明教师建议不直接调分；完整审读状态、版本、调分、证据与统计实现。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/store_postgres.go",
+      "status": "annotated",
+      "reason": "说明原批阅人回避、调分事务原子性和旧证据读取当前数据的边界。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/store_test.go",
+      "status": "self_explanatory",
+      "reason": "完整审读发布前禁止申诉、旧调分及统计、终态不可重开和过期版本回归。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/types.go",
+      "status": "annotated",
+      "reason": "区分旧可变成绩申诉模型与新发布快照申诉模型，已审读所有字段及接口。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/unicode_test.go",
+      "status": "self_explanatory",
+      "reason": "边界值表直接说明按字符计数而非字节计数，涵盖英文、中文和表情。"
+    },
+    {
+      "path": "services/api-gateway/internal/assessment/archetype.go",
+      "status": "annotated",
+      "reason": "默认评分模式不是AI准入许可"
+    },
+    {
+      "path": "services/api-gateway/internal/assessment/assessment_test.go",
+      "status": "self_explanatory",
+      "reason": "学科/题型覆盖、冻结修订、隔离与DB行JSON兼容断言明确"
+    },
+    {
+      "path": "services/api-gateway/internal/assessment/evidence.go",
+      "status": "annotated",
+      "reason": "质量字段单位与nil缺失语义"
+    },
+    {
+      "path": "services/api-gateway/internal/assessment/http.go",
+      "status": "self_explanatory",
+      "reason": "输入校验、鉴权上下文和错误映射直接，没有隐含流程"
+    },
+    {
+      "path": "services/api-gateway/internal/assessment/policy.go",
+      "status": "annotated",
+      "reason": "基础配置校验与外部AI证据准入分层"
+    },
+    {
+      "path": "services/api-gateway/internal/assessment/profile.go",
+      "status": "self_explanatory",
+      "reason": "枚举、别名归一和各学科默认能力映射直接"
+    },
+    {
+      "path": "services/api-gateway/internal/assessment/snapshot.go",
+      "status": "existing_sufficient",
+      "reason": "公开JSON与数据库行形态兼容及从冻结档案派生身份已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/assessment/store.go",
+      "status": "self_explanatory",
+      "reason": "接口方法名与类型完整表明查询配置/快照/证据职责"
+    },
+    {
+      "path": "services/api-gateway/internal/assessment/store_memory.go",
+      "status": "annotated",
+      "reason": "冻结后拒绝配置变更及重复冻结保留原快照"
+    },
+    {
+      "path": "services/api-gateway/internal/assessment/store_postgres.go",
+      "status": "annotated",
+      "reason": "考试再配置锁顺序及证据能力交集"
+    },
+    {
+      "path": "services/api-gateway/internal/assessment/summary.go",
+      "status": "existing_sufficient",
+      "reason": "冻结快照优先、最高风险聚合与混合来源已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/assessment/summary_test.go",
+      "status": "self_explanatory",
+      "reason": "两题风险最高值及部分冻结mixed结果直接断言"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/access_scope.go",
+      "status": "existing_sufficient",
+      "reason": "已有服务器派生权限、班级导航与学校管理权限区别等说明"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/activation.go",
+      "status": "annotated",
+      "reason": "邀请预检不取代最终消费校验"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/audit.go",
+      "status": "annotated",
+      "reason": "敏感字段名脱敏不覆盖自由文本的边界"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/audit_record.go",
+      "status": "existing_sufficient",
+      "reason": "审计失败不回滚成功业务但必须发错误日志已有中文说明"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/authorization_contract_postgres_test.go",
+      "status": "existing_sufficient",
+      "reason": "完整迁移后真实授权矩阵双向检查和隔离数据库流程已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/bootstrap.go",
+      "status": "annotated",
+      "reason": "初始化平台管理员限定与重复初始化拒绝"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/bootstrap_test.go",
+      "status": "self_explanatory",
+      "reason": "首次初始化、重复拒绝和先于存储的输入约束断言清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/context.go",
+      "status": "annotated",
+      "reason": "认证身份与RLS租户同时绑定"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/context_test.go",
+      "status": "self_explanatory",
+      "reason": "单一断言认证上下文同步数据库租户"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/cookies.go",
+      "status": "annotated",
+      "reason": "清除Cookie必须匹配Path"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/device_name_test.go",
+      "status": "self_explanatory",
+      "reason": "明确验证Unicode字符截断不破坏UTF8"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/handlers.go",
+      "status": "annotated",
+      "reason": "Bearer与浏览器cookie令牌交付边界"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/handlers_audit.go",
+      "status": "annotated",
+      "reason": "CSV单元格公式防护及日期过滤UTC闭区间"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/handlers_session.go",
+      "status": "annotated",
+      "reason": "改密提交比较已验证的旧哈希"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/handlers_test.go",
+      "status": "annotated",
+      "reason": "fixture显式权限用于隔离HTTP行为，不代表生产角色矩阵"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/identity.go",
+      "status": "annotated",
+      "reason": "号码归一格式不等于验证所有权"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/identity_test.go",
+      "status": "self_explanatory",
+      "reason": "手机号合法格式与无效区号用例清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/lifecycle_test.go",
+      "status": "annotated",
+      "reason": "在密码验证与会话落库之间切换安全版本的竞争fixture"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/login_helpers.go",
+      "status": "annotated",
+      "reason": "风险特征只保存网段"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/login_limiter.go",
+      "status": "existing_sufficient",
+      "reason": "账号别名合桶及成功登录不能清除来源IP历史已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/login_limiter_redis.go",
+      "status": "annotated",
+      "reason": "本机退化限流范围及Redis固定窗口原子计数"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/login_limiter_test.go",
+      "status": "self_explanatory",
+      "reason": "账户别名聚合、来源历史保留与Redis降级场景明确"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/login_service.go",
+      "status": "annotated",
+      "reason": "不存在账号虚拟哈希校验、并发改密旧凭据核对"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/login_service_test.go",
+      "status": "self_explanatory",
+      "reason": "会话类型、风险降级和安全版本失败的服务层场景清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/managed_user_test.go",
+      "status": "self_explanatory",
+      "reason": "角色标准作用域与组织绑定限制直接断言"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/mfa.go",
+      "status": "annotated",
+      "reason": "AAD绑定租户用户凭据以防跨记录移用密文"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/mfa_handlers.go",
+      "status": "annotated",
+      "reason": "最终命令须重新校验并消费挑战"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/mfa_http_test.go",
+      "status": "annotated",
+      "reason": "前后两次TOTP使用不同时间步避免fixture触发防重放"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/mfa_memory.go",
+      "status": "annotated",
+      "reason": "凭据级时间步防重用与关闭MFA撤销范围"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/mfa_postgres.go",
+      "status": "annotated",
+      "reason": "证明材料和验证状态同事务、关闭MFA整组撤销"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/mfa_security_changes.go",
+      "status": "existing_sufficient",
+      "reason": "安全事实不可授予权限、通知不含凭据以及同事务记录已有注释"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/mfa_security_changes_test.go",
+      "status": "self_explanatory",
+      "reason": "通知事实与凭据消费同步、拒绝不发事实和敏感信息隔离断言清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/mfa_test.go",
+      "status": "existing_sufficient",
+      "reason": "RFC向量与并发同时间步仅一次、命令不提升整会话已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/middleware.go",
+      "status": "existing_sufficient",
+      "reason": "空数据范围、锁定会话恢复入口与平台租户约束已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/migrations_test.go",
+      "status": "annotated",
+      "reason": "源码契约断言和真实数据库最终状态验证边界"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/network.go",
+      "status": "annotated",
+      "reason": "可信代理链从右向左停止规则"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/password.go",
+      "status": "existing_sufficient",
+      "reason": "Argon2id新写入、旧bcrypt升级、解析资源上限已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/password_test.go",
+      "status": "self_explanatory",
+      "reason": "新哈希、旧格式升级、资源参数边界测试清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/recovery.go",
+      "status": "annotated",
+      "reason": "恢复令牌预检与最终消费职责"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/resource_scope.go",
+      "status": "existing_sufficient",
+      "reason": "资源归属解析、对象授权与父级导航边界已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/resource_scope_test.go",
+      "status": "existing_sufficient",
+      "reason": "任务受派人与导航范围区别、例外路由授权依据已有注释"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/risk.go",
+      "status": "existing_sufficient",
+      "reason": "独立信号封顶、冷启动与旁路风险存储已有明确说明"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/risk_test.go",
+      "status": "self_explanatory",
+      "reason": "风险家族封顶、设备识别非信任、改密风险保留断言清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/role_policy.go",
+      "status": "annotated",
+      "reason": "管理目标账号必须覆盖其所有角色"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/role_policy_test.go",
+      "status": "self_explanatory",
+      "reason": "角色可分配矩阵和规范数据范围断言直接"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/scope.go",
+      "status": "existing_sufficient",
+      "reason": "平台worker与学生作用域两种存储形态已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/scope_test.go",
+      "status": "self_explanatory",
+      "reason": "角色范围并集、空范围拒绝和无通配权限等测试名字与断言清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/security_events.go",
+      "status": "existing_sufficient",
+      "reason": "个人安全事件不返回原始IP/UA和审计正文已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/seed_boundary_test.go",
+      "status": "self_explanatory",
+      "reason": "广范围仍须种子任务受派人直接断言"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/step_up.go",
+      "status": "existing_sufficient",
+      "reason": "已有敏感操作必须在会话/租户/资源权限之后校验的新鲜认证边界"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/step_up_test.go",
+      "status": "self_explanatory",
+      "reason": "认证新鲜度、未来时间和密码等级不足的表驱动用例清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/store_contracts.go",
+      "status": "self_explanatory",
+      "reason": "纯编译期接口实现断言，无运行分支"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/store_memory.go",
+      "status": "annotated",
+      "reason": "别名冲突、锁屏时序、安全版本改密恢复与邀请激活边界"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/store_postgres.go",
+      "status": "annotated",
+      "reason": "唯一登录候选、创建时安全版本、活跃时间降频、导航投影、改密恢复事务及最后管理员并发锁"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/story060_provision.go",
+      "status": "self_explanatory",
+      "reason": "固定E2E账号、强密码验证与逐账号写入清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/story060_provision_test.go",
+      "status": "self_explanatory",
+      "reason": "固定普通角色和弱密码拒绝直接断言"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/token.go",
+      "status": "annotated",
+      "reason": "令牌原值与存储哈希返回值的边界"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/trusted_proxy_test.go",
+      "status": "self_explanatory",
+      "reason": "可信链与恶意转发头的输入输出直接"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/types.go",
+      "status": "existing_sufficient",
+      "reason": "组织范围来源、安全epoch和能力接口边界已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/user_admin.go",
+      "status": "annotated",
+      "reason": "邀请账户无登录密码且原激活令牌仅响应交付"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/validation.go",
+      "status": "annotated",
+      "reason": "认证请求总字节上限与单JSON文档约束"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/wechat.go",
+      "status": "annotated",
+      "reason": "扫码state与轮询凭据分离、挑战消费后失败须重扫码"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/wechat_store_postgres.go",
+      "status": "annotated",
+      "reason": "租户应用绑定及原子一次性消费"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/wechat_test.go",
+      "status": "self_explanatory",
+      "reason": "模拟授权与重放不再创建会话清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/binaryresource/resource.go",
+      "status": "existing_sufficient",
+      "reason": "已说明延迟打开对象及HEAD不读取存储"
+    },
+    {
+      "path": "services/api-gateway/internal/binaryresourcehttp/serve.go",
+      "status": "existing_sufficient",
+      "reason": "已说明调用方先授权；条件请求与延迟对象打开分支直观"
+    },
+    {
+      "path": "services/api-gateway/internal/binaryresourcehttp/serve_test.go",
+      "status": "self_explanatory",
+      "reason": "条件请求不打开对象且不审计，实际GET才读取并审计"
+    },
+    {
+      "path": "services/api-gateway/internal/buildinfo/buildinfo.go",
+      "status": "existing_sufficient",
+      "reason": "已有注释解释构建时注入及开发值"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/barcode.go",
+      "status": "existing_sufficient",
+      "reason": "既有说明覆盖不可召回的印刷版本兼容、学生与实体纸张签名绑定及伪造 v1 身份拒绝。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/barcode_store.go",
+      "status": "annotated",
+      "reason": "解释学生集合幂等不依赖顺序，验签后仍需核对考试/模板/名册/纸张状态。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/barcode_test.go",
+      "status": "existing_sufficient",
+      "reason": "已完整审读；已有版本兼容与身份篡改夹具解释，其余签验与无效参数用例直观。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/batch_command.go",
+      "status": "annotated",
+      "reason": "解释命令键与请求内容摘要的分工，防止不同内容复用同键。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/batch_command_postgres.go",
+      "status": "annotated",
+      "reason": "补充命令恢复优先于考试当前阶段检查，保留历史重复命令与删除记录的既有约定。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/correction_apply_store_postgres.go",
+      "status": "annotated",
+      "reason": "解释原页快照、配准切片替换共事务及撤销只允许紧接应用的页版本。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/correction_geometry.go",
+      "status": "annotated",
+      "reason": "说明四角顺序不得反向和归一化面积的 5% 下限，审读几何与摘要。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/correction_geometry_test.go",
+      "status": "self_explanatory",
+      "reason": "简单四角夹具直接覆盖自交、重复点、越界及面积不足。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/correction_store_postgres.go",
+      "status": "annotated",
+      "reason": "审读草稿、预览入队和结果回写，解释普通/高级锚点区别及人工重试命令键。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/handlers.go",
+      "status": "annotated",
+      "reason": "解释非采集阶段命令恢复、worker 产物校验、事务存储与内存替身差异、严格 JSON 限制；完整审读全部 946 行。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/matching_store_postgres.go",
+      "status": "annotated",
+      "reason": "解释身份只能绑定冻结名册，人工改页码必须使配准与切片失效。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/organization_store_postgres.go",
+      "status": "annotated",
+      "reason": "说明拆合答卷会重排页码、清空身份并作废旧配准切片；审读删除恢复与操作记录。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/print_context_store.go",
+      "status": "existing_sufficient",
+      "reason": "已有公开接口说明打印上下文的考试管理边界；候选快照与打印台账查询直接可读。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/print_package_pdf.go",
+      "status": "annotated",
+      "reason": "解释固定签发时间确保产物稳定，及归一化题区到毫米答题区域的坐标映射。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/print_package_pdf_test.go",
+      "status": "self_explanatory",
+      "reason": "已完整审读；测试名称、固定时间和字节摘要断言直接说明重复渲染一致性与页数。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/print_package_store.go",
+      "status": "existing_sufficient",
+      "reason": "既有注释准确说明 observed/revoked 后禁止旧包下载和显式重印生命周期；完整审读页数一致性。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/registration_review_store_postgres.go",
+      "status": "annotated",
+      "reason": "解释汇总仅使用最近未失效运行的切片，完整审读人工确认、重试和阻塞分类。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/registration_store_postgres.go",
+      "status": "annotated",
+      "reason": "说明条码/考试绑定/唯一模板优先级、多模板匹配异步继续及低置信度人工确认。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/sheet_identity_store.go",
+      "status": "annotated",
+      "reason": "解释重印新旧序列事务及重复页冲突解除后按质检状态恢复，完整审读撤销和对账。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/store_memory.go",
+      "status": "annotated",
+      "reason": "说明内存替身对真实打印/配准能力的边界，并解释解码页先过质检；完整审读 766 行状态、文件、页和批次流转。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/store_memory_test.go",
+      "status": "self_explanatory",
+      "reason": "完整审读采集解码链、版本和租户隔离、终态写保护以及失败重传去重测试。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/store_postgres.go",
+      "status": "annotated",
+      "reason": "解释重复解码幂等、受控纸张自动绑定条件和批次聚合状态优先级，完整审读约 943 行。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/template_match_store_postgres.go",
+      "status": "annotated",
+      "reason": "解释并发模板绑定冲突不覆盖、业务结果和工作租约完成共事务。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/types.go",
+      "status": "annotated",
+      "reason": "说明解码条码尚不可信及归一化点坐标；完整审读 612 行协议与接口。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/validation.go",
+      "status": "self_explanatory",
+      "reason": "逐个审读输入校验、旋转枚举及批次状态表，条件直接表达允许值。"
+    },
+    {
+      "path": "services/api-gateway/internal/captureupload/completion_recovery_test.go",
+      "status": "annotated",
+      "reason": "取消上下文后的恢复保护"
+    },
+    {
+      "path": "services/api-gateway/internal/captureupload/handlers.go",
+      "status": "annotated",
+      "reason": "后续操作以保存的考试身份授权"
+    },
+    {
+      "path": "services/api-gateway/internal/captureupload/recovery_handler_test.go",
+      "status": "self_explanatory",
+      "reason": "恢复查询只读及权限拒绝直接断言"
+    },
+    {
+      "path": "services/api-gateway/internal/captureupload/service.go",
+      "status": "annotated",
+      "reason": "对象写入提前失败时释放管道写协程"
+    },
+    {
+      "path": "services/api-gateway/internal/captureupload/service_test.go",
+      "status": "annotated",
+      "reason": "修正丢失响应模拟说明，保留断点场景现有注释"
+    },
+    {
+      "path": "services/api-gateway/internal/captureupload/store_memory.go",
+      "status": "annotated",
+      "reason": "已确认分块重传和旧完成者隔离"
+    },
+    {
+      "path": "services/api-gateway/internal/captureupload/store_postgres.go",
+      "status": "annotated",
+      "reason": "分块与偏移同事务、数据库时钟租约、回执与清理同事务"
+    },
+    {
+      "path": "services/api-gateway/internal/captureupload/types.go",
+      "status": "annotated",
+      "reason": "请求/租约时长关系及分块保留清理契约"
+    },
+    {
+      "path": "services/api-gateway/internal/commandreceipt/receipt.go",
+      "status": "annotated",
+      "reason": "回执与业务同事务、冻结原始请求指纹"
+    },
+    {
+      "path": "services/api-gateway/internal/csvsafe/csvsafe.go",
+      "status": "existing_sufficient",
+      "reason": "包注释已解释CSV引号无法阻止公式执行"
+    },
+    {
+      "path": "services/api-gateway/internal/csvsafe/csvsafe_test.go",
+      "status": "self_explanatory",
+      "reason": "公式前缀与安全单元格对照清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/db/auth_dynamic_risk_migration_test.go",
+      "status": "self_explanatory",
+      "reason": "迁移必需RLS子句断言清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/db/auth_mfa_migration_test.go",
+      "status": "self_explanatory",
+      "reason": "迁移密文字段与禁止明文的断言清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/db/auth_mfa_notification_migration_test.go",
+      "status": "self_explanatory",
+      "reason": "通知意图留存与敏感字段禁止项断言清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/db/postgres.go",
+      "status": "annotated",
+      "reason": "连接池清理所有权、惰性连接及监控脱敏"
+    },
+    {
+      "path": "services/api-gateway/internal/db/postgres_test.go",
+      "status": "self_explanatory",
+      "reason": "表驱动断言覆盖SQL脱敏、超时格式、租户缺省隔离"
+    },
+    {
+      "path": "services/api-gateway/internal/db/tenant_context.go",
+      "status": "annotated",
+      "reason": "连接池复用时租户重绑与未绑定隔离"
+    },
+    {
+      "path": "services/api-gateway/internal/db/tenant_rls_migration_test.go",
+      "status": "self_explanatory",
+      "reason": "高风险表隔离名单及策略断言清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/deps/deps.go",
+      "status": "annotated",
+      "reason": "逐依赖超时、可选能力不阻断API就绪"
+    },
+    {
+      "path": "services/api-gateway/internal/deps/deps_test.go",
+      "status": "self_explanatory",
+      "reason": "依赖必需性、限流恢复、TLS和桶存在断言清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/candidate_snapshot_postgres.go",
+      "status": "annotated",
+      "reason": "修正状态限制承诺并说明复制历史身份与调用方事务"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/handlers.go",
+      "status": "annotated",
+      "reason": "HTTP幂等身份和业务回执身份一致"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/handlers_test.go",
+      "status": "self_explanatory",
+      "reason": "接口输入、准备门禁、冻结刷新、发布限制和租户隔离场景清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/session_command_test.go",
+      "status": "self_explanatory",
+      "reason": "重放不重复创建、变更正文冲突和未受理恢复清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/session_memory.go",
+      "status": "annotated",
+      "reason": "命令身份与同锁创建重放边界"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/session_postgres.go",
+      "status": "annotated",
+      "reason": "多科考试同事务创建与命令正文哈希"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/session_scope_test.go",
+      "status": "self_explanatory",
+      "reason": "年级范围拒绝与稳定命令重放断言清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/session_subjects_test.go",
+      "status": "self_explanatory",
+      "reason": "同场兄弟科目仍受租户和考试范围限制"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/status.go",
+      "status": "existing_sufficient",
+      "reason": "通用状态接口不得发布成绩规则已有注释"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/status_test.go",
+      "status": "self_explanatory",
+      "reason": "采集准入和成绩发布专用流程限制清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/store_memory.go",
+      "status": "annotated",
+      "reason": "内存名册仅模拟边界不生成真实数量"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/store_postgres.go",
+      "status": "annotated",
+      "reason": "作用域限定和考试锁同查询，关联修改沿用事务"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/store_postgres_test.go",
+      "status": "self_explanatory",
+      "reason": "写入父资源租户SQL契约断言清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/template_memory.go",
+      "status": "annotated",
+      "reason": "内存模板仅共享系统数据"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/template_postgres.go",
+      "status": "annotated",
+      "reason": "本租户/平台模板及学校范围条件"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/templates.go",
+      "status": "self_explanatory",
+      "reason": "模板层级字段、筛选输入和可用性错误直观"
+    },
+    {
+      "path": "services/api-gateway/internal/exam/types.go",
+      "status": "existing_sufficient",
+      "reason": "场次父级与科目考试、名册快照职责已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/files/downloads.go",
+      "status": "annotated",
+      "reason": "下载使用资产原始存储桶"
+    },
+    {
+      "path": "services/api-gateway/internal/files/downloads_test.go",
+      "status": "self_explanatory",
+      "reason": "下载权限范围和非active状态断言清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/files/handlers.go",
+      "status": "annotated",
+      "reason": "回读验证后激活和跨存储删除重试顺序"
+    },
+    {
+      "path": "services/api-gateway/internal/files/handlers_test.go",
+      "status": "annotated",
+      "reason": "对象已写入但激活失败的重试时序"
+    },
+    {
+      "path": "services/api-gateway/internal/files/reconciliation.go",
+      "status": "annotated",
+      "reason": "报告模式、扫描上限、上传宽限期、哈希恢复和版本冲突边界"
+    },
+    {
+      "path": "services/api-gateway/internal/files/storage_memory.go",
+      "status": "self_explanatory",
+      "reason": "内存对象读写和受限列表实现直接清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/files/storage_minio.go",
+      "status": "annotated",
+      "reason": "缺桶不自动创建及延迟读取错误提前探测"
+    },
+    {
+      "path": "services/api-gateway/internal/files/storage_minio_test.go",
+      "status": "self_explanatory",
+      "reason": "缺桶只允许查询且拒绝创建的请求断言清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/files/store_memory.go",
+      "status": "annotated",
+      "reason": "同锁状态版本检查与失败资产参与查重"
+    },
+    {
+      "path": "services/api-gateway/internal/files/store_postgres.go",
+      "status": "annotated",
+      "reason": "题库固定引用禁止删除、状态版本原子更新"
+    },
+    {
+      "path": "services/api-gateway/internal/files/types.go",
+      "status": "annotated",
+      "reason": "公开响应隐藏存储定位信息"
+    },
+    {
+      "path": "services/api-gateway/internal/files/validation.go",
+      "status": "annotated",
+      "reason": "存储键不使用原路径并为同内容分配独立后缀"
+    },
+    {
+      "path": "services/api-gateway/internal/files/validation_test.go",
+      "status": "self_explanatory",
+      "reason": "嗅探优先、TIFF字节序及UTF8采样边界直接断言"
+    },
+    {
+      "path": "services/api-gateway/internal/gradingdisagreement/engine.go",
+      "status": "annotated",
+      "reason": "左右分差方向、满分归一及双方支持时才比证据"
+    },
+    {
+      "path": "services/api-gateway/internal/gradingdisagreement/engine_test.go",
+      "status": "self_explanatory",
+      "reason": "评分点分歧、证据分歧及风险并集预期直接"
+    },
+    {
+      "path": "services/api-gateway/internal/httpx/response.go",
+      "status": "annotated",
+      "reason": "公开错误信息与稳定错误码输出约定"
+    },
+    {
+      "path": "services/api-gateway/internal/idempotency/command_identity.go",
+      "status": "existing_sufficient",
+      "reason": "已有注释解释不重放响应缓存及重新核查ACL"
+    },
+    {
+      "path": "services/api-gateway/internal/idempotency/middleware.go",
+      "status": "annotated",
+      "reason": "可重试失败释放键、冻结正文与临时文件清理"
+    },
+    {
+      "path": "services/api-gateway/internal/idempotency/middleware_test.go",
+      "status": "self_explanatory",
+      "reason": "案例名称与断言说明重试、挑战、TTL、冻结正文不变量"
+    },
+    {
+      "path": "services/api-gateway/internal/idempotency/store_memory.go",
+      "status": "annotated",
+      "reason": "处理中可恢复命令指纹不得随TTL删除"
+    },
+    {
+      "path": "services/api-gateway/internal/idempotency/store_postgres.go",
+      "status": "existing_sufficient",
+      "reason": "TTL与恢复例外已有完整注释，行锁/指纹核对可读"
+    },
+    {
+      "path": "services/api-gateway/internal/idempotency/types.go",
+      "status": "annotated",
+      "reason": "Begin执行权布尔值语义"
+    },
+    {
+      "path": "services/api-gateway/internal/logger/logger.go",
+      "status": "annotated",
+      "reason": "日志脱敏支持的容器类型与自由文本边界"
+    },
+    {
+      "path": "services/api-gateway/internal/logger/logger_test.go",
+      "status": "self_explanatory",
+      "reason": "关联ID与嵌套脱敏结果直接断言"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/access_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/correction.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/correction_postgres.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/correction_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/effective_handler_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/handlers.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/mixed_perception_migration_test.go",
+      "status": "protected",
+      "reason": "迁移文本只做内容断言，历史 SQL 不直接插入注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/pilot_gate.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/pilot_store.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/pilot_store_postgres.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/rubric.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/rubric_gate_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/runtime_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/scorer.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/scorer_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/scoring_handler.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/solution_builder.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/spatial.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/spatial_solution_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/step_segmenter.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/store.go",
+      "status": "existing_sufficient",
+      "reason": "接口定义直观且无额外实现边界，已有代码足够表达职责。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/store_memory.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/store_postgres.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/types.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/types_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/verification_runtime.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/verification_runtime_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/workbench_preview_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    },
+    {
+      "path": "services/api-gateway/internal/middleware/middleware.go",
+      "status": "annotated",
+      "reason": "中间件执行顺序与CORS非授权边界"
+    },
+    {
+      "path": "services/api-gateway/internal/minioadapter/client.go",
+      "status": "existing_sufficient",
+      "reason": "共享TLS信任设置的目的已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/minioadapter/client_test.go",
+      "status": "self_explanatory",
+      "reason": "合成TLS服务验证自定义CA及最低协议版本，边界清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/observability/metrics.go",
+      "status": "annotated",
+      "reason": "直方图秒单位/累计桶和复制后锁外输出"
+    },
+    {
+      "path": "services/api-gateway/internal/outbox/outbox.go",
+      "status": "annotated",
+      "reason": "发布后记账可能失败导致重复投递，消费者按事件ID去重"
+    },
+    {
+      "path": "services/api-gateway/internal/outbox/outbox_test.go",
+      "status": "self_explanatory",
+      "reason": "发布成功计数与失败指数退避明确断言"
+    },
+    {
+      "path": "services/api-gateway/internal/outbox/publisher_log.go",
+      "status": "existing_sufficient",
+      "reason": "日志只输出元数据、完整正文留库已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/outbox/store_postgres.go",
+      "status": "annotated",
+      "reason": "领取原子性与租约持有者确认边界"
+    },
+    {
+      "path": "services/api-gateway/internal/pagination/cursor.go",
+      "status": "annotated",
+      "reason": "复合定位键、排序一致与权限过滤边界"
+    },
+    {
+      "path": "services/api-gateway/internal/pagination/cursor_test.go",
+      "status": "self_explanatory",
+      "reason": "游标回环、非法格式和页长边界直接断言"
+    },
+    {
+      "path": "services/api-gateway/internal/releasegate/coordinator.go",
+      "status": "existing_sufficient",
+      "reason": "发布重算门禁、不接管分数事实、并发失败关闭已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/releasegate/handlers.go",
+      "status": "annotated",
+      "reason": "修正已注册路由仍称未注册的过时说明，注明权限由路由注入"
+    },
+    {
+      "path": "services/api-gateway/internal/releasegate/service.go",
+      "status": "existing_sufficient",
+      "reason": "预览证据不可用于发布、警告豁免范围与证据哈希已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/releasegate/service_test.go",
+      "status": "self_explanatory",
+      "reason": "警告豁免不突破硬阻断、默认策略与证据保存断言清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/releasegate/store_memory.go",
+      "status": "existing_sufficient",
+      "reason": "只追加证据/决定的模拟存储职责已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/releasegate/store_postgres.go",
+      "status": "annotated",
+      "reason": "单考试策略替换事务与锁约束"
+    },
+    {
+      "path": "services/api-gateway/internal/releasegate/types.go",
+      "status": "existing_sufficient",
+      "reason": "策略不能降低硬阻断、证据只追加及豁免投影已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/report/command_recovery.go",
+      "status": "self_explanatory",
+      "reason": "已逐行审读；只读命令回执按租户、操作者和 report 前缀恢复，调用和错误分支直接可读。"
+    },
+    {
+      "path": "services/api-gateway/internal/report/command_recovery_test.go",
+      "status": "self_explanatory",
+      "reason": "已完整审读；相同命令复用同一产物、新命令生成独立导出的断言清楚。"
+    },
+    {
+      "path": "services/api-gateway/internal/report/handlers.go",
+      "status": "annotated",
+      "reason": "说明学生本人报告必须绑定明确学生 ID，通用租户或班级范围不能替代。"
+    },
+    {
+      "path": "services/api-gateway/internal/report/handlers_test.go",
+      "status": "existing_sufficient",
+      "reason": "已有 tenantOnlyScope 注释准确解释历史账号缺少学生 ID 的回归边界，表格用例覆盖本人权限。"
+    },
+    {
+      "path": "services/api-gateway/internal/report/stats.go",
+      "status": "annotated",
+      "reason": "解释难度方向、满分正确率、四舍五入阈值、知识点重复归属、高低分组及总体标准差口径。"
+    },
+    {
+      "path": "services/api-gateway/internal/report/store_memory.go",
+      "status": "annotated",
+      "reason": "说明内存报表数据为单份测试种子，不模拟数据库租户/考试过滤。"
+    },
+    {
+      "path": "services/api-gateway/internal/report/store_postgres.go",
+      "status": "annotated",
+      "reason": "保留导出快照事务、重试和历史发布兼容说明，补充发布反馈可见性边界。"
+    },
+    {
+      "path": "services/api-gateway/internal/report/store_test.go",
+      "status": "self_explanatory",
+      "reason": "已完整审读；种子与断言直接表达发布成绩统计、空状态及导出水印。"
+    },
+    {
+      "path": "services/api-gateway/internal/report/types.go",
+      "status": "annotated",
+      "reason": "说明指标无样本与真实零值的区别，以及比例值单位。"
+    },
+    {
+      "path": "services/api-gateway/internal/score/command_recovery.go",
+      "status": "annotated",
+      "reason": "恢复查询无写入，按当前操作者查回执"
+    },
+    {
+      "path": "services/api-gateway/internal/score/command_recovery_test.go",
+      "status": "self_explanatory",
+      "reason": "同命令键重复不增修订、改正文冲突直接断言"
+    },
+    {
+      "path": "services/api-gateway/internal/score/handlers.go",
+      "status": "annotated",
+      "reason": "复合游标和多取一条判断后页"
+    },
+    {
+      "path": "services/api-gateway/internal/score/handlers_test.go",
+      "status": "annotated",
+      "reason": "修正旧测试fixture说明，明确缺少学生ID不能放行"
+    },
+    {
+      "path": "services/api-gateway/internal/score/store_memory.go",
+      "status": "annotated",
+      "reason": "人工/规则优先及缺考答卷冲突"
+    },
+    {
+      "path": "services/api-gateway/internal/score/store_postgres.go",
+      "status": "annotated",
+      "reason": "发布事实同事务、历史规则兼容条件、同考试写操作锁"
+    },
+    {
+      "path": "services/api-gateway/internal/score/store_test.go",
+      "status": "self_explanatory",
+      "reason": "汇总/确认/发布状态、名册异常、失败不锁分与幂等区别清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/score/types.go",
+      "status": "self_explanatory",
+      "reason": "响应结构、状态枚举及出勤输入限定清楚"
+    },
+    {
+      "path": "services/api-gateway/internal/workerruntime/handlers.go",
+      "status": "annotated",
+      "reason": "来源适配器独占需要原子激活的任务"
+    },
+    {
+      "path": "services/api-gateway/internal/workerruntime/identity.go",
+      "status": "existing_sufficient",
+      "reason": "服务角色白名单与不信任请求自报身份已有注释"
+    },
+    {
+      "path": "services/api-gateway/internal/workerruntime/result.go",
+      "status": "existing_sufficient",
+      "reason": "规范JSON与schema一起参与结果幂等哈希已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/workerruntime/scope_middleware.go",
+      "status": "existing_sufficient",
+      "reason": "任务租约推导租户与资源范围已有逐接口说明"
+    },
+    {
+      "path": "services/api-gateway/internal/workerruntime/store_memory.go",
+      "status": "annotated",
+      "reason": "已成功任务的重复完成必须同租约同结果"
+    },
+    {
+      "path": "services/api-gateway/internal/workerruntime/store_postgres.go",
+      "status": "annotated",
+      "reason": "事务数据库时钟判定租约；其余原子写入与锁顺序已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/workerruntime/types.go",
+      "status": "annotated",
+      "reason": "优先级数值方向与稳定排序"
+    },
+    {
+      "path": "services/api-gateway/internal/workerruntime/validation.go",
+      "status": "annotated",
+      "reason": "队列敏感字段递归检查范围"
+    }
+  ]
+}

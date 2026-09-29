@@ -134,6 +134,7 @@ export async function inspectScannerSample(file: File, profile: ScannerProfile):
   }
   try {
     const paper = paperDimensionsMm(profile.paperSize);
+    // 纸张尺寸是毫米，25.4 用于换算英寸；两轴取较低 DPI，避免单向缩放掩盖分辨率不足。
     const dpiX = (bitmap.width * 25.4) / paper.width;
     const dpiY = (bitmap.height * 25.4) / paper.height;
     const measuredDpi = Math.min(dpiX, dpiY);
@@ -184,6 +185,7 @@ interface SamplePixels {
 }
 
 async function samplePixels(bitmap: ImageBitmap): Promise<SamplePixels> {
+  // 质量阈值基于最长边 512 像素的缩略图；改采样尺寸时，清晰度等阈值也必须重新验证。
   const maxEdge = 512;
   const ratio = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
   const width = Math.max(1, Math.round(bitmap.width * ratio));

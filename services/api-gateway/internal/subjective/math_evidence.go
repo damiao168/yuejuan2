@@ -85,6 +85,7 @@ type MathEvidenceSource struct {
 	requireCrop bool
 }
 
+// 数学证据必须绑定当前答案版本、题目快照和裁剪哈希；绑定失败时宁可停在人工复核，也不复用旧证据。
 func (s MathEvidenceSource) Prepare(ctx context.Context, tenantID string, value Context) (*MathEvidenceContext, error) {
 	if value.AssessmentSnapshot.SubjectCode != assessment.SubjectMathematics || s.Artifacts == nil || s.Corrections == nil {
 		return nil, nil

@@ -129,7 +129,7 @@ export function CaptureBatchPage({
     },
     [preview],
   );
-
+  // 本地仍有待确认命令时复用原载荷和幂等键；页面表单的新编辑不能偷偷改变已经发出的操作。
   async function submitBatch() {
     if (creationBusy.current) return;
     creationBusy.current = true;

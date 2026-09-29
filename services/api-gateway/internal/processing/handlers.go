@@ -117,6 +117,7 @@ func (h *Handler) Resolve(w http.ResponseWriter, r *http.Request) {
 }
 
 func exceptionFilter(r *http.Request) (ExceptionFilter, error) {
+	// 游标由“创建时间|异常 ID”组成，按创建时间倒序分页时用 ID 解决同一时刻的并列项。
 	query := r.URL.Query()
 	filter := ExceptionFilter{ExamID: strings.TrimSpace(query.Get("exam_id")), Subject: strings.TrimSpace(query.Get("subject"))}
 	if value := strings.TrimSpace(query.Get("severity")); value != "" {
@@ -150,6 +151,7 @@ func exceptionFilter(r *http.Request) (ExceptionFilter, error) {
 }
 
 func decodeStrict(w http.ResponseWriter, r *http.Request, target any) bool {
+	// 请求体只接受一个已知字段的 JSON 对象，避免拼写错误或尾随内容被静默忽略。
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(target); err != nil {

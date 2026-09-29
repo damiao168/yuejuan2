@@ -65,6 +65,7 @@ export async function getCapabilityStatuses(sessionId?: string): Promise<Capabil
 }
 
 export async function appendLocalLog(entry: Omit<LocalLogEntry, "id" | "at">) {
+  // 写入原生日志或浏览器缓存之前统一脱敏，避免调用方漏处理令牌和密码。
   const next = redactLocalLogEntry({
     id: crypto.randomUUID(),
     at: new Date().toISOString(),
@@ -170,6 +171,7 @@ export function scanLocalCacheSecurity(): LocalCacheSecurityStatus {
 }
 
 async function invokeOptional<T>(command: string, args?: Record<string, unknown>): Promise<T | null> {
+  // 仅供可降级的诊断信息使用；凭据和草稿等必要存储不能通过这里吞掉原生调用失败。
   if (!isTauriRuntime()) {
     return null;
   }

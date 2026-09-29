@@ -32,6 +32,7 @@ func RenderStudentPrintPackage(pkg StudentPrintPackage) ([]byte, string, error) 
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.SetCompression(true)
 	pdf.SetCatalogSort(true)
+	// 使用签发时间固定 PDF 元数据，重复下载同一份打印台账才会产生相同字节与摘要。
 	pdf.SetCreationDate(pkg.IssuedAt)
 	pdf.SetModificationDate(pkg.IssuedAt)
 	pdf.SetTitle("EduGrade controlled answer sheets", true)
@@ -171,6 +172,7 @@ func drawRuledAnswerArea(pdf *gofpdf.Fpdf, x, y, width, height float64) {
 	}
 }
 
+// 题区坐标是 0 到 1 的相对比例，映射目标为页内答题区域的毫米尺寸。
 func mapPrintRegion(region PrintPackageRegion, x, y, width, height float64) (float64, float64, float64, float64, bool) {
 	values := []float64{region.X, region.Y, region.Width, region.Height}
 	for _, value := range values {

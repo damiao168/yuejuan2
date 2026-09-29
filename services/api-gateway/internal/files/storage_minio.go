@@ -24,6 +24,7 @@ func NewMinIOObjectStorage(cfg config.MinIOConfig) (*MinIOObjectStorage, error) 
 }
 
 func (s *MinIOObjectStorage) Put(ctx context.Context, bucket string, key string, body io.Reader, size int64, contentType string) error {
+	// 桶由部署流程准备；缺桶作为配置故障返回，不在上传请求中自动创建。
 	exists, err := s.client.BucketExists(ctx, bucket)
 	if err != nil {
 		return err
@@ -36,6 +37,7 @@ func (s *MinIOObjectStorage) Put(ctx context.Context, bucket string, key string,
 }
 
 func (s *MinIOObjectStorage) Get(ctx context.Context, bucket string, key string) (io.ReadCloser, error) {
+	// GetObject 延迟读取；下面的 Stat 提前暴露不存在或无权访问的对象。
 	object, err := s.client.GetObject(ctx, bucket, key, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, err

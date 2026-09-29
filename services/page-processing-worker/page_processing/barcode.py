@@ -13,6 +13,7 @@ MAX_BARCODE_TEXT_LENGTH = 2048
 def detect_barcodes(png: bytes) -> list[dict]:
     with Image.open(BytesIO(png)) as source:
         image = np.asarray(source.convert("RGB"))
+    # 这里只提取像素位置和原文观察值；码内身份或签名的可信性由后续业务校验。
     observations: list[dict] = []
     for result in zxingcpp.read_barcodes(image)[:MAX_BARCODES_PER_PAGE]:
         text = str(result.text or "")

@@ -29,6 +29,7 @@ export function useExamCaptureContext({
   const [isLoadingCaptureBatches, setIsLoadingCaptureBatches] = useState(false);
   const [scanStartPage, setScanStartPage] = useState(1);
   const captureBatchLoadRef = useRef(0);
+  // 账号和考试可在请求途中切换；作用域防串账号，递增序号防旧列表覆盖新选择。
   const examLoadRef = useRef(0);
   const scopeRef = useRef(durableScopeKey);
   scopeRef.current = durableScopeKey;

@@ -18,6 +18,7 @@ export async function launchScoringAIBatches(
   const questionIds = new Set(plan.questions.filter((question) => question.lane === "ai").map((question) => question.questionId));
   const existing = (await transport.list(runId)).batches.filter((batch) => batch.status !== "cancelled");
   const covered = new Set(existing.flatMap((batch) => batch.segment_ids));
+  // 先排除已有批次覆盖的片段并排序，使相同待处理集合在刷新后仍生成相同分块和命令键。
   const segmentIds = [...new Set(items.filter((item) => questionIds.has(item.question_id) && item.state === "review" && !covered.has(item.answer_segment_id)).map((item) => item.answer_segment_id))].sort();
   const result: AIBatchLaunch = { batchIds: [], requested: segmentIds.length, failed: 0 };
   const enqueue = async (batch: SubjectiveGradingBatch) => {

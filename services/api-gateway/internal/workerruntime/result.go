@@ -6,9 +6,8 @@ import (
 	"encoding/json"
 )
 
-// CanonicalResultJSON returns the deterministic JSON envelope used when
-// calculating a result payload hash. encoding/json sorts map keys, so
-// semantically identical result maps produce identical bytes.
+// CanonicalResultJSON 返回用于计算结果 payload 哈希的确定性 JSON 封装；encoding/json 会排序 map 键，
+// 因而语义相同的结果 map 会生成相同字节。
 func CanonicalResultJSON(schema string, result map[string]any) ([]byte, error) {
 	return json.Marshal(struct {
 		Schema  string         `json:"schema"`
@@ -19,8 +18,7 @@ func CanonicalResultJSON(schema string, result map[string]any) ([]byte, error) {
 	})
 }
 
-// ResultPayloadHash returns the canonical SHA-256 hash used for idempotent
-// completion checks and trusted imports.
+// ResultPayloadHash 返回用于幂等完成检查和可信导入的规范 SHA-256 哈希。
 func ResultPayloadHash(schema string, result map[string]any) (string, error) {
 	raw, err := CanonicalResultJSON(schema, result)
 	if err != nil {

@@ -52,6 +52,7 @@ func CanAssignManagedRole(actor User, targetRole string) bool {
 	return false
 }
 
+// CanManageUserRoles 要求操作者能管理目标用户的全部角色，不能凭其中一个低权限角色放行。
 func CanManageUserRoles(actor User, targetRoles []string) bool {
 	if len(targetRoles) == 0 {
 		return false

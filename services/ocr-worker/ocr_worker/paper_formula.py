@@ -261,6 +261,7 @@ class PaperFormulaRunner:
                         render_similarity_threshold=render_threshold,
                     )
                     primary_validations[index] = validation
+                    # 大模型仅重试结构或回渲染失败；低检测分、裁剪缺失及校验器不可用转人工。
                     if validation.action is FormulaAction.RETRY_L:
                         fallback_indices.append(index)
 
@@ -548,6 +549,7 @@ def _select_validated(
         reasons.append("fallback_validation_failed")
     else:
         reasons.append("fallback_unavailable")
+    # 保留结构可用的候选供复核，但没有通过完整校验时仍保持 review_required。
     selected = None
     if fallback is not None and fallback_validation is not None and fallback_validation.structure_valid:
         selected = fallback

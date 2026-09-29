@@ -39,6 +39,7 @@ def _effective_page_short_edge(
     analysis_height, analysis_width = analysis_shape
     scale_x = source_width / max(float(analysis_width), 1.0)
     scale_y = source_height / max(float(analysis_height), 1.0)
+    # 边框检测在缩小分析图上完成，有效短边必须先换回原图像素。
     scaled = page_quad.astype(np.float64) * np.asarray([scale_x, scale_y])
     top_left, top_right, bottom_right, bottom_left = scaled
     page_width = (
@@ -136,6 +137,7 @@ def _apply_deskew(
     transformed = cv2.transform(corners, affine).reshape(-1, 2)
     minimum = transformed.min(axis=0)
     maximum = transformed.max(axis=0)
+    # 将旋转后的最小坐标平移到画布原点，扩展画布以保留原图四角。
     affine[:, 2] -= minimum
     output_width = int(np.ceil(maximum[0] - minimum[0])) + 1
     output_height = int(np.ceil(maximum[1] - minimum[1])) + 1

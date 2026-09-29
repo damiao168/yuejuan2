@@ -58,6 +58,7 @@ export async function listAllActiveGraders(): Promise<ManagedUser[]> {
       if (user.status === "active" && user.roles.includes("grader")) users.set(user.id, user);
     }
     if (!page.has_more) break;
+    // 游标停滞时直接失败，不能把已读的部分人员误当作完整可分配名单。
     if (!page.next_cursor || seenCursors.has(page.next_cursor)) throw new Error("阅卷员分页异常，请刷新后重试");
     seenCursors.add(page.next_cursor);
     cursor = page.next_cursor;

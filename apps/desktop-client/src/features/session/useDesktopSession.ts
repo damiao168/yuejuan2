@@ -32,6 +32,7 @@ export function useDesktopSession(defaultServer: string, logEvent: LogEvent) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const autoLoginStartedRef = useRef(false);
   const loginAttemptRef = useRef(0);
+  // 退出也会递增登录序号，让退出前尚未完成的登录和身份检查结果失效。
   const logoutInProgressRef = useRef(false);
 
   const client = useMemo(() => new DesktopApiClient({ baseUrl: authenticatedServerUrl ?? serverUrl, getToken: () => token }), [authenticatedServerUrl, serverUrl, token]);
@@ -164,6 +165,7 @@ export function useDesktopSession(defaultServer: string, logEvent: LogEvent) {
       revokeError = getUserErrorMessage(error, "服务端会话吊销未确认");
     } finally {
       window.clearTimeout(timeout);
+      // 服务端吊销超时也必须清空本机身份；吊销是否成功单独提示，不能阻止用户退出本机。
       setToken(null);
       setUser(null);
       setDurableSessionKey(null);

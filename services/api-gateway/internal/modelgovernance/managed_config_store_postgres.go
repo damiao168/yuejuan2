@@ -30,6 +30,7 @@ ORDER BY is_default DESC, updated_at DESC, provider_key`, tenantID)
 	return items, rows.Err()
 }
 
+// 密钥先按租户和新配置 ID 加密，再在同一事务内切换默认配置，避免半保存状态。
 func (s *PostgresStore) CreateManagedAPIConfig(ctx context.Context, tenantID, actorID string, input ManagedAPIConfigInput) (ManagedAPIConfig, error) {
 	if s.credentialCipher == nil {
 		return ManagedAPIConfig{}, ErrManagedConfigUnavailable
@@ -214,6 +215,7 @@ func (s *PostgresStore) GetManagedAPIConnection(ctx context.Context, tenantID, i
 	return ManagedAPIConnection{Config: item, APIKey: apiKey}, nil
 }
 
+// 探测结果必须匹配请求开始时的 updated_at；配置已变更时返回 stale，调用方不能覆盖新凭据的证据。
 func (s *PostgresStore) RecordManagedAPIProbe(ctx context.Context, tenantID, id string, expectedUpdatedAt time.Time, result ManagedAPIProbeResult) (ManagedAPIConfig, error) {
 	probe := managedProbePersistence(&result)
 	row := s.db.QueryRowContext(ctx, `

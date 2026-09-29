@@ -235,6 +235,7 @@ func (h *Handler) auditEvent(r *http.Request, user auth.User, action, targetID s
 	})
 }
 
+// 只返回当前生效且已审批的 Gold Paper 版本，避免把历史或未审定答案当作教师参考。
 func (h *Handler) referenceCases(r *http.Request, tenantID, examID, questionID string) ([]TeacherReferenceCase, error) {
 	if h.references == nil {
 		return []TeacherReferenceCase{}, nil

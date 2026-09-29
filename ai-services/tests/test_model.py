@@ -115,6 +115,7 @@ class ModelAdapterTests(unittest.TestCase):
                     output,
                 )
 
+    # 两种协议共用同一组坏输出，防止切换供应商后放宽本地校验或改变重试语义。
     def test_all_providers_reject_schema_violations_with_identical_semantics(self):
         invalid_outputs = {
             "required": {"kind": "accepted", "count": 1},

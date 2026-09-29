@@ -12,6 +12,7 @@ export class BaseQuestionGrader {
     if (!inputValidation.valid) {
       throw new Error(`Invalid grading input: ${inputValidation.errors.join("; ")}`);
     }
+    // 同步 mock 和异步模型共用证据调整与输出校验，避免适配器绕过统一返回约束。
     const finalize = (rawOutput) => {
       const output = applyEvidenceVerification(input, rawOutput);
       const outputValidation = validateGradingOutput(output, input);

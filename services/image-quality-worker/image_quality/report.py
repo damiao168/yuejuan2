@@ -106,5 +106,6 @@ def build_normalization_transform(
         "detected_skew_angle": round(skew_angle, 4),
         "skew_correction_applied": deskew_applied,
         "crop_box_source_pixels": [0, 0, source_width, source_height],
+        # 列向量先应用 EXIF 方向变换再纠偏；矩阵乘法顺序必须与实际图像处理一致。
         "source_to_normalized_matrix": _matrix_list(deskew_matrix @ exif_matrix),
     }

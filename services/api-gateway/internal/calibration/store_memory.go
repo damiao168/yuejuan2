@@ -118,6 +118,7 @@ func (s *MemoryStore) CompleteSession(_ context.Context, tenantID string, sessio
 	if !ok {
 		return Session{}, Qualification{}, ErrNotFound
 	}
+	// 只允许完整且仍在进行中的会话进入终态，避免并发重试提前生成资格或重复完成。
 	if item.session.Status != SessionInProgress || len(item.attempts) != len(item.references) {
 		return Session{}, Qualification{}, ErrConflict
 	}

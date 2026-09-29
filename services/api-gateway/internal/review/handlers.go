@@ -294,6 +294,7 @@ func (h *Handler) ReturnTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.MustOwnActiveClaim = !isReviewManager
+	// 该标记由服务端身份决定，客户端不能通过请求体绕过写入时的租约检查。
 	task, err := h.store.ReturnTask(r.Context(), user.TenantID, r.PathValue("id"), user.ID, input)
 	if err != nil {
 		writeStoreError(w, r, err)
@@ -452,6 +453,7 @@ func (h *Handler) authorizeArbitrationManager(w http.ResponseWriter, r *http.Req
 	return false
 }
 
+// 原始整页可能含身份信息；即使能复核题目，也须同时满足这里的管理角色与权限条件。
 func canViewOriginalReviewImage(user auth.User) bool {
 	if !hasAnyRole(user, "platform_admin", "tenant_admin", "school_admin") {
 		return false

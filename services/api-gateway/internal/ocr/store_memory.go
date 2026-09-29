@@ -26,6 +26,7 @@ func (s *MemoryStore) CreateTask(ctx context.Context, tenantID string, submissio
 	return s.createTaskLocked(ctx, tenantID, submissionID, actorID, input)
 }
 
+// 幂等键按租户隔离；同键同参数返回原任务，同键改参数直接冲突，防止悄悄改变 OCR 配置。
 func (s *MemoryStore) createTaskLocked(_ context.Context, tenantID string, submissionID string, actorID string, input CreateTaskInput) (Task, error) {
 	input, err := PrepareCreateInput(submissionID, input)
 	if err != nil {
@@ -147,6 +148,7 @@ func (s *MemoryStore) CompleteTask(ctx context.Context, tenantID string, id stri
 	return s.completeTaskLocked(ctx, tenantID, id, input)
 }
 
+// 已完成任务只接受完全相同的结果重试；不同结果必须报冲突，不能覆盖已有 OCR 证据。
 func (s *MemoryStore) completeTaskLocked(_ context.Context, tenantID string, id string, input CompleteTaskInput) (Task, error) {
 	task, ok := s.tasks[id]
 	if !ok || task.TenantID != tenantID {

@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e/real",
+  // 真实部署测试共享业务状态，串行且不自动重试，避免重放有副作用的操作。
   fullyParallel: false,
   forbidOnly: true,
   retries: 0,

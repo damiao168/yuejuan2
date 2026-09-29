@@ -33,6 +33,7 @@ export function loadExamCreateCommand(storage: Pick<Storage, "getItem">, key: st
 }
 
 export function beginExamCreateCommand(payload: ExamSessionPayload, commandId: string = crypto.randomUUID(), creationMode?: ExamCreationMode): ExamCreateCommandSnapshot {
+  // 提交快照与编辑草稿分离；结果未知时必须重用原输入，不能夹带后续表单修改。
   return {
     version: 1,
     commandId,
@@ -46,6 +47,7 @@ export function beginExamCreateCommand(payload: ExamSessionPayload, commandId: s
 }
 
 export function persistExamCreateCommand(storage: Pick<Storage, "setItem">, key: string, command: ExamCreateCommandSnapshot) {
+  // 保留每次操作的独立回执，再更新最近操作入口，避免新建草稿覆盖旧请求的恢复依据。
   storage.setItem(`${key}:operation:${command.commandId}`, JSON.stringify(command));
   storage.setItem(key, JSON.stringify(command));
 }

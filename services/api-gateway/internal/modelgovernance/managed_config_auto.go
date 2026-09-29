@@ -110,6 +110,7 @@ func (s *AutoManagedAPIConfigService) ListModels(ctx context.Context, tenantID s
 	return resolved, list, result, nil
 }
 
+// 创建前必须完成零生成快速检查；连接可用但结构化能力未验证时只能保存为备用配置。
 func (s *AutoManagedAPIConfigService) Create(ctx context.Context, tenantID, actorID string, input AutoManagedAPIConfigInput) (ManagedAPIConfig, ResolvedManagedProvider, ManagedAPIProbeResult, error) {
 	resolved, err := s.Resolve(ResolveManagedProviderInput{ModelName: input.ModelName, Provider: input.Provider, BaseURL: input.BaseURL})
 	if err != nil {

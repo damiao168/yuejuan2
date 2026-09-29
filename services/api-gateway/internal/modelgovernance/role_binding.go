@@ -59,6 +59,7 @@ type ModelRoleBindingAdminStore interface {
 	ListConfiguredModelRoleBindings(context.Context, string, string, string, string) ([]ModelRoleBinding, error)
 }
 
+// 运行时只解析已启用且已验证的绑定，并要求两个主模型和独立仲裁模型形成完整组合。
 func ResolvePanelRoleBindings(ctx context.Context, store ModelRoleBindingStore, tenantID, stage, subject, archetype string) (PanelRoleBindings, error) {
 	if store == nil || strings.TrimSpace(tenantID) == "" {
 		return PanelRoleBindings{}, ErrInvalidManagedConfig

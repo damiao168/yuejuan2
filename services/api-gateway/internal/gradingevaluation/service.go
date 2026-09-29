@@ -53,6 +53,7 @@ func (s *Service) AddObservation(ctx context.Context, tenantID, runID string, in
 // Complete calculates every metric only from observations that were actually
 // recorded for this immutable run. It does not fabricate a missing model
 // response or infer a teacher reference from OCR/model output.
+// 完成时把当前观测数量作为期望值传给存储层，由存储层再次校验，防止计算期间悄悄新增样本。
 func (s *Service) Complete(ctx context.Context, tenantID, runID string) (Run, error) {
 	if s.store == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(runID) == "" {
 		return Run{}, ErrInvalidInput
@@ -416,6 +417,7 @@ func responseDifficulty(runID string, observations []Observation, computedAt tim
 	return result
 }
 
+// QWK 只在量表可对齐且样本足够时计算；量表混用或信息不足返回不可用原因，不猜测指标。
 func conservativeQWK(items []Observation) (float64, bool, string) {
 	if len(items) < 2 {
 		return 0, false, "requires_at_least_two_aligned_observations"

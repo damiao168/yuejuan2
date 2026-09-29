@@ -40,6 +40,7 @@ type AIGovernanceDependencies struct {
 	DisagreementHandler      *aidisagreement.Handler
 }
 
+// 治理模块把模型、数学理解和评估 handler 接到同一套审计与 worker runtime；运行时依赖由调用方传入，避免模块自行创建旁路队列。
 func NewAIGovernanceModule(cfg config.Config, stores AIGovernanceStores, dependencies AIGovernanceDependencies) *AIGovernanceModule {
 	return &AIGovernanceModule{
 		modelStore:               stores.ModelGovernance,

@@ -186,6 +186,7 @@ export function validateGradingOutput(output, input = undefined) {
   const evidenceItems = Array.isArray(output.evidence) ? output.evidence : [];
   const matchedItems = Array.isArray(output.matched_points) ? output.matched_points : [];
   const missingItems = Array.isArray(output.missing_points) ? output.missing_points : [];
+  // 命中和缺失共用集合，防止同一个采分点被重复或矛盾归类。
   const classifiedPointIds = new Set();
 
   const requiredStrings = [
@@ -299,6 +300,7 @@ export function validateGradingOutput(output, input = undefined) {
   if (inputValidation && !inputValidation.valid) {
     errors.push(...inputValidation.errors.map((error) => `output validation input is invalid: ${error}`));
   }
+  // 只有输入本身有效，才能依其量规校验输出关联关系，避免把损坏输入当作权威。
   if (inputValidation?.valid) {
     if (output.request_id !== input.request_id) errors.push("output.request_id must equal input.request_id");
     if (round(output.max_score) !== round(input.max_score)) errors.push("output.max_score must equal input.max_score");
@@ -349,6 +351,7 @@ export function validateGradingOutput(output, input = undefined) {
         errors.push(`missing rubric point does not exist: ${point.rubric_point_id}`);
       }
     }
+    // 每个量规点都必须显式归为命中或缺失，不能通过漏报难判项目提高完整性。
     for (const rubricPointId of rubricPoints.keys()) {
       if (!classifiedPointIds.has(rubricPointId)) errors.push(`rubric point was not classified: ${rubricPointId}`);
     }

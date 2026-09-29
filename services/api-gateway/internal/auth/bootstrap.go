@@ -33,6 +33,8 @@ type BootstrapStore interface {
 	UpsertBootstrapAdmin(ctx context.Context, input BootstrapAdminInput, passwordHash string) (BootstrapAdminResult, error)
 }
 
+// BootstrapInitialAdmin 创建首次部署需要的平台管理员；只接受 platform 租户及 platform_admin 角色。
+// 已有启用的管理员时拒绝初始化，后续账号管理应使用正常管理接口。
 func BootstrapInitialAdmin(ctx context.Context, store BootstrapStore, input BootstrapAdminInput) (BootstrapAdminResult, error) {
 	input = normalizeBootstrapAdminInput(input)
 	if input.TenantCode != "platform" || input.RoleCode != "platform_admin" {

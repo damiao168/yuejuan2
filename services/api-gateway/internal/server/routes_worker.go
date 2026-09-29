@@ -4,6 +4,7 @@ import (
 	"net/http"
 )
 
+// worker 回调先验证执行权限，再按 sourceType、路径参数或 payload 绑定持久化任务，防止跨任务写回结果。
 func registerWorkerRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("POST /api/v1/internal/image-quality/jobs/claim", ctx.guards.requireOCRManage(ctx.modules.Capture.ImageQualityHandler.ClaimJobs))
 	mux.Handle("POST /api/v1/internal/image-quality/runs/{runId}/normalized-assets", ctx.guards.requireOCRManage(ctx.guards.withWorkerTaskSource("image_quality_run", "runId", ctx.modules.Capture.ImageQualityHandler.CreateNormalizedAssetSlot)))

@@ -1,9 +1,20 @@
 """Validate model output against authoritative input provenance."""
 
 import math
+import re
 
 from .errors import AgentError
 from .paper_schema import FORMULA_SUBJECTS, QUESTION_TYPES, ROLES
+
+
+# A model may still confuse points earned in a word problem with exam marks.
+# This conservative direct-text guard only clears a proposed mark when none of
+# the cited documents contains any explicit question/section mark notation.
+_EXPLICIT_EXAM_MARK = re.compile(
+    r"(?:本(?:小)?题|第\s*\d+\s*题)\s*(?:满分|共|计|为)?\s*[:：]?\s*\d+(?:\.\d+)?\s*分"
+    r"|每\s*(?:小)?题\s*(?:共|计|为)?\s*\d+(?:\.\d+)?\s*分"
+    r"|[（(]\s*\d+(?:\.\d+)?\s*分\s*[）)]"
+)
 
 
 def normalize_direct_text_refs(output, documents):
@@ -144,6 +155,7 @@ def validate_paper_output(output, request_id, subject, documents):
                 for ref in refs
                 if ref.get("ocr_confidence") is not None
             ]
+            # 候选可信度不能高于其依赖的最低 OCR 证据可信度。
             if evidence_confidences:
                 candidate["confidence"] = min(confidence, *evidence_confidences)
     for rubric in output["rubric_candidates"]:
@@ -202,6 +214,15 @@ def validate_paper_output(output, request_id, subject, documents):
                 status=502,
                 request_id=request_id,
             )
+        if question.get("score") is not None:
+            cited = [documents_by_id[ref["source_id"]] for ref in question["source_refs"]]
+            if cited and all(
+                not document.get("blocks") and not document.get("_visual_page_nos")
+                and not _EXPLICIT_EXAM_MARK.search(str(document.get("content", "")))
+                for document in cited
+            ):
+                question["score"] = None
+                question.setdefault("issues", []).append("资料未见明确的小题满分标注；原建议分值已改为待核对")
     return output
 
 @staticmethod
@@ -258,6 +279,7 @@ def validate_refs(refs, documents_by_id, request_id):
             if isinstance(document.get("blocks"), list)
             else []
         )
+        # 引用模式由实际输入决定：原图只引用页，OCR 精确匹配块，纯文本使用字符半开区间。
         visual_page_nos = document.get("_visual_page_nos", [])
         if visual_page_nos:
             if (

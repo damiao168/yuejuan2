@@ -22,6 +22,7 @@ func NewHandler(store Store, audit auth.AuditRecorder) *Handler {
 	return &Handler{store: store, audit: audit}
 }
 
+// Gold 纸的读取与提名/审批/退休分开走权限中间件，避免只读用户改变参考答案。
 func RegisterRoutes(mux *http.ServeMux, h *Handler, requireRead, requireManage func(http.HandlerFunc) http.Handler) {
 	mux.Handle("POST /api/v1/exams/{examId}/questions/{questionId}/gold-papers", requireManage(h.Nominate))
 	mux.Handle("GET /api/v1/exams/{examId}/questions/{questionId}/gold-coverage", requireRead(h.GetCoverage))

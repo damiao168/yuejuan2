@@ -11,6 +11,7 @@ RUN python -m pip install --no-cache-dir -r /app/requirements.txt \
     && python -m pip uninstall -y pip
 
 COPY ai-services/grading_agent /app/grading_agent
+# 提示词与契约随镜像一起部署，运行时版本校验依赖这些固定资源。
 COPY ai-services/prompts /app/prompts
 COPY contracts/grading-agent /app/contracts/grading-agent
 

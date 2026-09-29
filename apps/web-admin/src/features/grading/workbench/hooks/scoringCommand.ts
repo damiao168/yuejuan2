@@ -12,6 +12,7 @@ export async function submitScoringCommand(options: {
   let commandId = options.storage.getItem(options.storageKey);
   let accepted = false;
   if (commandId) {
+    // 有待恢复命令时先查询原结果，不重新运行就绪检查或生成新 ID，避免响应丢失后重复建评分任务。
     const recovery = await transport.recover(options.examId, commandId);
     if (recovery.command_id !== commandId) throw new Error("评分命令恢复结果不匹配");
     accepted = recovery.status === "succeeded" && Boolean(recovery.scoring_run);

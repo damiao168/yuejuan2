@@ -1,0 +1,1 @@
+Isolated review Docker container removed; own native PG cluster already stopped.

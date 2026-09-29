@@ -139,6 +139,7 @@ func (h *Handler) ReplacePage(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"page": out})
 }
 
+// 文件必须同时属于当前租户和目标答卷，防止复用别的考试或别的答卷的上传文件。
 func (h *Handler) validatePageFile(w http.ResponseWriter, r *http.Request, tenantID string, submissionID string, fileAssetID string) bool {
 	asset, err := h.fileStore.Get(r.Context(), tenantID, fileAssetID)
 	if err != nil {
@@ -167,6 +168,7 @@ func (h *Handler) ListPages(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"pages": out})
 }
 
+// 质量检查只评估页面完整性和图像质量，不直接把答卷推进到可阅卷状态。
 func (h *Handler) QualityCheck(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	result, err := h.store.RunQualityCheck(r.Context(), user.TenantID, r.PathValue("id"), user.ID)

@@ -20,6 +20,7 @@ func NewHandler(store Store, audit auth.AuditRecorder) *Handler {
 	return &Handler{store: store, audit: audit}
 }
 
+// 每个请求都从当前用户租户取数据，并在状态变化后写审计，便于追溯智能体流程。
 func (h *Handler) CreateRun(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	var input CreateRunInput

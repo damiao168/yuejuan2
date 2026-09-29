@@ -297,6 +297,7 @@ def _append_formula_artifact(
             "selected_candidate": selected_candidate if selected_candidate is not None else 0,
         }
     )
+    # 此处的 verified 仅指受限解析器生成了 AST；推导等价与解集由第二阶段另行核验。
     verifications.append(
         {
             "id": f"verification-{len(verifications) + 1}",

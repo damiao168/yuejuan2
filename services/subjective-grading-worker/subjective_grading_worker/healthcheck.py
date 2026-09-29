@@ -20,6 +20,7 @@ def is_healthy(path: str, max_age: float, *, now: float | None = None) -> bool:
         return False
     current = time.time() if now is None else now
     age = current - modified
+    # 未来时间戳也不视为健康，避免时钟回拨让过期标记持续有效。
     return 0 <= age <= max_age
 
 

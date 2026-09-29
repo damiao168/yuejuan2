@@ -88,6 +88,7 @@ func CalculateStoredPanelMetrics(ctx context.Context, store PanelEvaluationStore
 	return CalculatePanelMetrics(items)
 }
 
+// A/B 使用全量样本，仲裁器指标只使用实际有 C 分数的样本，避免把未升级案例当作仲裁结果。
 func CalculatePanelMetrics(items []PanelObservation) (PanelMetrics, error) {
 	result := PanelMetrics{SampleCount: len(items)}
 	if len(items) == 0 {

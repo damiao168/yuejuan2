@@ -23,6 +23,7 @@ export function canSubmitTeacherAppealRecommendation({
   assignedTo,
   currentUserId,
 }: TeacherAppealRecommendationContext): boolean {
+  // 这里只控制教师界面的操作入口；最终权限、分派和状态仍需由服务端校验。
   return experience === "teacher"
     && canWork
     && !terminal

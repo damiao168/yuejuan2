@@ -41,6 +41,7 @@ def _metrics(
         "blur_pattern": str(focus["blur_pattern"]),
         "bad_focus_patch_ratio": round(float(focus["bad_patch_ratio"]), 4),
         "effective_short_edge_px": effective_short_edge,
+        # 按 A4 短边英寸数估算的 DPI，与文件嵌入的扫描 DPI 元数据分开报告。
         "estimated_a4_dpi": round(effective_short_edge / 8.27, 2),
         "effective_resolution_score": round(effective_resolution_score, 4),
         "brightness_score": round(brightness_score, 4),
@@ -101,6 +102,7 @@ def _focus_report(gray: np.ndarray) -> dict[str, Any]:
                 + 0.3 * tenengrad / 36.0
                 + 0.2 * gradient_energy / 3600.0
             )
+            # 局部清晰度框使用相对宽高的归一化坐标，数值不是原图像素。
             patches.append(
                 {
                     "row": row,

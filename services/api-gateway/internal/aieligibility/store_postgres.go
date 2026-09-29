@@ -66,6 +66,7 @@ ORDER BY version DESC LIMIT 1`, tenantID, subject, stage, archetype, risk))
 }
 
 func (s *PostgresStore) CreateOrGetDecision(ctx context.Context, tenantID string, input Decision) (Decision, error) {
+	// 决定以租户和运行项唯一；并发写入的后来者读取已接受的结果，不能覆写历史准入依据。
 	inputJSON, _ := json.Marshal(input.InputSnapshot)
 	reasonsJSON, _ := json.Marshal(input.Reasons)
 	constraintJSON, _ := json.Marshal(input.OutputConstraint)

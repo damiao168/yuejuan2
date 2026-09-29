@@ -1,0 +1,1127 @@
+{
+  "scope": "ai-services Python, Dockerfile and requirements; service workers Python, Dockerfiles and pyproject metadata",
+  "checked": 142,
+  "changed_files": 76,
+  "method": "Python ast.dump(include_attributes=False), non-comment token stream and protected directives; Docker instruction lines; dependency metadata SHA-256 vs saved workspace baseline",
+  "passed": true,
+  "status_counts": {
+    "annotated": 76,
+    "existing_sufficient": 17,
+    "self_explanatory": 49
+  },
+  "files": [
+    {
+      "path": "ai-services/Dockerfile",
+      "changed_from_baseline": true,
+      "instructions_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/__init__.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/__main__.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/app.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/app_v2.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/capabilities.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/config.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/contract.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/contract_v2.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/dashscope_native_contract.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/dashscope_native_transport.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/errors.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/guardrails.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/managed_model.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/math_rubric_draft.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/model.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/__init__.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/anchors.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/chunks.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/expand.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/layout.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_input.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_parser.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_routing.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_schema.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_validation.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_visual.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/provider_adapter.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/grading_agent/server.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/requirements.txt",
+      "changed_from_baseline": false,
+      "bytes_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/tests/helpers.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/tests/test_application.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/tests/test_application_v2.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/tests/test_config.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/tests/test_contract.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/tests/test_contract_v2.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/tests/test_dashscope_multimodal_contract.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/tests/test_dashscope_native_contract.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/tests/test_dashscope_native_transport.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/tests/test_http.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/tests/test_managed_model.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/tests/test_math_rubric_draft.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/tests/test_math_v2_production.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/tests/test_model.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/tests/test_paper_compact.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/tests/test_paper_parser.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "ai-services/tests/test_provider_adapter.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/image-quality-worker/Dockerfile",
+      "changed_from_baseline": true,
+      "instructions_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/__init__.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/__main__.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/api.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/config.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/engine.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/errors.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/geometry.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/metrics.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/policy.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/report.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/runner.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/schemas.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/image-quality-worker/pyproject.toml",
+      "changed_from_baseline": false,
+      "bytes_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/image-quality-worker/tests/test_api.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/image-quality-worker/tests/test_config.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/image-quality-worker/tests/test_engine.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/image-quality-worker/tests/test_runner.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/math-verification-worker/Dockerfile",
+      "changed_from_baseline": true,
+      "instructions_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/math-verification-worker/math_verification_worker/__init__.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/math-verification-worker/math_verification_worker/__main__.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/math-verification-worker/math_verification_worker/parser.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/math-verification-worker/math_verification_worker/server.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/math-verification-worker/math_verification_worker/verifier.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/math-verification-worker/pyproject.toml",
+      "changed_from_baseline": false,
+      "bytes_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/math-verification-worker/tests/test_parser.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/math-verification-worker/tests/test_server.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/math-verification-worker/tests/test_timeout.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/math-verification-worker/tests/test_verifier.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/Dockerfile",
+      "changed_from_baseline": false,
+      "instructions_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/benchmarks/benchmark_local.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/__init__.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/__main__.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/api.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/config.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/deployment_profile.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/engine.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/formula_calibration.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/formula_validation.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/math_layout.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/math_runner.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/paper_formula.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/recognition_router.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/runner.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/symbolic_runner.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/pyproject.toml",
+      "changed_from_baseline": false,
+      "bytes_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/tests/test_api.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/tests/test_benchmark.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/tests/test_config.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/tests/test_engine.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/tests/test_formula_calibration.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/tests/test_http_response.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/tests/test_main.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/tests/test_math_runner.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/tests/test_paper_formula.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/tests/test_recognition_router.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/tests/test_runner.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/ocr-worker/tests/test_symbolic_runner.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/Dockerfile",
+      "changed_from_baseline": false,
+      "instructions_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/__init__.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/__main__.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/api.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/barcode.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/config.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/decoder.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/omr.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/omr_acceptance.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/registration.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/runner.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/pyproject.toml",
+      "changed_from_baseline": false,
+      "bytes_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_api.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_barcode.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_config.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_decoder.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_main.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_omr.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_omr_acceptance.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_registration.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_runner_heartbeat.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_runner_omr.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_runner_paper_import.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_runner_template_match.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/tools/evaluate_external_omr.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/page-processing-worker/tools/run_omr_acceptance.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/subjective-grading-worker/Dockerfile",
+      "changed_from_baseline": true,
+      "instructions_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/subjective-grading-worker/pyproject.toml",
+      "changed_from_baseline": false,
+      "bytes_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/subjective-grading-worker/subjective_grading_worker/__init__.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/subjective-grading-worker/subjective_grading_worker/__main__.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/subjective-grading-worker/subjective_grading_worker/api.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/subjective-grading-worker/subjective_grading_worker/config.py",
+      "changed_from_baseline": false,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/subjective-grading-worker/subjective_grading_worker/healthcheck.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/subjective-grading-worker/subjective_grading_worker/runner.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/subjective-grading-worker/tests/test_api_integration.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    },
+    {
+      "path": "services/subjective-grading-worker/tests/test_worker.py",
+      "changed_from_baseline": true,
+      "ast_equivalent": true,
+      "non_comment_tokens_equivalent": true,
+      "tool_directives_unchanged": true,
+      "passed": true
+    }
+  ],
+  "directive_note": "Only actual directive syntax (such as coverage:) is classified; the ordinary algorithm variable coverage is not a coverage-tool directive."
+}

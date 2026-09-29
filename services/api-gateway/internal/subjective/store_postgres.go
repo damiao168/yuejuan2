@@ -14,6 +14,7 @@ type PostgresStore struct {
 	db *sql.DB
 }
 
+// 数据库用 tenant/request_id 唯一键实现运行幂等；冲突后仍需校验面板角色和版本，避免复用错误运行。
 func (s *PostgresStore) GetOrCreateRun(ctx context.Context, tenantID string, _ string, input CreateRunInput) (GradingRun, error) {
 	if tenantID == "" || input.AnswerSegmentID == "" || input.QuestionID == "" || input.RequestID == "" {
 		return GradingRun{}, ErrInvalidInput
@@ -61,6 +62,7 @@ RETURNING id::text, tenant_id::text, COALESCE(batch_id::text, ''), answer_segmen
 	return run, nil
 }
 
+// 通过带 status=queued 条件的更新做原子抢占，只有成功更新的 worker 才能调用模型。
 func (s *PostgresStore) ClaimPanelRun(ctx context.Context, tenantID, runID string) (GradingRun, bool, error) {
 	if tenantID == "" || runID == "" {
 		return GradingRun{}, false, ErrInvalidInput
@@ -131,6 +133,7 @@ WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL
 	return scanRun(row)
 }
 
+// 批次幂等键冲突时返回原批次并核对题目列表、评分运行和创建人，防止把不同请求当作同一批。
 func (s *PostgresStore) CreateBatch(ctx context.Context, tenantID string, actorID string, input CreateBatchInput) (GradingBatch, error) {
 	segments, err := normalizeBatchSegments(input.SegmentIDs)
 	if err != nil || tenantID == "" || input.IdempotencyKey == "" || actorID == "" {
@@ -376,10 +379,16 @@ SELECT
   COALESCE(qr.id::text, ''), COALESCE(qr.question_id::text, ''), COALESCE(rv.version, ''),
   COALESCE(qr.status, ''), COALESCE(qr.max_score::float8, 0), COALESCE(qr.points, '[]'::jsonb),
   COALESCE(qr.deductions, '[]'::jsonb), COALESCE(qr.examples, '[]'::jsonb),
-  COALESCE(ans.id::text, ''), COALESCE(ans.answer_text, ''), ans.confidence::float8, ans.created_at
+  COALESCE(ans.id::text, ''), COALESCE(ans.answer_text, ''), ans.confidence::float8, ans.created_at,
+  ref.question_snapshot, COALESCE(ref.import_snapshot_hash, '')
 FROM answer_segment seg
 JOIN question q ON q.tenant_id = seg.tenant_id AND q.id = seg.question_id
-JOIN exam_question_snapshot eqs ON eqs.tenant_id = q.tenant_id AND eqs.exam_id = q.exam_id AND eqs.question_id = q.id
+JOIN LATERAL (
+  SELECT * FROM exam_question_snapshot snapshot
+  WHERE snapshot.tenant_id = q.tenant_id AND snapshot.exam_id = q.exam_id AND snapshot.question_id = q.id
+  ORDER BY snapshot.snapshot_version DESC
+  LIMIT 1
+) eqs ON true
 JOIN exam e ON e.tenant_id = q.tenant_id AND e.id = q.exam_id AND e.deleted_at IS NULL
 LEFT JOIN LATERAL (
   SELECT CASE
@@ -407,6 +416,17 @@ LEFT JOIN LATERAL (
   ORDER BY created_at DESC
   LIMIT 1
 ) ans ON true
+LEFT JOIN LATERAL (
+  SELECT item.value AS question_snapshot, r.import_snapshot_hash
+  FROM exam_readiness_snapshot r
+  CROSS JOIN LATERAL jsonb_array_elements(r.import_snapshot_json->'questions') item(value)
+  WHERE r.tenant_id = q.tenant_id AND r.exam_id = q.exam_id AND r.status = 'passed'
+    AND item.value->>'id' = q.id::text
+    AND item.value->>'assessment_snapshot_id' = eqs.id::text
+    AND item.value->>'assessment_snapshot_hash' = eqs.content_hash
+  ORDER BY r.confirmed_at DESC
+  LIMIT 1
+) ref ON true
 WHERE seg.tenant_id = $1 AND seg.id::text = $2 AND seg.deleted_at IS NULL
 `, tenantID, segmentID)
 	var out Context
@@ -419,6 +439,8 @@ WHERE seg.tenant_id = $1 AND seg.id::text = $2 AND seg.deleted_at IS NULL
 	var answerID string
 	var ocrConfidence sql.NullFloat64
 	var answerCreated sql.NullTime
+	var referenceRaw []byte
+	var referenceHash string
 	if err := row.Scan(
 		&out.SegmentID,
 		&snapshotRaw,
@@ -450,6 +472,8 @@ WHERE seg.tenant_id = $1 AND seg.id::text = $2 AND seg.deleted_at IS NULL
 		&out.AnswerText,
 		&ocrConfidence,
 		&answerCreated,
+		&referenceRaw,
+		&referenceHash,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Context{}, ErrNotFound
@@ -459,6 +483,11 @@ WHERE seg.tenant_id = $1 AND seg.id::text = $2 AND seg.deleted_at IS NULL
 	if err := json.Unmarshal(snapshotRaw, &out.AssessmentSnapshot); err != nil {
 		return Context{}, err
 	}
+	reference, err := referenceContextFromSnapshot(referenceRaw, referenceHash)
+	if err != nil {
+		return Context{}, err
+	}
+	out.ReferenceContext = reference
 	out.Subject = string(out.AssessmentSnapshot.SubjectCode)
 	out.GradeLevel = string(out.AssessmentSnapshot.EducationStage)
 	if !IsSupportedQuestionType(question.QuestionType) {

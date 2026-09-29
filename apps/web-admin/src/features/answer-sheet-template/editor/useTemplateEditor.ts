@@ -43,6 +43,7 @@ export function useTemplateEditor({
 
   useEffect(() => {
     if (!selectedTemplate) return;
+    // 编辑器持有独立草稿，不能让区域拖动直接修改已加载模板或其查询缓存。
     setLayout(structuredClone(selectedTemplate.layout));
     setPageNo(1);
   }, [selectedTemplate, setLayout, setPageNo]);

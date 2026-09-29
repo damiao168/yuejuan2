@@ -171,6 +171,7 @@ export function paperImportProgress(job: PaperImportJob): { percent: number | un
 		const completed = Math.max(0, runtime.completed ?? 0);
 		const total = Math.max(0, runtime.total ?? 0);
 		const calculating = runtime.phase === "model_loading";
+		// 这里只表示当前 Worker 阶段的实际计数比例；加载模型或缺少总量时不推算百分比。
 		const percent = !calculating && total > 0 ? Math.min(100, Math.floor((completed / total) * 100)) : undefined;
 		const queued = runtime.task_status === "queued" || runtime.task_status === "leased";
 		const parts = [queued ? "任务已进入处理队列" : runtime.message || "Worker 正在处理"];

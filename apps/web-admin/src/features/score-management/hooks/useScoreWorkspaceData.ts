@@ -71,6 +71,7 @@ export function useScoreWorkspaceData({
 }) {
   const { message } = App.useApp();
   const [state, dispatch] = useReducer(scoreWorkspaceReducer, initialExamId, initialScoreWorkspaceState);
+  // 全量刷新和翻页共用代次；新请求开始后，旧请求即使成功也不能写回当前快照。
   const scoreRequestsRef = useRef(new LatestRequestController());
   const { selectedExamId, snapshot, appliedKeyword, statusFilter } = state;
 

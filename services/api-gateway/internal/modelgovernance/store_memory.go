@@ -277,6 +277,7 @@ func (s *MemoryStore) GetPolicy(_ context.Context, tenantID string) (TenantPolic
 	return item, nil
 }
 
+// 策略版本采用乐观锁；同时写入旧版部署白名单和托管配置白名单会被拒绝，避免授权来源混淆。
 func (s *MemoryStore) UpdatePolicy(_ context.Context, tenantID string, _ string, input PolicyUpdateInput) (TenantPolicy, error) {
 	policy := PolicyFromUpdate(input)
 	if ValidateTenantPolicy(policy) != nil || input.ExpectedVersion < 1 || strings.TrimSpace(input.Reason) == "" {
@@ -339,6 +340,7 @@ func (s *MemoryStore) ListSandboxApprovals(_ context.Context, tenantID string) (
 	return out, nil
 }
 
+// 审批创建在同一把锁内检查托管配置或旧版部署，保证同一租户和目标不会出现两个未撤销审批。
 func (s *MemoryStore) CreateSandboxApproval(
 	_ context.Context,
 	tenantID string,
@@ -708,6 +710,7 @@ func (s *MemoryStore) ListModelApprovals(_ context.Context, tenantID string) ([]
 	return out, nil
 }
 
+// 晋级只接受已完成的授权冻结集评测，并把候选的模型、提示词和量规版本复制进不可变审批快照。
 func (s *MemoryStore) CreateModelApproval(
 	_ context.Context,
 	tenantID string,
@@ -820,6 +823,7 @@ func (s *MemoryStore) RevokeModelApproval(
 	return item, nil
 }
 
+// 对外返回供应商时只保留密钥是否配置和 scheme，绝不把 credential_ref 原文带出存储边界。
 func sanitizeProvider(provider Provider) Provider {
 	provider.CredentialConfigured = provider.CredentialRef != ""
 	if parsed, err := url.Parse(provider.CredentialRef); err == nil {

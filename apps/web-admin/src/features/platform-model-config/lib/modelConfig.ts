@@ -80,6 +80,7 @@ export function modelConfigDraftKey(tenantID: string, editingID?: string, creden
   return `${tenantID}:create`;
 }
 
+// 能力通过还须匹配当前探测协议，旧版探测成功不能代替当前结构化输出验证。
 export function capabilityVerified(config: ManagedModelAPIConfig) {
   return config.last_capability_status === "success" && config.last_capability_probe_version === "structured-json-v3";
 }

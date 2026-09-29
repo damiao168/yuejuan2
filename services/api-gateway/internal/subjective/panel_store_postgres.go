@@ -16,6 +16,7 @@ const panelColumns = `id::text, tenant_id::text, answer_segment_id::text, answer
   trigger_codes, decision_config, status, resolved_score::float8, COALESCE(resolution_source,''),
   COALESCE(review_task_id::text,''), created_by::text, created_at, updated_at, completed_at`
 
+// 数据库唯一键保证同一答案版本只建一个面板；命中旧记录后仍核对题目和满分，防止静默复用。
 func (s *PostgresStore) GetOrCreatePanel(ctx context.Context, tenantID, actorID string, input CreatePanelInput) (GradingPanel, error) {
 	input.DecisionConfig = NormalizePanelDecisionConfig(input.DecisionConfig)
 	if tenantID == "" || actorID == "" || validateCreatePanel(input) != nil {
@@ -48,6 +49,7 @@ func (s *PostgresStore) GetPanel(ctx context.Context, tenantID, panelID string) 
 WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL`, tenantID, panelID))
 }
 
+// 状态约束和角色完整性由数据库触发器与本层共同校验；约束冲突统一转为可重试的幂等冲突。
 func (s *PostgresStore) UpdatePanel(ctx context.Context, tenantID, panelID string, input UpdatePanelInput) (GradingPanel, error) {
 	if !validPanelStatus(input.Status) {
 		return GradingPanel{}, ErrInvalidInput

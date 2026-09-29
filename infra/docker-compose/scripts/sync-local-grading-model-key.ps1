@@ -10,6 +10,8 @@ $keyPath = if ([IO.Path]::IsPathRooted($KeyFile)) { $KeyFile } else { Join-Path 
 $envPath = (Resolve-Path -LiteralPath $envPath).Path
 $keyPath = (Resolve-Path -LiteralPath $keyPath).Path
 
+
+# 仅把密钥同步到配置文件，不输出值；运行中的容器需由部署流程重新加载配置。
 $key = (Get-Content -Raw -LiteralPath $keyPath).Trim()
 if ([string]::IsNullOrWhiteSpace($key)) {
   throw "The local llama.cpp API key file is empty: $keyPath"

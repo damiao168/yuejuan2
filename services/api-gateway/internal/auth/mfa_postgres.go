@@ -249,6 +249,7 @@ func lockMFACommand(ctx context.Context, tx *sql.Tx, proof MFAProof) (TOTPRecord
 }
 
 func (s *PostgresStore) VerifyMFAChallenge(ctx context.Context, proof MFAProof) error {
+	// 消费恢复码/TOTP 时间步与标记挑战已验证同事务，失败时不单独烧掉证明材料。
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -322,6 +323,7 @@ func (s *PostgresStore) FinishMFACommand(ctx context.Context, proof MFAProof, op
 		}
 		_, err = tx.ExecContext(ctx, `UPDATE auth_mfa_challenge SET consumed_at=$5::timestamptz WHERE tenant_id=$1::uuid AND user_id=$2::uuid AND session_hash=$3 AND token_hash=$4`, proof.TenantID, proof.UserID, proof.SessionHash, proof.ChallengeHash, proof.Now)
 	case MFAOperationDisable:
+		// 凭据删除、安全版本更新及会话/设备撤销一起提交，关闭 MFA 不留下旧登录权限。
 		_, err = tx.ExecContext(ctx, `DELETE FROM auth_totp WHERE tenant_id=$1::uuid AND user_id=$2::uuid AND id=$3::uuid`, record.TenantID, record.UserID, record.ID)
 		if err != nil {
 			return err

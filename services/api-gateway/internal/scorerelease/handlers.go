@@ -340,6 +340,7 @@ func studentReleaseUser(w http.ResponseWriter, r *http.Request) (auth.User, stri
 	if !ok {
 		return auth.User{}, "", false
 	}
+	// 学生端只能使用认证上下文中的本人 ID；路径参数只标识考试和题目。
 	studentID, scoped := auth.ScopedStudentID(user)
 	if !auth.HasPermission(user, "student:grade:read") || !scoped {
 		httpx.Error(w, r, http.StatusForbidden, "student_score_scope_required", "student scope is required for published scores")

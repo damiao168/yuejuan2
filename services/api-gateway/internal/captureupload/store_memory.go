@@ -81,6 +81,7 @@ func (s *MemoryStore) AppendChunk(_ context.Context, tenantID, uploadID string, 
 		return session, nil
 	}
 	if input.Offset < session.ConfirmedOffset {
+		// 旧偏移只接受同一分块的重传；不能用新内容覆盖已确认的字节范围。
 		existing, exists := s.chunks[uploadID][input.Offset]
 		if exists && existing.hash == input.SHA256 && len(existing.data) == len(input.Data) {
 			return session, nil
@@ -105,6 +106,7 @@ func (s *MemoryStore) BeginComplete(_ context.Context, tenantID, uploadID string
 	if (session.Status != "uploading" && session.Status != "finalizing") || session.ConfirmedOffset != session.Size {
 		return Session{}, false, ErrIncomplete
 	}
+	// 过期租约可被接管，但必须换令牌，使旧请求不能再回退或提交该会话。
 	session.Status = "finalizing"
 	session.CompletionToken = uuid.NewString()
 	session.CompletionLeaseUntil = s.now().Add(completionLeaseDuration)

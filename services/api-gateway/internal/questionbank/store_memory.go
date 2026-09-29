@@ -82,6 +82,7 @@ func memoryMutation[T any](ctx context.Context, s *MemoryStore, scope auth.Acces
 		return out, err
 	}
 	if replay {
+		// 命令回执也可能在撤权后被再次读取，返回旧结果前仍要检查当前权限。
 		switch v := any(out).(type) {
 		case Bank:
 			_, err = s.bank(scope, v.ID, action)

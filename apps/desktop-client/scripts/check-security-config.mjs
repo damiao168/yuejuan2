@@ -67,6 +67,7 @@ if (!Array.isArray(capability.permissions) || capability.permissions.length !== 
   fail("no Tauri core or plugin permission is currently required");
 }
 
+// 仅扫描源码中的字面量调用，并与允许的 IPC 命令双向核对；新增命令时必须同步更新清单和能力审查。
 const expectedCommands = new Set([
   "archive_durable_scan_queue_items",
   "append_local_log",

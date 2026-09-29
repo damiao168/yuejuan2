@@ -38,6 +38,7 @@ function readJson(relativePath) {
   return JSON.parse(readFileSync(absolutePath, "utf8"));
 }
 
+// eval 会重写实验报告，后续门禁读取这次生成的结果；这些证据仅证明开发链路。
 const commands = [
   run("lab_unit_tests", npmCommand, ["test"], LAB_ROOT),
   run("lab_synthetic_eval", npmCommand, ["run", "eval"], LAB_ROOT),

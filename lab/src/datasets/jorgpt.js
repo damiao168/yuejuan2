@@ -70,6 +70,7 @@ function participantGroupId(rawId) {
   return createHash("sha256").update(`edugrade-jorgpt-participant-v1\0${rawId}`).digest("hex");
 }
 
+// 量规由公开理想答案重建，仅用于外部基准，不能冒充原教师逐点量规或双评 Gold。
 function rubricFor(questionId, idealAnswer) {
   return {
     rubric_id: `jorgpt-${questionId}-derived-holistic`,
@@ -178,6 +179,7 @@ export function transformJorgptRows(rows) {
   });
 }
 
+// 参与者分组哈希只用于拆分泄漏审计；持久化前删除，减少可关联信息。
 export function minimizeJorgptSamplesForPersistence(samples) {
   return samples.map(({ participant_group_id: _participantGroupId, ...sample }) => sample);
 }

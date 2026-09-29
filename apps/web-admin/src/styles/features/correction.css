@@ -39,6 +39,7 @@
 .correction-inspector textarea { margin-bottom: 12px; }
 .correction-mobile-note { display: none; margin-bottom: 16px; }
 
+/* 窄屏只保留校正结果和提示，隐藏四点拖拽画布与编辑操作，避免误用桌面几何交互。 */
 @media (max-width: 900px) {
   .correction-workspace-head { grid-template-columns: auto 1fr; }
   .correction-workspace-head > .ant-space { grid-column: 1 / -1; justify-self: end; }

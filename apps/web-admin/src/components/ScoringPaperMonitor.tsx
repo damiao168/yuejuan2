@@ -174,6 +174,7 @@ export function ScoringPaperMonitor({ run, items, loading, onRefresh }: ScoringP
     };
   }, [pageKey]);
 
+  // 此进度统计离开排队/处理中的项目，包含待人工和失败，不能作为成绩已确认比例。
   const processed = items.filter((item) => item.state !== "queued" && item.state !== "processing").length;
   const progress = items.length ? Math.round((processed / items.length) * 100) : 0;
   const activeItems = (selected?.items ?? [])

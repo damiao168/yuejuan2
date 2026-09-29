@@ -49,6 +49,7 @@ WHERE tenant_id=$1 AND id=$2::uuid AND paper_import_id=$3::uuid AND run_id=$4::u
 	if inputHash != binding.InputHash {
 		return PaperImportJob{}, ErrConflict
 	}
+	// 代次已变化时只允许确认历史上相同任务、相同结果的成功回执，不把旧结果写到当前代次。
 	if runID != binding.RunID || generation != binding.Generation || revision != binding.SourceRevision {
 		if err = confirmHistoricalPaperImportParseResult(ctx, tx, tenantID, taskID, leaseToken, binding, resultPayload, resultHash, durationMS); err != nil {
 			return PaperImportJob{}, err
@@ -61,6 +62,7 @@ WHERE tenant_id=$1 AND id=$2::uuid AND paper_import_id=$3::uuid AND run_id=$4::u
 	if err = validatePaperImportStageBinding(ctx, tx, tenantID, taskID, runID, generation, "paper_parse", "paper_import_parse", binding.InputID); err != nil {
 		return PaperImportJob{}, err
 	}
+	// 任务完成与待核对结果共用事务；后续校验失败也会回滚此处，避免任务成功却没有业务结果。
 	if _, err = workerruntime.CompleteTaskInTx(ctx, tx, tenantID, taskID, workerruntime.CompleteInput{
 		LeaseToken: leaseToken, ResultSchemaVersion: "paper-import-parse-result-v2", Result: resultPayload, DurationMS: durationMS,
 	}); err != nil {
@@ -93,6 +95,7 @@ WHERE tenant_id=$1 AND id=$2::uuid AND paper_import_id=$3::uuid AND run_id=$4::u
 	}
 	var previous []PaperImportDraftQuestion
 	if json.Unmarshal(previousRaw, &previous) == nil {
+		// 先记录新旧候选冲突，再保留人工确认值；顺序反过来会掩盖本轮识别与人工结果的差异。
 		structured = appendHumanConfirmationConflicts(structured, drafts, previous)
 		drafts = preserveHumanConfirmedDrafts(drafts, previous)
 		structured = issuesAfterHumanReview(structured, drafts, false)

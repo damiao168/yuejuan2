@@ -10,6 +10,7 @@ import (
 
 const correctionColumns = `id::text,capture_page_id::text,base_registration_run_id::text,COALESCE(applied_registration_run_id::text,''),source_page_revision,template_id::text,template_content_hash,page_no,source_points,template_points,advanced_anchor_mode,status,revision,attempt_count,COALESCE(preview_registered_file_asset_id::text,''),preview_segments,source_to_template_matrix,template_to_source_matrix,COALESCE(coverage,0),COALESCE(reprojection_error,0),validation_report,previous_registration_snapshot,COALESCE(runtime_task_id::text,''),COALESCE(error_code,''),expires_at,applied_at,undone_at,created_at`
 
+// 校正上下文只接受该页最新且未失效的配准运行，避免把旧坐标套到新页面版本。
 func (s *PostgresStore) GetRegistrationCorrectionContext(ctx context.Context, tenantID, runID string) (RegistrationCorrectionContext, error) {
 	var out RegistrationCorrectionContext
 	var layoutRaw []byte
@@ -37,6 +38,7 @@ func (s *PostgresStore) CreateRegistrationCorrection(ctx context.Context, tenant
 	if input.PageRevision <= 0 || validateCorrectionPoints(input.SourcePoints, input.TemplatePoints) != nil {
 		return RegistrationCorrection{}, ErrInvalidInput
 	}
+	// 普通模式把源图四角映射到整张模板；只有高级模式保留用户给定的模板锚点。
 	if !input.AdvancedAnchorMode {
 		input.TemplatePoints = []NormalizedPoint{{0, 0}, {1, 0}, {1, 1}, {0, 1}}
 	}
@@ -121,6 +123,7 @@ func (s *PostgresStore) QueueRegistrationCorrectionPreview(ctx context.Context, 
 		return RegistrationCorrection{}, ErrInvalidInput
 	}
 	payload, _ := json.Marshal(map[string]any{"correction_id": current.ID, "capture_page_id": current.CapturePageID, "exam_id": examID, "source_download_url": "/api/v1/files/" + sourceAssetID + "/download", "source_content_type": "image/png", "template_download_url": "/api/v1/files/" + templateAssetID + "/download", "template_content_type": templateContentType, "template_page_index": current.PageNo, "source_points": current.SourcePoints, "template_points": current.TemplatePoints, "question_regions": regions, "render_dpi": 300})
+	// 同一组点允许人工再次尝试，键中加入尝试次数，避免重用已结束的预览任务。
 	key := "registration-correction:" + current.ID + ":" + current.ValidationReportHash() + ":a" + strconv.Itoa(current.AttemptCount+1)
 	var taskID string
 	err = tx.QueryRowContext(ctx, `INSERT INTO agent_worker_task(tenant_id,task_type,queue_name,source_type,source_id,priority,payload,payload_schema_version,idempotency_key,dedupe_key,max_attempts,retry_backoff_seconds,created_by) VALUES($1,'page_registration_correction_preview','page-processing','page_registration_correction',$2::uuid,65,$3,'page-registration-correction-v1',$4,$4,3,10,$5::uuid) ON CONFLICT(tenant_id,task_type,idempotency_key) DO UPDATE SET updated_at=agent_worker_task.updated_at RETURNING id::text`, tenantID, current.ID, payload, key, actorID).Scan(&taskID)

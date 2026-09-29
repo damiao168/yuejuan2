@@ -8,6 +8,7 @@ export class NotConfiguredError extends Error {
   }
 }
 
+// 这里只声明兼容适配器的配置与能力接口，grade 仍主动拒绝执行，不能用于真实调用。
 export class OpenAICompatibleGradingAdapter {
   constructor(env = process.env) {
     this.baseUrl = env.GRADING_OPENAI_BASE_URL ?? "https://api.openai.com/v1";

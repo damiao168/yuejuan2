@@ -19,6 +19,7 @@ func NewPostgresStore(db *sql.DB) *PostgresStore {
 	return &PostgresStore{db: db}
 }
 
+// 创建租户同时建立首个管理员，使用事务保证不会出现“有租户却没有管理员”的半成品。
 func (s *PostgresStore) CreateTenant(ctx context.Context, input TenantProvision) (Tenant, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {

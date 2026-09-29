@@ -18,6 +18,7 @@ export function coverageFailures(coverage, budgets) {
   const failures = [];
   for (const [name, floor] of Object.entries(budgets)) {
     const actual = coverage.get(name);
+    // 被预算约束的包必须有本次结果，不能因未执行或输出格式变化而跳过覆盖率门禁。
     if (actual === undefined) {
       failures.push(`${name}: no coverage result`);
     } else if (actual < floor) {

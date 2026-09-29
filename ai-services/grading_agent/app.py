@@ -107,6 +107,7 @@ class GradingAgentApplication:
                 self._inflight[idempotency_key] = inflight
                 owner = True
 
+        # 同键同内容只由首个请求执行推理；等待者共享结果或错误，不能再次消耗模型额度。
         if not owner:
             wait_seconds = (
                 self.settings.model_queue_timeout_seconds
@@ -154,6 +155,7 @@ class GradingAgentApplication:
                 self._inflight.pop(idempotency_key, None)
             raise internal_error from exc
 
+        # 缓存的是经契约校验的建议副本；调用方修改返回对象不能污染后续幂等重放。
         with self._cache_lock:
             self._cache[idempotency_key] = (self.clock(), digest, copy.deepcopy(suggestion))
             while len(self._cache) > self.settings.idempotency_max_entries:

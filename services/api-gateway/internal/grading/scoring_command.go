@@ -35,6 +35,7 @@ func (s *PostgresStore) RecoverScoringCommand(ctx context.Context, tenantID, exa
 	if err != nil {
 		return result, err
 	}
+	// succeeded 表示启动命令已被接受；实际评分进度仍看返回 run 的状态，不能据此显示阅卷完成。
 	result.Status = "succeeded"
 	result.Run = &run
 	return result, nil

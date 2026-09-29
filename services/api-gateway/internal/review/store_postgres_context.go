@@ -165,6 +165,7 @@ WHERE seg.tenant_id = $1 AND seg.id::text = $2 AND seg.deleted_at IS NULL AND su
 	if err := decodeJSONB(examplesRaw, &rubric.Examples, "rubric.examples"); err != nil {
 		return Context{}, err
 	}
+	// 优先用考试快照中的评分细则；快照无法还原细则时，保留前面查到的当前细则。
 	if frozen, ok := frozenRubric(out.AssessmentSnapshot.RubricSnapshot, question.ID); ok {
 		rubric = frozen
 	}
@@ -200,6 +201,7 @@ func frozenRubric(snapshot map[string]any, questionID string) (paper.Rubric, boo
 	return rubric, rubric.ID != "" || rubric.Version != "" || len(rubric.Points) > 0
 }
 
+// 这里汇集当前识别候选、标准答案、已发布规则和当前成绩，供异常复核展示；不是一份历史评分快照。
 func loadAutomationResult(ctx context.Context, q queryer, tenantID, segmentID string) (*AutomationResult, error) {
 	row := q.QueryRowContext(ctx, `
 SELECT

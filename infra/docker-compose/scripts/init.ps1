@@ -75,6 +75,7 @@ try {
   Invoke-Compose -Arguments @("up", "-d", "postgres", "redis", "minio", "qdrant")
   foreach ($service in @("postgres", "redis", "minio", "qdrant")) { Wait-ComposeService $service }
 
+  # 先完成迁移和对象桶初始化再启动应用，防止服务连接到尚未准备好的存储结构。
   $migrationArgs = @("--profile", "tools", "run", "--rm")
   if ($MigrationBaselineVersion) { $migrationArgs += @("-e", "EDUGRADE_MIGRATION_BASELINE_VERSION=$MigrationBaselineVersion") }
   $migrationArgs += "db-migrate"

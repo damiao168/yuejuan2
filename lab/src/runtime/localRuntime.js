@@ -65,6 +65,7 @@ export function resolveLocalRuntimePaths(manifest = loadLocalRuntimeManifest()) 
   };
 }
 
+// 快速检查只看清单、存在性和大小；需要完整性证据时另外调用 sha256File。
 export function inspectLocalRuntime(manifest = loadLocalRuntimeManifest()) {
   const manifestValidation = validateLocalRuntimeManifest(manifest);
   if (!manifestValidation.valid) {

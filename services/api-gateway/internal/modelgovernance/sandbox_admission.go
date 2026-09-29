@@ -30,6 +30,7 @@ type SandboxAdmissionDecision struct {
 	Blockers []string `json:"blockers"`
 }
 
+// 先做离线准入判断，再核对审批记录与供应商/部署的租户和 ID 绑定；任何解绑都会强制拒绝。
 func AssessStoredSandboxAdmission(
 	provider Provider,
 	deployment Deployment,

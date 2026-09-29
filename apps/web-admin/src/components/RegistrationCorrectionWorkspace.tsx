@@ -31,6 +31,7 @@ import {
 import { downloadFileBlob } from "../api/files";
 
 GlobalWorkerOptions.workerSrc = pdfWorker;
+// 对应点按左上、右上、右下、左下成对排列，坐标归一化到 0–1，与预览缩放无关。
 const initialPoints: NormalizedPoint[] = [
   { x: 0, y: 0 },
   { x: 1, y: 0 },
@@ -256,6 +257,7 @@ export function RegistrationCorrectionWorkspace({
     if (!context) return;
     setBusy(true);
     try {
+      // 预览先冻结本次点位和页面版本；后续应用使用返回的校正记录及其版本。
       const created = await createRegistrationCorrection(runId, {
         page_revision: context.page_revision,
         source_points: sourcePoints,

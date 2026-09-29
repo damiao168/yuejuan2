@@ -65,6 +65,7 @@ func (s *MemoryStore) Build(_ context.Context, tenantID, examID, questionID, act
 	if len(eligibleAnswers) == 0 {
 		return nil, ErrNoEligibleAnswers
 	}
+	// 输入事实、算法版本和表示版本共同组成幂等键；同一批来源答案重复构建直接复用原组。
 	inputHash := buildInputHash(eligibleAnswers, algorithm, s.provider.Version())
 	indexKey := questionKey(tenantID, examID, questionID) + "\x00" + inputHash
 	if ids := s.buildIndex[indexKey]; len(ids) > 0 {

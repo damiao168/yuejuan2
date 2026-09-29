@@ -176,6 +176,50 @@ func TestGradingAgentV2IdempotencyDigestBindsMediaWithoutEncodingIt(t *testing.T
 	}
 }
 
+func TestBuildGradingAgentV2RequestBindsConfirmedReference(t *testing.T) {
+	input := validMathV2AdapterInput()
+	input.ReferenceContext = &GradingReferenceContext{
+		Source: "confirmed_exam_import_snapshot", SnapshotHash: strings.Repeat("a", 64),
+		StandardAnswer: "x=2", EquivalentAnswers: []any{"2=x"},
+		SolutionText: "Rearrange and solve.",
+	}
+	crop := validResolvedActiveCrop(t)
+	policy := ModelPolicy{ModelVersion: "fixture-v1", PromptVersion: "prompt-v2", MinConfidence: 0.8}
+	built, err := BuildGradingAgentV2Request(input.RequestID, input, crop, policy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer built.Clear()
+	var body map[string]any
+	decoder := json.NewDecoder(bytes.NewReader(built.Body))
+	decoder.UseNumber()
+	if err := decoder.Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateGradingAgentV2RequestFixture(body); err != nil {
+		t.Fatal(err)
+	}
+	reference := body["reference_context"].(map[string]any)
+	if reference["standard_answer"] != "x=2" || reference["solution_text"] != "Rearrange and solve." {
+		t.Fatalf("reference omitted from model input: %#v", reference)
+	}
+	if _, ok := reference["solution_steps"].([]any); !ok {
+		t.Fatalf("empty solution steps must encode as an array: %#v", reference)
+	}
+	changed := input
+	copyReference := *input.ReferenceContext
+	copyReference.SolutionText = "Different confirmed solution."
+	changed.ReferenceContext = &copyReference
+	other, err := BuildGradingAgentV2Request(input.RequestID, changed, crop, policy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer other.Clear()
+	if built.IdempotencyDigest == other.IdempotencyDigest {
+		t.Fatal("confirmed reference must affect request identity")
+	}
+}
+
 func validMathV2AdapterInput() AdapterInput {
 	input := validHTTPAdapterInput()
 	input.Subject = "mathematics"

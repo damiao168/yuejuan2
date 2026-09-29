@@ -19,6 +19,7 @@ function rotateRight(value: number, bits: number) {
 }
 
 export class IncrementalSha256 {
+  // 分块累积文件摘要，避免把整份扫描文件载入内存；hex() 结束计算后不再接受新数据。
   private readonly state = new Uint32Array(INITIAL_STATE);
   private readonly block = new Uint8Array(64);
   private readonly words = new Uint32Array(64);
@@ -50,6 +51,7 @@ export class IncrementalSha256 {
 
   private finish() {
     const totalBytes = this.bytesHashed;
+    // SHA-256 末尾保留 8 字节的大端位长度；当前块放不下时，先补齐一块再写长度。
     this.block[this.blockLength++] = 0x80;
     if (this.blockLength > 56) {
       this.block.fill(0, this.blockLength);

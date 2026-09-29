@@ -65,9 +65,8 @@ func (h *Handler) ListStudentAnnotations(w http.ResponseWriter, r *http.Request)
 	httpx.JSON(w, http.StatusOK, map[string]any{"annotations": items})
 }
 
-// ListStudentQuestionAnnotations exposes only the public annotation DTO for
-// the current student's currently released answer. It has no submission-id
-// parameter by design, which prevents horizontal enumeration of answer pages.
+// 学生查询从身份上下文取得 student_id，只读取当前发布版本的公开批注；
+// 不接收 URL 中的学生或提交 ID，避免横向枚举他人答案。
 func (h *Handler) ListStudentQuestionAnnotations(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())
 	if !ok {
@@ -182,9 +181,7 @@ func (h *Handler) DeleteCommentTemplate(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// UseCommentTemplate resolves a personal shortcut and atomically increments
-// usage_count. Returning the whole template lets clients insert the authoritative
-// content without a second request.
+// 存储层一次完成快捷键解析、usage_count 增量和模板读取，返回完整模板供客户端直接使用。
 func (h *Handler) UseCommentTemplate(w http.ResponseWriter, r *http.Request) {
 	user, _ := auth.UserFromContext(r.Context())
 	item, err := h.store.UseCommentTemplate(r.Context(), user.TenantID, user.ID, r.PathValue("shortcut"))
@@ -196,6 +193,7 @@ func (h *Handler) UseCommentTemplate(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"comment_template": item})
 }
 
+// 限制请求体大小、拒绝未知字段和尾随 JSON，避免客户端误传字段却被静默忽略。
 func decodeStrictJSON(w http.ResponseWriter, r *http.Request, target any) bool {
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
 	decoder.DisallowUnknownFields()

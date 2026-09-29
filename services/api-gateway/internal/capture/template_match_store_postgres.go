@@ -60,6 +60,7 @@ ORDER BY ast.version_no DESC LIMIT 8`, tenantID, examID)
 	if err = rows.Close(); err != nil {
 		return TemplateMatchRun{}, err
 	}
+	// 没有任何锁定模板能覆盖该页时记录 unknown 并转人工，不创建无效的 worker 任务。
 	if len(candidates) == 0 {
 		evidence, _ := json.Marshal(candidates)
 		run, insertErr := scanTemplateMatchRun(tx.QueryRowContext(ctx, `INSERT INTO page_template_match_run (tenant_id,exam_id,capture_page_id,submission_page_id,source_file_asset_id,source_sha256,source_page_revision,processing_status,decision,candidates,created_by,completed_at) VALUES ($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,$6,$7,'completed','unknown',$8::jsonb,$9::uuid,now()) RETURNING `+templateMatchColumns, tenantID, examID, page.id, page.submissionPageID, page.assetID, page.hash, page.revision, evidence, actorID))
@@ -156,6 +157,7 @@ func applyTemplateMatchResultInTx(ctx context.Context, tx *sql.Tx, tenantID, run
 		if bindErr != nil {
 			return TemplateMatchRun{}, nil, bindErr
 		}
+		// 同一考试只能保留一个绑定；并发自动匹配选中不同模板时转人工冲突，不覆盖先前绑定。
 		if affected, _ := result.RowsAffected(); affected == 0 {
 			var boundID, boundHash string
 			if bindErr = tx.QueryRowContext(ctx, `SELECT template_id::text,template_content_hash FROM exam_answer_sheet_template_binding WHERE tenant_id=$1::uuid AND exam_id=$2::uuid`, tenantID, current.ExamID).Scan(&boundID, &boundHash); bindErr != nil {
@@ -207,6 +209,7 @@ func (s *PostgresStore) SubmitTemplateMatchResultCommand(ctx context.Context, te
 		return TemplateMatchRun{}, nil, err
 	}
 	result := map[string]any{"template_match_run_id": runID, "result_version": input.ResultVersion, "decision": out.Decision, "selected_template_id": out.SelectedTemplateID, "score": out.Score, "margin": out.Margin}
+	// 业务结果与任务租约完成共用事务，过期工作进程不能单独提交模板绑定和后续任务。
 	if _, err = workerruntime.CompleteTaskInTx(ctx, tx, tenantID, input.TaskID, workerruntime.CompleteInput{LeaseToken: input.LeaseToken, ResultSchemaVersion: "page-template-match-result-v1", Result: result, DurationMS: input.DurationMS}); err != nil {
 		return TemplateMatchRun{}, nil, err
 	}

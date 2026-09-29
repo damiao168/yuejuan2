@@ -33,6 +33,7 @@ jobs:
             echo "::error::Release commit ${GITHUB_SHA} is not part of main."
             exit 1
           fi
+      # 发布门禁绑定当前提交，不能用分支上另一提交的成功检查代替。
       - name: Verify successful main CI Gate for exact SHA
         shell: bash
         env:
@@ -183,6 +184,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # 推送已扫描的本地镜像，再取仓库摘要；后续签名和SBOM证明都绑定这个不可变摘要。
       - name: Publish and resolve registry digest
         id: publish
         shell: bash

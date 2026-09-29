@@ -72,6 +72,7 @@ class _Handler(BaseHTTPRequestHandler):
         return
 
 
+# 本地 HTTP 服务器验证登录、认领、心跳、执行及结果写回的协议顺序，不衡量模型质量。
 def test_worker_protocol_smoke_from_login_to_persisted_result(tmp_path):
     _Handler.requests = []
     server = ThreadingHTTPServer(("127.0.0.1", 0), _Handler)

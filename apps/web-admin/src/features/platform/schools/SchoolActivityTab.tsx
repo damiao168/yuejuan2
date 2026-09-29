@@ -8,6 +8,7 @@ export function SchoolActivityTab({ tenantId }: { tenantId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   useEffect(() => {
+    // 切换学校或卸载后关闭本轮回填，防止旧学校活动在新面板中显示。
     let active = true;
     setLoading(true); setError(false);
     void getPlatformSchoolActivity(tenantId).then((result) => { if (active) setData(result); }).catch(() => { if (active) setError(true); }).finally(() => { if (active) setLoading(false); });

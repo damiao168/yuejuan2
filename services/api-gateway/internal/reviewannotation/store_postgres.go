@@ -13,6 +13,7 @@ type PostgresStore struct{ db *sql.DB }
 
 func NewPostgresStore(db *sql.DB) *PostgresStore { return &PostgresStore{db: db} }
 
+// 创建时从任务和答案段关联表读取不可变归属，避免客户端伪造 segment/page ID。
 func (s *PostgresStore) CreateAnnotation(ctx context.Context, tenantID, reviewTaskID, actorID string, input CreateAnnotationInput) (Annotation, error) {
 	input = normalizeAnnotationInput(input)
 	if tenantID == "" || reviewTaskID == "" || actorID == "" || validateAnnotationInput(input) != nil {
@@ -70,6 +71,7 @@ WHERE tenant_id = $1::uuid AND id::text = $2 AND deleted_at IS NULL
 `, tenantID, id))
 }
 
+// 学生列表只在考试已发布且批注标记为 student_after_publish 时返回，查询结果再转换为安全 DTO。
 func (s *PostgresStore) ListStudentAnnotations(ctx context.Context, tenantID, submissionID string) ([]StudentAnnotation, error) {
 	rows, err := s.db.QueryContext(ctx, `
 SELECT ra.id::text, ra.answer_segment_id::text, ra.submission_page_id::text,
@@ -108,10 +110,8 @@ ORDER BY ra.created_at, ra.id
 	return out, rows.Err()
 }
 
-// ListStudentQuestionAnnotations makes the published score release the only
-// authority for the answer a student may inspect. The path never accepts a
-// submission id from the browser: release_item pins the student's current
-// released submission and release_question pins the requested question.
+// 学生批注只能来自当前发布版本中该学生的 release_item 和指定题目；
+// 查询不接受提交 ID，未发布或未授权题目自然返回空结果。
 func (s *PostgresStore) ListStudentQuestionAnnotations(ctx context.Context, tenantID, examID, studentID, questionID string) ([]StudentAnnotation, error) {
 	rows, err := s.db.QueryContext(ctx, `
 SELECT ra.id::text, ra.answer_segment_id::text, ra.submission_page_id::text,
@@ -154,6 +154,7 @@ ORDER BY ra.created_at, ra.id
 	return scanStudentAnnotations(rows)
 }
 
+// UPDATE 把 revision 作为并发条件；影响行数为零时再区分资源不存在和版本过期。
 func (s *PostgresStore) UpdateAnnotation(ctx context.Context, tenantID, id, actorID string, input UpdateAnnotationInput) (Annotation, error) {
 	normalized := normalizeAnnotationInput(CreateAnnotationInput{
 		Type: input.Type, Geometry: input.Geometry, Payload: input.Payload,
@@ -206,6 +207,7 @@ func scanStudentAnnotations(rows studentAnnotationRows) ([]StudentAnnotation, er
 	return out, rows.Err()
 }
 
+// 删除沿用 revision 条件；更新或删除竞争时统一映射为版本冲突，调用方需重新读取。
 func (s *PostgresStore) DeleteAnnotation(ctx context.Context, tenantID, id, actorID string, expectedRevision int64) error {
 	if tenantID == "" || id == "" || actorID == "" || expectedRevision <= 0 {
 		return ErrInvalidInput
@@ -311,6 +313,7 @@ RETURNING id::text
 	return err
 }
 
+// 数据库直接递增使用次数并返回新版本，快捷键不存在时不会创建或修改其他模板。
 func (s *PostgresStore) UseCommentTemplate(ctx context.Context, tenantID, ownerID, shortcut string) (CommentTemplate, error) {
 	_, _, shortcut = normalizeTemplate("", "", shortcut)
 	if shortcut == "" {

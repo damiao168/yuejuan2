@@ -54,6 +54,7 @@ function taskTone(status: string): StatusTone {
 async function fetchTeacherHome(user: SessionUser): Promise<TeacherHomeData> {
   const canReview = hasAnyPermission(user, ["review:manage", "review:work"]);
   const canArbitrate = hasAnyPermission(user, ["arbitration:manage", "arbitration:work"]);
+  // 阅卷和仲裁分别降级，某一接口失败时仍展示另一类已分派任务并提示缺失。
   const results = await Promise.allSettled([
     canReview ? listReviewTasks({ assigned_to: user.id }) : Promise.resolve({ tasks: [] }),
     canArbitrate ? listArbitrationTasks({ assigned_to: user.id }) : Promise.resolve({ arbitration_tasks: [] })

@@ -51,6 +51,7 @@ test("all-normal evaluation cannot claim perfect risk recall or pass a release g
   assert.match(result.reasons.join("\n"), /real adapter/);
 });
 
+// 这里手工构造真实报告的元数据来测试准入条件；数据仍是内存测试夹具，不是真实评估证据。
 test("production gate requires enough positives in every risk slice", () => {
   const records = Array.from({ length: 500 }, (_, index) => ({
     sample: {

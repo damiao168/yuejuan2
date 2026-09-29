@@ -112,6 +112,7 @@ RETURNING `+reviewTaskColumns+`
 		input.Source, status, input.Priority, input.AssignedTo, input.GradeRound, input.DueAt, actorID))
 }
 
+// 题目策略优先于考试策略，明确禁用也算覆盖；都未配置时才根据考试阅卷模式给出默认双评策略。
 func (s *PostgresStore) effectivePolicyTx(ctx context.Context, tx *sql.Tx, tenantID string, examID string, questionID string) (DoubleMarkPolicy, error) {
 	if questionID != "" {
 		policy, err := scanPolicy(tx.QueryRowContext(ctx, `

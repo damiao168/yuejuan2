@@ -13,6 +13,7 @@ import cv2
 import numpy as np
 from page_processing.omr import OMRProfile, extract_marks
 
+# 以下坐标绑定本工具的 90 题三栏评估版式，不是通用生产模板参数。
 CANONICAL_WIDTH = 1960
 CANONICAL_HEIGHT = 3340
 QUESTION_COUNT = 90

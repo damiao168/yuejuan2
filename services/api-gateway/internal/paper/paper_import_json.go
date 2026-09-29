@@ -50,6 +50,7 @@ func (job PaperImportJob) MarshalJSON() ([]byte, error) {
 	for i := range job.Questions {
 		q := &job.Questions[i]
 		q.SourceRefs = wireList(q.SourceRefs)
+		q.Options = wireList(q.Options)
 		q.KnowledgePoints = wireList(q.KnowledgePoints)
 		q.Issues = wireList(q.Issues)
 		if q.AnswerKey != nil {

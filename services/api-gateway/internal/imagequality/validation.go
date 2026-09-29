@@ -52,6 +52,7 @@ func normalizeClaimInput(input ClaimInput) ClaimInput {
 	return input
 }
 
+// 处理完成且质量通过时必须带标准化文件；待复核和质量不通过的结果不作此要求。
 func validateResultInput(input ResultInput) error {
 	if strings.TrimSpace(input.LeaseToken) == "" || input.AttemptNo <= 0 || strings.TrimSpace(input.ResultVersion) == "" {
 		return ErrInvalidInput

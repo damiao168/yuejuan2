@@ -64,6 +64,7 @@ type Evidence struct {
 	BBox           []float64 `json:"bbox,omitempty"`
 }
 
+// Grade 是规则引擎生成的建议结果；AutoPass 只表示达到引擎阈值，不能替代评分编排写入正式成绩。
 type Grade struct {
 	ID               string         `json:"id"`
 	TenantID         string         `json:"tenant_id"`

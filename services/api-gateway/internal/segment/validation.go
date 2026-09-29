@@ -17,6 +17,7 @@ func IsValidStatus(status string) bool {
 }
 
 func ValidateBBox(bbox []float64) error {
+	// bbox 约定为 [x, y, width, height]；这里只校验结构和数值，页面范围由上游坐标系统负责。
 	if len(bbox) != 4 {
 		return ErrInvalidInput
 	}
@@ -32,6 +33,7 @@ func ValidateBBox(bbox []float64) error {
 }
 
 func ParseAnswerArea(area map[string]any) (int, []float64, error) {
+	// 题目配置可能来自 JSON，数字类型需统一转换后再进入片段存储。
 	page, ok := numberFromMap(area, "page")
 	if !ok || page <= 0 {
 		return 0, nil, fmt.Errorf("answer_area.page is required")

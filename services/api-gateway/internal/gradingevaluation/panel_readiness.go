@@ -46,6 +46,7 @@ type SeniorPanelReadinessReport struct {
 	Slices          []PanelSliceReadiness `json:"slices"`
 }
 
+// Senior 面板必须覆盖九个学科，并同时满足版本化策略的样本、准确率、人工升级和成本阈值。
 func AssessSeniorNineSubjectShadowReadiness(items []PanelObservation, policy PanelReadinessPolicy) (SeniorPanelReadinessReport, error) {
 	if ValidatePanelReadinessPolicy(policy) != nil {
 		return SeniorPanelReadinessReport{}, ErrInvalidInput
@@ -99,6 +100,7 @@ func AssessPanelSliceShadowReadiness(educationStage, subject, archetype string, 
 	return PanelSliceReadiness{PolicyVersion: policy.PolicyVersion, EducationStage: educationStage, Subject: subject, Archetype: archetype, Ready: len(reasons) == 0, Reasons: reasons, Metrics: metrics}, nil
 }
 
+// 每个失败阈值都保留原因码；缺数据或 QWK 不可用时保持未就绪，不能用默认值放行。
 func panelSliceReadinessReasons(metrics PanelMetrics, policy PanelReadinessPolicy) []string {
 	reasons := []string{}
 	if metrics.SampleCount < policy.MinSamplesPerSlice {

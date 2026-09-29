@@ -1,3 +1,4 @@
+// 规则命中仅表示可疑并触发复核；未命中不代表已穷尽提示词注入方式。
 const DEFAULT_RULES = [
   { id: "ignore-rubric-cn", pattern: /忽略(?:之前|以上|所有)?(?:的)?(?:评分|规则|标准|指令)/i },
   { id: "full-score-cn", pattern: /(?:给我|直接给|应该给)(?:满分|\d+(?:\.\d+)?分)/i },

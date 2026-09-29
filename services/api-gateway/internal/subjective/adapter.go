@@ -36,6 +36,7 @@ func (a *MockLLMAdapter) RuntimeStatus() RuntimeStatus {
 	return RuntimeStatus{Enabled: true, Available: true, Mode: "mock"}
 }
 
+// Mock 适配器只提供占位结果，必须保留低置信度和人工复核标记，不能被误当成真实评分。
 func (a *MockLLMAdapter) Grade(_ context.Context, input AdapterInput) (AdapterOutput, error) {
 	return AdapterOutput{
 		RequestID:      input.RequestID,
@@ -97,6 +98,7 @@ func (a *DisabledAdapter) RuntimeStatus() RuntimeStatus {
 	return a.status
 }
 
+// 禁用状态直接失败并交给人工流程，避免调用方在未配置模型时继续写入 AI 分数。
 func (a *DisabledAdapter) Grade(context.Context, AdapterInput) (AdapterOutput, error) {
 	return AdapterOutput{}, ErrAIGradingUnavailable
 }

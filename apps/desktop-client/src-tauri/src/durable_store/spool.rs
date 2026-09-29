@@ -34,6 +34,7 @@ pub fn begin_spool_local_asset(
     let conn = open_connection_at(&root)?;
     initialize_schema(&conn)?;
 
+    // 同一文件只有在业务归属和页码也相同时才复用，不能只按摘要合并不同答卷。
     let idempotency_key = format!(
         "scan-upload-v1:{}:{}:{}:{}:{}",
         input.sha256,
@@ -174,6 +175,7 @@ pub fn write_spool_local_asset_chunk(
     let directory = PathBuf::from(local_path);
     ensure_controlled_path(&root, &directory)?;
     let path = directory.join(format!("{offset:012}.chunk"));
+    // 该偏移尚未被数据库确认；同名文件可能是上次落盘后、提交前崩溃留下的孤立分块。
     if path.exists() {
         fs::remove_file(&path).map_err(|error| error.to_string())?;
     }
@@ -229,6 +231,7 @@ pub fn complete_spool_local_asset(
             "local spool is incomplete: {received_size} / {expected_size}"
         ));
     }
+    // 入队前重新校验分块连续性、总长度和整体摘要，避免把缺块原件交给上传流程。
     verify_chunked_asset(
         &conn,
         &root,

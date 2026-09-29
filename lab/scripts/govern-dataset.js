@@ -46,6 +46,7 @@ const input = labPath(args.input);
 const samples = readJsonl(input.absolute);
 const validation = validateGovernedSamples(samples, source);
 if (!validation.valid) throw new Error(`Dataset governance failed: ${validation.errors.join("; ")}`);
+// 同一题目与 Rubric 作为整体分区，避免同题答案同时进入训练和评估集合。
 const split = splitByQuestionGroup(samples);
 const output = labPath(args.out);
 const outputDir = output.absolute;

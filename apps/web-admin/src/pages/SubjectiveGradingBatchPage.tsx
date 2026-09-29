@@ -130,6 +130,7 @@ export function SubjectiveGradingBatchPage({ scopeKey }: { scopeKey: string }) {
     setError(undefined);
     setEnqueueNotice(undefined);
     try {
+      // 上次入队可能已成功但回包丢失；先查命令结果，成功时只刷新批次，不重新入队。
       const recovered = await recoverSubjectiveEnqueueCommand(batch.id);
       if (recovered.status === "succeeded") {
         const result = await getSubjectiveGradingBatch(batch.id);

@@ -37,6 +37,7 @@ const samples = requestedSampleId ? sourceSamples.filter((sample) => sample.samp
   selectDiverseBenchmarkSamples(sourceSamples, limit);
 if (requestedSampleId && samples.length !== 1) throw new Error(`sample_id not found or duplicated: ${requestedSampleId}`);
 const completeDataset = samples.length === sourceSamples.length;
+// 诊断子集单独计算哈希并标注不完整，防止与完整数据集的选型报告混比。
 const evaluatedDatasetText = completeDataset ? datasetText : `${samples.map((sample) => JSON.stringify(sample)).join("\n")}\n`;
 const datasetSource = getApprovedDatasetSource(sourceId, "evaluation");
 const governance = validateGovernedSamples(samples, datasetSource);
@@ -73,6 +74,7 @@ for (const sample of samples) {
     failures.push({ sample_id: sample.sample_id, code: error.code ?? "ERROR", message: error.message, latency_ms: Math.round(performance.now() - started) });
   }
 }
+// 质量指标只统计完成的样本；失败另计 completion_rate，解读时必须同时看完成率。
 const quality = computeMetrics(records);
 const report = {
   schema_version: "model-selection-report-v1",

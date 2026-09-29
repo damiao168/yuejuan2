@@ -86,6 +86,7 @@ class EduGradeClient:
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
         if auth and self.token:
             headers["Authorization"] = f"Bearer {self.token}"
+            # 服务账号会话与当前租约能力同时发送，结果写回绑定已认领的任务。
             if self.current_task:
                 headers.update(_task_capability_headers(self.current_task))
         req = request.Request(url, data=json.dumps(payload).encode(), headers=headers, method=method)

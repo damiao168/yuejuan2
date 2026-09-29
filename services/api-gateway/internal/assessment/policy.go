@@ -50,6 +50,7 @@ func (r RiskTier) Valid() bool {
 	return r == RiskR1 || r == RiskR2 || r == RiskR3
 }
 
+// ValidateScoringPolicy 校验题目配置的基本约束；真正调用外部 AI 前仍须经过 aieligibility 的证据准入。
 func ValidateScoringPolicy(risk RiskTier, archetypeCode string, policy ScoringPolicy) error {
 	if !risk.Valid() || !IsQuestionArchetype(archetypeCode) || !policy.Mode.Valid() {
 		return ErrInvalidInput

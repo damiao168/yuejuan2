@@ -26,6 +26,7 @@ const examWorkspaceRoute = createRoute({
   path: "/$experience/exams/$examId/$section"
 });
 
+// 旧入口由 AppShell 的路由注册表继续解析；通配匹配本身不授予页面访问权限。
 const compatibilityRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/$"

@@ -31,6 +31,7 @@ export function check() {
   console.log(`Schema version ${latest} is synchronized.`);
 }
 
+// 只同步示例部署元数据，不执行迁移，也不证明运行中的数据库已达到该版本。
 export function sync() {
   const latest = getLatestMigrationVersion();
   const envSource = fs.readFileSync(envFile, 'utf8');

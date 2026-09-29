@@ -49,6 +49,7 @@ func TestCaptureBatchDecodeFlow(t *testing.T) {
 	if pages[0].Status != "normalized" {
 		t.Fatalf("passed page should expose normalized state, got %q", pages[0].Status)
 	}
+	// 质检通过只进入 normalized，配准尚未完成时汇总仍应阻塞批次完成。
 	summary, err := store.GetProcessingSummary(ctx, "tenant-1", pages[0].SubmissionID)
 	if err != nil || summary.TotalPages != 2 || summary.PendingPages != 2 || summary.CanComplete {
 		t.Fatalf("processing summary must reflect the stored page state: %#v, %v", summary, err)

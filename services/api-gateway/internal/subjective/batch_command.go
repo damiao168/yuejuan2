@@ -58,6 +58,8 @@ func (s *PostgresStore) GetEnqueuePlan(ctx context.Context, tenantID, actorID, b
 	err = json.Unmarshal(raw, &plan.Runs)
 	return plan, err
 }
+
+// 计划保存用租户、批次级 advisory lock 串行化；重试必须复用原命令和运行快照，不能按新策略重新生成请求 ID。
 func (s *PostgresStore) SaveEnqueuePlan(ctx context.Context, tenantID, actorID string, plan BatchEnqueuePlan) (BatchEnqueuePlan, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {

@@ -74,6 +74,7 @@ pub fn persist_durable_scan_queue_item(
     validate_transition(&previous.status, &item.status)?;
     item.id = id.clone();
     item.local_asset_id = Some(id.clone());
+    // 幂等键始终沿用原始入队记录，重试和界面更新都不能把同一原件变成新上传命令。
     item.idempotency_key = previous.idempotency_key.clone();
     item.retry_count = Some(
         previous.retry_count.unwrap_or_default()
@@ -136,6 +137,7 @@ pub fn persist_durable_scan_queue_item(
 }
 
 pub fn archive_durable_scan_queue_items(app: AppHandle, ids: Vec<String>) -> Result<(), String> {
+    // 归档只隐藏已由服务端确认的队列项，原件仍保留；它不等同于删除扫描文件。
     if ids.is_empty() {
         return Ok(());
     }
@@ -192,6 +194,7 @@ pub(crate) fn read_queue_item(
         )
         .map_err(sql_error)?;
     let mut item: DurableQueueItem = decrypt_json(key, &payload, &nonce)?;
+    // 重启恢复可能只更新数据库状态；用状态列覆盖密文中的旧快照。
     item.id = id.to_string();
     item.local_asset_id = Some(id.to_string());
     item.status = state;

@@ -58,7 +58,8 @@ func unresolved(reason string) evidenceMatch {
 	return evidenceMatch{status: "uncertain", reason: reason, source: "rule"}
 }
 
-// MatchRubricEvidence never turns missing or unbound facts into a false zero.
+// MatchRubricEvidence 根据量规查找可追溯到具体步骤、公式的证据。
+// 找不到证据或只有未核实的语义标签时返回 uncertain，不能把“未确认”直接记成零分。
 func MatchRubricEvidence(input EvidenceMatchInput) ([]RubricEvidence, error) {
 	out := make([]RubricEvidence, 0, len(input.Requirements))
 	for index, r := range input.Requirements {
@@ -265,9 +266,8 @@ func boundDerivation(check MathVerification, graph SolutionGraph) bool {
 	return false
 }
 
-// Local equivalence cannot silently grant follow-through credit after an
-// unverified/incorrect predecessor. That policy needs an explicit rubric and
-// teacher decision. Walk only mathematical dependencies, not reading order.
+// dependentStepRequiresReview 沿 derives 回查前置推导，next 阅读顺序不算数学依赖。
+// 前面算错后是否给后续步骤分，需要量规和教师判断；这里只要前置推导存疑就转人工。
 func dependentStepRequiresReview(stepID string, input EvidenceMatchInput) bool {
 	visited := map[string]bool{}
 	var visit func(string) bool

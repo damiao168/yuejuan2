@@ -59,6 +59,7 @@ function baseEvidenceCase(index = 0) {
   return { input, output };
 }
 
+// 同一模板生成多个变体仍属于一个攻击家族；门禁分别统计样本数和家族数。
 function generatedCases(templates, variants, factory) {
   return templates.flatMap((template, templateIndex) =>
     Array.from({ length: variants }, (_, variantIndex) => factory(template, templateIndex, variantIndex))
@@ -206,6 +207,7 @@ export class EvidenceIntegrityAdversary {
 
   evaluate(testCase) {
     const result = verifyEvidence(testCase.input, testCase.output);
+    // 低 OCR 场景只需强制复核即可算检测到风险，不要求证据校验本身失败。
     return !result.verification_passed || result.forced_needs_human_review;
   }
 }

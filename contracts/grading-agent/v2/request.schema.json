@@ -99,9 +99,34 @@
         }
       }
     },
-    "math_evidence": {"$ref": "#/$defs/mathEvidence"}
+    "math_evidence": {"$ref": "#/$defs/mathEvidence"},
+    "reference_context": {"$ref": "#/$defs/referenceContext"}
   },
   "$defs": {
+    "referenceContext": {
+      "description": "Authored answer and worked solution from the confirmed exam import snapshot. Optional for legacy exams. This content interprets rubric criteria and does not change final score authority.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "snapshot_hash", "standard_answer", "equivalent_answers", "solution_text", "solution_steps"],
+      "properties": {
+        "source": {"const": "confirmed_exam_import_snapshot"},
+        "snapshot_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "standard_answer": {},
+        "equivalent_answers": {"type": "array", "maxItems": 100, "items": {}},
+        "solution_text": {"type": "string", "maxLength": 20000},
+        "solution_steps": {
+          "type": "array", "maxItems": 100,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["step_no", "content"],
+            "properties": {
+              "step_no": {"type": "integer", "minimum": 1},
+              "content": {"type": "string", "maxLength": 4000}
+            }
+          }
+        }
+      }
+    },
     "mathEvidence": {
       "type": "object",
       "additionalProperties": false,

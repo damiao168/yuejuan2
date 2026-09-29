@@ -11,6 +11,7 @@ interface Props {
   summary: { total: number; active: number; disabled: number };
 }
 
+// 筛选条件改变后旧游标不再对应当前结果集，必须从第一页重新查询。
 const update = (filter: PlatformSchoolListFilter, key: keyof PlatformSchoolListFilter, value: string | undefined) => ({ ...filter, [key]: value, cursor: undefined });
 
 export function SchoolManagementToolbar({ filter, onChange, onRefresh, onCreate, loading, summary }: Props) {

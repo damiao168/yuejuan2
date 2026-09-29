@@ -44,6 +44,7 @@ test("CMD browser double click and failed draft cleanup preserve a successful co
   let submissions = 0;
   await page.route("**/api/v1/exam-sessions", async (route) => { submissions++; await route.fallback(); });
   await prepare(page);
+  // 只让草稿清理失败，验证远端成功回执仍保留，避免本地清理错误触发重复创建。
   await page.evaluate(() => {
     const original = Storage.prototype.removeItem;
     Storage.prototype.removeItem = function(key) {

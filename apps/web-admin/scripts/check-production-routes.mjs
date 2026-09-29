@@ -70,6 +70,7 @@ for (const key of ["review", "quality", "permissions", "settings"]) {
   assert(routePattern.test(routes), `Route ${key} must remain explicitly marked as non-production.`);
 }
 
+// 源码规则每次都检查；只有存在构建产物时才继续检查入口包，避免把构建目录缺失误判为失败。
 const productionEntry = join(root, "dist", "index.html");
 if (existsSync(productionEntry)) {
   const entryHtml = readFileSync(productionEntry, "utf8");

@@ -6,6 +6,7 @@ import os
 import ssl
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from queue import Empty
 
 from .parser import UnsupportedExpression, parse_restricted_latex
 from .verifier import (
@@ -48,20 +49,39 @@ def _process_entry(queue: multiprocessing.Queue, operation: str, payload: dict[s
 
 
 def run_bounded(operation: str, payload: dict[str, object], timeout_seconds: float) -> dict[str, object]:
-    queue: multiprocessing.Queue = multiprocessing.Queue(maxsize=1)
-    process = multiprocessing.Process(target=_process_entry, args=(queue, operation, payload), daemon=True)
-    process.start()
-    process.join(timeout_seconds)
-    if process.is_alive():
-        process.terminate()
-        process.join(1)
-        return {"status": "uncertain", "relation": "unknown", "reason_code": "verification_timeout"}
-    if queue.empty():
-        return {"status": "uncertain", "relation": "unknown", "reason_code": "verification_failed"}
-    item = queue.get_nowait()
-    if item[0] == "ok":
-        return item[1]
-    raise VerificationError(item[2])
+    deadline = time.monotonic() + max(0, timeout_seconds)
+    # 请求运行在 HTTP 线程中；使用 spawn，避免 fork 继承线程锁和进程状态。
+    context = multiprocessing.get_context("spawn")
+    queue = context.Queue(maxsize=1)
+    process = context.Process(target=_process_entry, args=(queue, operation, payload), daemon=True)
+    started = False
+    try:
+        process.start()
+        started = True
+        try:
+            # 先读取结果再 join；结果超过系统管道容量时，子进程必须等父进程消费，不能先互相等待。
+            item = queue.get(timeout=max(0, deadline - time.monotonic()))
+        except Empty:
+            reason = "verification_timeout" if process.is_alive() else "verification_failed"
+            return {"status": "uncertain", "relation": "unknown", "reason_code": reason}
+        process.join(max(0, deadline - time.monotonic()))
+        if process.is_alive():
+            return {"status": "uncertain", "relation": "unknown", "reason_code": "verification_timeout"}
+        if item[0] == "ok":
+            return item[1]
+        raise VerificationError(item[2])
+    # 预算耗尽仍需回收子进程；清理等待不属于数学运算的可用预算。
+    finally:
+        if started and process.is_alive():
+            process.terminate()
+            process.join(1)
+            if process.is_alive():
+                process.kill()
+                process.join(1)
+        if not started or not process.is_alive():
+            process.close()
+        queue.close()
+        queue.join_thread()
 
 
 class Handler(BaseHTTPRequestHandler):

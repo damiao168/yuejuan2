@@ -90,6 +90,7 @@ func (h *Handler) ExportAudits(w http.ResponseWriter, r *http.Request) {
 	writer := csv.NewWriter(&buffer)
 	_ = writer.Write([]string{"id", "tenant_id", "actor_id", "action", "target_type", "target_id", "before_value", "after_value", "reason", "ip_address", "user_agent", "request_id", "created_at", "watermark"})
 	for _, record := range records {
+		// 审计内容含用户输入；导出前逐单元格处理，避免被表格软件解释成公式。
 		_ = writer.Write(csvsafe.Row([]string{
 			record.ID,
 			record.TenantID,
@@ -174,6 +175,7 @@ func parseAuditTime(w http.ResponseWriter, r *http.Request, key string) (time.Ti
 	parsed, err := time.Parse(time.RFC3339, raw)
 	if err != nil {
 		if dateOnly, dateErr := time.Parse("2006-01-02", raw); dateErr == nil {
+			// 无时区的日期按 UTC 解析；截止日期包含该日最后一个纳秒。
 			if key == "created_to" {
 				return dateOnly.Add(24*time.Hour - time.Nanosecond), true
 			}

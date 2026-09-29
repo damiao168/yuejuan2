@@ -42,6 +42,7 @@ export function useTemplatePreview(selectedPaper: PaperVersion | undefined) {
         if (!active) return;
         if (download.contentType === "application/pdf" || selectedPaper.file.content_type === "application/pdf") {
           const pdfDocument = await getDocument({ data: await download.blob.arrayBuffer() }).promise;
+          // PDF 解析可能晚于试卷切换完成，过期文档必须销毁，不能再绑定给当前预览。
           if (!active) { await pdfDocument.destroy(); return; }
           pdfRef.current = pdfDocument;
           setPdfSourceId(selectedPaper.id);
@@ -77,6 +78,7 @@ export function useTemplatePreview(selectedPaper: PaperVersion | undefined) {
         setPreview((current) => ({ ...current, loading: true, error: undefined }));
         const page = await pdfDocument.getPage(Math.min(pageNo, pdfDocument.numPages));
         const base = page.getViewport({ scale: 1 });
+        // 渲染像素受上限控制；区域编辑仍使用原始页面尺寸，避免缩放改变保存的几何比例。
         const scale = Math.min(1.5, 1400 / base.width);
         const viewport = page.getViewport({ scale });
         const canvas = window.document.createElement("canvas");

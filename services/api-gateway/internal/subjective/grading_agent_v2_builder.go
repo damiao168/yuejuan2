@@ -12,6 +12,7 @@ import (
 	"unicode/utf8"
 
 	"edugrade-enterprise/services/api-gateway/internal/mathunderstanding"
+	"edugrade-enterprise/services/api-gateway/internal/paper"
 )
 
 const (
@@ -70,6 +71,7 @@ type gradingAgentV2Request struct {
 	OutputConstraint gradingAgentOutputConstraint `json:"output_constraint"`
 	MediaEvidence    gradingAgentV2MediaEvidence  `json:"media_evidence"`
 	MathEvidence     MathEvidenceContext          `json:"math_evidence"`
+	ReferenceContext *GradingReferenceContext     `json:"reference_context,omitempty"`
 }
 
 type gradingAgentV2MediaEvidence struct {
@@ -106,6 +108,7 @@ type gradingAgentV2DigestRequest struct {
 	OutputConstraint gradingAgentOutputConstraint `json:"output_constraint"`
 	MediaEvidence    gradingAgentV2DigestEvidence `json:"media_evidence"`
 	MathEvidence     MathEvidenceContext          `json:"math_evidence"`
+	ReferenceContext *GradingReferenceContext     `json:"reference_context,omitempty"`
 }
 
 type gradingAgentV2DigestEvidence struct {
@@ -180,6 +183,18 @@ func BuildGradingAgentV2Request(
 	}
 	if !validMathEvidenceForV2(input.MathEvidence, input) {
 		return BuiltGradingAgentV2Request{}, &GradingAgentError{Code: "math_evidence_invalid"}
+	}
+	if !validGradingReferenceContext(input.ReferenceContext) {
+		return BuiltGradingAgentV2Request{}, &GradingAgentError{Code: "grading_reference_invalid"}
+	}
+	var reference *GradingReferenceContext
+	if input.ReferenceContext != nil {
+		copyReference := *input.ReferenceContext
+		copyReference.EquivalentAnswers = nonNilAny(copyReference.EquivalentAnswers)
+		if copyReference.SolutionSteps == nil {
+			copyReference.SolutionSteps = []paper.SolutionStep{}
+		}
+		reference = &copyReference
 	}
 	if err := validateResolvedActiveCropForV2(crop); err != nil {
 		return BuiltGradingAgentV2Request{}, err
@@ -295,8 +310,9 @@ func BuildGradingAgentV2Request(
 			AllowModelFinalScore: false,
 			FinalScoreAuthority:  input.OutputConstraint.FinalScoreAuthority,
 		},
-		MediaEvidence: media,
-		MathEvidence:  *input.MathEvidence,
+		MediaEvidence:    media,
+		MathEvidence:     *input.MathEvidence,
+		ReferenceContext: reference,
 	}
 	request.MathEvidence.effective = mathunderstanding.EffectiveArtifact{}
 	request.MathEvidence.frozen = mathunderstanding.FrozenRubric{}
@@ -416,7 +432,8 @@ func gradingAgentV2IdempotencyDigest(request gradingAgentV2Request) (string, err
 			NormalizedBBox: media.NormalizedBBox,
 			BindingHash:    media.BindingHash,
 		},
-		MathEvidence: request.MathEvidence,
+		MathEvidence:     request.MathEvidence,
+		ReferenceContext: request.ReferenceContext,
 	}
 	encoded, err := json.Marshal(safe)
 	if err != nil {
@@ -425,6 +442,33 @@ func gradingAgentV2IdempotencyDigest(request gradingAgentV2Request) (string, err
 	digest := sha256.Sum256(encoded)
 	clear(encoded)
 	return hex.EncodeToString(digest[:]), nil
+}
+
+func validGradingReferenceContext(reference *GradingReferenceContext) bool {
+	if reference == nil {
+		return true // Historical exams can predate confirmed import snapshots.
+	}
+	if reference.Source != "confirmed_exam_import_snapshot" || !validLowerSHA256(reference.SnapshotHash) ||
+		len(reference.EquivalentAnswers) > 100 || len(reference.SolutionSteps) > 100 ||
+		len(reference.SolutionText) > 20_000 {
+		return false
+	}
+	answer, err := json.Marshal(reference.StandardAnswer)
+	if err != nil || len(answer) > 20_000 {
+		return false
+	}
+	for _, equivalent := range reference.EquivalentAnswers {
+		encoded, err := json.Marshal(equivalent)
+		if err != nil || len(encoded) > 4_000 {
+			return false
+		}
+	}
+	for _, step := range reference.SolutionSteps {
+		if step.StepNo <= 0 || len(step.Content) > 4_000 {
+			return false
+		}
+	}
+	return reference.StandardAnswer != nil || strings.TrimSpace(reference.SolutionText) != "" || len(reference.SolutionSteps) > 0
 }
 
 func validMathEvidenceForV2(evidence *MathEvidenceContext, input AdapterInput) bool {

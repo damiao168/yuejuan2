@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { App } from "antd";
 import { getUserErrorMessage } from "../../../api/client";
 import {
@@ -39,12 +39,18 @@ export function useRubricEditor({
 }) {
   const { message } = App.useApp();
   const [savingRubric, setSavingRubric] = useState(false);
+  const [rubricDirty, setRubricDirty] = useState(false);
   const [rubricStatus, setRubricStatus] = useState("draft");
   const [rubricPoints, setRubricPoints] = useState<RubricPoint[]>([]);
   const [deductionsJson, setDeductionsJson] = useState("");
   const [examplesJson, setExamplesJson] = useState("");
+  const loadedQuestionKey = useRef<string | null>(null);
 
   useEffect(() => {
+    const questionKey = selectedQuestion?.id ?? "create";
+    if (rubricDirty && loadedQuestionKey.current === questionKey) return;
+    loadedQuestionKey.current = questionKey;
+    setRubricDirty(false);
     if (selectedQuestion) {
       setRubricStatus(selectedQuestion.rubric?.status ?? "draft");
       setRubricPoints(selectedQuestion.rubric?.points ?? []);
@@ -56,9 +62,10 @@ export function useRubricEditor({
     setRubricPoints([{ id: "p1", description: "", score: 10, required: true }]);
     setDeductionsJson("");
     setExamplesJson("");
-  }, [selectedQuestion]);
+  }, [rubricDirty, selectedQuestion]);
 
   const updatePoint = (index: number, patch: Partial<RubricPoint>) => {
+    setRubricDirty(true);
     setRubricPoints((current) => current.map((point, currentIndex) => currentIndex === index ? { ...point, ...patch } : point));
   };
   const addEvidenceRequirement = (pointIndex: number) => {
@@ -81,21 +88,23 @@ export function useRubricEditor({
     updatePoint(pointIndex, { evidence_requirements: requirements.filter((_, index) => index !== requirementIndex) });
   };
   const removePoint = (index: number) => {
+    setRubricDirty(true);
     setRubricPoints((current) => current.filter((_, currentIndex) => currentIndex !== index));
   };
   const addPoint = () => {
+    setRubricDirty(true);
     setRubricPoints((current) => [...current, { id: `p${current.length + 1}`, description: "", score: 0, required: false }]);
   };
 
   const saveRubric = async () => {
     if (!selectedQuestion || !selectedExamId) {
       message.error("请先选择已保存的题目");
-      return;
+      return false;
     }
     const total = rubricPointTotal(rubricPoints);
     if (Math.abs(total - selectedQuestion.score) > 0.0001) {
       message.error("评分细则采分点总分必须等于题目分值");
-      return;
+      return false;
     }
     let deductions: unknown[];
     let examples: unknown[];
@@ -104,10 +113,11 @@ export function useRubricEditor({
       examples = parseArrayJSON(examplesJson, "样例答案");
     } catch (error) {
       message.error(getUserErrorMessage(error, "操作失败，请稍后重试"));
-      return;
+      return false;
     }
     setSavingRubric(true);
     try {
+      // 保存会创建评分细则的新版本；当前题目满分始终作为该版本的总分。
       await createRubric(selectedQuestion.id, {
         status: rubricStatus,
         max_score: selectedQuestion.score,
@@ -118,8 +128,11 @@ export function useRubricEditor({
       message.success(rubricStatus === "locked" ? "评分细则已锁定" : "评分细则新版本已提交");
       await loadConfig(selectedExamId);
       onChanged?.();
+      setRubricDirty(false);
+      return true;
     } catch (error) {
       message.error(getUserErrorMessage(error, "操作失败，请稍后重试"));
+      return false;
     } finally {
       setSavingRubric(false);
     }
@@ -127,8 +140,8 @@ export function useRubricEditor({
 
   const pointTotal = rubricPointTotal(rubricPoints);
   return {
-    savingRubric, rubricStatus, setRubricStatus, rubricPoints, deductionsJson,
-    setDeductionsJson, examplesJson, setExamplesJson, pointTotal,
+    savingRubric, rubricDirty, discardRubricDraft: () => setRubricDirty(false), rubricStatus, setRubricStatus: (value: string) => { setRubricDirty(true); setRubricStatus(value); }, rubricPoints, deductionsJson,
+    setDeductionsJson: (value: string) => { setRubricDirty(true); setDeductionsJson(value); }, examplesJson, setExamplesJson: (value: string) => { setRubricDirty(true); setExamplesJson(value); }, pointTotal,
     scoreMismatch: Boolean(selectedQuestion && Math.abs(pointTotal - selectedQuestion.score) > 0.0001),
     updatePoint, addEvidenceRequirement, updateEvidenceRequirement,
     removeEvidenceRequirement, removePoint, addPoint, saveRubric

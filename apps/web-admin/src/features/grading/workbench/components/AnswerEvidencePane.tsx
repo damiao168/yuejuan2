@@ -65,6 +65,7 @@ export function AnswerEvidencePane({
     if (viewerMode !== "ocr" && !preview) return <EmptyState title="暂无答卷页面" description="当前任务没有可下载的页面文件。" />;
     const isImage = Boolean(preview?.contentType.startsWith("image/"));
     const isPDF = preview?.contentType === "application/pdf";
+    // 图片通过实际宽高缩放，让百分比证据框同步缩放；其他预览才使用 transform 的 scale。
     const viewerTransform = isImage
       ? `translate(${offset.x}px, ${offset.y}px) rotate(${rotation}deg)`
       : `translate(${offset.x}px, ${offset.y}px) scale(${scale}) rotate(${rotation}deg)`;

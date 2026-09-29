@@ -80,6 +80,8 @@ type Content struct {
 	CustomMetadata      map[string]any `json:"custom_metadata,omitempty"`
 }
 
+// Version 同时保留题目版本号、内容修订号和绑定的元数据规则版本，三者用途不同。
+// ContentHash 只覆盖题目内容，BundleHash 还覆盖评分规则，审核须以整包为准。
 type Version struct {
 	ImportProvenance    *ImportProvenance `json:"import_provenance,omitempty"`
 	BundleSchemaVersion int               `json:"bundle_schema_version"`

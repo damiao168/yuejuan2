@@ -48,6 +48,7 @@ func (s *MemoryStore) UpsertWindow(_ context.Context, tenantID string, input Qua
 	return cloneWindow(input), nil
 }
 
+// 同一窗口和事件类型只保留一条记录，重复刷新只返回新建事件，不重复告警。
 func (s *MemoryStore) CreateIncidentsIfMissing(_ context.Context, tenantID string, candidates []Incident) ([]Incident, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

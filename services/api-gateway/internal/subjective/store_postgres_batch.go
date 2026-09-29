@@ -38,11 +38,17 @@ SELECT
   COALESCE(qr.id::text, ''), COALESCE(qr.question_id::text, ''), COALESCE(rv.version, ''),
   COALESCE(qr.status, ''), COALESCE(qr.max_score::float8, 0), COALESCE(qr.points, '[]'::jsonb),
   COALESCE(qr.deductions, '[]'::jsonb), COALESCE(qr.examples, '[]'::jsonb),
-  COALESCE(ans.id::text, ''), COALESCE(ans.answer_text, ''), ans.confidence::float8, ans.created_at
+  COALESCE(ans.id::text, ''), COALESCE(ans.answer_text, ''), ans.confidence::float8, ans.created_at,
+  ref.question_snapshot, COALESCE(ref.import_snapshot_hash, '')
 FROM requested
 JOIN answer_segment seg ON seg.id = requested.segment_id
 JOIN question q ON q.tenant_id = seg.tenant_id AND q.id = seg.question_id
-JOIN exam_question_snapshot eqs ON eqs.tenant_id = q.tenant_id AND eqs.exam_id = q.exam_id AND eqs.question_id = q.id
+JOIN LATERAL (
+  SELECT * FROM exam_question_snapshot snapshot
+  WHERE snapshot.tenant_id = q.tenant_id AND snapshot.exam_id = q.exam_id AND snapshot.question_id = q.id
+  ORDER BY snapshot.snapshot_version DESC
+  LIMIT 1
+) eqs ON true
 JOIN exam e ON e.tenant_id = q.tenant_id AND e.id = q.exam_id AND e.deleted_at IS NULL
 LEFT JOIN LATERAL (
   SELECT CASE
@@ -70,6 +76,17 @@ LEFT JOIN LATERAL (
   ORDER BY created_at DESC
   LIMIT 1
 ) ans ON true
+LEFT JOIN LATERAL (
+  SELECT item.value AS question_snapshot, r.import_snapshot_hash
+  FROM exam_readiness_snapshot r
+  CROSS JOIN LATERAL jsonb_array_elements(r.import_snapshot_json->'questions') item(value)
+  WHERE r.tenant_id = q.tenant_id AND r.exam_id = q.exam_id AND r.status = 'passed'
+    AND item.value->>'id' = q.id::text
+    AND item.value->>'assessment_snapshot_id' = eqs.id::text
+    AND item.value->>'assessment_snapshot_hash' = eqs.content_hash
+  ORDER BY r.confirmed_at DESC
+  LIMIT 1
+) ref ON true
 WHERE seg.tenant_id = $1 AND seg.deleted_at IS NULL
 ORDER BY requested.ordinality
 `, tenantID, rawSegmentIDs)
@@ -110,6 +127,8 @@ func scanBatchContext(row contextRowsScanner) (Context, error) {
 	var answerID string
 	var ocrConfidence sql.NullFloat64
 	var answerCreated sql.NullTime
+	var referenceRaw []byte
+	var referenceHash string
 	if err := row.Scan(
 		&out.SegmentID,
 		&snapshotRaw,
@@ -141,6 +160,8 @@ func scanBatchContext(row contextRowsScanner) (Context, error) {
 		&out.AnswerText,
 		&ocrConfidence,
 		&answerCreated,
+		&referenceRaw,
+		&referenceHash,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Context{}, ErrNotFound
@@ -150,6 +171,11 @@ func scanBatchContext(row contextRowsScanner) (Context, error) {
 	if err := json.Unmarshal(snapshotRaw, &out.AssessmentSnapshot); err != nil {
 		return Context{}, err
 	}
+	reference, err := referenceContextFromSnapshot(referenceRaw, referenceHash)
+	if err != nil {
+		return Context{}, err
+	}
+	out.ReferenceContext = reference
 	out.Subject = string(out.AssessmentSnapshot.SubjectCode)
 	out.GradeLevel = string(out.AssessmentSnapshot.EducationStage)
 	if !IsSupportedQuestionType(question.QuestionType) {

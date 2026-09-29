@@ -122,6 +122,7 @@ func (s *MemoryStore) Create(ctx context.Context, tenantID, examID, questionID, 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	key := tenantID + ":" + examID + ":" + input.IdempotencyKey
+	// 同一租户、考试下复用幂等键会返回原任务，不会按本次参数重建任务。
 	if id := s.idempotency[key]; id != "" {
 		return cloneJob(s.jobs[id]), cloneItems(s.items[id]), nil
 	}
@@ -351,6 +352,7 @@ func (s *MemoryStore) RecordCandidate(_ context.Context, tenantID, itemID, actor
 		return Item{}, ErrInvalidInput
 	}
 	candidate, delta := input.Score, input.Score-item.OldScore
+	// 候选结果统一进入人工复核，RequireManualReview 只记入事件，不会跳过这一步。
 	item.CandidateScore, item.CandidateGradeID, item.Delta = &candidate, input.CandidateGradeID, &delta
 	item.CandidateRubricSelections, item.CandidateComment = append([]RubricSelection(nil), input.RubricSelections...), input.Comment
 	item.Status, item.Revision, item.UpdatedAt = ItemAwaitingReview, item.Revision+1, s.now().UTC()
@@ -494,6 +496,7 @@ func previewFromSources(examID, questionID, releaseID string, version int, curre
 		result.AffectedCount++
 		counts[item.OldScore]++
 		low, high := -item.OldScore, item.MaxScore-item.OldScore
+		// 这里只给出改成零分或满分时的差值范围，不预测实际会改多少分。
 		if index == 0 || low < min {
 			min = low
 		}

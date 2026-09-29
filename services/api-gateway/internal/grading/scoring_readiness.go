@@ -68,6 +68,7 @@ WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL
 		return ScoringReadiness{}, fmt.Errorf("load active scoring run: %w", runErr)
 	}
 
+	// 自动候选数只估计配置与输入是否齐备；实际自动确认还要经过识别结果和服务端授权门槛。
 	var counts scoringReadinessCounts
 	err = q.QueryRowContext(ctx, `
 WITH scoped_segments AS (
@@ -150,6 +151,7 @@ FROM segment_facts
 		return ScoringReadiness{}, fmt.Errorf("count dual-mark questions: %w", err)
 	}
 	if counts.dualQuestions > 0 {
+		// 这里只统计同校在岗阅卷员；启动事务还会重新读取名册并分配两份任务。
 		if err := q.QueryRowContext(ctx, `SELECT count(DISTINCT u.id) FROM app_user u
 JOIN exam e ON e.tenant_id=u.tenant_id AND e.school_id=u.school_id
 JOIN user_role ur ON ur.tenant_id=u.tenant_id AND ur.user_id=u.id AND ur.deleted_at IS NULL
@@ -260,6 +262,7 @@ func buildScoringReadiness(status string, activeRun *ScoringRun, counts scoringR
 			Count:    counts.missingAutomation,
 		},
 	}
+	// 自动化配置不足可以转人工，因此 warning 不阻止启动；只有 blocker 决定 Ready。
 	ready := true
 	for _, check := range checks {
 		if check.Severity == "blocker" && !check.Passed {

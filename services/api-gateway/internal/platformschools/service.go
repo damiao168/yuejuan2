@@ -20,6 +20,7 @@ type Service struct{ store Store }
 
 func NewService(store Store) *Service { return &Service{store: store} }
 
+// 平台列表先统一过滤和排序，再用游标切页；游标只代表当前结果集中的偏移位置。
 func (s *Service) List(ctx context.Context, filter ListFilter) (ListResult, error) {
 	filter = normalizeFilter(filter)
 	if filter.Limit < 1 || filter.Limit > 200 || !validListFilter(filter) {

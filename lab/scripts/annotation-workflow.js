@@ -59,12 +59,14 @@ function writeJsonl(path, values) {
   writeFileSync(path, values.map((value) => JSON.stringify(value)).join("\n") + (values.length ? "\n" : ""), "utf8");
 }
 
+// 真实标注包只落入忽略目录；可跟踪报告另经字段检查，避免把答题内容带入仓库。
 function enforceSensitiveOutput(samples, outputDir) {
   if (samples.every((sample) => sample.synthetic === true)) return;
   const rel = relative(resolve(LAB_ROOT, ".downloads"), outputDir);
   if (rel.startsWith("..") || isAbsolute(rel)) throw new Error("real annotation artifacts must stay under lab/.downloads");
 }
 
+// 合并/裁决前核对已分发包的正文哈希，避免使用被改写的任务包继续流程。
 function verifyPacketHashes(manifest, baseDir, idField) {
   for (const item of manifest ?? []) {
     const path = childPath(baseDir, item.file);

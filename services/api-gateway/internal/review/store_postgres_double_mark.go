@@ -123,6 +123,7 @@ func (s *PostgresStore) CreateDoubleMarkSession(ctx context.Context, tenantID st
 	if !policy.Enabled {
 		return DoubleMarkSession{}, ErrInvalidInput
 	}
+	// 两个任务与双评会话一起提交，任一步失败都会回滚，避免只派出一份评分任务。
 	firstTask, err := s.insertReviewTaskTx(ctx, tx, tenantID, actorID, taskContext, CreateTaskInput{
 		AnswerSegmentID: input.AnswerSegmentID,
 		Source:          "double_mark_required",

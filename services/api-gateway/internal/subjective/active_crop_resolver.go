@@ -61,6 +61,7 @@ func (r *ActiveCropResolver) Resolve(ctx context.Context, tenantID string, segme
 		strings.TrimSpace(tenantID) == "" || strings.TrimSpace(segmentID) == "" || strings.TrimSpace(questionID) == "" {
 		return ResolvedActiveCrop{}, ErrActiveCropUnavailable
 	}
+	// 先锁定租户范围内当前裁剪的元数据；对象读取前后都会复核它，避免修正或替换在读取期间改变。
 	first, err := r.loadMetadata(ctx, tenantID, segmentID, questionID)
 	if err != nil {
 		return ResolvedActiveCrop{}, resolverError(ctx)
@@ -123,6 +124,7 @@ func (r *ActiveCropResolver) loadMetadata(ctx context.Context, tenantID string, 
 	if err != nil {
 		return activeCropMetadata{}, ErrActiveCropUnavailable
 	}
+	// 只有已完成、未删除且归属关系完整的裁剪才能进入模型请求；任何状态不一致都按不可用处理。
 	if evidence.SegmentID != segmentID ||
 		evidence.QuestionID != questionID ||
 		evidence.SubmissionID == "" ||
@@ -179,6 +181,7 @@ func (r *ActiveCropResolver) loadMetadata(ctx context.Context, tenantID string, 
 	}, nil
 }
 
+// 只解析 PNG 头部并先做像素上限检查，避免为验证一张答案图而进行无界解码。
 func validateActiveCropPNG(data []byte) (int, int, error) {
 	signature := []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}
 	if len(data) < 33 ||

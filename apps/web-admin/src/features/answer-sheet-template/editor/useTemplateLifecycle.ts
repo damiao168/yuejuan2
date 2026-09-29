@@ -86,6 +86,7 @@ export function useTemplateLifecycle({
         message.success("模板已保存");
       } else {
         message.error(getUserErrorMessage(result.error, "操作失败，请稍后重试"));
+        // 版本冲突后重读服务端模板，不能用本地旧版本继续覆盖保存。
         if (result.status === "revision_conflict") void loadData();
       }
     } finally {

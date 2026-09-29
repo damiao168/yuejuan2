@@ -128,6 +128,8 @@ type ReturnTaskInput struct {
 	MustOwnActiveClaim bool   `json:"-"`
 }
 
+// ReviewDraft 是当前阅卷人的未提交内容；Revision 只管草稿冲突，与任务版本独立。
+// 保存草稿不会生成成绩，正式提交仍需通过 SubmitGrade 校验。
 type ReviewDraft struct {
 	ID               string            `json:"id"`
 	ReviewTaskID     string            `json:"review_task_id"`
@@ -264,6 +266,8 @@ type CreateDoubleMarkSessionInput struct {
 	DueAt            *time.Time `json:"due_at"`
 }
 
+// DoubleMarkSession 保存两份独立评分的关联及创建时的分差阈值、合分方式。
+// 后续修改双评策略不会替换这里已经保存的 Threshold 和 ResolutionStrategy。
 type DoubleMarkSession struct {
 	ID                 string    `json:"id"`
 	TenantID           string    `json:"tenant_id"`

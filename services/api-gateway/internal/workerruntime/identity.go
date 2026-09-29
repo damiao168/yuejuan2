@@ -2,9 +2,8 @@ package workerruntime
 
 import "edugrade-enterprise/services/api-gateway/internal/auth"
 
-// A lease is scoped to a task, but it is not a substitute for the caller's
-// authenticated service role. Keep this allowlist server-side: queue and
-// worker_service values in requests and task headers are untrusted claims.
+// 租约只绑定任务，不能代替调用方的已认证服务角色。队列和 worker_service
+// 都来自请求或任务头，属于不可信声明，必须由服务端白名单决定。
 func workerIdentityAllows(user auth.User, queueName, workerService string) bool {
 	if !auth.IsServiceUser(user) {
 		return true

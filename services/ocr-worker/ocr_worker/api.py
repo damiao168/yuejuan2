@@ -303,6 +303,7 @@ class EduGradeClient:
         require_auth: bool = True,
         tenant_id: str | None = None,
     ) -> request.Request:
+        # 附带令牌前先校验初始目标同源；任务权限来自租约头，不发送调用方指定的租户头。
         url = _trusted_service_url(self.base_url, path_or_url)
         body = None if payload is None else json.dumps(payload).encode("utf-8")
         headers = {"Accept": "application/json"}

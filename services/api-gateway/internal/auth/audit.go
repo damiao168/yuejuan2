@@ -16,6 +16,7 @@ func normalizedAuditLimit(limit int) int {
 	return limit
 }
 
+// RedactAuditRecord 按敏感字段名递归隐藏审计值；自由文本不会被识别，写入方仍须避免记录秘密。
 func RedactAuditRecord(record AuditRecord) AuditRecord {
 	record.BeforeValue = redactAuditMap(record.BeforeValue)
 	record.AfterValue = redactAuditMap(record.AfterValue)

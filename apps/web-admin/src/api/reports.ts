@@ -7,6 +7,7 @@ export interface ReportEmptyState {
 }
 
 export interface ReportMetric {
+  // 不可计算与实际为零分别表示；展示前先看 available，并按 reason 解释缺失原因。
   available: boolean;
   value: number;
   numerator?: number;
@@ -145,6 +146,7 @@ export async function exportLearningReport(examId: string) {
   return executeBusinessCommand("report.export", examId, null,
     commandId => apiClient.requestBlob(`/api/v1/exams/${encodeURIComponent(examId)}/reports/export`, { method: "POST", headers: { "Idempotency-Key": commandId } }),
     value => {
+      // 命令恢复回执里的文件是 Base64；还原成与首次 Blob 下载相同的返回形状。
       const result = value as { Content: string; ContentType: string; Filename: string; Watermark: string };
       const bytes = Uint8Array.from(atob(result.Content), character => character.charCodeAt(0));
       return { blob: new Blob([bytes], { type: result.ContentType }), contentType: result.ContentType, filename: result.Filename, watermark: result.Watermark };

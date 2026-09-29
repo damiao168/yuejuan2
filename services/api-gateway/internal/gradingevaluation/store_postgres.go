@@ -195,6 +195,7 @@ FROM grading_evaluation_observation WHERE tenant_id=$1::uuid AND run_id=$2::uuid
 	return items, nil
 }
 
+// 完成事务锁住运行并重新统计原始观测，再替换派生指标；并发新增样本会使本次提交失败而非污染结果。
 func (s *PostgresStore) ReplaceComputed(ctx context.Context, tenantID, runID string, expectedCount int, slices []SliceMetric, difficulty []ResponseDifficulty, at time.Time) (Run, error) {
 	if s.db == nil {
 		return Run{}, ErrInvalidInput

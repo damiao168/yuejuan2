@@ -51,6 +51,7 @@ func (DeterministicTextProvider) Similarity(left, right Representation) float64 
 	return float64(intersection) / float64(union)
 }
 
+// 统一大小写和全角形式，但保留数字、小数、运算符等有区分意义的符号；句末句号才会被忽略。
 func normalizeText(value string) string {
 	value = strings.ToLower(norm.NFKC.String(strings.TrimSpace(value)))
 	var builder strings.Builder
@@ -146,6 +147,7 @@ func clusterAnswers(answers []SourceAnswer, provider RepresentationProvider, thr
 	return out
 }
 
+// 代表样本取组内平均相似度最高者，边界样本取最低者；单成员组必须回到人工复核。
 func materializeMembers(cluster groupedAnswers, outlierThreshold float64) ([]Member, float64) {
 	members := make([]Member, len(cluster.Answers))
 	averages := make([]float64, len(cluster.Answers))

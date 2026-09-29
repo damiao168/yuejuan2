@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   App,
@@ -9,22 +9,20 @@ import {
   List,
   Select,
   Space,
-  Switch,
-  type TableColumnsType
+  Switch
 } from "antd";
 import { CheckCircle2, LockKeyhole, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
 import { getPaperImportUserMessage } from "../api/client";
 import {
   validatePaperConfig,
-  type RubricEvidenceRequirement,
-  type RubricPoint
+  type RubricEvidenceRequirement
 } from "../api/papers";
 import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
-import { ResponsiveTable } from "../components/ResponsiveTable";
 import { StatusTag } from "../components/StatusTag";
 import { AssessmentProfileEditor } from "../components/features/assessment/AssessmentProfileEditor";
 import { questionTypeOptions } from "../constants/examCatalog";
 import { PaperImportWorkspace } from "../features/paper-import/PaperImportWorkspace";
+import { PaperImportReviewPanel } from "../features/paper-import/PaperImportReviewPanel";
 import { usePaperConfigData } from "../features/paper-import/usePaperConfigData";
 import { useScoringRules } from "../features/paper-import/useScoringRules";
 import { usePaperImportWorkflow } from "../features/paper-import/usePaperImportWorkflow";
@@ -40,6 +38,7 @@ import {
 } from "../features/paper-rubric/paperPresentation";
 import { BankQuestionPicker } from "../features/question-bank/BankQuestionPicker";
 import { HistoryQuestionImporter } from "../features/question-bank/HistoryQuestionImporter";
+import { MathMarkdown } from "../components/MathMarkdown";
 
 const toleranceQuestionTypes = ["numeric", "formula", "calculation"];
 
@@ -77,7 +76,10 @@ export function PaperRubricPage({
   onExamChanged?: () => void;
   onNavigate?: (path: string) => void;
 }) {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
+  const [formDirty, setFormDirty] = useState(false);
+  const [activeCandidateIndex, setActiveCandidateIndex] = useState<number | null>(null);
+  const [detailTab, setDetailTab] = useState("content");
 	const config = usePaperConfigData({ initialExamId, fixedExamId });
 	const {
 		exams, selectedExamId, setSelectedExamId, papers, paperImports, questions,
@@ -93,9 +95,15 @@ export function PaperRubricPage({
     () => (editorMode === "edit" ? questions.find((question) => question.id === selectedQuestionId) ?? null : null),
     [editorMode, questions, selectedQuestionId]
   );
+  const latestPaperImport = paperImports[0];
+  const pendingDrafts = latestPaperImport?.status !== "applied" ? importWorkflow.reviewDrafts : [];
+  useEffect(() => {
+    setActiveCandidateIndex(latestPaperImport?.status === "review_required" && latestPaperImport.questions.length ? 0 : null);
+  }, [latestPaperImport?.id, latestPaperImport?.status]);
+  useEffect(() => { setFormDirty(false); }, [selectedQuestion?.id]);
   const questionWorkflow = useQuestionEditor({
     selectedExam, selectedQuestion, papers, questionCount: questions.length,
-    editorMode, setEditorMode, setSelectedQuestionId, loadConfig,
+    editorMode, setEditorMode, setSelectedQuestionId, preserveUnsaved: formDirty, loadConfig,
     onChanged: onExamChanged
   });
   const {
@@ -107,127 +115,47 @@ export function PaperRubricPage({
     selectedQuestion, selectedExamId, loadConfig, onChanged: onExamChanged
   });
   const {
-    savingRubric, rubricStatus, setRubricStatus, rubricPoints, deductionsJson,
+    savingRubric, rubricDirty, discardRubricDraft, rubricStatus, setRubricStatus, rubricPoints, deductionsJson,
     setDeductionsJson, examplesJson, setExamplesJson, pointTotal: rubricTotal,
     scoreMismatch, updatePoint, addEvidenceRequirement, updateEvidenceRequirement,
     removeEvidenceRequirement, removePoint, addPoint, saveRubric
   } = rubricWorkflow;
-  const fillBlankUsesAnswerKey = (watchedQuestionType ?? selectedQuestion?.question_type) === "fill_blank";
-  const selectedLocked = !fillBlankUsesAnswerKey && selectedQuestion?.rubric?.status === "locked";
+  const isFillBlank = (watchedQuestionType ?? selectedQuestion?.question_type) === "fill_blank";
+  const selectedLocked = !isFillBlank && selectedQuestion?.rubric?.status === "locked";
   const questionDisabled = !canManage || selectedLocked;
   const showTolerance = toleranceQuestionTypes.includes(watchedQuestionType ?? "");
   const showFormulaEvidence = formulaEvidenceEnabled(selectedExam?.subject, selectedQuestion?.question_type);
   const objectiveRuleType = selectedQuestion && ["single_choice", "true_false", "multiple_choice", "fill_blank", "numeric"].includes(selectedQuestion.question_type) ? selectedQuestion.question_type : "";
+  const editorUsesFixedScoring = ["single_choice", "true_false", "multiple_choice", "fill_blank", "numeric"].includes(watchedQuestionType ?? selectedQuestion?.question_type ?? "");
   const scoringRuleWorkflow = useScoringRules({ selectedQuestion, objectiveRuleType, onChanged: onExamChanged });
   const {
-    scoringRuleConfig, savingScoringRule, publishedScoringRule,
+    scoringRuleConfig, scoringRuleDirty, discardScoringRuleDraft, savingScoringRule, publishedScoringRule,
     setRuleConfig, saveScoringRule
   } = scoringRuleWorkflow;
+  const unsavedWork = formDirty || rubricDirty || scoringRuleDirty;
 
-  const rubricColumns: TableColumnsType<RubricPoint> = [
-    {
-      title: "采分点",
-      dataIndex: "description",
-      render: (_, point, index) => (
-        <Input
-          value={point.description}
-          disabled={questionDisabled}
-          placeholder="采分点描述"
-          onChange={(event) => updatePoint(index, { description: event.target.value })}
-        />
-      )
-    },
-    {
-      title: "分值",
-      dataIndex: "score",
-      width: 120,
-      render: (_, point, index) => (
-        <InputNumber
-          value={point.score}
-          disabled={questionDisabled}
-          min={0}
-          precision={1}
-          className="full-width-control"
-          onChange={(value) => updatePoint(index, { score: Number(value ?? 0) })}
-        />
-      )
-    },
-    {
-      title: "必需",
-      dataIndex: "required",
-      width: 90,
-      render: (_, point, index) => (
-        <Switch checked={point.required} disabled={questionDisabled} onChange={(checked) => updatePoint(index, { required: checked })} />
-      )
-    },
-    ...(showFormulaEvidence
-      ? [
-          {
-            title: "识别证据（仅供教师参考）",
-            width: 380,
-            render: (_: unknown, point: RubricPoint, index: number) => {
-              const requirements = point.evidence_requirements ?? [];
-              return (
-                <Space direction="vertical" size={6} className="full-width-control">
-                  {requirements.map((requirement, requirementIndex) => (
-                    <Space key={`${requirement.type}-${requirementIndex}`} wrap size={6}>
-                      <Select
-                        value={requirement.type}
-                        options={formulaEvidenceOptions}
-                        disabled={questionDisabled}
-                        className="rubric-evidence-type-select"
-                        onChange={(type: RubricEvidenceRequirement["type"]) =>
-                          updateEvidenceRequirement(index, requirementIndex, {
-                            type,
-                            target: type === "concept" || type === "unit" || type === "domain" ? requirement.target ?? "" : undefined,
-                            minimum: undefined,
-                            children: undefined
-                          })
-                        }
-                      />
-                      {requirement.type === "concept" || requirement.type === "unit" || requirement.type === "domain" ? (
-                        <Input
-                          value={requirement.target}
-                          disabled={questionDisabled}
-                          placeholder={requirement.type === "concept" ? "例如：配方法" : requirement.type === "unit" ? "例如：m/s" : "例如：x ≥ 0"}
-                          className="rubric-evidence-target-input"
-                          onChange={(event) => updateEvidenceRequirement(index, requirementIndex, { target: event.target.value })}
-                        />
-                      ) : null}
-                      <Button
-                        type="text"
-                        danger
-                        size="small"
-                        aria-label="删除识别证据"
-                        disabled={questionDisabled}
-                        icon={<Trash2 size={14} />}
-                        onClick={() => removeEvidenceRequirement(index, requirementIndex)}
-                      />
-                    </Space>
-                  ))}
-                  <Button
-                    type="link"
-                    size="small"
-                    icon={<Plus size={14} />}
-                    disabled={questionDisabled}
-                    onClick={() => addEvidenceRequirement(index)}
-                  >
-                    添加识别证据
-                  </Button>
-                </Space>
-              );
-            }
-          } satisfies TableColumnsType<RubricPoint>[number]
-        ]
-      : []),
-    {
-      title: "操作",
-      width: 90,
-      render: (_, __, index) => (
-        <Button danger size="small" icon={<Trash2 size={14} />} disabled={questionDisabled || rubricPoints.length <= 1} onClick={() => removePoint(index)} />
-      )
+  function navigateAfterDirtyCheck(action: () => void) {
+    if (!unsavedWork) { action(); return; }
+    modal.confirm({
+      title: "当前题目有未保存修改",
+      content: "切换题目会放弃当前题目、评分细则或客观规则中尚未保存的修改。",
+      okText: "放弃修改并切换",
+      okButtonProps: { danger: true },
+      cancelText: "继续编辑",
+      onOk: () => { setFormDirty(false); discardRubricDraft(); discardScoringRuleDraft(); action(); }
+    });
+  }
+
+  // 三个编辑区共享刷新后的题目数据；保存一处前先处理其他草稿，避免刷新覆盖未提交内容。
+  function saveWithoutOverwritingOtherDrafts(section: "question" | "rubric" | "scoring", action: () => void) {
+    const otherDirty = section === "question" ? rubricDirty || scoringRuleDirty
+      : section === "rubric" ? formDirty || scoringRuleDirty : formDirty || rubricDirty;
+    if (otherDirty) {
+      message.warning("请先保存或放弃其他区域的修改；刷新题目数据会覆盖那些未保存内容。");
+      return;
     }
-  ];
+    action();
+  }
 
   async function runValidation() {
     if (!selectedExam) {
@@ -247,7 +175,6 @@ export function PaperRubricPage({
   }
 
   const embedded = mode === "embedded";
-	const latestPaperImport = paperImports[0];
   const editorVisible = !loading && !error && Boolean(selectedExam) && !configLoading && !configError;
   const showMaterials = initialView === "materials";
   const showQuestionConfiguration = initialView === "questions" || (!embedded && (questions.length > 0 || Boolean(latestPaperImport)));
@@ -317,6 +244,7 @@ export function PaperRubricPage({
           {showMaterials ? <PaperImportWorkspace
             canManage={canManage}
             latestPaperImport={latestPaperImport}
+            existingQuestions={questions}
             workflow={importWorkflow}
             setShowQuestionEditor={setShowQuestionEditor}
             initialExamId={fixedExamId ?? initialExamId}
@@ -348,43 +276,48 @@ export function PaperRubricPage({
             <div>
               <strong>{questions.length}</strong>
               <span>道题目</span>
-              <small>{questions.filter((question) => question.answer_key).length} 道已配置标准答案</small>
+               <small>{questions.filter((question) => String(question.answer_key?.standard_answer ?? "").trim()).length} 道已配置标准答案</small>
             </div>
             {initialView === "materials" ? <Button onClick={() => setShowQuestionEditor((current) => !current)}>
               {showQuestionEditor ? "收起逐题校对" : questions.length ? "逐题校对" : "手动补充题目"}
             </Button> : null}
           </section> : null}
 
-          {showQuestionConfiguration && questionEditorVisible ? <section className="paper-workbench">
+           {showQuestionConfiguration && questionEditorVisible ? <section className="paper-workbench" id="paper-question-workbench">
             <aside className="workspace-section question-list-panel">
               <div className="section-head">
                 <div>
                   <h2>题目列表</h2>
-                  <p>{questions.length} 道题</p>
+                   <p>{questions.length} 道正式题目{pendingDrafts.length ? ` · ${pendingDrafts.length} 道资料候选待核对` : ""}</p>
                 </div>
                 <Button
                   size="small"
                   icon={<Plus size={14} />}
                   disabled={!canManage}
-                  onClick={() => {
-                    setEditorMode("create");
-                    setSelectedQuestionId(null);
-                  }}
+                   onClick={() => navigateAfterDirtyCheck(() => {
+                     setActiveCandidateIndex(null);
+                     setEditorMode("create");
+                     setSelectedQuestionId(null);
+                     setDetailTab("content");
+                   })}
                 >
                   新建
                 </Button>
               </div>
-              <List
+               {pendingDrafts.length ? <div className="paper-pending-questions"><strong>待应用的识别结果</strong>{pendingDrafts.map((draft, index) => <button key={`${draft.candidate_id ?? draft.question_no}-${index}`} type="button" className={`paper-pending-question${activeCandidateIndex === index ? " is-active" : ""}`} onClick={() => navigateAfterDirtyCheck(() => { setActiveCandidateIndex(index); setDetailTab("content"); })}><span>第 {draft.question_no || index + 1} 题</span><span>{draft.score > 0 ? `${draft.score} 分` : "分值待确认"}</span></button>)}</div> : null}
+               <List
                 className="question-list"
                 dataSource={questions}
                 locale={{ emptyText: <EmptyState title="暂无题目" description="先新建题目配置。" /> }}
                 renderItem={(question) => (
                   <List.Item
-                    className={selectedQuestionId === question.id ? "question-list-item active" : "question-list-item"}
-                    onClick={() => {
-                      setEditorMode("edit");
-                      setSelectedQuestionId(question.id);
-                    }}
+                     className={activeCandidateIndex === null && selectedQuestionId === question.id ? "question-list-item active" : "question-list-item"}
+                     onClick={() => navigateAfterDirtyCheck(() => {
+                       setActiveCandidateIndex(null);
+                       setEditorMode("edit");
+                       setSelectedQuestionId(question.id);
+                       setDetailTab("content");
+                     })}
                   >
                     <div>
                       <strong>{question.question_no}</strong>
@@ -392,10 +325,16 @@ export function PaperRubricPage({
                     </div>
                     <div>
                       <span>{question.score} 分</span>
-                      <span title={question.question_type === "fill_blank" ? "按标准答案评分" : question.rubric?.status}>
-                        {question.question_type === "fill_blank"
-                          ? <StatusTag tone="success">按答案评分</StatusTag>
-                          : <StatusTag tone={rubricTone(question.rubric?.status)}>{rubricStatusLabel(question.rubric?.status)}</StatusTag>}
+                       <span title={question.question_type === "fill_blank" ? "根据标准答案完整性显示状态" : question.rubric?.status}>
+                         {question.question_type === "fill_blank"
+                           ? String(question.answer_key?.standard_answer ?? "").trim()
+                             ? <StatusTag tone="success">答案已配置</StatusTag>
+                             : <StatusTag tone="warning">答案待补充</StatusTag>
+                           : ["single_choice", "multiple_choice", "true_false", "numeric"].includes(question.question_type)
+                             ? String(question.answer_key?.standard_answer ?? "").trim()
+                               ? <StatusTag tone="success">固定判分</StatusTag>
+                               : <StatusTag tone="warning">答案待补充</StatusTag>
+                             : <StatusTag tone={rubricTone(question.rubric?.status)}>{rubricStatusLabel(question.rubric?.status)}</StatusTag>}
                       </span>
                     </div>
                   </List.Item>
@@ -403,11 +342,18 @@ export function PaperRubricPage({
               />
             </aside>
 
-            <section className="workspace-section question-editor">
-              <div className="section-head">
-                <div>
-                  <h2>{editorMode === "edit" ? "题目配置" : "新建题目"}</h2>
-                  <p>{selectedLocked ? "评分细则已锁定，题目和细则不可编辑。" : "保存题目修改会生成新的答案版本。"}</p>
+             {activeCandidateIndex !== null && latestPaperImport && pendingDrafts[activeCandidateIndex] ? <section className="workspace-section question-editor paper-candidate-editor">
+               <div className="section-head paper-editor-sticky-head">
+                 <div><span className="preparation-kicker">资料识别候选</span><h2>第 {pendingDrafts[activeCandidateIndex].question_no || activeCandidateIndex + 1} 题</h2><p>此内容尚未写入正式题目；核对分值、答案与解析后确认导入。</p></div>
+                 {latestPaperImport.status === "review_required" ? <Space wrap><Button loading={importWorkflow.savingImportReview} onClick={() => void importWorkflow.saveImportReview(latestPaperImport)}>保存核对</Button><Button type="primary" loading={importWorkflow.parsing} disabled={importWorkflow.invalidReviewRubric || importWorkflow.invalidReviewScore} onClick={() => void importWorkflow.confirmPaperImport(latestPaperImport)}>确认导入</Button></Space> : null}
+               </div>
+               <PaperImportReviewPanel job={latestPaperImport} drafts={[pendingDrafts[activeCandidateIndex]]} existingQuestions={questions} showOverview={false} readOnly={latestPaperImport.status !== "review_required"} onChange={(_, field, patch) => importWorkflow.updateReviewDraft(activeCandidateIndex, field, patch)} onOpenSource={(ref) => void importWorkflow.openImportSource(ref.file_asset_id, ref.page_no)} />
+             </section> : <section className="workspace-section question-editor">
+               <div className="section-head paper-editor-sticky-head">
+                 <div>
+                   <span className="preparation-kicker">正式题目</span>
+                   <h2>{editorMode === "edit" ? `第 ${selectedQuestion?.question_no ?? "—"} 题` : "新建题目"}</h2>
+                   <p>{selectedLocked ? "评分细则已锁定。" : unsavedWork ? "有未保存的修改" : "题目、答案与评分配置"}</p>
                 </div>
                 <Space>
                   {selectedLocked ? <StatusTag tone="success">已锁定</StatusTag> : null}
@@ -416,22 +362,18 @@ export function PaperRubricPage({
                       删除
                     </Button>
                   ) : null}
-                  <Button type="primary" icon={<Save size={16} />} disabled={questionDisabled} loading={savingQuestion} onClick={() => void saveQuestion()}>
-                    保存题目
-                  </Button>
-                </Space>
-              </div>
-
-              <Form form={form} layout="vertical" disabled={questionDisabled}>
-                <div className="form-grid">
-                  <Form.Item label="关联试卷版本" name="exam_paper_id">
-                    <Select
-                      allowClear
-                      options={papers.map((paper) => ({ label: `v${paper.version_no} ${paper.file.original_name || "未命名文件"}`, value: paper.id }))}
-                      placeholder="可不关联"
-                    />
-                  </Form.Item>
-                  <Form.Item label="题号" name="question_no" rules={[{ required: true, message: "请输入题号" }]}>
+                   {detailTab === "content" ? <Button type="primary" icon={<Save size={16} />} disabled={questionDisabled} loading={savingQuestion} onClick={() => saveWithoutOverwritingOtherDrafts("question", () => { void saveQuestion().then((saved) => { if (saved) setFormDirty(false); }); })}>保存题目与答案</Button> : null}
+                 </Space>
+               </div>
+               <div className="paper-detail-tabs" role="tablist" aria-label="题目详情">
+                 <button type="button" role="tab" aria-selected={detailTab === "content"} className={detailTab === "content" ? "active" : ""} onClick={() => setDetailTab("content")}>题目与参考解答</button>
+                 <button type="button" role="tab" aria-selected={detailTab === "scoring"} className={detailTab === "scoring" ? "active" : ""} onClick={() => setDetailTab("scoring")}>评分配置</button>
+                 <button type="button" role="tab" aria-selected={detailTab === "source"} className={detailTab === "source" ? "active" : ""} onClick={() => setDetailTab("source")}>来源与答题区域</button>
+               </div>
+               <div style={{ display: detailTab === "content" ? undefined : "none" }}>
+               <Form form={form} layout="vertical" disabled={questionDisabled} onValuesChange={() => setFormDirty(true)}>
+                 <div className="form-grid">
+                   <Form.Item label="题号" name="question_no" rules={[{ required: true, message: "请输入题号" }]}>
                     <Input placeholder="Q1" />
                   </Form.Item>
                   <Form.Item label="题型" name="question_type" rules={[{ required: true, message: "请选择题型" }]}>
@@ -440,40 +382,16 @@ export function PaperRubricPage({
                   <Form.Item label="分值" name="score" rules={[{ required: true, message: "请输入分值" }]}>
                     <InputNumber min={0.5} precision={1} className="full-width-control" />
                   </Form.Item>
-                  <Form.Item label="排序" name="sort_order" rules={[{ required: true, message: "请输入排序" }]}>
-                    <InputNumber min={1} precision={0} className="full-width-control" />
+                 </div>
+                  <Form.Item label="题干" name="stem">
+                    <Input.TextArea autoSize={{ minRows: 3, maxRows: 9 }} placeholder="上传资料识别后自动填充，或在此录入题干" />
                   </Form.Item>
-                  <Form.Item label="知识点" name="knowledge_points">
-                    <Select mode="tags" placeholder="输入后回车" />
-                  </Form.Item>
-                </div>
-                <Form.Item label="题干" name="stem">
-                  <Input.TextArea rows={3} />
-                </Form.Item>
-                <details className="paper-advanced-settings"><summary>高级题目设置</summary><Form.Item label="答题区域位置" required>
-                  <div className="form-grid">
-                    <Form.Item label="所在页码" name="answer_area_page" rules={[{ required: true, message: "请输入所在页码" }]}>
-                      <InputNumber min={1} precision={0} className="full-width-control" />
-                    </Form.Item>
-                    <Form.Item label="左边距" name="answer_area_x" rules={[{ required: true, message: "请输入左边距" }]}>
-                      <InputNumber min={0} className="full-width-control" />
-                    </Form.Item>
-                    <Form.Item label="上边距" name="answer_area_y" rules={[{ required: true, message: "请输入上边距" }]}>
-                      <InputNumber min={0} className="full-width-control" />
-                    </Form.Item>
-                    <Form.Item label="宽度" name="answer_area_w" rules={[{ required: true, message: "请输入宽度" }]}>
-                      <InputNumber min={0} className="full-width-control" />
-                    </Form.Item>
-                    <Form.Item label="高度" name="answer_area_h" rules={[{ required: true, message: "请输入高度" }]}>
-                      <InputNumber min={0} className="full-width-control" />
-                    </Form.Item>
-                  </div>
-                  <p className="muted">也可以在「答题卡模板」中拖拽框选，更直观。</p>
-                </Form.Item></details>
-                <Form.Item label="标准答案" name="standard_answer" rules={[{ required: true, message: "请输入标准答案" }]}>
-                  <Input.TextArea rows={3} />
-                </Form.Item>
-                {fillBlankUsesAnswerKey ? <Alert type="info" showIcon message="填空题按标准答案评分" description="标准答案和等价答案就是判分依据，无需再设置评分细则。" /> : null}
+                  {["single_choice", "multiple_choice"].includes(watchedQuestionType ?? "") ? <Form.List name="options">{(fields, { add, remove }) => <div className="paper-option-editor"><div className="section-head"><h3>选项</h3><Button size="small" icon={<Plus size={14} />} onClick={() => add("")}>添加选项</Button></div>{fields.map((field, index) => <div className="paper-option-row" key={field.key}><span>{String.fromCharCode(65 + index)}</span><Form.Item name={field.name} rules={[{ required: true, message: "请输入选项" }]}><Input placeholder={`选项 ${String.fromCharCode(65 + index)} 内容`} /></Form.Item><Button type="text" danger aria-label={`删除选项 ${String.fromCharCode(65 + index)}`} icon={<Trash2 size={14} />} onClick={() => remove(field.name)} /></div>)}</div>}</Form.List> : null}
+                  <Form.Item label="标准答案" name="standard_answer" rules={[{ required: true, message: "请输入标准答案" }]}>
+                   <Input.TextArea autoSize={{ minRows: 2, maxRows: 7 }} placeholder="上传答案资料识别后自动填充，或在此录入" />
+                 </Form.Item>
+                 {isFillBlank ? <Alert type={String(selectedQuestion?.answer_key?.standard_answer ?? "").trim() ? "info" : "warning"} showIcon message={String(selectedQuestion?.answer_key?.standard_answer ?? "").trim() ? "填空题按答案判分" : "标准答案尚未配置"} description="逐空答案、等价写法及分值应在评分配置中核对。数学区间的括号不可随意忽略。" /> : null}
+                 {selectedQuestion?.solution?.raw_text ? <div className="paper-reference-solution"><h3>教师解析</h3><MathMarkdown>{selectedQuestion.solution.raw_text}</MathMarkdown></div> : <p className="paper-missing-content">暂无教师解析。若资料中已有详解，请先核对并应用识别结果。</p>}
                 <details className="paper-advanced-settings"><summary>高级答案设置</summary><Form.Item label="等价答案" name="equivalent_answers">
                   <Select mode="tags" placeholder="输入后回车" />
                 </Form.Item>
@@ -489,7 +407,12 @@ export function PaperRubricPage({
                     </div>
                   </Form.Item>
                 ) : null}</details>
-              </Form>
+               </Form>
+               </div>
+
+               {detailTab === "source" ? <div className="paper-source-context"><h3>来源</h3><p>{selectedQuestion?.paper_import_id ? "本题由考试资料识别导入" : "本题暂无已关联的识别来源"}</p>{selectedQuestion?.paper_import_source_refs?.length ? <p>已记录 {selectedQuestion.paper_import_source_refs.length} 处题目来源；教师解析来源 {selectedQuestion.solution?.source_refs.length ?? 0} 处。</p> : null}<h3>答题区域</h3><p>答题卡上的作答区域应在模板中可视化框选，不在题目配置中填写坐标。</p>{onNavigate ? <Button onClick={() => navigateAfterDirtyCheck(() => onNavigate(`/exams/${encodeURIComponent(selectedExam.id)}/template`))}>打开答题卡模板</Button> : null}</div> : null}
+
+               {detailTab === "scoring" ? <>
 
               <details className="paper-advanced-settings"><summary>高级评分配置</summary><AssessmentProfileEditor
                 examId={selectedExam.id}
@@ -500,18 +423,19 @@ export function PaperRubricPage({
                 onChanged={onExamChanged}
               /></details>
 
-              {selectedQuestion && objectiveRuleType ? <details className="paper-advanced-settings"><summary>客观题评分规则</summary><section className="scoring-rule-editor">
+              {selectedQuestion && objectiveRuleType ? <section className="scoring-rule-editor">
                 <div className="section-head">
                   <div>
-                    <h2>客观题评分规则</h2>
-                    <p>规则发布后不可修改；再次调整会创建新版本。</p>
+                    <h2>固定判分规则</h2>
+                    <p>标准答案：{String(selectedQuestion.answer_key?.standard_answer ?? "").trim() || "待补充"} · 满分 {selectedQuestion.score} 分</p>
                   </div>
                   <Space>
                     {publishedScoringRule ? <StatusTag tone="success">{`已发布 v${publishedScoringRule.version}`}</StatusTag> : <StatusTag tone="warning">未发布</StatusTag>}
-                    <Button icon={<Save size={16} />} disabled={!canManage} loading={savingScoringRule} onClick={() => void saveScoringRule(false)}>保存草稿</Button>
-                    <Button type="primary" icon={<LockKeyhole size={16} />} disabled={!canManage} loading={savingScoringRule} onClick={() => void saveScoringRule(true)}>发布规则</Button>
+                    <Button icon={<Save size={16} />} disabled={!canManage} loading={savingScoringRule} onClick={() => saveWithoutOverwritingOtherDrafts("scoring", () => { void saveScoringRule(false); })}>保存草稿</Button>
+                    <Button type="primary" icon={<LockKeyhole size={16} />} disabled={!canManage || !String(selectedQuestion.answer_key?.standard_answer ?? "").trim()} loading={savingScoringRule} onClick={() => saveWithoutOverwritingOtherDrafts("scoring", () => { void saveScoringRule(true); })}>发布规则</Button>
                   </Space>
                 </div>
+                {!String(selectedQuestion.answer_key?.standard_answer ?? "").trim() ? <Alert type="warning" showIcon message="尚无标准答案，无法判分" description="请先在「题目与参考解答」中核对答案并保存。" /> : <Alert type="info" showIcon message="全对得满分；错误得 0 分" description={objectiveRuleType === "multiple_choice" ? "多选题少选分与错选扣分以下方政策为准。" : objectiveRuleType === "fill_blank" ? "填空题还需核对每空答案、等价写法和分值。" : "空白或识别不确定的答卷应转人工确认。"} />}
                 {objectiveRuleType === "multiple_choice" ? <div className="scoring-rule-grid">
                   <label><span>允许少选得分</span><Switch checked={Boolean(scoringRuleConfig.allow_partial)} onChange={(value) => setRuleConfig("allow_partial", value)} /></label>
                   <label><span>每个正确选项分值</span><InputNumber min={0} max={selectedQuestion.score} precision={2} value={Number(scoringRuleConfig.score_per_correct_option ?? 0)} onChange={(value) => setRuleConfig("score_per_correct_option", Number(value ?? 0))} /></label>
@@ -521,7 +445,7 @@ export function PaperRubricPage({
                 {objectiveRuleType === "fill_blank" ? <div className="scoring-rule-grid">
                   <label><span>忽略大小写</span><Switch checked={Boolean(scoringRuleConfig.ignore_case)} onChange={(value) => setRuleConfig("ignore_case", value)} /></label>
                   <label><span>忽略空格</span><Switch checked={Boolean(scoringRuleConfig.ignore_spaces)} onChange={(value) => setRuleConfig("ignore_spaces", value)} /></label>
-                  <label><span>忽略标点</span><Switch checked={Boolean(scoringRuleConfig.ignore_punctuation)} onChange={(value) => setRuleConfig("ignore_punctuation", value)} /></label>
+                  <label><span>忽略标点（数学区间慎用）</span><Switch checked={Boolean(scoringRuleConfig.ignore_punctuation)} onChange={(value) => setRuleConfig("ignore_punctuation", value)} /></label>
                 </div> : null}
                 {objectiveRuleType === "numeric" ? <div className="scoring-rule-grid">
                   <label><span>绝对误差</span><InputNumber min={0} precision={6} value={Number(scoringRuleConfig.absolute ?? 0)} onChange={(value) => setRuleConfig("absolute", Number(value ?? 0))} /></label>
@@ -529,9 +453,9 @@ export function PaperRubricPage({
                   <label><span>单位必须填写</span><Switch checked={Boolean(scoringRuleConfig.unit_required)} onChange={(value) => setRuleConfig("unit_required", value)} /></label>
                 </div> : null}
                 {["single_choice", "true_false"].includes(objectiveRuleType) ? <Alert type="info" showIcon message="使用标准答案精确判定" description="空白、多涂、擦除或识别把握不足的答卷不会自动判零分，将转入人工确认。" /> : null}
-              </section></details> : null}
+              </section> : editorUsesFixedScoring ? <Alert type="info" showIcon message="先保存题目与答案" description="保存后可核对并发布固定判分规则。" /> : null}
 
-              {fillBlankUsesAnswerKey ? null : <div className="rubric-editor">
+              {editorUsesFixedScoring ? null : <div className="rubric-editor">
                 <div className="section-head">
                   <div>
                     <h2>评分细则</h2>
@@ -545,7 +469,7 @@ export function PaperRubricPage({
                     <Button icon={<Plus size={16} />} disabled={questionDisabled} onClick={addPoint}>
                       添加采分点
                     </Button>
-                    <Button type="primary" icon={rubricStatus === "locked" ? <LockKeyhole size={16} /> : <Save size={16} />} disabled={questionDisabled || !selectedQuestion || scoreMismatch} loading={savingRubric} onClick={() => void saveRubric()}>
+                    <Button type="primary" icon={rubricStatus === "locked" ? <LockKeyhole size={16} /> : <Save size={16} />} disabled={questionDisabled || !selectedQuestion || scoreMismatch} loading={savingRubric} onClick={() => saveWithoutOverwritingOtherDrafts("rubric", () => { void saveRubric(); })}>
                       {rubricStatus === "locked" ? "锁定评分细则" : rubricStatus === "pending_review" ? "提交审批" : "保存评分细则"}
                     </Button>
                   </Space>
@@ -559,7 +483,35 @@ export function PaperRubricPage({
                     description="系统只会为数学、物理、化学的公式类题目生成这些证据；不会自动给分，最终分数仍由规则或教师确认。"
                   />
                 ) : null}
-                <ResponsiveTable<RubricPoint> rowKey="id" dataSource={rubricPoints} columns={rubricColumns} pagination={false} size="small" />
+                <div className="paper-rubric-points">
+                  {rubricPoints.map((point, index) => (
+                    <div className="paper-rubric-point" key={`${point.id}-${index}`}>
+                      <div className="paper-rubric-point-heading">
+                        <strong>采分点 {index + 1}</strong>
+                        <Button danger size="small" aria-label={`删除采分点 ${index + 1}`} icon={<Trash2 size={14} />} disabled={questionDisabled || rubricPoints.length <= 1} onClick={() => removePoint(index)}>删除</Button>
+                      </div>
+                      <label className="paper-rubric-description">
+                        <span>得分条件</span>
+                        <Input.TextArea value={point.description} disabled={questionDisabled} autoSize={{ minRows: 2, maxRows: 5 }} placeholder="描述学生需要完成的数学步骤或结果" onChange={(event) => updatePoint(index, { description: event.target.value })} />
+                      </label>
+                      <div className="paper-rubric-point-fields">
+                        <label><span>分值</span><InputNumber value={point.score} disabled={questionDisabled} min={0} precision={1} className="full-width-control" onChange={(value) => updatePoint(index, { score: Number(value ?? 0) })} /></label>
+                        <label><span>必需</span><Switch checked={point.required} disabled={questionDisabled} onChange={(checked) => updatePoint(index, { required: checked })} /></label>
+                      </div>
+                      {showFormulaEvidence ? <details className="paper-rubric-evidence">
+                        <summary>识别证据（仅供教师参考）{point.evidence_requirements?.length ? ` · ${point.evidence_requirements.length} 项` : ""}</summary>
+                        {(point.evidence_requirements ?? []).map((requirement, requirementIndex) => (
+                          <div className="paper-rubric-evidence-row" key={`${requirement.type}-${requirementIndex}`}>
+                            <Select value={requirement.type} options={formulaEvidenceOptions} disabled={questionDisabled} className="rubric-evidence-type-select" onChange={(type: RubricEvidenceRequirement["type"]) => updateEvidenceRequirement(index, requirementIndex, { type, target: type === "concept" || type === "unit" || type === "domain" ? requirement.target ?? "" : undefined, minimum: undefined, children: undefined })} />
+                            {requirement.type === "concept" || requirement.type === "unit" || requirement.type === "domain" ? <Input value={requirement.target} disabled={questionDisabled} placeholder={requirement.type === "concept" ? "例如：配方法" : requirement.type === "unit" ? "例如：m/s" : "例如：x ≥ 0"} className="rubric-evidence-target-input" onChange={(event) => updateEvidenceRequirement(index, requirementIndex, { target: event.target.value })} /> : null}
+                            <Button type="text" danger size="small" aria-label="删除识别证据" disabled={questionDisabled} icon={<Trash2 size={14} />} onClick={() => removeEvidenceRequirement(index, requirementIndex)} />
+                          </div>
+                        ))}
+                        <Button type="link" size="small" icon={<Plus size={14} />} disabled={questionDisabled} onClick={() => addEvidenceRequirement(index)}>添加识别证据</Button>
+                      </details> : null}
+                    </div>
+                  ))}
+                </div>
                 <details className="paper-advanced-settings"><summary>高级评分数据</summary><div className="form-grid rubric-json-grid">
                   <label>
                     <span>扣分点（JSON 格式，选填）</span>
@@ -585,7 +537,8 @@ export function PaperRubricPage({
                   </label>
                 </div></details>
               </div>}
-            </section>
+              </> : null}
+            </section>}
           </section> : null}
         </>
       )}

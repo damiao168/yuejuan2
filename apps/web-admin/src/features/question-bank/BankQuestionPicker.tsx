@@ -83,6 +83,7 @@ export function BankQuestionPicker({
 				number,
 				order,
 			});
+			// 响应未确定时沿用原幂等键和考试修订号重试；只有重新选择内容或服务端明确冲突，才创建新请求。
 			if (pending.current?.fingerprint !== fingerprint) {
 				const latest = await getExam(examId);
 				pending.current = {

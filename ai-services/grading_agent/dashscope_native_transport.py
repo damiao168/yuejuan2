@@ -154,6 +154,7 @@ class DashScopeNativeTransportSeam:
                 self._log("succeeded", path, attempt + 1)
                 return result
         finally:
+            # 仅清除此 seam 持有的可变请求缓冲，不声称能擦除调用方对象或序列化临时副本。
             body[:] = b"\x00" * len(body)
             body.clear()
         raise AgentError("internal_error", "native transport seam ended unexpectedly", status=500)

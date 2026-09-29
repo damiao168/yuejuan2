@@ -31,6 +31,7 @@ func (s *MemoryStore) Begin(_ context.Context, input BeginInput) (Record, bool, 
 	key := memoryKey(input)
 	if existing, ok := s.records[key]; ok {
 		expired := !time.Now().UTC().Before(existing.expiresAt)
+		// 可恢复命令即使超过缓存期限，也必须保留处理中请求的指纹，防止换正文接管。
 		if expired && (existing.record.State == "completed" || !input.AllowTakeover) {
 			delete(s.records, key)
 		} else {

@@ -16,7 +16,8 @@ type CorrectionOperation struct {
 	Payload  map[string]any `json:"payload"`
 }
 type CreateCorrectionInput struct {
-	ExpectedArtifactVersion    int64                 `json:"expected_artifact_version"`
+	ExpectedArtifactVersion int64 `json:"expected_artifact_version"`
+	// nil 不校验修订号；0 表示只能在尚无教师修订时保存。编辑器应提交读到的修订号以发现并发冲突。
 	ExpectedCorrectionRevision *int64                `json:"expected_correction_revision,omitempty"`
 	Operations                 []CorrectionOperation `json:"operations"`
 	CorrectedContract          CreateArtifactInput   `json:"corrected_contract"`
@@ -87,6 +88,7 @@ func (s *MemoryCorrectionStore) CreateCorrection(ctx context.Context, tenantID, 
 	if err != nil {
 		return Correction{}, err
 	}
+	// 修订只能针对当前版本，并保留原始题块、快照、输入哈希和引擎绑定；否则返回冲突而不是改写历史。
 	if !artifact.IsCurrent || artifact.Version != input.ExpectedArtifactVersion || !correctionMatchesArtifact(input.CorrectedContract, artifact) {
 		return Correction{}, ErrRevisionConflict
 	}
@@ -166,8 +168,8 @@ func correctionMatchesArtifact(contract CreateArtifactInput, artifact Artifact) 
 		contract.EngineVersion == artifact.EngineVersion
 }
 
-// ResolveEffectiveArtifact is the single projection boundary for mathematical
-// evidence. Callers must not independently interpret the correction log.
+// ResolveEffectiveArtifact 保留原始识别记录，并另行返回应用最新教师修订后的内容。
+// 每次修订都保存完整内容，读取时直接选最新版本，不逐条重放操作日志。
 func ResolveEffectiveArtifact(ctx context.Context, artifacts Store, corrections CorrectionStore, tenantID, answerSegmentID string) (EffectiveArtifact, error) {
 	base, err := artifacts.GetLatestArtifact(ctx, tenantID, answerSegmentID)
 	if err != nil {

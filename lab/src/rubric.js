@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { validateRubric } from "./schemas/gradingSchema.js";
 
+// 只排序对象键，保留量规点数组顺序；哈希不受对象键写入顺序影响。
 function stableSort(value) {
   if (Array.isArray(value)) return value.map(stableSort);
   if (value && typeof value === "object") {

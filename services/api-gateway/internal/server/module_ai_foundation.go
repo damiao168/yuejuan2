@@ -26,6 +26,7 @@ type AIFoundation struct {
 	DisagreementHandler      *aidisagreement.Handler
 }
 
+// 评估先于校准创建，校准服务因此能读取同一份评估证据；Eligibility 是可选能力，缺失时路由不会注册对应接口。
 func NewAIFoundation(stores AIFoundationStores) *AIFoundation {
 	gradingEvaluationService := gradingevaluation.NewService(stores.GradingEvaluation)
 	modelCalibrationService := modelcalibration.NewService(stores.ModelCalibration, modelcalibration.NewEvaluationReader(gradingEvaluationService))

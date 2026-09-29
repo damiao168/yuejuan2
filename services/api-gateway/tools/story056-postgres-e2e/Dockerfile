@@ -1,3 +1,4 @@
+# 镜像入口运行 internal/server 包的测试，未按 STORY-056 名称筛选。
 FROM golang:1.26-alpine
 
 WORKDIR /src

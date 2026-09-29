@@ -30,8 +30,8 @@ type memoryTaskReference struct {
 	submissionID, answerSegmentID, submissionPageID string
 }
 
-// SetTaskReference and SetSubmissionPublished seed dependencies owned by other
-// domains when MemoryStore is used by an integrated in-memory server or tests.
+// 集成内存服务或测试通过这两个方法注入其他领域维护的任务关联和发布状态；
+// 生产数据源仍由对应领域的存储实现提供。
 func (s *MemoryStore) SetTaskReference(tenantID, taskID, submissionID, answerSegmentID, submissionPageID string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -44,10 +44,8 @@ func (s *MemoryStore) SetSubmissionPublished(tenantID, submissionID string, publ
 	s.published[memoryKey(tenantID, submissionID)] = published
 }
 
-// SetStudentQuestionAnnotations is an in-memory fixture seam for the
-// immutable release projection that the PostgreSQL implementation joins at
-// read time. It accepts internal annotations but persists only the safe DTO,
-// so unit/router tests cannot accidentally make a private annotation visible.
+// 测试夹具只保存学生安全 DTO，模拟 PostgreSQL 在发布投影上的查询结果；
+// 即使传入私有批注，也不会被学生查询重新暴露。
 func (s *MemoryStore) SetStudentQuestionAnnotations(tenantID, examID, studentID, questionID string, annotations []Annotation) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -62,6 +60,8 @@ func (s *MemoryStore) CreateAnnotation(_ context.Context, tenantID, reviewTaskID
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	now := time.Now().UTC()
+	// 集成夹具未注入任务关联时，用任务 ID 占位，保持内存实现可独立测试；
+	// PostgreSQL 实现则要求真实任务和答案段存在，不会采用此回退。
 	reference, ok := s.taskRefs[memoryKey(tenantID, reviewTaskID)]
 	if !ok {
 		reference = memoryTaskReference{reviewTaskID, reviewTaskID, reviewTaskID}
@@ -77,6 +77,7 @@ func (s *MemoryStore) CreateAnnotation(_ context.Context, tenantID, reviewTaskID
 	return cloneAnnotation(item), nil
 }
 
+// 学生只能看到已发布提交中的公开批注；未发布时返回空集合而不是内部错误。
 func (s *MemoryStore) ListStudentAnnotations(_ context.Context, tenantID, submissionID string) ([]StudentAnnotation, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -128,6 +129,7 @@ func (s *MemoryStore) GetAnnotation(_ context.Context, tenantID, id string) (Ann
 	return cloneAnnotation(item), nil
 }
 
+// 更新必须携带读取时的 revision；并发保存使用旧版本会冲突，避免后写入覆盖先写入。
 func (s *MemoryStore) UpdateAnnotation(_ context.Context, tenantID, id, actorID string, input UpdateAnnotationInput) (Annotation, error) {
 	normalized := normalizeAnnotationInput(CreateAnnotationInput{
 		Type: input.Type, Geometry: input.Geometry, Payload: input.Payload,
@@ -154,6 +156,7 @@ func (s *MemoryStore) UpdateAnnotation(_ context.Context, tenantID, id, actorID 
 	return cloneAnnotation(item), nil
 }
 
+// 删除也使用 expected_revision 做并发校验，避免把别人刚更新的批注误删。
 func (s *MemoryStore) DeleteAnnotation(_ context.Context, tenantID, id, _ string, expectedRevision int64) error {
 	if tenantID == "" || id == "" || expectedRevision <= 0 {
 		return ErrInvalidInput
@@ -192,6 +195,7 @@ func (s *MemoryStore) CreateCommentTemplate(_ context.Context, tenantID, actorID
 	return item, nil
 }
 
+// 模板按租户和拥有者隔离，并按使用次数降序返回，便于前端优先展示常用快捷语句。
 func (s *MemoryStore) ListCommentTemplates(_ context.Context, tenantID, ownerID string) ([]CommentTemplate, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -263,6 +267,7 @@ func (s *MemoryStore) DeleteCommentTemplate(_ context.Context, tenantID, ownerID
 	return nil
 }
 
+// 使用快捷语句和 usage_count 更新放在同一把锁内，列表排序不会看到半更新状态。
 func (s *MemoryStore) UseCommentTemplate(_ context.Context, tenantID, ownerID, shortcut string) (CommentTemplate, error) {
 	_, _, shortcut = normalizeTemplate("", "", shortcut)
 	s.mu.Lock()

@@ -73,6 +73,7 @@ func (s *PostgresStore) ApplyRegistrationCorrection(ctx context.Context, tenantI
 	if err != nil {
 		return RegistrationCorrection{}, mapNotFound(err)
 	}
+	// 先保存原页状态和切片快照，再在同一事务中替换配准结果，供显式撤销恢复。
 	var segmentRaw []byte
 	err = tx.QueryRowContext(ctx, `SELECT COALESCE(jsonb_agg(jsonb_build_object('submission_id',submission_id::text,'submission_page_id',submission_page_id::text,'question_id',question_id::text,'question_no',question_no,'bbox',bbox,'source',source,'status',status,'template_id',COALESCE(template_id::text,''),'template_content_hash',COALESCE(template_content_hash,''),'registration_run_id',COALESCE(registration_run_id::text,''),'normalized_bbox',COALESCE(normalized_bbox,'{}'),'pixel_bbox',COALESCE(pixel_bbox,'{}'),'crop_file_asset_id',COALESCE(crop_file_asset_id::text,''),'crop_sha256',COALESCE(crop_sha256,''),'question_version',COALESCE(question_version,1),'processing_status',processing_status,'confidence',COALESCE(confidence,0))) FILTER(WHERE id IS NOT NULL),'[]') FROM answer_segment WHERE tenant_id=$1 AND submission_id=$2::uuid AND submission_page_id=$3::uuid AND deleted_at IS NULL`, tenantID, submissionID, submissionPageID).Scan(&segmentRaw)
 	if err != nil {
@@ -152,6 +153,7 @@ func (s *PostgresStore) UndoRegistrationCorrection(ctx context.Context, tenantID
 	if err = ensureBatchWritableTx(ctx, tx, tenantID, batchID); err != nil {
 		return RegistrationCorrection{}, err
 	}
+	// 只允许撤销紧接本次应用的页版本，防止覆盖应用之后其他人的修改。
 	if pageRevision != current.SourcePageRevision+1 {
 		return RegistrationCorrection{}, ErrConflict
 	}

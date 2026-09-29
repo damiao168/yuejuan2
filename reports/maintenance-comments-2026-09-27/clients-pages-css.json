@@ -1,0 +1,455 @@
+{
+  "scope": "All apps CSS and web-admin pages TypeScript/TSX",
+  "files": [
+    {
+      "path": "apps/desktop-client/src/experience.css",
+      "status": "self_explanatory",
+      "reason": "常规字体、触达尺寸和窄屏样式覆盖，无额外隐含规则"
+    },
+    {
+      "path": "apps/desktop-client/src/styles.css",
+      "status": "self_explanatory",
+      "reason": "桌面采集/离线工作区栅格、预览contain及窄屏单列规则清楚，无需复述视觉属性。"
+    },
+    {
+      "path": "apps/student-portal/src/experience.css",
+      "status": "annotated",
+      "reason": "说明移动表格依赖 data-label 的组件协作"
+    },
+    {
+      "path": "apps/student-portal/src/styles.css",
+      "status": "annotated",
+      "reason": "说明整卷图片与批注共享百分比坐标容器；审读移动粘滞首列、响应式覆盖与减少动画规则。"
+    },
+    {
+      "path": "apps/web-admin/src/components/features/review-annotation/reviewAnnotations.css",
+      "status": "annotated",
+      "reason": "说明覆盖层和标记的pointer-events分工，保护空白区域绘制交互。"
+    },
+    {
+      "path": "apps/web-admin/src/experience.css",
+      "status": "annotated",
+      "reason": "说明容器查询依据工作区可用宽度重排，保持复杂工作区可用。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/exam-create.css",
+      "status": "annotated",
+      "reason": "说明移动底部操作条与正文提交区互斥，保留现有线性表单层叠说明。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/grading-workbench.css",
+      "status": "existing_sufficient",
+      "reason": "文件头已有功能范围说明，样式分区命名清楚，无需重复补注释。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/history-question-importer.css",
+      "status": "self_explanatory",
+      "reason": "导入控件网格、内容换行和移动列收敛为常规响应式规则。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/question-bank.css",
+      "status": "self_explanatory",
+      "reason": "题库左右检查器、字段栅格与断点收敛规则直接清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ActivationPage.tsx",
+      "status": "annotated",
+      "reason": "说明一次性激活令牌保留于组件状态并清理地址栏查询串。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/AdminGradingOperationsPage.test.ts",
+      "status": "self_explanatory",
+      "reason": "状态集合测试完整表达管理页只包含阅卷与复核考试。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/AdminGradingOperationsPage.tsx",
+      "status": "annotated",
+      "reason": "说明各考试进度独立降级及404未生成任务的区别。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx",
+      "status": "annotated",
+      "reason": "说明锁定差分模板和校准能力边界；审读页面归一化坐标、模板绑定、盲标展示及打印包入口。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/AppealCenterPage.tsx",
+      "status": "annotated",
+      "reason": "说明匿名复核身份数据按能力加载，复核建议与管理员正式结论在各自提交接口区分。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ArbitrationPage.tsx",
+      "status": "annotated",
+      "reason": "说明深链补取后的范围核对与独立请求序号；审读分派/提交revision、材料缺失与最终分反馈。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ArbitrationPanels.tsx",
+      "status": "self_explanatory",
+      "reason": "展示组件显式检查建议数值、缺失评分标准和审计状态，不承诺建议写入成绩。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/arbitrationPresentation.model.ts",
+      "status": "self_explanatory",
+      "reason": "纯展示格式和待办状态谓词可直接理解。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/AuditLogPage.tsx",
+      "status": "annotated",
+      "reason": "说明界面脱敏兜底边界和导出与本地关键字筛选的不同范围；审读分页及审计详情。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/CaptureBatchPage.tsx",
+      "status": "annotated",
+      "reason": "说明批次创建恢复必须复用原载荷/幂等键；审读质检放行、重开、预览代次和处理状态。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/DashboardPage.tsx",
+      "status": "self_explanatory",
+      "reason": "平台/学校分支、刷新保留旧数据以及警告和阻断入口在实现与提示中直接明确。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ExamManagementPage.tsx",
+      "status": "annotated",
+      "reason": "说明通用状态推进绕开的准备/采集/发布边界；审读聚合考试选择、编辑revision和归档。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ExamPreparationPage.test.ts",
+      "status": "self_explanatory",
+      "reason": "测试直接说明步骤顺序、未知section回退和跨年级勾选保留。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+      "status": "annotated",
+      "reason": "说明班级分组选择合并及请求版本/考试身份双重隔离；审读准备确认和导入状态入口。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ExamWorkspacePage.tsx",
+      "status": "self_explanatory",
+      "reason": "查询与错误/加载状态到布局的组合直接清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/GradingWorkbenchPage.tsx",
+      "status": "existing_sufficient",
+      "reason": "现有说明准确定位路由组合层和feature工作区分工。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/IdentityLandingPage.tsx",
+      "status": "self_explanatory",
+      "reason": "角色落地提示及受配置控制的学生入口清楚，无隐含状态流程。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/learningReports.model.ts",
+      "status": "annotated",
+      "reason": "说明跨班知识点得分权重及错误线索两种来源的整体回退。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/LearningReportsPage.tsx",
+      "status": "annotated",
+      "reason": "说明不可用质量指标不绘制为0；审读报告请求代次、跨班数据回退和导出。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/LoginPage.tsx",
+      "status": "annotated",
+      "reason": "说明微信轮询代次淘汰、二维码已消费时通过当前会话恢复。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ModulePage.tsx",
+      "status": "self_explanatory",
+      "reason": "未开放模块及可选替代路由展示直接清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/OrganizationSetupPage.tsx",
+      "status": "annotated",
+      "reason": "说明初始进度定位只执行一次；审读CSV映射、逐步保存及初始化完成判据。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/PanelModelBindingsSection.tsx",
+      "status": "annotated",
+      "reason": "说明删除模型后允许停用原绑定；审读角色强度、不同模型、结构化检测和范围切换guard。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/PaperRubricPage.tsx",
+      "status": "annotated",
+      "reason": "说明共用题目刷新与三个草稿区保存互斥；审读候选/正式题目、锁定和固定规则展示边界。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/PlatformGettingStartedPage.tsx",
+      "status": "self_explanatory",
+      "reason": "缺失检查保守标unavailable；首次与刷新错误显示已由代码和提示明确。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/PlatformModelConfigPage.tsx",
+      "status": "annotated",
+      "reason": "说明学校切换请求代次隔离；审读供应商凭据复用、默认模型检测和角色绑定分离。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/PlatformSchoolsPage.tsx",
+      "status": "annotated",
+      "reason": "说明学校整体启停与管理员再次验证的执行边界。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/QualityDashboardPage.tsx",
+      "status": "annotated",
+      "reason": "说明回标筛选预览代次与范围哈希；审读盲测、质量事件、分页与正式复评交接边界。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/RecoveryPage.tsx",
+      "status": "annotated",
+      "reason": "说明恢复令牌清理URL后仍用于本次提交，避免误把清理当作丢失令牌。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/school-ai-chat.css",
+      "status": "annotated",
+      "reason": "说明流式聊天关闭浏览器锚定由组件管理底部跟随。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/schoolAiChatMessages.test.ts",
+      "status": "self_explanatory",
+      "reason": "中断仅推理与部分答案测试准确表达界面保留和模型请求过滤的不同结果。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/schoolAiChatMessages.ts",
+      "status": "annotated",
+      "reason": "说明中断推理保留展示但不作为空助手消息进入后续模型上下文。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/SchoolAIChatPage.tsx",
+      "status": "annotated",
+      "reason": "说明公共电脑不落盘、个人历史去除附件正文和同步ref并发限流；审读PDF文本读取、流式中断与消息恢复。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ScoreManagementPage.tsx",
+      "status": "annotated",
+      "reason": "说明正式发布再次验证与取消分支；审读名册缺考、质量门禁、分页成绩和版本化复评入口。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/SessionManagementPage.tsx",
+      "status": "self_explanatory",
+      "reason": "撤销当前会话、全部退出和修改密码后的登录状态转换在条件与提示中明确。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/StudentManagementPage.tsx",
+      "status": "annotated",
+      "reason": "说明部分导入后服务端错误行号须映射回原CSV；审读分页、年级班级筛选与状态变更。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/SubjectiveGradingBatchPage.tsx",
+      "status": "annotated",
+      "reason": "说明入队先恢复既有命令结果；审读本地待确认批次与可见性轮询。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/SubmissionCapturePage.tsx",
+      "status": "annotated",
+      "reason": "说明已持久化页面与后续处理失败的结果区分；审读并发请求门、命令门及预览URL释放。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/SystemStatusPage.tsx",
+      "status": "self_explanatory",
+      "reason": "服务状态映射、心跳阈值单位、版本差异和日志隐私展示均由字段与提示清楚表达。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/TeacherDashboardPage.tsx",
+      "status": "annotated",
+      "reason": "说明任务接口独立降级，统计基于各接口实际返回任务。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/answer-sheet-template-calibration.css",
+      "status": "self_explanatory",
+      "reason": "标定指标、可滚动裁剪及换行证据展示规则直接清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/appeals-workspace.css",
+      "status": "self_explanatory",
+      "reason": "申诉三栏、粘滞操作栏和证据换行规则直接清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/appeals.css",
+      "status": "existing_sufficient",
+      "reason": "已有说明明确队列与聚焦案件布局，审查证据和决策面板重排可读。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/arbitration.css",
+      "status": "self_explanatory",
+      "reason": "仲裁列表、证据滚动区与粘滞裁决栏布局清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/audit-system.css",
+      "status": "self_explanatory",
+      "reason": "审计详情换行、服务状态指标与窄屏边框恢复规则直接清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/capture-core.css",
+      "status": "self_explanatory",
+      "reason": "批次列表、工作区和页面预览在窄屏改单列，规则直接可读。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/capture-matching.css",
+      "status": "self_explanatory",
+      "reason": "匹配三栏及异常行在窄屏改纵向，布局边界清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/capture.css",
+      "status": "existing_sufficient",
+      "reason": "现有说明定位质检工作区；热区透传事件、减少动画时恢复opacity及容器查询规则直接可读。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/correction.css",
+      "status": "annotated",
+      "reason": "说明窄屏隐藏四点几何编辑，保留结果与移动提示。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/dashboard-operations.css",
+      "status": "existing_sufficient",
+      "reason": "已有说明定位学校运营分区；表格宽度与移动指标栅格清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/dashboard-workbench.css",
+      "status": "existing_sufficient",
+      "reason": "已有说明定位学校操作工作台；阶段轨道、侧栏重排与窄屏动作可达性清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/dashboard.css",
+      "status": "self_explanatory",
+      "reason": "工作台任务层叠覆盖、TOTP对话框视口滚动与安全码可选文本规则直接清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/exam-management.css",
+      "status": "existing_sufficient",
+      "reason": "现有说明解释侧栏占宽后提前堆叠成绩工作区；审读响应式表格与移动控件覆盖。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/exam-preparation.css",
+      "status": "annotated",
+      "reason": "说明模板画布图片填充与归一化坐标一致；审读题框/选项指针事件及模板检查器布局。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/exam-setup.css",
+      "status": "self_explanatory",
+      "reason": "初始化侧栏和考试上下文栅格、仅导航Tabs隐藏内容区规则直接清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/exam.css",
+      "status": "existing_sufficient",
+      "reason": "已有说明区分考试上下文、局部导航与单表单工作面，断点转横向导航可读。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/gold-paper.css",
+      "status": "self_explanatory",
+      "reason": "金标和回评图片使用contain显示、窄屏单列等规则直接可读。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/immersive.css",
+      "status": "existing_sufficient",
+      "reason": "现有注释解释短桌面改文档流以保证动作可达、移动顶栏不能继承堆叠布局，准确充分。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/member-management.css",
+      "status": "annotated",
+      "reason": "补充长试卷content-visibility与预估块高目的；审读成员列表和KaTeX横向滚动、打印可见规则。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/model-config.css",
+      "status": "self_explanatory",
+      "reason": "模型表格/诊断/绑定网格及不确定进度样式清楚，不修改状态含义。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/model-governance-prompts.css",
+      "status": "self_explanatory",
+      "reason": "提示词查看器仅排版与滚动，保留文本换行，不触碰提示词运行内容。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/model-governance.css",
+      "status": "existing_sufficient",
+      "reason": "已有说明定位治理状态与审查抽屉；窄屏政策/评测区重排清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/onboarding.css",
+      "status": "existing_sufficient",
+      "reason": "现有说明表达首次启用操作清单，断点和减少动画规则清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/paper-editor.css",
+      "status": "self_explanatory",
+      "reason": "资料上传和纯文本预览的容器宽度、滚动与断点规则清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/platform-schools.css",
+      "status": "existing_sufficient",
+      "reason": "现有说明表达列表及检查器布局；列截断、详情与响应式规则清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/print-and-scope.css",
+      "status": "self_explanatory",
+      "reason": "审读打印批次、班级范围、模板检查器及移动重排规则，均属清楚的布局与展示。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/question-appeal.css",
+      "status": "self_explanatory",
+      "reason": "申诉证据区、标记不接管点击及窄屏重排规则直接清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/question-bank.css",
+      "status": "self_explanatory",
+      "reason": "题目与细则编辑双栏、粘滞标题和窄屏释放高度规则清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/reports.css",
+      "status": "self_explanatory",
+      "reason": "报告图表固定容器高、宽屏跨列与指标布局直接清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/scoring-paper-monitor.css",
+      "status": "existing_sufficient",
+      "reason": "既有说明定位整卷与红笔语义；审读绝对定位分数、活动轨道与响应式隐藏。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/scoring.css",
+      "status": "self_explanatory",
+      "reason": "成绩名册、质量门禁、粘滞发布操作和版本工作区布局直接清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/student-management.css",
+      "status": "self_explanatory",
+      "reason": "筛选控件和dense-data-table覆盖具有明确选择器范围，响应式规则直接可读。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/forms.css",
+      "status": "self_explanatory",
+      "reason": "登录表单与扫码展示的层叠规则直接清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/foundation-controls.css",
+      "status": "self_explanatory",
+      "reason": "通用控件字体与登录背景规则直接可读，无需补视觉描述。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/foundation-reset.css",
+      "status": "self_explanatory",
+      "reason": "仅统一border-box盒模型，代码已完整表达。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/foundation.css",
+      "status": "self_explanatory",
+      "reason": "令牌别名、页面尺寸与滚动条状态选择器直接清楚。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/layout-responsive.css",
+      "status": "self_explanatory",
+      "reason": "顶栏、共用电脑遮罩、移动监控行和安全区内边距规则直接可读。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/layout.css",
+      "status": "annotated",
+      "reason": "说明侧栏中部独立滚动、首尾入口保留；审读教师和管理监控布局。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/tables.css",
+      "status": "existing_sufficient",
+      "reason": "现有说明清楚解释普通工作区嵌套滚动到边界交还页面；审读预览和通用表格布局。"
+    },
+    {
+      "path": "apps/web-admin/src/styles.css",
+      "status": "self_explanatory",
+      "reason": "样式导入顺序直接可查；未改层叠顺序，无需重复文件名注释。"
+    }
+  ]
+}

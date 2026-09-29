@@ -107,6 +107,7 @@ def _decode_pdf(
                     estimated_total_pixels += pixels
                     if estimated_total_pixels > max_total_pixels:
                         raise DecodeError("document_pixel_limit_exceeded")
+                    # PDF 尺寸单位为 1/72 英寸；先按目标 DPI 估算像素，再分配渲染位图。
                     bitmap = page.render(scale=scale, rotation=0, rev_byteorder=True)
                     try:
                         images.append(bitmap.to_pil().copy())

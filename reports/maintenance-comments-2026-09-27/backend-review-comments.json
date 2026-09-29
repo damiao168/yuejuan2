@@ -1,0 +1,36 @@
+{
+  "scope": "services/api-gateway/internal/reviewannotation/*.go",
+  "method": "逐文件阅读实现与测试，仅补充权限、发布状态、并发和数据脱敏等维护边界；重复说明合并，不按行堆注释。",
+  "entries": [
+    {
+      "path": "services/api-gateway/internal/reviewannotation/handlers.go",
+      "status": "annotated",
+      "reason": "已核对学生查询身份范围、严格 JSON 解码和模板快捷键使用流程；将重复英文说明合并为简明中文。"
+    },
+    {
+      "path": "services/api-gateway/internal/reviewannotation/store_memory.go",
+      "status": "annotated",
+      "reason": "已说明内存夹具与真实存储的边界、发布前学生不可见、任务关联回退、revision 并发校验及模板租户/拥有者隔离。"
+    },
+    {
+      "path": "services/api-gateway/internal/reviewannotation/store_postgres.go",
+      "status": "annotated",
+      "reason": "已说明任务关联归属由数据库读取、学生公开条件、发布版本题目范围、revision 竞态和 usage_count 原子更新。"
+    },
+    {
+      "path": "services/api-gateway/internal/reviewannotation/types.go",
+      "status": "annotated",
+      "reason": "已说明归一化坐标、学生 DTO 脱敏、发布版本查询范围、输入默认值、快捷键规范化和 map 拷贝边界。"
+    },
+    {
+      "path": "services/api-gateway/internal/reviewannotation/store_test.go",
+      "status": "annotated",
+      "reason": "已标注租户隔离与乐观锁测试意图；其余测试名称和断言已能直接表达行为。"
+    },
+    {
+      "path": "services/api-gateway/internal/reviewannotation/student_handler_test.go",
+      "status": "annotated",
+      "reason": "已标注学生身份范围与 DTO 脱敏回归测试意图。"
+    }
+  ]
+}

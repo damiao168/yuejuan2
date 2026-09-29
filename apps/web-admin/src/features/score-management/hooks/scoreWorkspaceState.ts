@@ -98,6 +98,7 @@ export function scoreWorkspaceReducer(state: ScoreWorkspaceState, action: ScoreW
     case "loadFailed": return state.selectedExamId === action.examId
       ? { ...state, loadingScores: false, error: action.error }
       : state;
+    // 翻页结果还须匹配发起时的游标，重复回包或全量刷新后的旧页不能再次拼入。
     case "appendGrades": {
       if (state.selectedExamId !== action.examId || state.snapshot.examId !== action.examId
         || state.snapshot.gradeNextCursor !== action.expectedCursor) return state;

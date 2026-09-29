@@ -73,6 +73,7 @@ func (r *Reconciler) Run(ctx context.Context, options ReconciliationOptions) (ru
 	if options.Bucket == "" {
 		return run, errors.New("reconciliation bucket is required")
 	}
+	// report 模式仍记录本次巡检与发现，但不修复资产或删除对象。
 	mode := "report"
 	if options.Repair {
 		mode = "repair"
@@ -133,6 +134,7 @@ RETURNING completed_at`, run.ID, status, run.ScannedAssets, run.ScannedObjects,
 		}
 	}
 
+	// 孤立对象只在本次限定数量内检查并记录，不能据此认定整个桶已检查完毕。
 	objects, err := r.objects.List(ctx, options.Bucket, "tenant/", options.ObjectScanLimit)
 	if err != nil {
 		return run, fmt.Errorf("list object storage for reconciliation: %w", err)
@@ -234,6 +236,7 @@ func (r *Reconciler) inspectAsset(ctx context.Context, runID string, asset FileA
 	if errors.Is(err, ErrObjectNotFound) {
 		code := "object_missing"
 		if asset.Lifecycle == LifecyclePendingUpload || asset.Lifecycle == LifecycleUploadFailed {
+			// 上传元数据可能先于对象落盘；等待宽限期，避免把进行中的上传判为遗失。
 			if time.Since(asset.CreatedAt) < options.StaleAfter {
 				return findings, nil
 			}
@@ -285,6 +288,7 @@ func (r *Reconciler) inspectAsset(ctx context.Context, runID string, asset FileA
 		return findings, nil
 	}
 
+	// 只有大小和完整内容哈希都匹配，才允许把已有对象恢复为可继续处理的状态。
 	switch asset.Lifecycle {
 	case LifecyclePendingUpload, LifecycleUploadFailed:
 		repaired := false
@@ -345,6 +349,7 @@ func (r *Reconciler) repairMissing(ctx context.Context, asset FileAsset) (bool, 
 }
 
 func (r *Reconciler) setLifecycle(ctx context.Context, asset FileAsset, status string, errorCode string) (bool, error) {
+	// 巡检可能耗时较长；版本已变化时放弃这次修复，避免覆盖期间的业务写入。
 	result, err := r.db.ExecContext(ctx, `
 UPDATE file_asset
 SET lifecycle_status=$3,revision=revision+1,last_storage_error=NULLIF($4,''),

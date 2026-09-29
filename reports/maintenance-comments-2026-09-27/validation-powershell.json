@@ -1,0 +1,103 @@
+{
+  "checked": 16,
+  "passed": true,
+  "method": "PowerShell parsed non-comment tokens including strings, plus tool directives and parse errors",
+  "files": [
+    {
+      "path": "infra/docker-compose/scripts/backup.ps1",
+      "directives_unchanged": true,
+      "equivalent": true,
+      "errors": []
+    },
+    {
+      "path": "infra/docker-compose/scripts/calibrate-formula-runtime.ps1",
+      "directives_unchanged": true,
+      "equivalent": true,
+      "errors": []
+    },
+    {
+      "path": "infra/docker-compose/scripts/init.ps1",
+      "directives_unchanged": true,
+      "equivalent": true,
+      "errors": []
+    },
+    {
+      "path": "infra/docker-compose/scripts/preflight.ps1",
+      "directives_unchanged": true,
+      "equivalent": true,
+      "errors": []
+    },
+    {
+      "path": "infra/docker-compose/scripts/recovery-common.ps1",
+      "directives_unchanged": true,
+      "equivalent": true,
+      "errors": []
+    },
+    {
+      "path": "infra/docker-compose/scripts/restore-drill.ps1",
+      "directives_unchanged": true,
+      "equivalent": true,
+      "errors": []
+    },
+    {
+      "path": "infra/docker-compose/scripts/restore.ps1",
+      "directives_unchanged": true,
+      "equivalent": true,
+      "errors": []
+    },
+    {
+      "path": "infra/docker-compose/scripts/smoke-test.ps1",
+      "directives_unchanged": true,
+      "equivalent": true,
+      "errors": []
+    },
+    {
+      "path": "infra/docker-compose/scripts/story063-subjective-smoke-test.ps1",
+      "directives_unchanged": true,
+      "equivalent": true,
+      "errors": []
+    },
+    {
+      "path": "infra/docker-compose/scripts/sync-local-grading-model-key.ps1",
+      "directives_unchanged": true,
+      "equivalent": true,
+      "errors": []
+    },
+    {
+      "path": "infra/docker-compose/scripts/verify-backup.ps1",
+      "directives_unchanged": true,
+      "equivalent": true,
+      "errors": []
+    },
+    {
+      "path": "lab/scripts/prepare-jorgpt-dataset.ps1",
+      "directives_unchanged": true,
+      "equivalent": true,
+      "errors": []
+    },
+    {
+      "path": "lab/scripts/prepare-local-runtime.ps1",
+      "directives_unchanged": true,
+      "equivalent": true,
+      "errors": []
+    },
+    {
+      "path": "lab/scripts/start-local-server.ps1",
+      "directives_unchanged": true,
+      "equivalent": true,
+      "errors": []
+    },
+    {
+      "path": "lab/scripts/stop-local-server.ps1",
+      "directives_unchanged": true,
+      "equivalent": true,
+      "errors": []
+    },
+    {
+      "path": "scripts/launch-local.ps1",
+      "directives_unchanged": true,
+      "equivalent": true,
+      "errors": []
+    }
+  ]
+}

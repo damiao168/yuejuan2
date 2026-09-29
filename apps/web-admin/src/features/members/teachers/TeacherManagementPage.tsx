@@ -90,6 +90,7 @@ export function TeacherManagementPage({ currentUser }: { currentUser: SessionUse
     ? `${schoolsNeedingBackup.map((item) => `${item.name}当前有 ${item.count} 位`).join("；")}。建议至少保留 2 位启用的学校管理员，系统不允许停用最后一位。`
     : "当前每所学校均有至少 2 位启用的学校管理员，系统不允许停用最后一位。"}${canCreateAdministrator ? "" : " 如需新增、停用或恢复管理员，请联系机构管理员。"}`;
 
+  // 多角色账号必须所有角色都在可分配范围内，不能只因匹配其中一个低权限角色就允许管理。
   function canManageUser(user: ManagedUser) {
     return user.id !== currentUser.id && user.roles.length > 0 && user.roles.every((role) => assignableRoleCodes.has(role));
   }

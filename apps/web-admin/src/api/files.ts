@@ -59,6 +59,7 @@ export async function uploadFile(file: File, metadata: FileUploadMetadata) {
 }
 
 export function uploadFileWithProgress(file: File, metadata: FileUploadMetadata, onProgress: (percent: number) => void) {
+  // XHR 用于报告请求体上传进度；到达 100% 仍需等待服务端响应后才算上传成功。
   return new Promise<{ file: FileAsset }>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", apiClient.url("/api/v1/files"));

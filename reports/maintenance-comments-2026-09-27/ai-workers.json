@@ -1,0 +1,715 @@
+{
+  "scope": "ai-services Python, Dockerfile and requirements; service workers Python, Dockerfiles and pyproject metadata",
+  "files": [
+    {
+      "path": "ai-services/Dockerfile",
+      "status": "annotated",
+      "reason": "提示词与契约随镜像一起部署，运行时版本校验依赖这些固定资源。"
+    },
+    {
+      "path": "ai-services/grading_agent/__init__.py",
+      "status": "existing_sufficient",
+      "reason": "包用途与两个公共导出直接清晰"
+    },
+    {
+      "path": "ai-services/grading_agent/__main__.py",
+      "status": "self_explanatory",
+      "reason": "标准模块入口仅调用serve，无隐藏约束"
+    },
+    {
+      "path": "ai-services/grading_agent/app.py",
+      "status": "annotated",
+      "reason": "同键同内容只由首个请求执行推理；等待者共享结果或错误，不能再次消耗模型额度。；缓存的是经契约校验的建议副本；调用方修改返回对象不能污染后续幂等重放。"
+    },
+    {
+      "path": "ai-services/grading_agent/app_v2.py",
+      "status": "annotated",
+      "reason": "摘要使用已校验的媒体哈希、尺寸和绑定信息，避免再次复制大块 Base64 图像。；生产数学接口只接受采分点与证据的候选映射，人工复核标志由服务端强制补齐。"
+    },
+    {
+      "path": "ai-services/grading_agent/capabilities.py",
+      "status": "annotated",
+      "reason": "能力表同时限制交付方式和人工复核要求，不能仅凭模型支持题型就允许发布成绩。"
+    },
+    {
+      "path": "ai-services/grading_agent/config.py",
+      "status": "annotated",
+      "reason": "原生协议仅允许固定供应商 HTTPS 根路径；兼容接口不应混用此适配器。"
+    },
+    {
+      "path": "ai-services/grading_agent/contract.py",
+      "status": "annotated",
+      "reason": "只对证据校验后保留的采分点重算建议总分，不采用模型自行报告的总分。；模型自报置信度尚未校准，不能把它转换成可自动放行的可靠度。"
+    },
+    {
+      "path": "ai-services/grading_agent/contract_v2.py",
+      "status": "annotated",
+      "reason": "跨语言绑定统一使用百万分之一页尺寸的整数单位，避免浮点格式差异改变摘要。；每段以 UTF-8 字节长度定界，避免字段拼接产生歧义。"
+    },
+    {
+      "path": "ai-services/grading_agent/dashscope_native_contract.py",
+      "status": "annotated",
+      "reason": "截断或异常结束的内容即使能解成 JSON，也不能当作一次完整的候选响应。"
+    },
+    {
+      "path": "ai-services/grading_agent/dashscope_native_transport.py",
+      "status": "annotated",
+      "reason": "仅清除此 seam 持有的可变请求缓冲，不声称能擦除调用方对象或序列化临时副本。"
+    },
+    {
+      "path": "ai-services/grading_agent/errors.py",
+      "status": "self_explanatory",
+      "reason": "受控错误数据类及payload映射明确，无额外业务分支"
+    },
+    {
+      "path": "ai-services/grading_agent/guardrails.py",
+      "status": "annotated",
+      "reason": "规则命中只提供风险信号；未命中不代表学生文本可信，后续仍按不可信证据处理。"
+    },
+    {
+      "path": "ai-services/grading_agent/managed_model.py",
+      "status": "annotated",
+      "reason": "学校托管模型仅在当前解析请求内生效，同时移除凭据字段，避免进入后续题目内容。"
+    },
+    {
+      "path": "ai-services/grading_agent/math_rubric_draft.py",
+      "status": "annotated",
+      "reason": "建议分值不一致时保留复核问题，不自动重分配，也不把草稿冒充原文评分标准。"
+    },
+    {
+      "path": "ai-services/grading_agent/model.py",
+      "status": "annotated",
+      "reason": "用量保存在请求线程上下文，避免并行 HTTP 请求读取另一请求的供应商统计。；启动时逐文件验证 manifest 哈希；版本名相同也不能接受被悄悄改动的提示词。"
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/__init__.py",
+      "status": "existing_sufficient",
+      "reason": "仅统一导出compact协议组件与常量，包说明明确"
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/anchors.py",
+      "status": "existing_sufficient",
+      "reason": "已有锚点覆盖前提、评分题头来源、原文范围保留及页眉页脚保守过滤详细说明"
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/chunks.py",
+      "status": "annotated",
+      "reason": "文本范围按 Python 字符索引记录为 [start, end)，分片不重置原文偏移。；优先以题号和章节形成逻辑组；超预算的单组仍需拆分，不能无限放大模型上下文。"
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/expand.py",
+      "status": "annotated",
+      "reason": "rNNN 只在当前分片内有效；不存在或重复的短引用直接拒绝，不能猜测相邻分片来源。"
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/layout.py",
+      "status": "annotated",
+      "reason": "跨栏标题把左右栏切成上下段，每段先左后右，不能一次读完整左栏再处理全宽标题。"
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/schema.py",
+      "status": "existing_sufficient",
+      "reason": "已有完整模块说明解释短引用降上下文、恢复权威来源；schema字段直述"
+    },
+    {
+      "path": "ai-services/grading_agent/paper_input.py",
+      "status": "annotated",
+      "reason": "按解码后字节累计整批预算，单页合规不能替代整份导入的总大小限制。"
+    },
+    {
+      "path": "ai-services/grading_agent/paper_parser.py",
+      "status": "annotated",
+      "reason": "先把当前分片短引用恢复为原始来源，再校验；模型不能自行填写可信坐标和文件标识。"
+    },
+    {
+      "path": "ai-services/grading_agent/paper_routing.py",
+      "status": "annotated",
+      "reason": "同一来源的不同分片可能分别是题目和答案；保留 mixed，避免后一个分片覆盖前者。"
+    },
+    {
+      "path": "ai-services/grading_agent/paper_schema.py",
+      "status": "annotated",
+      "reason": "可缺失的事实使用 null 或空数组；schema 约束结构，来源是否真实由 paper_validation 校验。"
+    },
+    {
+      "path": "ai-services/grading_agent/paper_validation.py",
+      "status": "annotated",
+      "reason": "候选可信度不能高于其依赖的最低 OCR 证据可信度。；引用模式由实际输入决定：原图只引用页，OCR 精确匹配块，纯文本使用字符半开区间。"
+    },
+    {
+      "path": "ai-services/grading_agent/paper_visual.py",
+      "status": "annotated",
+      "reason": "OCR 仅参与差异告警，不用 OCR 的文本覆盖原图模型结果。；文件标识与文档序号来自可信输入；视觉模型只负责选择来源与已提供的页码。"
+    },
+    {
+      "path": "ai-services/grading_agent/provider_adapter.py",
+      "status": "existing_sufficient",
+      "reason": "协议与构建白名单已有docstring；延迟导入隔离vendor依赖已有注释"
+    },
+    {
+      "path": "ai-services/grading_agent/server.py",
+      "status": "annotated",
+      "reason": "流式 HTTP 200 只表示连接已建立，只有 result 事件代表完整解析成功。"
+    },
+    {
+      "path": "ai-services/requirements.txt",
+      "status": "self_explanatory",
+      "reason": "固定版本的JSON Schema及传递依赖列表清楚，无需添加解释性元数据。"
+    },
+    {
+      "path": "ai-services/tests/helpers.py",
+      "status": "annotated",
+      "reason": "故意让模型总分与采分点之和不一致，并取消模型自报复核要求，用于验证服务端重新计算及强制复核。"
+    },
+    {
+      "path": "ai-services/tests/test_application.py",
+      "status": "annotated",
+      "reason": "两个线程同时进入同键请求，验证共享一次推理而不只是顺序缓存重放。"
+    },
+    {
+      "path": "ai-services/tests/test_application_v2.py",
+      "status": "annotated",
+      "reason": "两个不同请求各执行一次；fixture seam 的并发上限与同键幂等合并是两条独立规则。"
+    },
+    {
+      "path": "ai-services/tests/test_config.py",
+      "status": "self_explanatory",
+      "reason": "启动配置在清空环境后逐项校验，有限数值、URL 与原生端点边界由测试名和断言完整表达。"
+    },
+    {
+      "path": "ai-services/tests/test_contract.py",
+      "status": "self_explanatory",
+      "reason": "审读路由白名单、证据引用、总分重算及错误类型用例；场景和断言已清楚。"
+    },
+    {
+      "path": "ai-services/tests/test_contract_v2.py",
+      "status": "self_explanatory",
+      "reason": "裁剪哈希、绑定、坐标及无分数响应的契约用例直接清晰。"
+    },
+    {
+      "path": "ai-services/tests/test_dashscope_multimodal_contract.py",
+      "status": "annotated",
+      "reason": "说明单像素合成图仅验证传输契约；其余身份投影、媒体及长度边界用例已清晰。"
+    },
+    {
+      "path": "ai-services/tests/test_dashscope_native_contract.py",
+      "status": "self_explanatory",
+      "reason": "原生请求字段、finish_reason、错误映射及不变性测试名称和断言已清楚。"
+    },
+    {
+      "path": "ai-services/tests/test_dashscope_native_transport.py",
+      "status": "self_explanatory",
+      "reason": "重试次数、超时、严格JSON、受控夹具入口及日志字段均有明确断言，无额外背景需补充。"
+    },
+    {
+      "path": "ai-services/tests/test_http.py",
+      "status": "self_explanatory",
+      "reason": "实际本地HTTP服务配模型替身，鉴权、幂等及流式终止结果场景直接可读。"
+    },
+    {
+      "path": "ai-services/tests/test_managed_model.py",
+      "status": "annotated",
+      "reason": "注明DNS和连接替身仅检验固定IP及重定向调用约束，避免把单测视为实际网络集成验证。"
+    },
+    {
+      "path": "ai-services/tests/test_math_rubric_draft.py",
+      "status": "self_explanatory",
+      "reason": "测试名称完整表达评分草稿需复核、来源锚定、空分值与拒绝编造步骤。"
+    },
+    {
+      "path": "ai-services/tests/test_math_v2_production.py",
+      "status": "self_explanatory",
+      "reason": "模型替身类名称明确，应用和HTTP契约及盲仲裁角色边界由断言表达。"
+    },
+    {
+      "path": "ai-services/tests/test_model.py",
+      "status": "annotated",
+      "reason": "说明双供应商共用无效输出集保护本地校验与重试错误语义一致。"
+    },
+    {
+      "path": "ai-services/tests/test_paper_compact.py",
+      "status": "existing_sufficient",
+      "reason": "已有检测器交错顺序和原OCR不可变说明；分栏、页边内容、评分锚点及部分评分细则用例清楚。"
+    },
+    {
+      "path": "ai-services/tests/test_paper_parser.py",
+      "status": "annotated",
+      "reason": "说明合成视觉字节的验证边界；审读可信来源回填、OCR置信度限制和各候选类型测试。"
+    },
+    {
+      "path": "ai-services/tests/test_provider_adapter.py",
+      "status": "self_explanatory",
+      "reason": "注册白名单、重复及未知适配器拒绝和注入传输测试可直接理解。"
+    },
+    {
+      "path": "services/image-quality-worker/Dockerfile",
+      "status": "annotated",
+      "reason": "固定依赖安装分层与no-deps原因"
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/__init__.py",
+      "status": "existing_sufficient",
+      "reason": "已有包用途说明且无业务逻辑"
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/__main__.py",
+      "status": "self_explanatory",
+      "reason": "异常类型分别控制重新登录与轮询退避，分支及日志已直述行为"
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/api.py",
+      "status": "annotated",
+      "reason": "任务返回URL的同源令牌边界"
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/config.py",
+      "status": "existing_sufficient",
+      "reason": "已有顺序消费只能单任务认领、避免后续租约过期的完整注释"
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/engine.py",
+      "status": "annotated",
+      "reason": "解码前像素上限及纠偏前测量边界"
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/errors.py",
+      "status": "self_explanatory",
+      "reason": "唯一异常类型声明无隐藏业务行为"
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/geometry.py",
+      "status": "annotated",
+      "reason": "分析图与原图像素转换、扩展画布保角"
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/metrics.py",
+      "status": "annotated",
+      "reason": "局部框归一化坐标和A4 DPI估算单位"
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/policy.py",
+      "status": "annotated",
+      "reason": "硬门槛不能被综合质量分抵消"
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/report.py",
+      "status": "annotated",
+      "reason": "EXIF与纠偏齐次矩阵组合顺序"
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/runner.py",
+      "status": "annotated",
+      "reason": "先上传后结果写回与内容哈希绑定"
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/schemas.py",
+      "status": "self_explanatory",
+      "reason": "结果字段与normalized_png的repr禁显声明直接清晰"
+    },
+    {
+      "path": "services/image-quality-worker/pyproject.toml",
+      "status": "self_explanatory",
+      "reason": "已核对Python版本、运行/可选依赖、打包入口及测试目录，常规依赖元数据无需补注释。"
+    },
+    {
+      "path": "services/image-quality-worker/tests/test_api.py",
+      "status": "self_explanatory",
+      "reason": "同源拒绝及心跳payload断言直接体现认证和续约契约"
+    },
+    {
+      "path": "services/image-quality-worker/tests/test_config.py",
+      "status": "self_explanatory",
+      "reason": "用例直接覆盖batch=1、心跳窗口和必填配置"
+    },
+    {
+      "path": "services/image-quality-worker/tests/test_engine.py",
+      "status": "annotated",
+      "reason": "真实角点变换保证而非仅宽高检查"
+    },
+    {
+      "path": "services/image-quality-worker/tests/test_runner.py",
+      "status": "self_explanatory",
+      "reason": "FakeClient逐步断言下载上传与结果协议、尺寸及隐私字段，不需额外复述"
+    },
+    {
+      "path": "services/math-verification-worker/Dockerfile",
+      "status": "annotated",
+      "reason": "注释运行权限及健康地址部署边界"
+    },
+    {
+      "path": "services/math-verification-worker/math_verification_worker/__init__.py",
+      "status": "existing_sufficient",
+      "reason": "仅包说明docstring，现有模块用途充分"
+    },
+    {
+      "path": "services/math-verification-worker/math_verification_worker/__main__.py",
+      "status": "self_explanatory",
+      "reason": "仅调用server.main，无额外业务分支"
+    },
+    {
+      "path": "services/math-verification-worker/math_verification_worker/parser.py",
+      "status": "annotated",
+      "reason": "解释受限语法残留必须拒绝"
+    },
+    {
+      "path": "services/math-verification-worker/math_verification_worker/server.py",
+      "status": "annotated",
+      "reason": "补超时清理预算边界"
+    },
+    {
+      "path": "services/math-verification-worker/math_verification_worker/verifier.py",
+      "status": "annotated",
+      "reason": "说明方程解集与表达式定义域两种认证标准"
+    },
+    {
+      "path": "services/math-verification-worker/pyproject.toml",
+      "status": "self_explanatory",
+      "reason": "已核对Python版本、运行/可选依赖、打包入口及测试目录，常规依赖元数据无需补注释。"
+    },
+    {
+      "path": "services/math-verification-worker/tests/test_parser.py",
+      "status": "self_explanatory",
+      "reason": "用例名、明确AST断言与非法输入参数已解释受限语法"
+    },
+    {
+      "path": "services/math-verification-worker/tests/test_server.py",
+      "status": "self_explanatory",
+      "reason": "单一生产TLS缺失启动拒绝断言，结构直接"
+    },
+    {
+      "path": "services/math-verification-worker/tests/test_timeout.py",
+      "status": "annotated",
+      "reason": "解释大响应必须真实子进程传输"
+    },
+    {
+      "path": "services/math-verification-worker/tests/test_verifier.py",
+      "status": "annotated",
+      "reason": "补原AST变量根式参数化场景保证"
+    },
+    {
+      "path": "services/ocr-worker/Dockerfile",
+      "status": "existing_sufficient",
+      "reason": "已有说明覆盖缓存镜像构建权限、依赖层、惰性公式依赖及非root缓存目录；无需重复。"
+    },
+    {
+      "path": "services/ocr-worker/benchmarks/benchmark_local.py",
+      "status": "annotated",
+      "reason": "说明就绪与预热排除在页面计时外；已有质量缺失和隐私边界说明充分。"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/__init__.py",
+      "status": "self_explanatory",
+      "reason": "包说明直接清晰，无非直观契约。"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/__main__.py",
+      "status": "existing_sufficient",
+      "reason": "已有注释准确说明按队列突发排空后退出进程释放Paddle原生内存；初始化与各运行队列开关清楚。"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/api.py",
+      "status": "annotated",
+      "reason": "说明初始请求同源检查先于附加令牌，租约头与调用方租户参数的区别。"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/config.py",
+      "status": "existing_sufficient",
+      "reason": "已有注释解释顺序处理只能领取一个任务；数值范围、租约及公式M/L限制校验明确。"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/deployment_profile.py",
+      "status": "annotated",
+      "reason": "说明运行库或模型版本变化使旧性能档案失效。"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/engine.py",
+      "status": "annotated",
+      "reason": "说明MKLDNN降级仅适用自动兼容错误，以及四角点到像素xywh的输出契约。"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/formula_calibration.py",
+      "status": "annotated",
+      "reason": "说明单批次仅为输出一致性基准，不提供绝对识别准确率。"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/formula_validation.py",
+      "status": "annotated",
+      "reason": "区分回渲染形态相似性与数学正确性/语义等价。"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/math_layout.py",
+      "status": "annotated",
+      "reason": "说明边缘墨迹最大比例只用于扩裁启发式，避免过度保证完整性。"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/math_runner.py",
+      "status": "annotated",
+      "reason": "说明syntax verified只表明生成AST，数学核验在第二阶段。"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/paper_formula.py",
+      "status": "annotated",
+      "reason": "说明大模型重试范围和保留候选但仍需复核的状态边界。"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/recognition_router.py",
+      "status": "annotated",
+      "reason": "说明同批相同图片去重推理后回填原始输入位置；已有行框分割、CPU兼容说明保留。"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/runner.py",
+      "status": "annotated",
+      "reason": "说明区域坐标还原和进度快照锁不覆盖网络发送。"
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/symbolic_runner.py",
+      "status": "annotated",
+      "reason": "说明人工修订号及证据版本绑定阻止旧任务错写新版证据。"
+    },
+    {
+      "path": "services/ocr-worker/pyproject.toml",
+      "status": "self_explanatory",
+      "reason": "已核对Python版本、运行/可选依赖、打包入口及测试目录，常规依赖元数据无需补注释。"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_api.py",
+      "status": "self_explanatory",
+      "reason": "任务租约头、跨源拒绝与长完成回调超时断言直接可读。"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_benchmark.py",
+      "status": "self_explanatory",
+      "reason": "合成样本和模型替身明确，预热次数、答案不出报告和基线构造契约直接断言。"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_config.py",
+      "status": "self_explanatory",
+      "reason": "租约、顺序领取、性能档案及有限参数用例由名称和断言清楚表达。"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_engine.py",
+      "status": "self_explanatory",
+      "reason": "Paddle返回格式、四角坐标、完整就绪探针和限定MKLDNN降级测试清楚。"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_formula_calibration.py",
+      "status": "self_explanatory",
+      "reason": "模型与时钟均为替身，明确断言无绝对准确率及显式生命周期目标。"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_http_response.py",
+      "status": "self_explanatory",
+      "reason": "有限读取、错误类型及生产URL约束测试名称完整表达场景。"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_main.py",
+      "status": "self_explanatory",
+      "reason": "事件列表直接断言引擎就绪先于登录领取，失败不注册。"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_math_runner.py",
+      "status": "self_explanatory",
+      "reason": "冻结任务输入、归一化坐标、符号服务不可用时保留识别证据用例清楚。"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_paper_formula.py",
+      "status": "annotated",
+      "reason": "说明相同合成图只验证渲染阈值分流；其余结构、裁剪及fallback边界明确。"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_recognition_router.py",
+      "status": "self_explanatory",
+      "reason": "混合区域残余文本、缺模型转复核和缓存去重场景已由替身及断言完整表达。"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_runner.py",
+      "status": "annotated",
+      "reason": "说明用阻塞心跳制造终态竞争；其余ROI、租约失败及错误映射场景名称清楚。"
+    },
+    {
+      "path": "services/ocr-worker/tests/test_symbolic_runner.py",
+      "status": "self_explanatory",
+      "reason": "公式事实来源、阅读顺序不是等价、版本修订绑定和错误重试场景清楚。"
+    },
+    {
+      "path": "services/page-processing-worker/Dockerfile",
+      "status": "existing_sufficient",
+      "reason": "已有说明覆盖自定义镜像构建权限、依赖下载重试与最终非root用户。"
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/__init__.py",
+      "status": "self_explanatory",
+      "reason": "单行包说明足以表达用途。"
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/__main__.py",
+      "status": "annotated",
+      "reason": "说明服务端Retry-After优先于本地退避上限。"
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/api.py",
+      "status": "annotated",
+      "reason": "说明复用网关返回已有资产支持上传成功后的重试。"
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/barcode.py",
+      "status": "annotated",
+      "reason": "限定为条码观察值提取，不承诺码内身份或签名可信。"
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/config.py",
+      "status": "existing_sufficient",
+      "reason": "已有注释说明单任务租约及服务端租期截断边界，参数校验可读。"
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/decoder.py",
+      "status": "annotated",
+      "reason": "说明PDF点单位与DPI换算、先限像素后渲染；已有异常释放图片说明保留。"
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/omr.py",
+      "status": "annotated",
+      "reason": "说明选项比例/像素单位切换与规则置信度并非正确概率。"
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/omr_acceptance.py",
+      "status": "annotated",
+      "reason": "限定合成验收只检验选择与复核分流，避免推广为真实质量。"
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/registration.py",
+      "status": "annotated",
+      "reason": "说明候选间隔、手工点比例到像素转换和coverage面积比的实际定义。"
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/runner.py",
+      "status": "annotated",
+      "reason": "说明考试模板锁不可被候选自动覆盖，以及差分参考必须匹配绑定哈希。"
+    },
+    {
+      "path": "services/page-processing-worker/pyproject.toml",
+      "status": "self_explanatory",
+      "reason": "已核对Python版本、运行/可选依赖、打包入口及测试目录，常规依赖元数据无需补注释。"
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_api.py",
+      "status": "self_explanatory",
+      "reason": "上传重复复用、HTTP错误状态、Retry-After及跨源拒绝场景直接清晰。"
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_barcode.py",
+      "status": "self_explanatory",
+      "reason": "ZXing替身返回值到有界观察结构的断言直接清楚。"
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_config.py",
+      "status": "self_explanatory",
+      "reason": "单任务领取和有限正轮询周期用例名称清楚。"
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_decoder.py",
+      "status": "self_explanatory",
+      "reason": "真实内存合成TIFF/PDF及解码上限、格式嗅探、截断错误测试清楚。"
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_main.py",
+      "status": "self_explanatory",
+      "reason": "启动前凭据、单轮输出及有限退避/Retry-After用例清楚。"
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_omr.py",
+      "status": "self_explanatory",
+      "reason": "合成填涂、空白/多选复核及非法参数拒绝用例直接可读。"
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_omr_acceptance.py",
+      "status": "self_explanatory",
+      "reason": "测试名及调用明确限定合成100例，断言仅覆盖该套件分流。"
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_registration.py",
+      "status": "self_explanatory",
+      "reason": "透视合成图、答案区遮罩、相似模板歧义和非法手工点测试清楚。"
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_runner_heartbeat.py",
+      "status": "existing_sufficient",
+      "reason": "已有说明准确区分首个续租、短暂503与租约丢失、失败回报再次失败及服务端终态校验。"
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_runner_omr.py",
+      "status": "annotated",
+      "reason": "说明一像素参考宽度差制造取整偏差，保护印刷内容与新增填涂区分。"
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_runner_paper_import.py",
+      "status": "self_explanatory",
+      "reason": "直接处理函数用合成图验证资料来源和导入资产归属，无复杂隐含背景。"
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_runner_template_match.py",
+      "status": "self_explanatory",
+      "reason": "合成图与替身验证候选排序及回调契约，名称和断言已清楚。"
+    },
+    {
+      "path": "services/page-processing-worker/tools/evaluate_external_omr.py",
+      "status": "annotated",
+      "reason": "说明固定坐标只适用本评估版式；已有两折参考及输出限制说明充分。"
+    },
+    {
+      "path": "services/page-processing-worker/tools/run_omr_acceptance.py",
+      "status": "self_explanatory",
+      "reason": "简单参数入口写合成报告，无额外维护约束。"
+    },
+    {
+      "path": "services/subjective-grading-worker/Dockerfile",
+      "status": "annotated",
+      "reason": "解释健康标记语义"
+    },
+    {
+      "path": "services/subjective-grading-worker/pyproject.toml",
+      "status": "self_explanatory",
+      "reason": "已核对Python版本、运行/可选依赖、打包入口及测试目录，常规依赖元数据无需补注释。"
+    },
+    {
+      "path": "services/subjective-grading-worker/subjective_grading_worker/__init__.py",
+      "status": "existing_sufficient",
+      "reason": "仅Worker Runtime消费者包说明"
+    },
+    {
+      "path": "services/subjective-grading-worker/subjective_grading_worker/__main__.py",
+      "status": "annotated",
+      "reason": "明确健康更新时间与异常重试关系"
+    },
+    {
+      "path": "services/subjective-grading-worker/subjective_grading_worker/api.py",
+      "status": "annotated",
+      "reason": "解释认证与任务能力双重上下文"
+    },
+    {
+      "path": "services/subjective-grading-worker/subjective_grading_worker/config.py",
+      "status": "existing_sufficient",
+      "reason": "已有750/780/810秒层次预算注释，配置校验集中且清晰"
+    },
+    {
+      "path": "services/subjective-grading-worker/subjective_grading_worker/healthcheck.py",
+      "status": "annotated",
+      "reason": "说明健康标记上下界"
+    },
+    {
+      "path": "services/subjective-grading-worker/subjective_grading_worker/runner.py",
+      "status": "annotated",
+      "reason": "说明长模型调用前后检查租约"
+    },
+    {
+      "path": "services/subjective-grading-worker/tests/test_api_integration.py",
+      "status": "annotated",
+      "reason": "说明协议烟雾测试与模型评估边界"
+    },
+    {
+      "path": "services/subjective-grading-worker/tests/test_worker.py",
+      "status": "annotated",
+      "reason": "解释跨来源任务拒绝场景"
+    }
+  ]
+}

@@ -45,6 +45,7 @@ func NewWorkerCompletionService(store workerCompletionStore, runtime workerCompl
 	return &WorkerCompletionService{store: store, runtime: runtime}
 }
 
+// 完成顺序是成绩幂等写入、租约完成、运行落终态；租约失败时不应把运行标成成功。
 func (s *WorkerCompletionService) Complete(ctx context.Context, tenantID, actorID string, prepared WorkerExecutionContext, input WorkerResultInput, output AdapterOutput) (WorkerCompletionResult, error) {
 	grade, err := s.store.GetGradeByAdapterRequestID(ctx, tenantID, prepared.Run.RequestID)
 	if errors.Is(err, ErrNotFound) {

@@ -327,9 +327,15 @@ INSERT INTO managed_model_api_config(
  credential_ciphertext,credential_nonce,status,created_by
 ) VALUES($1::uuid,$2::uuid,$3,'Duplicate synthetic model','openai_compatible',
  'https://example.invalid/v1','synthetic-model-a','synthetic-model-a',
- decode(repeat('00',24),'hex'),decode(repeat('00',12),'hex'),'active',$4::uuid)`,
-		uuid.NewString(), fixture.TenantID, sharedProvider, fixture.AdminID); err == nil {
-		t.Fatal("same school/provider/model was not rejected after multi-model migration")
+ decode(repeat('01',24),'hex'),decode(repeat('01',12),'hex'),'active',$4::uuid)`,
+		uuid.NewString(), fixture.TenantID, sharedProvider, fixture.AdminID); err != nil {
+		t.Fatalf("same school/provider/model must allow independent credentials after migration 000176: %v", err)
+	}
+	var configCount, credentialCount int
+	if err := db.QueryRowContext(ctx, `SELECT count(*), count(DISTINCT credential_ciphertext)
+FROM managed_model_api_config WHERE tenant_id=$1::uuid AND provider_key=$2 AND model_name='synthetic-model-a'`,
+		fixture.TenantID, sharedProvider).Scan(&configCount, &credentialCount); err != nil || configCount != 2 || credentialCount != 2 {
+		t.Fatalf("independent model credentials did not round-trip: configs=%d credentials=%d err=%v", configCount, credentialCount, err)
 	}
 	roleStore := modelgovernance.NewPostgresStore(db, nil)
 	for index, role := range []string{modelgovernance.ModelRolePrimaryA, modelgovernance.ModelRolePrimaryB, modelgovernance.ModelRoleArbiter} {

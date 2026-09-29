@@ -21,6 +21,7 @@ func (s *PostgresStore) CreatePaper(ctx context.Context, tenantID string, examID
 	if err := tx.QueryRowContext(ctx, `SELECT gen_random_uuid()::text`).Scan(&paperID); err != nil {
 		return Paper{}, err
 	}
+	// 引用已上传资产时使用库内元数据，并拒绝关联其他考试的文件；文件归属与试卷版本同事务写入。
 	fileID := input.FileAssetID
 	fileInput := input.File
 	if fileID != "" {

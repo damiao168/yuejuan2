@@ -101,6 +101,7 @@ RETURNING id::text, tenant_id::text, submission_id::text, submission_page_id::te
 	return runs, nil
 }
 
+// PostgreSQL 领取使用行锁和租约 token，多个 Worker 并发时同一运行只能被一个租约持有。
 func (s *PostgresStore) Claim(ctx context.Context, tenantID string, input ClaimInput) ([]ClaimedJob, error) {
 	input = normalizeClaimInput(input)
 	tx, err := s.db.BeginTx(ctx, nil)

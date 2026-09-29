@@ -150,6 +150,7 @@ FOR UPDATE
 	if item.Revision != input.ExpectedRevision {
 		return Appeal{}, ErrRevisionConflict
 	}
+	// 已参与这道题原始人工批阅的教师不能再受派复核同一成绩。
 	if item.FinalGradeID != "" {
 		var participated bool
 		if err := tx.QueryRowContext(ctx, `
@@ -451,6 +452,7 @@ FOR UPDATE
 	return out, nil
 }
 
+// 调分流水、单题分数和总分增量共用裁决事务；任何一步失败都不能留下部分调分。
 func (s *PostgresStore) applyAdjustmentTx(ctx context.Context, tx *sql.Tx, tenantID string, item Appeal, final finalGradeRef, actorID string, reason string, adjustedScore float64) (ScoreAdjustment, error) {
 	previous := final.Score
 	delta := adjustedScore - previous
@@ -515,6 +517,7 @@ WHERE e.tenant_id = $1 AND e.id::text = $2 AND sg.id::text = $3
 	return out, nil
 }
 
+// 旧流程展示当前成绩与最近批阅证据，不是成绩发布时冻结的证据快照。
 func (s *PostgresStore) loadEvidence(ctx context.Context, tenantID string, finalGradeID string) (AppealEvidence, error) {
 	var ev AppealEvidence
 	var answerSegmentID string

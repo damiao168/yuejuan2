@@ -45,6 +45,7 @@ type Service struct{ deps Dependencies }
 
 func NewService(deps Dependencies) *Service { return &Service{deps: deps} }
 
+// Readiness 按角色选择平台或学校视角；其他角色直接拒绝，避免把管理状态泄露给普通用户。
 func (s *Service) Readiness(ctx context.Context, actor Actor) (OnboardingReadiness, error) {
 	if hasRole(actor.Roles, "platform_admin") {
 		return s.platformReadiness(ctx, actor), nil
@@ -66,6 +67,7 @@ func (s *Service) platformReadiness(ctx context.Context, actor Actor) Onboarding
 		checks = append(checks, ReadinessCheck{Key: "system_core", State: CheckAction, Severity: SeverityBlocking, Title: "系统关键依赖需要处理", Description: "请先在系统运维中检查关键服务。", ActionCode: "check_system", ActionPath: "/system/status"})
 	}
 
+	// 空状态只兼容历史调用；明确的非 active 状态必须阻断平台初始化。
 	adminReady := strings.EqualFold(strings.TrimSpace(actor.Status), "active") || strings.TrimSpace(actor.Status) == ""
 	checks = append(checks, booleanCheck("platform_admin", adminReady, SeverityBlocking, "平台管理员有效", "平台管理员账号需要恢复为可用状态。", "check_account", "/account/sessions"))
 
@@ -170,6 +172,7 @@ func unavailableCheck(key string, severity Severity, title, actionPath string) R
 
 func summarize(scope string, checks []ReadinessCheck) OnboardingReadiness {
 	result := OnboardingReadiness{Scope: scope, ReadyForUse: true, Checks: checks}
+	// 只有 blocking 检查计入 ReadyForUse；recommended 检查只产生提示，不阻断基础使用。
 	for _, check := range checks {
 		if check.Severity == SeverityBlocking {
 			result.TotalRequired++
@@ -180,6 +183,7 @@ func summarize(scope string, checks []ReadinessCheck) OnboardingReadiness {
 			}
 		}
 	}
+	// NextAction 优先选择第一个可执行检查，前端据此把管理员带到最短处理路径。
 	for _, check := range checks {
 		if check.State != CheckReady && check.ActionCode != "" && check.ActionPath != "" && (check.Severity == SeverityBlocking || result.ReadyForUse) {
 			result.NextAction = &NextAction{Code: check.ActionCode, Path: check.ActionPath}

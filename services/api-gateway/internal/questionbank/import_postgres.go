@@ -78,6 +78,7 @@ WHERE tenant_id=$1::uuid AND id=$2::uuid AND ($3 OR exam_id::text=ANY($4::text[]
 		return prepared, ErrSourceUnavailable
 	}
 	var frozen frozenImportSnapshot
+	// 题目、评分快照和哈希必须来自同一份冻结记录，不能用考试当前配置替换缺失的历史依据。
 	if err = json.Unmarshal(raw, &frozen); err != nil || frozen.Version != 1 || frozen.ConfigurationHash != configurationHash || hashJSON(frozen) != sourceHash.String {
 		return prepared, ErrSourceUnavailable
 	}
@@ -138,6 +139,7 @@ func importStemSummary(value string) string {
 }
 
 func (s *PostgresStore) duplicateHints(ctx context.Context, q queryer, scope auth.AccessScope, bankID, contentHashValue, bundleHashValue, stem string) ([]ImportDuplicateHint, error) {
+	// 相似题只作为提示；是否新建题目或追加版本，由确认请求明确选择。
 	rows, err := q.QueryContext(ctx, `
 SELECT i.id::text,i.item_code,v.id::text,v.version_no,v.content_hash,v.bundle_hash,v.content->>'stem'
 FROM question_bank_item i
@@ -257,6 +259,7 @@ func (s *PostgresStore) ImportQuestion(ctx context.Context, scope auth.AccessSco
 		if !prepared.ScoringConsistent {
 			return ImportResult{}, ErrSourceUnavailable
 		}
+		// 评分来源不一致时拒绝导入；其余映射问题随草稿保存，交给后续编辑和发布检查处理。
 		for _, asset := range prepared.Scoring.Assets {
 			if err = s.validateImportAsset(ctx, tx, scope, asset); err != nil {
 				return ImportResult{}, err
@@ -316,6 +319,7 @@ VALUES($1::uuid,$2::uuid,$3,$4,$5,$6::uuid,'question') RETURNING `+itemCols,
 			return ImportResult{}, err
 		}
 		if version.ContentHash != contentHashValue || version.BundleHash != bundleHashValue {
+			// 同时核对 Go 预览和数据库生成的哈希，避免两端使用不同规则却接受同一份导入。
 			return ImportResult{}, ErrConflict
 		}
 		mappingRaw, _ := json.Marshal(in.Mapping)

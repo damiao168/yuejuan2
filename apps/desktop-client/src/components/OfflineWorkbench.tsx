@@ -54,17 +54,27 @@ export function OfflineWorkbench({ durableScopeKey, client, token, user, isOnlin
   const [syncStatus, setSyncStatus] = useState<OfflineDraftEnvelope["syncStatus"]>("draft");
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const packageRequestRef = useRef(0);
+  // ref 同步阻止连续点击；state 负责按钮显示，不能替代尚未重新渲染时的互斥检查。
+  const packageBusy = useRef(false);
+  const syncInFlight = useRef(false);
+  const draftSaveInFlight = useRef(false);
+  // 即使本地回执写入失败，也要保留服务端已确认的结果。
+  const confirmedTaskIds = useRef(new Set<string>());
 
   const latestAiGrade = useMemo(() => latestGrade(pkg?.aiGrades ?? []), [pkg?.aiGrades]);
   const maxScore = pkg?.question?.rubric?.max_score ?? pkg?.question?.score ?? latestAiGrade?.max_score ?? 0;
   const hasKey = hasDurableDesktopStore() || offlineKey.trim().length >= 8;
   const currentEnvelope = envelopes.find((item) => item.taskId === (pkg?.task.id ?? selectedTaskId));
+  const alreadySynced = syncStatus === "synced" || currentEnvelope?.syncStatus === "synced" || confirmedTaskIds.current.has(pkg?.task.id ?? "");
 
   const refreshEnvelopes = async () => setEnvelopes(await listOfflineDraftEnvelopes(durableScopeKey));
 
   useEffect(() => {
-    if (durableScopeKey || !hasDurableDesktopStore()) void refreshEnvelopes();
+    if (durableScopeKey || !hasDurableDesktopStore()) {
+      void refreshEnvelopes().catch((error) => setSyncMessage(`本地列表读取失败：${formatError(error)}`));
+    }
   }, [durableScopeKey]);
 
   useEffect(() => () => {
@@ -93,19 +103,23 @@ export function OfflineWorkbench({ durableScopeKey, client, token, user, isOnlin
       const message = formatError(error);
       setTaskError(message);
       setTasks([]);
-      await onLog("warning", "offline task load failed", message);
+      try { await onLog("warning", "offline task load failed", message); } catch {
+        setTaskError(`${message} 本地日志保存失败。`);
+      }
     } finally {
       setLoadingTasks(false);
     }
   };
 
   const downloadPackage = async (taskId = selectedTaskId) => {
+    if (syncInFlight.current || draftSaveInFlight.current) return;
     const requestId = ++packageRequestRef.current;
     if (!taskId || !token) {
       setPackageError("请先登录并选择真实阅卷任务。");
       return;
     }
     setPackageError(null);
+    packageBusy.current = true;
     setPackageLoading(true);
     setImagePreview((current) => {
       if (current?.url) {
@@ -120,8 +134,10 @@ export function OfflineWorkbench({ durableScopeKey, client, token, user, isOnlin
       if (requestId !== packageRequestRef.current) return;
       setPkg(nextPackage);
       setDraft(createInitialDraft(nextPackage));
-      setSyncStatus("draft");
-      setSyncMessage(null);
+      const knownEnvelope = envelopes.find((item) => item.taskId === taskId);
+      const confirmed = confirmedTaskIds.current.has(taskId) || knownEnvelope?.syncStatus === "synced";
+      setSyncStatus(confirmed ? "synced" : "draft");
+      setSyncMessage(confirmed ? "该任务已同步成功，服务端已接收人工评分。" : null);
       if (nextPackage.page?.file_asset_id) {
         try {
           const blob = await downloadFileBlob(client, nextPackage.page.file_asset_id);
@@ -137,13 +153,19 @@ export function OfflineWorkbench({ durableScopeKey, client, token, user, isOnlin
       if (requestId !== packageRequestRef.current) return;
       const message = formatError(error);
       setPackageError(message);
-      await onLog("error", "offline task package download failed", message);
+      try { await onLog("error", "offline task package download failed", message); } catch {
+        setPackageError(`${message} 本地日志保存失败。`);
+      }
     } finally {
-      if (requestId === packageRequestRef.current) setPackageLoading(false);
+      if (requestId === packageRequestRef.current) {
+        packageBusy.current = false;
+        setPackageLoading(false);
+      }
     }
   };
 
   const saveDraft = async () => {
+    if (syncInFlight.current || draftSaveInFlight.current || packageBusy.current || alreadySynced || confirmedTaskIds.current.has(pkg?.task.id ?? "")) return;
     if (!pkg) {
       setSyncMessage("请先下载任务包。");
       return;
@@ -162,24 +184,52 @@ export function OfflineWorkbench({ durableScopeKey, client, token, user, isOnlin
       packageSnapshot: pkg,
       draft
     };
-    await saveOfflineDraft(record, offlineKey, durableScopeKey);
-    await refreshEnvelopes();
-    setSyncStatus("draft");
-    setSyncMessage("草稿已加密保存到本地。");
-    await onLog("info", "offline draft encrypted and saved", pkg.task.id);
+    draftSaveInFlight.current = true;
+    setSavingDraft(true);
+    try {
+      await saveOfflineDraft(record, offlineKey, durableScopeKey);
+      setSyncStatus("draft");
+      setSyncMessage("草稿已加密保存到本地。");
+    } catch (error) {
+      setSyncMessage(`草稿保存失败：${formatError(error)}`);
+      draftSaveInFlight.current = false;
+      setSavingDraft(false);
+      return;
+    }
+    try {
+      await refreshEnvelopes();
+      await onLog("info", "offline draft encrypted and saved", pkg.task.id);
+    } catch (error) {
+      setSyncMessage(`草稿已加密保存，但本地列表或日志更新失败：${formatError(error)}`);
+    } finally {
+      draftSaveInFlight.current = false;
+      setSavingDraft(false);
+    }
   };
 
   const loadDraft = async (taskId: string) => {
+    if (syncInFlight.current || draftSaveInFlight.current) return;
     if (!hasKey) {
       setSyncMessage("请输入本地离线密钥后再加载草稿。");
       return;
     }
+    const requestId = ++packageRequestRef.current;
+    packageBusy.current = true;
+    setPackageLoading(true);
     try {
-      const record = await loadOfflineDraft(taskId, offlineKey, durableScopeKey);
+      // 原生和浏览器存储只更新状态元数据，不重写加密正文；正文内的状态可能早于服务端回执。
+      const [record, latestEnvelopes] = await Promise.all([
+        loadOfflineDraft(taskId, offlineKey, durableScopeKey),
+        listOfflineDraftEnvelopes(durableScopeKey)
+      ]);
+      if (requestId !== packageRequestRef.current) return;
       if (!record) {
         setSyncMessage("未找到本地草稿。");
         return;
       }
+      setEnvelopes(latestEnvelopes);
+      const metadata = latestEnvelopes.find((item) => item.taskId === taskId);
+      const confirmed = confirmedTaskIds.current.has(taskId);
       setPkg(record.packageSnapshot);
       setDraft(record.draft);
       setSelectedTaskId(taskId);
@@ -187,81 +237,135 @@ export function OfflineWorkbench({ durableScopeKey, client, token, user, isOnlin
         if (current?.url) URL.revokeObjectURL(current.url);
         return null;
       });
-      setSyncStatus(record.syncStatus);
-      setSyncMessage(record.syncMessage ?? "本地加密草稿已加载。");
+      setSyncStatus(confirmed ? "synced" : metadata?.syncStatus ?? record.syncStatus);
+      setSyncMessage(confirmed ? "同步成功，服务端已接收人工评分。" : metadata?.syncMessage ?? record.syncMessage ?? "本地加密草稿已加载。");
       await onLog("info", "offline draft decrypted and loaded", taskId);
     } catch (error) {
+      if (requestId !== packageRequestRef.current) return;
       const message = `草稿解密失败：${formatError(error)}`;
       setSyncMessage(message);
-      await onLog("warning", "offline draft decrypt failed", message);
+      try { await onLog("warning", "offline draft decrypt failed", message); } catch {
+        setSyncMessage(`${message} 本地日志保存失败。`);
+      }
+    } finally {
+      if (requestId === packageRequestRef.current) {
+        packageBusy.current = false;
+        setPackageLoading(false);
+      }
     }
   };
 
   const syncDraft = async () => {
+    if (syncInFlight.current || draftSaveInFlight.current || packageBusy.current) return;
     if (!pkg) {
       setSyncMessage("请先下载或加载任务包。");
+      return;
+    }
+    if (!hasKey) {
+      setSyncMessage("本地离线密钥至少 8 个字符；未配置密钥时禁止同步草稿。");
       return;
     }
     if (!draft || draft.score === null) {
       setSyncMessage("请先填写最终分。");
       return;
     }
-    if (currentEnvelope?.syncStatus === "synced" || syncStatus === "synced") {
+    if (alreadySynced || confirmedTaskIds.current.has(pkg.task.id)) {
       setSyncMessage("该草稿已同步成功，已阻止重复提交。");
       return;
     }
-    if (!token || !isOnline) {
-      setSyncMessage("当前未登录或离线，无法同步；草稿可稍后重试。");
-      await updateOfflineDraftStatus(pkg.task.id, { syncStatus: "failed", syncMessage: "未登录或离线" }, durableScopeKey);
-      await refreshEnvelopes();
+    if (!Number.isFinite(draft.score) || draft.score < 0 || (maxScore > 0 && draft.score > maxScore)) {
+      setSyncMessage("最终分必须在 0 到题目满分之间。");
       return;
     }
+    syncInFlight.current = true;
     setSyncing(true);
     setSyncStatus("syncing");
+    const packageRequestId = packageRequestRef.current;
+    let stored = false;
+    let outcome: OfflineDraftEnvelope["syncStatus"] = "failed";
+    let message = "";
     try {
-      const conflict = await detectConflict(client, pkg, user);
-      if (conflict) {
-        setSyncStatus("conflict");
-        setSyncMessage(conflict);
-        await updateOfflineDraftStatus(pkg.task.id, { syncStatus: "conflict", syncMessage: conflict }, durableScopeKey);
-        await refreshEnvelopes();
-        await onLog("warning", "offline draft sync conflict", conflict);
-        return;
+      try {
+        const now = new Date();
+        // 网络请求前先持久化本次提交的完整快照；刚下载的任务可能还没有本地草稿行。
+        await saveOfflineDraft({
+          taskId: pkg.task.id,
+          anonymousCode: pkg.task.anonymous_code,
+          savedAt: now.toISOString(),
+          expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          syncStatus: "syncing",
+          packageSnapshot: pkg,
+          draft
+        }, offlineKey, durableScopeKey);
+        stored = true;
+        if (packageRequestId !== packageRequestRef.current) return;
+        if (!token || !isOnline) throw new Error("当前未登录或离线，无法同步；加密草稿可稍后重试。");
+        const conflict = await detectConflict(client, pkg, user);
+        if (packageRequestId !== packageRequestRef.current) return;
+        if (conflict) {
+          outcome = "conflict";
+          message = conflict;
+        } else {
+          const selections: RubricSelection[] = Object.entries(draft.rubricSelections)
+            .filter(([, score]) => Number(score) > 0)
+            .map(([point_id, score]) => ({ point_id, score: Number(score) }));
+          await submitHumanGrade(client, pkg.task.id, {
+            expected_revision: pkg.task.revision,
+            score: Number(draft.score),
+            rubric_selections: selections,
+            comments: draft.comments,
+            private_note: draft.privateNote,
+            student_feedback: draft.studentFeedback,
+            reason: draft.reason || "offline review synced"
+          });
+          confirmedTaskIds.current.add(pkg.task.id);
+          outcome = "synced";
+          message = "同步成功，服务端已接收人工评分。";
+        }
+      } catch (error) {
+        message = stored ? formatError(error) : `草稿加密保存失败，尚未提交：${formatError(error)}`;
       }
-      const selections: RubricSelection[] = Object.entries(draft.rubricSelections)
-        .filter(([, score]) => Number(score) > 0)
-        .map(([point_id, score]) => ({ point_id, score: Number(score) }));
-      await submitHumanGrade(client, pkg.task.id, {
-        expected_revision: pkg.task.revision,
-        score: Number(draft.score),
-        rubric_selections: selections,
-        comments: draft.comments,
-        private_note: draft.privateNote,
-        student_feedback: draft.studentFeedback,
-        reason: draft.reason || "offline review synced"
-      });
-      setSyncStatus("synced");
-      setSyncMessage("同步成功，服务端已接收人工评分。");
-      await updateOfflineDraftStatus(pkg.task.id, { syncStatus: "synced", syncMessage: "同步成功" }, durableScopeKey);
-      await refreshEnvelopes();
-      await onLog("info", "offline draft synced", pkg.task.id);
-    } catch (error) {
-      const message = formatError(error);
-      setSyncStatus("failed");
-      setSyncMessage(message);
-      await updateOfflineDraftStatus(pkg.task.id, { syncStatus: "failed", syncMessage: message }, durableScopeKey);
-      await refreshEnvelopes();
-      await onLog("error", "offline draft sync failed", message);
+      setSyncStatus(outcome);
+      // 本地写入失败不能把服务端已确认的结果改成 failed，也不能因再次写状态失败而冒出未处理异常。
+      const localWarnings: string[] = [];
+      if (stored) {
+        try {
+          await updateOfflineDraftStatus(pkg.task.id, { syncStatus: outcome, syncMessage: message }, durableScopeKey);
+        } catch (error) {
+          localWarnings.push(`本地状态保存失败：${formatError(error)}`);
+        }
+      }
+      try { await refreshEnvelopes(); } catch (error) {
+        localWarnings.push(`本地列表刷新失败：${formatError(error)}`);
+      }
+      try {
+        await onLog(outcome === "synced" ? "info" : "warning", `offline draft sync ${outcome}`, message);
+      } catch (error) {
+        localWarnings.push(`本地日志保存失败：${formatError(error)}`);
+      }
+      setSyncMessage([message, ...localWarnings].join(" "));
     } finally {
+      syncInFlight.current = false;
       setSyncing(false);
     }
   };
 
   const purgeExpired = async () => {
-    const count = await purgeExpiredOfflineDrafts(new Date(), durableScopeKey);
-    await refreshEnvelopes();
-    await onLog("info", "expired offline drafts purged", `${count} drafts`);
-    setSyncMessage(`已清理 ${count} 条过期本地缓存。`);
+    if (syncInFlight.current || draftSaveInFlight.current) return;
+    let count: number;
+    try {
+      count = await purgeExpiredOfflineDrafts(new Date(), durableScopeKey);
+    } catch (error) {
+      setSyncMessage(`本地缓存清理失败：${formatError(error)}`);
+      return;
+    }
+    try {
+      await refreshEnvelopes();
+      await onLog("info", "expired offline drafts purged", `${count} drafts`);
+      setSyncMessage(`已清理 ${count} 条过期本地缓存。`);
+    } catch (error) {
+      setSyncMessage(`已清理 ${count} 条过期本地缓存，但本地列表或日志更新失败：${formatError(error)}`);
+    }
   };
 
   return (
@@ -292,7 +396,7 @@ export function OfflineWorkbench({ durableScopeKey, client, token, user, isOnlin
           <Button icon={<RefreshCw size={16} />} loading={loadingTasks} disabled={!token || !user} onClick={loadMyTasks}>
             获取我的任务
           </Button>
-          <Button icon={<Trash2 size={16} />} onClick={purgeExpired}>
+          <Button icon={<Trash2 size={16} />} disabled={syncing || savingDraft} onClick={purgeExpired}>
             清理过期缓存
           </Button>
         </div>
@@ -313,7 +417,7 @@ export function OfflineWorkbench({ durableScopeKey, client, token, user, isOnlin
             </div>
           </div>
           <Table rowKey="id" size="small" columns={taskColumns(setSelectedTaskId)} dataSource={tasks} pagination={{ pageSize: 6, showSizeChanger: false }} locale={{ emptyText: <Empty description="暂无任务" /> }} />
-          <Button className="section-button" type="primary" icon={<Download size={16} />} loading={packageLoading} disabled={!selectedTaskId || !token} onClick={() => void downloadPackage()}>
+          <Button className="section-button" type="primary" icon={<Download size={16} />} loading={packageLoading} disabled={!selectedTaskId || !token || syncing || savingDraft} onClick={() => void downloadPackage()}>
             下载任务包
           </Button>
           {packageError && <Alert className="section-alert" type="error" message={packageError} showIcon />}
@@ -336,7 +440,7 @@ export function OfflineWorkbench({ durableScopeKey, client, token, user, isOnlin
             dataSource={envelopes}
             locale={{ emptyText: <Empty description="暂无本地草稿" /> }}
             renderItem={(item) => (
-              <List.Item actions={[<Button key="load" size="small" disabled={!hasKey} onClick={() => void loadDraft(item.taskId)}>加载</Button>]}>
+              <List.Item actions={[<Button key="load" size="small" disabled={!hasKey || syncing || savingDraft} onClick={() => void loadDraft(item.taskId)}>加载</Button>]}>
                 <List.Item.Meta
                   title={
                     <Space wrap>
@@ -357,12 +461,12 @@ export function OfflineWorkbench({ durableScopeKey, client, token, user, isOnlin
           <PackageView pkg={pkg} imagePreview={imagePreview} />
         </section>
         <section className="panel">
-          <DraftEditor pkg={pkg} draft={draft} setDraft={setDraft} maxScore={maxScore} latestAiGrade={latestAiGrade} />
+          <DraftEditor pkg={pkg} draft={draft} setDraft={setDraft} maxScore={maxScore} latestAiGrade={latestAiGrade} disabled={syncing || alreadySynced} />
           <Space className="offline-actions" wrap>
-            <Button icon={<Save size={16} />} disabled={!pkg || !hasKey} onClick={() => void saveDraft()}>
+            <Button icon={<Save size={16} />} loading={savingDraft} disabled={!pkg || !hasKey || syncing || savingDraft || packageLoading || alreadySynced} onClick={() => void saveDraft()}>
               加密保存草稿
             </Button>
-            <Button type="primary" icon={<Send size={16} />} loading={syncing} disabled={!pkg || syncStatus === "synced"} onClick={() => void syncDraft()}>
+            <Button type="primary" icon={<Send size={16} />} loading={syncing} disabled={!pkg || !hasKey || syncing || savingDraft || packageLoading || alreadySynced} onClick={() => void syncDraft()}>
               同步提交
             </Button>
             <SyncTag status={syncStatus} />
@@ -438,19 +542,21 @@ function DraftEditor({
   draft,
   setDraft,
   maxScore,
-  latestAiGrade
+  latestAiGrade,
+  disabled
 }: {
   pkg: OfflineTaskPackage | null;
   draft: OfflineGradeDraft;
   setDraft: React.Dispatch<React.SetStateAction<OfflineGradeDraft>>;
   maxScore: number;
   latestAiGrade?: AiGrade;
+  disabled: boolean;
 }) {
   if (!pkg) {
     return <Empty description="下载任务包后填写草稿" />;
   }
   return (
-    <Form layout="vertical" className="offline-draft-form">
+    <Form layout="vertical" className="offline-draft-form" disabled={disabled}>
       <Form.Item label={`最终分 / ${maxScore || "未记录"} 分`}>
         <InputNumber min={0} max={maxScore || undefined} value={draft.score} onChange={(value) => setDraft((current) => ({ ...current, score: value === null ? null : Number(value) }))} />
         {latestAiGrade && <span className="muted"> AI 建议：{latestAiGrade.suggested_score}</span>}
@@ -490,6 +596,7 @@ function DraftEditor({
 }
 
 async function buildTaskPackage(client: DesktopApiClient, task: ReviewTask): Promise<OfflineTaskPackage> {
+  // 各类证据独立读取，失败项转为缺失提示；部分成功不代表任务包已经完整可用。
   const [segmentsResult, pagesResult, ocrTaskResult, questionResult, gradeResult] = await Promise.allSettled([
     listAnswerSegments(client, task.submission_id),
     listSubmissionPages(client, task.submission_id),
@@ -537,6 +644,7 @@ async function buildTaskPackage(client: DesktopApiClient, task: ReviewTask): Pro
 }
 
 async function detectConflict(client: DesktopApiClient, pkg: OfflineTaskPackage, user: AuthUser | null) {
+  // 预检提供可读冲突原因；提交仍携带下载时的 revision，由服务端处理预检后的再次变更。
   if (!Number.isInteger(pkg.task.revision) || pkg.task.revision <= 0) {
     return "本地任务包缺少版本，请重新下载任务包后核对草稿。";
   }

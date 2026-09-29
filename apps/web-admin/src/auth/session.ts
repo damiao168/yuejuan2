@@ -59,6 +59,7 @@ export function sessionFromAuthUser(user: AuthUser): SessionUser {
     currentExam: "未选择考试",
     permissions: user.permissions,
     publicComputer: user.current_session_type === "public_device",
+    // 缺失组织范围表示尚未解析，不能把空数组解释为机构内全部可见。
     organizationScope: {
       resolved: Boolean(user.organization_scope),
       tenantWide: user.organization_scope?.tenant_wide ?? false,

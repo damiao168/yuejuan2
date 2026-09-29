@@ -3,7 +3,7 @@ import { Alert, Button, Input, List, Modal, Progress, Select, Space, Tabs, Uploa
 import { StatusBadge } from "@edugrade/ui";
 import { ChevronDown, ChevronUp, ClipboardPaste, ExternalLink, FileUp, Trash2 } from "lucide-react";
 import { getPaperImportUserMessage } from "../../api/client";
-import type { PaperImportJob, PaperImportRole } from "../../api/papers";
+import type { PaperImportJob, PaperImportRole, Question } from "../../api/papers";
 import { MathMarkdown } from "../../components/MathMarkdown";
 import {
   hasBlockingImportIssues,
@@ -33,6 +33,7 @@ const rubricRequiredArchetypes = new Set(["structured_steps", "short_constructed
 export function PaperImportWorkspace({
   canManage,
   latestPaperImport,
+  existingQuestions,
   workflow,
   setShowQuestionEditor,
   initialExamId,
@@ -40,6 +41,7 @@ export function PaperImportWorkspace({
 }: {
   canManage: boolean;
   latestPaperImport?: PaperImportJob;
+  existingQuestions?: Question[];
   workflow: ReturnType<typeof usePaperImportWorkflow>;
   setShowQuestionEditor: (show: boolean) => void;
   initialExamId: string;
@@ -47,7 +49,7 @@ export function PaperImportWorkspace({
 }) {
   const {
     uploadProps, parsing, reviewDrafts, savingImportReview, updatingImportSources,
-    stoppingImport, retryingParse, invalidReviewRubric, replaceImportSources,
+    stoppingImport, retryingParse, invalidReviewRubric, invalidReviewScore, replaceImportSources,
     stopPaperImport, retryImportParse, removeImportSource, openImportSource,
     confirmPaperImport, saveImportReview, updateReviewDraft, importPastedText
   } = workflow;
@@ -65,6 +67,7 @@ export function PaperImportWorkspace({
   };
   const importCancelled = latestPaperImport ? isPaperImportCancelled(latestPaperImport) : false;
   const noExamContentDetected = latestPaperImport ? hasNoExamContentDetected(latestPaperImport) : false;
+  // 重新识别期间仍保留上一轮题目，但暂不展示旧问题，避免把历史告警当作本轮结果。
   const visibleImportIssues = importCancelled || latestPaperImport?.status === "processing" ? [] : noExamContentDetected
     ? (latestPaperImport?.structured_issues ?? []).filter((issue) => issue.code === "NO_EXAM_CONTENT_DETECTED")
     : latestPaperImport?.structured_issues?.length
@@ -78,6 +81,14 @@ export function PaperImportWorkspace({
     ? `已处理约 ${Math.max(1, Math.floor((Date.now() - new Date(importProgress.startedAt).getTime()) / 1000))} 秒`
     : "";
   const canEditImportSources = latestPaperImport && ["processing", "review_required", "failed", "cancelled"].includes(latestPaperImport.status);
+  const goToQuestionReview = () => {
+    if (initialExamId && onNavigate) {
+      onNavigate(`/exams/${encodeURIComponent(initialExamId)}/questions`);
+      return;
+    }
+    setShowQuestionEditor(true);
+    requestAnimationFrame(() => document.getElementById("paper-question-workbench")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  };
 
   return <>
     <section className={`workspace-section paper-source-files${latestPaperImport ? " has-materials" : " is-empty"}`}>
@@ -170,8 +181,8 @@ export function PaperImportWorkspace({
                   : "正在识别考试资料中的题目、答案与解析"}</p>
         </div>
         {latestPaperImport.status === "review_required" ? noExamContentDetected
-          ? <Space wrap><Button type="primary" loading={updatingImportSources} onClick={() => void replaceImportSources(latestPaperImport, latestPaperImport.sources)}>重新识别</Button><Button onClick={() => { setShowQuestionEditor(true); document.getElementById("paper-question-summary")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>手动补充题目</Button></Space>
-          : <Space><Button loading={savingImportReview} onClick={() => void saveImportReview(latestPaperImport)}>保存人工核对</Button><Button type="primary" loading={parsing} disabled={hasBlockingImportIssues(latestPaperImport) || invalidReviewRubric} onClick={() => void confirmPaperImport(latestPaperImport)}>确认导入</Button></Space>
+          ? <Space wrap><Button type="primary" loading={updatingImportSources} onClick={() => void replaceImportSources(latestPaperImport, latestPaperImport.sources)}>重新识别</Button><Button onClick={goToQuestionReview}>手动补充题目</Button></Space>
+          : <Space><Button onClick={goToQuestionReview}>逐题核对</Button><Button loading={savingImportReview} onClick={() => void saveImportReview(latestPaperImport)}>保存人工核对</Button><Button type="primary" loading={parsing} disabled={hasBlockingImportIssues(latestPaperImport) || invalidReviewRubric || invalidReviewScore} onClick={() => void confirmPaperImport(latestPaperImport)}>确认导入</Button></Space>
           : latestPaperImport.status === "failed" && latestPaperImport.error_code === "ai_parse_failed"
             ? <Space wrap><Button type="primary" loading={retryingParse} onClick={() => void retryImportParse(latestPaperImport)}>仅重新解析</Button><Button loading={updatingImportSources} onClick={() => void replaceImportSources(latestPaperImport, latestPaperImport.sources)}>重新识别全部</Button></Space>
             : latestPaperImport.status === "cancelled" && latestPaperImport.sources.length
@@ -194,9 +205,9 @@ export function PaperImportWorkspace({
       {latestPaperImport.status !== "applied" && reviewDrafts.length ? <div className="paper-import-facts">
         <span><strong>{importSummary?.questions ?? 0}</strong> 道题目</span><span><strong>{importSummary?.answers ?? 0}</strong> 个答案</span><span><strong>{importSummary?.solutions ?? 0}</strong> 份解析</span><span><strong>{latestPaperImport.rubric_candidates?.length ?? 0}</strong> 份评分标准</span><span><strong>{importSummary?.reviewIssues ?? 0}</strong> 项需核对</span><span><strong>{latestPaperImport.questions.reduce((sum, item) => sum + item.score, 0)}</strong> 分</span>
       </div> : null}
-      {latestPaperImport.status !== "applied" && reviewDrafts.length ? <PaperImportReviewPanel job={latestPaperImport} drafts={reviewDrafts} readOnly={latestPaperImport.status !== "review_required"} onChange={updateReviewDraft} onOpenSource={(ref) => void openImportSource(ref.file_asset_id, ref.page_no)} /> : null}
+      {latestPaperImport.status !== "applied" && reviewDrafts.length ? <PaperImportReviewPanel job={latestPaperImport} drafts={reviewDrafts} existingQuestions={existingQuestions} readOnly={latestPaperImport.status !== "review_required"} onChange={updateReviewDraft} onOpenSource={(ref) => void openImportSource(ref.file_asset_id, ref.page_no)} /> : null}
       {excludedPageFurniture.length ? <details><summary>已自动排除 {excludedPageFurniture.length} 项页眉、页脚或水印</summary><ul className="validation-issue-list">{excludedPageFurniture.map((issue, index) => <li key={`${issue.message}-${index}`}>{issue.message}{issue.source_refs?.[0]?.file_asset_id ? <Button type="link" size="small" onClick={() => void openImportSource(issue.source_refs[0].file_asset_id, issue.source_refs[0].page_no)}>核对来源</Button> : null}</li>)}</ul><p>原图和 OCR 原文仍保留；如果正文被误排除，请对照来源补充。</p></details> : null}
-      {latestPaperImport.status === "applied" ? <div className="paper-import-result"><div className="paper-import-facts"><span>已写入题目：<strong>{latestPaperImport.questions.length}</strong></span><span>已配置答案：<strong>{latestPaperImport.questions.filter((item) => item.answer_key).length}</strong></span><span>已导入解析：<strong>{latestPaperImport.questions.filter((item) => item.solution).length}</strong></span><span>已配置评分标准：<strong>{latestPaperImport.questions.filter((item) => item.rubric).length}</strong></span><span>已锁定评分标准：<strong>{latestPaperImport.questions.filter((item) => item.rubric?.status === "locked").length}</strong></span><span>仍需处理：<strong>{latestPaperImport.questions.filter((item) => rubricRequiredArchetypes.has(item.assessment_archetype ?? "") && item.rubric?.status !== "locked").length}</strong></span></div><Space wrap><Button onClick={() => document.getElementById("paper-question-summary")?.scrollIntoView({ behavior: "smooth", block: "start" })}>去逐题校对</Button>{initialExamId && onNavigate ? <Button type="primary" onClick={() => onNavigate(`/exams/${encodeURIComponent(initialExamId)}/questions`)}>核对小题与分值</Button> : null}</Space></div> : null}
+      {latestPaperImport.status === "applied" ? <div className="paper-import-result"><div className="paper-import-facts"><span>已写入题目：<strong>{latestPaperImport.questions.length}</strong></span><span>已配置答案：<strong>{latestPaperImport.questions.filter((item) => item.answer_key).length}</strong></span><span>已导入解析：<strong>{latestPaperImport.questions.filter((item) => item.solution).length}</strong></span><span>已配置评分标准：<strong>{latestPaperImport.questions.filter((item) => item.rubric).length}</strong></span><span>已锁定评分标准：<strong>{latestPaperImport.questions.filter((item) => item.rubric?.status === "locked").length}</strong></span><span>仍需处理：<strong>{latestPaperImport.questions.filter((item) => rubricRequiredArchetypes.has(item.assessment_archetype ?? "") && item.rubric?.status !== "locked").length}</strong></span></div><Button type="primary" onClick={goToQuestionReview}>逐题核对内容与分值</Button></div> : null}
       {visibleImportIssues.length ? <Alert type={latestPaperImport.status === "failed" || noExamContentDetected ? "error" : "warning"} showIcon message={noExamContentDetected ? "未识别到考试内容" : "还需完善"} description={<ul className="validation-issue-list">{visibleImportIssues.map((issue, index) => <li key={`${issue.message}-${index}`}><strong>{"question_no" in issue && issue.question_no ? `第${issue.question_no}题：` : ""}</strong>{getPaperImportUserMessage(issue.message, "考试资料存在需要核对的内容")}{issue.certainty === "suspected" ? "（疑似）" : ""}</li>)}</ul>} /> : null}
     </section> : null}
   </>;

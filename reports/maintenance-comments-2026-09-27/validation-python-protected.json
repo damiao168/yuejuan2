@@ -1,0 +1,1325 @@
+{
+  "method": "Python ast.dump without source locations + tool-directive comment comparison; SHA-256 for protected files",
+  "checked": 79,
+  "protected_checked": 230,
+  "passed": true,
+  "files": [
+    {
+      "path": "ai-services/grading_agent/app.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/app_v2.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/capabilities.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/config.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/contract.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/contract_v2.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/dashscope_native_contract.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/dashscope_native_transport.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/guardrails.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/managed_model.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/math_rubric_draft.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/model.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/chunks.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/expand.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_compact/layout.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_input.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_parser.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_routing.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_schema.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_validation.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/paper_visual.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/grading_agent/server.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/tests/helpers.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/tests/test_application.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/tests/test_application_v2.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/tests/test_dashscope_multimodal_contract.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/tests/test_managed_model.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/tests/test_model.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "ai-services/tests/test_paper_parser.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "lab/evals/math-recognition/generate_synthetic_fixtures.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "lab/evals/math-recognition/run_math_bench.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "packages/worker-runtime-python/edugrade_worker_runtime/http.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "packages/worker-runtime-python/edugrade_worker_runtime/lease.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "scripts/generate-fujian-2024-math-simulation.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/api.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/engine.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/geometry.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/metrics.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/policy.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/report.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/image-quality-worker/image_quality/runner.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/image-quality-worker/tests/test_engine.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/math-verification-worker/math_verification_worker/parser.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/math-verification-worker/math_verification_worker/server.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/math-verification-worker/math_verification_worker/verifier.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/math-verification-worker/tests/test_timeout.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/math-verification-worker/tests/test_verifier.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/ocr-worker/benchmarks/benchmark_local.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/api.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/deployment_profile.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/engine.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/formula_calibration.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/formula_validation.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/math_layout.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/math_runner.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/paper_formula.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/recognition_router.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/runner.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/ocr-worker/ocr_worker/symbolic_runner.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/ocr-worker/tests/test_paper_formula.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/ocr-worker/tests/test_runner.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/__main__.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/api.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/barcode.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/decoder.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/omr.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/omr_acceptance.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/registration.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/page-processing-worker/page_processing/runner.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/page-processing-worker/tests/test_runner_omr.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/page-processing-worker/tools/evaluate_external_omr.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/subjective-grading-worker/subjective_grading_worker/__main__.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/subjective-grading-worker/subjective_grading_worker/api.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/subjective-grading-worker/subjective_grading_worker/healthcheck.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/subjective-grading-worker/subjective_grading_worker/runner.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/subjective-grading-worker/tests/test_api_integration.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "services/subjective-grading-worker/tests/test_worker.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "tests/ai-evaluation/evaluate.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "tests/e2e/story060_grading_agent.py",
+      "equivalent": true,
+      "directives_unchanged": true
+    }
+  ],
+  "protected_files": [
+    {
+      "path": "ai-services/prompts/base_grading.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/local_structured_grading.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/roles/arbiter.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/roles/primary.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/stages/junior.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/stages/senior.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/biology/calculation.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/biology/discussion.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/biology/short_answer.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/chemistry/calculation.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/chemistry/discussion.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/chemistry/short_answer.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/chinese/discussion.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/chinese/essay.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/chinese/short_answer.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/computer_science/calculation.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/computer_science/discussion.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/computer_science/short_answer.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/english/discussion.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/english/essay.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/english/short_answer.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/geography/calculation.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/geography/discussion.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/geography/short_answer.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/history/discussion.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/history/short_answer.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/math/calculation.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/math/discussion.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/math/short_answer.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/physics/calculation.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/physics/discussion.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/physics/short_answer.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/politics/discussion.md",
+      "unchanged": true
+    },
+    {
+      "path": "ai-services/prompts/subjects/politics/short_answer.md",
+      "unchanged": true
+    },
+    {
+      "path": "lab/src/prompts/base_grading_prompt.md",
+      "unchanged": true
+    },
+    {
+      "path": "lab/src/prompts/calculation_prompt.md",
+      "unchanged": true
+    },
+    {
+      "path": "lab/src/prompts/discussion_prompt.md",
+      "unchanged": true
+    },
+    {
+      "path": "lab/src/prompts/essay_prompt.md",
+      "unchanged": true
+    },
+    {
+      "path": "lab/src/prompts/evidence_verification_prompt.md",
+      "unchanged": true
+    },
+    {
+      "path": "lab/src/prompts/local_structured_grading_prompt.md",
+      "unchanged": true
+    },
+    {
+      "path": "lab/src/prompts/short_answer_prompt.md",
+      "unchanged": true
+    },
+    {
+      "path": "packages/sdk/src/generated/client.ts",
+      "unchanged": true
+    },
+    {
+      "path": "packages/sdk/src/generated/types.ts",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000001_auth_rbac.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000002_organization.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000003_exam_management.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000004_paper_question.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000005_file_upload.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000006_submission_collection.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000007_ocr_task.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000008_answer_segment.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000009_orchestrator.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000010_rule_grading.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000011_subjective_ai_grading.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000012_evidence_check.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000013_human_review_workflow.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000014_double_mark_arbitration.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000015_final_grades_publishing.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000016_appeal_workflow.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000017_report_analytics.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000018_audit_log_export.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000019_story044_rbac_hardening.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000020_story047_tenant_constraints.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000021_story049_ocr_worker_metadata.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000022_story050_image_quality_run.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000023_story051_agent_worker_runtime.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000024_completed_scope_integrity_hardening.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000025_story053_product_shell_rbac.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000026_story054_exam_readiness.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000027_story055_capture_processing.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000028_story055_page_processing_role.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000029_story055_page_processing_task_types.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000030_story055_capture_quality_source_asset.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000031_story055_candidate_page_matching.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000032_story055_registration_review.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000033_story055_capture_complete_operation.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000034_story055_manual_registration_correction.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000035_story055_manual_correction_apply.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000036_story056_grading_workbench.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000037_story056_review_grade_link.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000038_story056_scoring_recovery.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000039_story056_template_omr_gate.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000040_story056_template_difference_reference.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000041_story056_omr_calibration_approval.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000042_story056_human_confirmed_count.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000043_teacher_appeal_workflow.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000044_grading_agent_integration.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000045_reconcile_published_exam_status.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000046_reconcile_completed_ocr_runtime_tasks.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000047_remove_teacher_grader_system_read.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000048_ocr_runtime_atomicity.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000049_remove_teacher_review_management.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000050_scoring_run_grade_candidate_indexes.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000051_human_grade_ai_link.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000052_story060_exam_roster_attendance.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000053_story060_roster_query_indexes.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000054_story060_student_sheet_identity.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000055_story060_sheet_reprint_lifecycle.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000056_story060_template_omr_calibration.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000057_story061_model_governance_foundation.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000058_story061_governance_tenant_constraints.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000059_story061_model_governance_rbac.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000060_story061_sandbox_approval.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000061_story061_offline_model_evaluation.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000062_story061_model_promotion.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000063_story063_subjective_grading_runs.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000064_story063_subjective_grading_batches.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000065_device_sessions.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000066_access_scope_exam_revision.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000067_file_asset_lifecycle.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000068_strong_audit_outbox.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000069_request_idempotency.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000070_outbox_delivery.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000071_file_reconciliation.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000072_critical_entity_revisions.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000073_list_pagination_indexes.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000074_transactional_strong_audit.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000075_subjective_grading_worker_role.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000076_storyA01_assessment_domain.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000077_storyA06_review_annotations.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000078_storyA08_gold_papers.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000079_storyA09_grader_calibration.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000080_storyA07_answer_groups.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000081_storyA10_seed_quality.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000082_storyA11_grader_drift.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000083_storyA12_backmark.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000084_storyA14_ai_eligibility.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000085_storyA16_grading_evaluation.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000086_storyA15_model_calibration.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000087_storyA17_ai_human_disagreement.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000088_storyA18_score_releases.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000089_storyA19_regrade_workflow.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000090_storyA20_release_gate.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000091_storyA21_student_portal.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000092_storyA22_question_appeal.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000093_storyA24_offline_scan_spool.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000094_storyA25_scanner_profiles.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000095_storyA26_processing_state.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000096_storyA19_regrade_candidate_evidence.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000097_story_math00_understanding_contract.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000098_story_math07_corrections.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000099_story_math08_pilot_gate.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000100_story_math_runtime_pipeline.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000101_question_appeal_single_submission.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000102_paper_document_import.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000103_school_admin_review_work.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000104_exam_sessions.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000105_grade_education_stage.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000106_exam_templates.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000107_exam_candidate_snapshot.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000108_school_enrollment_model.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000109_grading_error_attribution.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000110_paper_import_sources_candidates.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000111_authorization_model_hardening.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000112_backfill_school_admin_rbac.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000113_local_authorization_repair.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000114_authorization_repair_followup.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000115_school_activity_projection.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000116_paper_import_rubric_candidates.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000117_student_learning_portal.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000118_managed_model_api_config.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000119_paper_import_cancellation.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000120_paper_import_parse_runtime.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000121_exam_session_command_id.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000122_processing_projection_refresh.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000123_reliability_command_runs.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000124_import_input_integrity.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000125_projection_lifecycle_identity.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000126_capture_batch_command.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000127_scoring_run_command.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000128_subjective_batch_commands.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000129_business_command_receipts.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000130_review_round_identity.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000131_exam_answer_sheet_template_binding.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000132_managed_model_api_health.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000133_managed_model_api_probe_modes.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000135_paper_formula_recognition.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000136_managed_model_api_capability_diagnostics.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000137_worker_task_progress.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000138_business_command_payload.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000139_high_risk_tenant_rls.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000140_question_bank_core.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000141_question_bank_publication.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000142_question_bank_metadata_acl_search.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000143_auth_identity_security_epoch.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000144_question_bank_snapshot_import.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000145_story_math09a_mixed_perception.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000146_story_math11_symbolic_verification_stage.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000147_auth_dynamic_risk_shadow.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000148_story_math13_grading_bindings.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000149_auth_totp_scoped_challenges.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000150_auth_mfa_security_notification_intents.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000151_capture_upload_completion_lease.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000152_paper_import_visual_pages.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000153_paper_import_model_usage.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000154_auth_wechat_login.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000155_subjective_multi_agent_panel.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000156_model_role_binding.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000157_subjective_panel_evaluation.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000158_subjective_panel_policy.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000159_managed_model_api_multi_model.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000160_subjective_panel_model_set_provenance.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000161_platform_panel_model_binding_actor.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000162_subjective_panel_legacy_hardening.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000163_answer_group_v2_candidate_quarantine.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000164_score_release_anonymous_page.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000165_platform_school_operations.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000166_managed_model_probe_transient_status.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000167_model_management_rbac_alignment.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000168_managed_model_soft_delete_audit.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000169_model_governance_managed_config_bridge.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000170_model_evaluation_managed_config.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000171_model_approval_managed_config.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000172_model_policy_managed_config.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000173_model_sandbox_managed_config.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000174_managed_model_permissions.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000175_model_call_fact_managed_identity.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000176_managed_model_api_multiple_credentials.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000177_scoring_ai_batch_link.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000178_scoring_double_mark_cancel.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/000179_question_import_options.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/baseline/000020_fingerprint.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/tests/000169_bridge_assert.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/tests/000169_bridge_fixture.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/tests/000170_171_managed_flow_assert.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/tests/000172_policy_assert.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/tests/000172_policy_fixture.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/tests/000173_sandbox_assert.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/tests/000173_sandbox_fixture.sql",
+      "unchanged": true
+    },
+    {
+      "path": "services/api-gateway/migrations/tests/000175_call_fact_assert.sql",
+      "unchanged": true
+    }
+  ]
+}

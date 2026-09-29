@@ -55,6 +55,7 @@ export function LoginPage({ onLogin, onWechatLogin, loading = false, error }: {
 
   useEffect(() => {
     if (method !== "wechat" || !challenge) return;
+    // 切换登录方式或刷新二维码后，旧轮询结果不能继续完成当前登录流程。
     const generation = ++pollGeneration.current;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -77,6 +78,7 @@ export function LoginPage({ onLogin, onWechatLogin, loading = false, error }: {
           setWechatError("二维码已过期，请刷新后重新扫码。");
           return;
         }
+        // 二维码已消费仍可能已有 Cookie 会话；先读取当前身份，恢复成功的登录结果。
         if (response.status === "consumed") {
           try {
             const recovered = await getCurrentUser();

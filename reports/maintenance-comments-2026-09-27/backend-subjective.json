@@ -1,0 +1,300 @@
+{
+  "scope": "services/api-gateway/internal/subjective（主观评分、批处理、面板和 worker 流程）",
+  "files": [
+    {
+      "path": "services/api-gateway/internal/subjective/active_crop_resolver.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/active_crop_resolver_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/adapter.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/adapter_http.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/adapter_http_real_e2e_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/adapter_http_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/adapter_http_v2.go",
+      "status": "existing_sufficient",
+      "reason": "已审读实现；现有注释、类型命名和短小流程已能说明维护边界，未增加重复注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/adapter_http_v2_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/adapter_usage_metrics_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/batch_command.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/eligibility.go",
+      "status": "existing_sufficient",
+      "reason": "已审读实现；现有注释、类型命名和短小流程已能说明维护边界，未增加重复注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/grade_settlement_pipeline.go",
+      "status": "existing_sufficient",
+      "reason": "已审读实现；现有注释、类型命名和短小流程已能说明维护边界，未增加重复注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/grade_settlement_pipeline_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/grading_agent_v2_builder.go",
+      "status": "existing_sufficient",
+      "reason": "已审读实现；现有注释、类型命名和短小流程已能说明维护边界，未增加重复注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/grading_agent_v2_builder_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/grading_agent_v2_contract_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/grading_reference.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/grading_reference_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/handlers.go",
+      "status": "existing_sufficient",
+      "reason": "已审读实现；现有注释、类型命名和短小流程已能说明维护边界，未增加重复注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/handlers_batch.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/handlers_grade.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/handlers_support.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/handlers_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/handlers_worker.go",
+      "status": "existing_sufficient",
+      "reason": "已审读实现；现有注释、类型命名和短小流程已能说明维护边界，未增加重复注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/idempotency.go",
+      "status": "existing_sufficient",
+      "reason": "已审读实现；现有注释、类型命名和短小流程已能说明维护边界，未增加重复注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/math_evidence.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/math_grading.go",
+      "status": "existing_sufficient",
+      "reason": "已审读实现；现有注释、类型命名和短小流程已能说明维护边界，未增加重复注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/math_grading_handler_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/math_grading_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_agent_binding.go",
+      "status": "existing_sufficient",
+      "reason": "已审读实现；现有注释、类型命名和短小流程已能说明维护边界，未增加重复注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_agent_binding_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_disagreement.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_disagreement_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_migration_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_orchestrator.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_orchestrator_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_policy.go",
+      "status": "existing_sufficient",
+      "reason": "已审读实现；现有注释、类型命名和短小流程已能说明维护边界，未增加重复注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_policy_store_memory.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_policy_store_postgres.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_policy_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_shadow_runner.go",
+      "status": "existing_sufficient",
+      "reason": "已审读实现；现有注释、类型命名和短小流程已能说明维护边界，未增加重复注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_shadow_runner_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_store.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_store_memory.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_store_postgres.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_store_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/panel_types.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/scoring_coverage_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/scoring_run_batch_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/store_memory.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/store_postgres.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/store_postgres_batch.go",
+      "status": "existing_sufficient",
+      "reason": "已审读实现；现有注释、类型命名和短小流程已能说明维护边界，未增加重复注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/types.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/usage_pipeline_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/validation.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/worker_completion_service.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/worker_completion_service_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/worker_execution_service.go",
+      "status": "annotated",
+      "reason": "已审读核心流程，补充租户边界、幂等、状态迁移、并发抢占或失败转人工等维护注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/worker_execution_service_test.go",
+      "status": "existing_sufficient",
+      "reason": "已审读测试场景和断言；测试名称、fixture 及断言已直接说明行为，无需逐行补注释。"
+    }
+  ]
+}

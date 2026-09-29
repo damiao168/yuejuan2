@@ -72,6 +72,7 @@ func (h *parseTaskHeartbeat) setProgress(ctx context.Context, phase string, comp
 	}
 	now := time.Now().UTC()
 	h.mu.Lock()
+	// 只有实际解析进展增加事件序号；定时续租不伪装成新的业务进展。
 	h.eventSeq++
 	h.progress = map[string]any{
 		"stage":               "paper_parse",
@@ -91,6 +92,7 @@ func (h *parseTaskHeartbeat) setProgress(ctx context.Context, phase string, comp
 }
 
 func (h *parseTaskHeartbeat) beat(ctx context.Context) error {
+	// 进度回调和定时续租共用串行入口，避免并发心跳把较旧的进度写回。
 	h.callMu.Lock()
 	defer h.callMu.Unlock()
 	h.mu.Lock()
@@ -112,6 +114,7 @@ func (h *parseTaskHeartbeat) beat(ctx context.Context) error {
 		h.mu.Lock()
 		if h.err == nil {
 			h.err = err
+			// 续租失败后停止计算；最终能否提交仍由存储层校验租约和导入版本。
 			h.cancelExecution()
 		}
 		h.mu.Unlock()
@@ -395,6 +398,7 @@ func (e *ParseTaskExecutor) executionContext(ctx context.Context) (context.Conte
 	return context.WithCancel(ctx)
 }
 
+// finalizationContext 为成功或失败落库留出独立的短时限，避免执行超时连带取消收尾写入。
 func finalizationContext(ctx context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.WithoutCancel(ctx), parseFinalizationTimeout)
 }

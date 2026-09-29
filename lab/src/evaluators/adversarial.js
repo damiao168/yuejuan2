@@ -113,6 +113,7 @@ export function checkAdversarialGate(reports, level, configPath = "config/advers
     if (matches.length > 1) reasons.push(`duplicate adversarial agent ${agentId}`);
 
     const report = matches[0];
+    // 从逐条用例重算汇总值，防止报告中的比例与实际攻击/对照样本不一致。
     const calculated = aggregateResults(report, reasons);
     if (!calculated) continue;
     for (const field of AGGREGATE_FIELDS) {

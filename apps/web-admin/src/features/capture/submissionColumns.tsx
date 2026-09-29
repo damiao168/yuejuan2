@@ -98,6 +98,7 @@ export function captureSubmissionColumns({ studentName, canWrite, actioning, run
         const runNext = () => {
           if (qualityPending) {
             return runAction(`quality-${id}`, async () => {
+              // 先确认页面完整，再排图像质量任务；完整性失败时不能继续下游识别。
               const integrity = await runQualityCheck(id);
               if (!integrity.result.valid) {
                 throw new Error("答卷完整性未通过，请先补齐或更正页面");

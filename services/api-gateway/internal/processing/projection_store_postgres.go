@@ -12,6 +12,7 @@ import (
 var ErrProjectionLeaseLost = errors.New("processing projection lease lost")
 
 func (s *PostgresStore) ClaimProjection(ctx context.Context, owner string, leaseTTL time.Duration) (ProjectionRefresh, bool, error) {
+	// SKIP LOCKED 让多个投影进程各领一条待处理版本；租约过期后任务才会再次可领取。
 	if strings.TrimSpace(owner) == "" || leaseTTL <= 0 {
 		return ProjectionRefresh{}, false, ErrInvalidInput
 	}
@@ -54,6 +55,7 @@ WHERE tenant_id=$1::uuid AND exam_id=$2::uuid
 }
 
 func (s *PostgresStore) CompleteProjection(ctx context.Context, owner string, refresh ProjectionRefresh) error {
+	// 完成更新必须带上租约所有者和有效期，防止过期 worker 覆盖后来接手的任务。
 	result, err := s.db.ExecContext(ctx, `
 UPDATE processing_projection_cursor
 SET projected_version=GREATEST(projected_version,$4), projected_at=now(),
@@ -75,6 +77,7 @@ WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND lease_owner=$3 AND lease_expir
 }
 
 func (s *PostgresStore) FailProjection(ctx context.Context, owner string, refresh ProjectionRefresh, message string, backoff time.Duration) error {
+	// 失败只释放当前租约并推迟 available_at；版本仍保持未投影，供后续重试。
 	if backoff < 0 {
 		backoff = 0
 	}

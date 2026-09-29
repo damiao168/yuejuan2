@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 )
 
+// NewToken 返回原始令牌和存储用哈希；原值交给客户端，数据库只保存第二个返回值。
 func NewToken() (string, string, error) {
 	var raw [32]byte
 	if _, err := rand.Read(raw[:]); err != nil {

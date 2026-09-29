@@ -1,0 +1,70 @@
+{
+  "rubric_id": "example-q15-rubric",
+  "rubric_version": "example-draft-v1",
+  "question_type": "calculation",
+  "max_score": 11,
+  "allow_partial_total": false,
+  "points": [
+    {
+      "id": "q15-part1-sample-statistics",
+      "description": "第（1）问：正确计算样本均值 x_bar=4、y_bar=4.3，并得到相关计算所需的交叉离差和14。",
+      "score": 2,
+      "required": true,
+      "aliases": [],
+      "evidence_required": true,
+      "match_policy": "semantic"
+    },
+    {
+      "id": "q15-part1-correlation",
+      "description": "第（1）问：正确使用相关系数公式，计算14/14.08，并按题目精度要求得到 r≈0.99。",
+      "score": 2,
+      "required": true,
+      "aliases": [],
+      "evidence_required": true,
+      "match_policy": "semantic"
+    },
+    {
+      "id": "q15-part1-regression-slope",
+      "description": "第（1）问：正确使用最小二乘法计算回归斜率 b_hat=14/28=0.5。",
+      "score": 2,
+      "required": true,
+      "aliases": [],
+      "evidence_required": true,
+      "match_policy": "semantic"
+    },
+    {
+      "id": "q15-part1-regression-equation",
+      "description": "第（1）问：正确计算截距 a_hat=4.3-0.5×4=2.3，并写出回归直线 y_hat=0.5x+2.3。",
+      "score": 2,
+      "required": true,
+      "aliases": [],
+      "evidence_required": true,
+      "match_policy": "semantic"
+    },
+    {
+      "id": "q15-part2-year8",
+      "description": "第（2）问：正确将x=8代入回归直线，得到预测利润6.3亿元。",
+      "score": 1.5,
+      "required": true,
+      "aliases": [],
+      "evidence_required": true,
+      "match_policy": "semantic"
+    },
+    {
+      "id": "q15-part2-year9",
+      "description": "第（2）问：正确将x=9代入回归直线，得到预测利润6.8亿元。",
+      "score": 1.5,
+      "required": true,
+      "aliases": [],
+      "evidence_required": true,
+      "match_policy": "semantic"
+    }
+  ],
+  "deductions": [],
+  "equivalent_answers": [],
+  "examples": [],
+  "scoring_notes": [
+    "本文件仅演示现有rubric契约；11分取自当前蓝图，具体采分点分配是建议示例，并非本卷官方评分标准。",
+    "须先核对本题满分、子问分值与评分政策，再确认正式版本。"
+  ]
+}

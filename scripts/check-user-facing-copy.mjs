@@ -7,6 +7,7 @@ const allowedFiles = new Set([
   "apps/web-admin/src/api/userError.ts",
   "apps/desktop-client/src/api/userError.ts"
 ]);
+// 逐行规则用于发现常见内部错误泄露写法，不追踪变量数据流；白名单中的转换函数需单独评审。
 const forbidden = [
   { name: "response.statusText 进入客户端文案", pattern: /response\.statusText/ },
   { name: "message.error 直接显示 Error.message", pattern: /message\.error\([^\n;]*\b\w*[Ee]rror\.message/ },

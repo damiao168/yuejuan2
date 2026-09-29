@@ -78,7 +78,7 @@ export function PlatformModelConfigPage() {
   const configRequestRef = useRef(0);
   const { clearFormDraft, saveFormDraft, restoreFormDraft } = useModelConfigDrafts(form);
   const watchedSupplier = Form.useWatch("supplier", form);
-
+  // 切换学校立即递增请求代次，旧学校配置不得回填到当前模型列表。
   const selectedSchool = useMemo(
     () => schools.find((school) => school.id === selectedTenantID),
     [schools, selectedTenantID]

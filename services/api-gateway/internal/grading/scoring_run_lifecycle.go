@@ -6,6 +6,7 @@ import (
 	"errors"
 )
 
+// BeginScoringRunCancellation 先持久化 cancelling，再交由调用方取消外部任务；中途失败可继续同一取消流程。
 func (s *PostgresStore) BeginScoringRunCancellation(ctx context.Context, tenantID, runID string) (ScoringRun, []string, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -66,6 +67,7 @@ WHERE batch.tenant_id=$1::uuid AND batch.scoring_run_id=$2::uuid AND batch.delet
 	return run, taskIDs, tx.Commit()
 }
 
+// FinalizeScoringRunCancellation 仅在后台任务均已停止后作废未完成阅卷和本轮成绩，已锁定的 final_grade 不删除。
 func (s *PostgresStore) FinalizeScoringRunCancellation(ctx context.Context, tenantID, runID string) (ScoringRun, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -205,6 +207,7 @@ FOR UPDATE OF o,sr`, tenantID, omrRunID).Scan(&item.OMRRunID, &item.RuntimeTaskI
 	return item, tx.Commit()
 }
 
+// RestoreOMRRetry 用于外部 Worker 重试未成功时恢复业务状态；只撤回仍处于 queued 的准备结果。
 func (s *PostgresStore) RestoreOMRRetry(ctx context.Context, tenantID, omrRunID string) error {
 	result, err := s.db.ExecContext(ctx, `UPDATE omr_run SET status='terminal_error',completed_at=now(),updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid AND status='queued'`, tenantID, omrRunID)
 	if err != nil {

@@ -11,10 +11,8 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 )
 
-// Handler is intentionally not registered by this story. The server should
-// wire it with the same results-management permission as A18, then add its
-// OpenAPI/SDK contract in the composition change. Keeping the handler here
-// means policy/evidence operations are not reimplemented in a page handler.
+// Handler 提供发布策略、证据及警告豁免操作；路由层必须注入成绩发布的管理权限守卫。
+// 这里仅管理发布门禁，实际成绩发布由 PublicationCoordinator 组合执行。
 type Handler struct {
 	service *Service
 	audit   auth.AuditRecorder

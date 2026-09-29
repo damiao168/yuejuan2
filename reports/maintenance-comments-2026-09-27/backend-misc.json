@@ -1,0 +1,230 @@
+{
+  "scope": "api-gateway onboarding, orchestration, organization, platform schools, student portal, submission and workspace",
+  "files": [
+    {
+      "path": "services/api-gateway/internal/onboarding/handler.go",
+      "status": "annotated",
+      "reason": "补充管理员角色、访问范围和敏感状态响应边界。"
+    },
+    {
+      "path": "services/api-gateway/internal/onboarding/handler_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称和断言已明确未认证、角色限制及脱敏响应。"
+    },
+    {
+      "path": "services/api-gateway/internal/onboarding/service.go",
+      "status": "annotated",
+      "reason": "已有按角色和状态的准备度规则注释，说明平台初始化阻断条件。"
+    },
+    {
+      "path": "services/api-gateway/internal/onboarding/service_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试覆盖首个学校、AI 可选项和局部失败，场景名已说明规则。"
+    },
+    {
+      "path": "services/api-gateway/internal/onboarding/types.go",
+      "status": "self_explanatory",
+      "reason": "状态、严重级别和返回结构字段直观，补充注释不会增加维护信息。"
+    },
+    {
+      "path": "services/api-gateway/internal/orchestrator/handlers.go",
+      "status": "annotated",
+      "reason": "说明租户取数和状态审计链路。"
+    },
+    {
+      "path": "services/api-gateway/internal/orchestrator/handlers_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试场景覆盖低置信人工复核、状态流转、重试上限和权限。"
+    },
+    {
+      "path": "services/api-gateway/internal/orchestrator/store_memory.go",
+      "status": "annotated",
+      "reason": "说明低置信转人工以及运行状态按任务严重度汇总。"
+    },
+    {
+      "path": "services/api-gateway/internal/orchestrator/store_postgres.go",
+      "status": "annotated",
+      "reason": "说明创建、完成任务与运行状态必须同事务提交。"
+    },
+    {
+      "path": "services/api-gateway/internal/orchestrator/types.go",
+      "status": "self_explanatory",
+      "reason": "运行、任务及输入输出结构字段语义直接。"
+    },
+    {
+      "path": "services/api-gateway/internal/orchestrator/validation.go",
+      "status": "annotated",
+      "reason": "说明重试仅在失败且未达到次数上限时允许。"
+    },
+    {
+      "path": "services/api-gateway/internal/org/enrollment_postgres.go",
+      "status": "annotated",
+      "reason": "说明转班结束旧在读、创建新记录和更新当前班级需原子完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/org/handlers.go",
+      "status": "annotated",
+      "reason": "说明平台管理员创建租户和 CSV 导入逐行容错规则。"
+    },
+    {
+      "path": "services/api-gateway/internal/org/handlers_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试覆盖租户隔离、权限、重复数据冲突和 CSV 行错误。"
+    },
+    {
+      "path": "services/api-gateway/internal/org/readiness.go",
+      "status": "annotated",
+      "reason": "说明准备度统计受 active 状态和学校访问范围约束。"
+    },
+    {
+      "path": "services/api-gateway/internal/org/store_memory.go",
+      "status": "annotated",
+      "reason": "说明内存实现也必须执行租户隔离。"
+    },
+    {
+      "path": "services/api-gateway/internal/org/store_postgres.go",
+      "status": "annotated",
+      "reason": "说明租户和首个管理员创建需要同一事务。"
+    },
+    {
+      "path": "services/api-gateway/internal/org/store_postgres_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称直接说明父级租户约束。"
+    },
+    {
+      "path": "services/api-gateway/internal/org/types.go",
+      "status": "self_explanatory",
+      "reason": "组织层实体和筛选结构字段语义清晰。"
+    },
+    {
+      "path": "services/api-gateway/internal/platformschools/handlers.go",
+      "status": "annotated",
+      "reason": "说明 HTTP 参数先校验，非法平台筛选返回 400。"
+    },
+    {
+      "path": "services/api-gateway/internal/platformschools/handlers_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试覆盖独立读模型、查询筛选和未知学校。"
+    },
+    {
+      "path": "services/api-gateway/internal/platformschools/service.go",
+      "status": "annotated",
+      "reason": "说明过滤排序后用游标切页及结果集偏移语义。"
+    },
+    {
+      "path": "services/api-gateway/internal/platformschools/service_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试覆盖过滤、排序、分页和非法游标。"
+    },
+    {
+      "path": "services/api-gateway/internal/platformschools/store.go",
+      "status": "self_explanatory",
+      "reason": "存储接口方法按平台学校读模型分组，字段语义直观。"
+    },
+    {
+      "path": "services/api-gateway/internal/platformschools/store_memory.go",
+      "status": "annotated",
+      "reason": "说明内存汇总仅用于对齐运营页读模型。"
+    },
+    {
+      "path": "services/api-gateway/internal/platformschools/store_postgres.go",
+      "status": "annotated",
+      "reason": "说明跨表运营汇总必须保留租户边界。"
+    },
+    {
+      "path": "services/api-gateway/internal/platformschools/types.go",
+      "status": "self_explanatory",
+      "reason": "平台学校运营 DTO 字段和状态常量语义直接。"
+    },
+    {
+      "path": "services/api-gateway/internal/studentportal/handlers.go",
+      "status": "existing_sufficient",
+      "reason": "已有路由归属和学生安全 DTO 说明，认证范围规则清楚。"
+    },
+    {
+      "path": "services/api-gateway/internal/studentportal/handlers_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试场景已说明学生权限和认证范围限制。"
+    },
+    {
+      "path": "services/api-gateway/internal/studentportal/service.go",
+      "status": "existing_sufficient",
+      "reason": "已有版本唯一性和异常降级说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/studentportal/store_memory.go",
+      "status": "existing_sufficient",
+      "reason": "已有测试存储只维护发现索引、不复制成绩的说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/studentportal/store_postgres.go",
+      "status": "existing_sufficient",
+      "reason": "查询职责单一，学生租户范围由 SQL 条件表达。"
+    },
+    {
+      "path": "services/api-gateway/internal/studentportal/types.go",
+      "status": "existing_sufficient",
+      "reason": "已有学生安全 DTO 的字段裁剪和职责边界说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/submission/answer_regions_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称已说明新旧 bbox 输入兼容。"
+    },
+    {
+      "path": "services/api-gateway/internal/submission/handlers.go",
+      "status": "annotated",
+      "reason": "说明质量检查只评估页面质量，并校验文件归属租户和答卷。"
+    },
+    {
+      "path": "services/api-gateway/internal/submission/handlers_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试覆盖质量门禁、页面替换、重复页、文件归属和权限。"
+    },
+    {
+      "path": "services/api-gateway/internal/submission/store_memory.go",
+      "status": "existing_sufficient",
+      "reason": "已有质量聚合、人工覆盖及旧版答题区域回退说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/submission/store_memory_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称已说明质量字段初始化、替换失效和证据保留。"
+    },
+    {
+      "path": "services/api-gateway/internal/submission/store_postgres.go",
+      "status": "existing_sufficient",
+      "reason": "已有 bbox 失败关闭和质量聚合事务说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/submission/types.go",
+      "status": "existing_sufficient",
+      "reason": "已有隐私安全答题区域、回退接口和租户 SQL 约束说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/submission/validation.go",
+      "status": "annotated",
+      "reason": "说明 ready_for_ocr 只能由质量通过的答卷进入。"
+    },
+    {
+      "path": "services/api-gateway/internal/workspace/handlers.go",
+      "status": "annotated",
+      "reason": "说明认证、访问范围和越权 404 处理。"
+    },
+    {
+      "path": "services/api-gateway/internal/workspace/service.go",
+      "status": "annotated",
+      "reason": "说明子系统局部读取失败降级为 warning，考试不可访问才失败。"
+    },
+    {
+      "path": "services/api-gateway/internal/workspace/service_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试覆盖五阶段、可选依赖失败和首个行动项优先级。"
+    },
+    {
+      "path": "services/api-gateway/internal/workspace/types.go",
+      "status": "self_explanatory",
+      "reason": "工作台投影结构按阶段、提示、计数和行动组织，字段语义清楚。"
+    }
+  ]
+}

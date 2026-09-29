@@ -171,6 +171,7 @@ func (s *MemoryStore) GetManagedAPIConnection(_ context.Context, tenantID, id st
 	return ManagedAPIConnection{Config: item, APIKey: secret}, nil
 }
 
+// 只接受探测开始时的更新时间，配置在请求期间被修改就丢弃结果，避免旧探测覆盖新密钥。
 func (s *MemoryStore) RecordManagedAPIProbe(_ context.Context, tenantID, id string, expectedUpdatedAt time.Time, result ManagedAPIProbeResult) (ManagedAPIConfig, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -187,6 +188,7 @@ func (s *MemoryStore) RecordManagedAPIProbe(_ context.Context, tenantID, id stri
 	return item, nil
 }
 
+// 临时网络失败保留上次能力证据；确定性失败才刷新能力状态，并且不持久化响应预览。
 func applyManagedProbe(item *ManagedAPIConfig, result ManagedAPIProbeResult, testedAt time.Time) {
 	item.LastTestStatus = "failed"
 	connectionOK := result.OK || (result.ProbeMode == "capability" && result.CredentialCheck.OK && result.ModelCheck.OK)

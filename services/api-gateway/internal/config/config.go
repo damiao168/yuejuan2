@@ -166,6 +166,7 @@ type BarcodeConfig struct {
 	HMACKeys    map[string][]byte
 }
 
+// 配置按环境读取默认值，并在生产类环境最后执行严格校验，禁止不安全配置悄悄启动。
 func Load(envFile string) (Config, error) {
 	if envFile != "" {
 		if err := loadDotEnv(envFile); err != nil {
@@ -332,6 +333,7 @@ func parseBarcodeKeys(raw string) map[string][]byte {
 	return keys
 }
 
+// 这里集中检查密钥、传输加密、限流和 AI 服务边界；任一项不满足就拒绝生产启动。
 func validateProductionConfig(cfg Config) error {
 	if cfg.Auth.MFAEnabled {
 		key, err := base64.StdEncoding.DecodeString(strings.TrimSpace(cfg.Auth.MFAMasterKey))

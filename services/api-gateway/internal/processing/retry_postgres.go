@@ -10,6 +10,7 @@ import (
 
 // Match the result coordinator's source-before-runtime lock order.
 func (s *PostgresStore) RetryImageQuality(ctx context.Context, tenantID, runID, taskID string) (workerruntime.Task, error) {
+	// 先锁质量运行记录，再在同一事务中重新排队 worker，避免页面状态和任务状态分叉。
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return workerruntime.Task{}, err

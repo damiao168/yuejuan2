@@ -34,7 +34,13 @@ export interface PaperImportDraftQuestion {
   question_type: string;
   assessment_archetype?: PaperImportAssessmentArchetype;
   score: number;
+  score_source?: "material" | "missing" | "blueprint" | "human";
+  score_resolution?: "use_blueprint" | "use_material";
+  question_type_resolution?: "use_blueprint" | "use_material";
   stem: string;
+  options?: string[];
+  parent_question_no?: string;
+  subquestion_no?: string;
   knowledge_points: string[];
   confidence: number;
   issues: string[];
@@ -71,6 +77,8 @@ export interface AnswerCandidate { candidate_id: string; question_no_hint?: stri
 export interface SolutionCandidate { candidate_id: string; question_no_hint?: string; question_no_normalized?: string; subquestion_no_hint?: string; raw_text: string; steps: SolutionStep[]; confidence: number; source_refs: PaperImportSourceRef[]; issues: string[]; }
 export interface RubricCandidatePoint { id: string; description: string; score?: number | null; required?: boolean | null; evidence_requirements?: RubricEvidenceRequirement[]; }
 export interface RubricCandidate { candidate_id: string; question_no_hint?: string; question_no_normalized?: string; max_score?: number | null; points: RubricCandidatePoint[]; deductions: unknown[]; examples: unknown[]; confidence: number; source_refs: PaperImportSourceRef[]; issues: string[]; }
+export interface SuggestedRubricPoint { id: string; description: string; suggested_score: number | null; evidence_step_ids: string[]; source_refs: PaperImportSourceRef[]; review_note: string; }
+export interface SuggestedRubricCandidate { candidate_id: string; question_no_normalized?: string; max_score: number | null; points: SuggestedRubricPoint[]; origin: "ai_suggestion_from_solution"; status: "review_required"; provenance?: Record<string, unknown>; issues: string[]; }
 export interface SolutionStep { step_no: number; content: string; }
 export interface SolutionInput { raw_text: string; steps: SolutionStep[]; source_refs: PaperImportSourceRef[]; }
 export interface PaperImportIssue { code: string; severity: "info" | "warning" | "error"; certainty: "confirmed" | "suspected" | "unknown"; question_no?: string; section?: string; message: string; confidence?: number; source_refs: PaperImportSourceRef[]; resolution_hint?: string; }
@@ -203,6 +211,9 @@ export interface Question {
   question_type: string;
   score: number;
   stem?: string;
+  options: string[];
+  parent_question_no?: string;
+  subquestion_no?: string;
   knowledge_points: string[];
   answer_area?: Record<string, unknown>;
   sort_order: number;
@@ -222,6 +233,9 @@ export interface QuestionPayload {
   question_type: string;
   score: number;
   stem: string;
+  options?: string[];
+  parent_question_no?: string;
+  subquestion_no?: string;
   knowledge_points: string[];
   answer_area: Record<string, unknown>;
   sort_order: number;
@@ -279,6 +293,13 @@ export async function replacePaperImportSources(importId: string, expectedGenera
 
 export async function savePaperImportReview(importId: string, expectedGeneration: number, questions: PaperImportDraftQuestion[]) {
 	return generatedApi.savePaperImportReview({ path: { id: importId }, body: { expected_generation: expectedGeneration, questions } });
+}
+
+export async function generatePaperImportRubricDraft(importId: string, candidateId: string, expectedGeneration: number, expectedUpdatedAt: string) {
+  return apiClient.request<{ suggested_rubric_candidates: SuggestedRubricCandidate[] }>(`/api/v1/paper-imports/${encodeURIComponent(importId)}/rubric-draft`, {
+    method: "POST",
+    body: JSON.stringify({ candidate_id: candidateId, expected_generation: expectedGeneration, expected_updated_at: expectedUpdatedAt })
+  });
 }
 
 export async function applyPaperImport(importId: string) {

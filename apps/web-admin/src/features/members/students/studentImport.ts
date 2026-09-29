@@ -95,6 +95,7 @@ export function prepareStudentImport(csv: string, classes: SchoolClass[]): Prepa
 }
 
 export function remapStudentImportError(error: StudentImportError, sourceRows: number[]): StudentImportError {
+  // 本地预检会剔除坏行；服务端返回的是精简 CSV 行号，需映射回用户原始文件。
   return {
     ...error,
     row: error.row > 1 ? (sourceRows[error.row - 2] ?? error.row) : error.row

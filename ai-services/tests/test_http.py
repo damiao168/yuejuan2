@@ -1,6 +1,8 @@
 import json
 import threading
 import unittest
+from contextlib import nullcontext
+from unittest.mock import patch
 from urllib import error as urlerror
 from urllib import request as urlrequest
 
@@ -120,6 +122,38 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(events[-1]["type"], "result")
         self.assertEqual(events[-2]["progress"]["route"], "unrelated_guard")
         self.assertEqual(events[-1]["result"]["question_candidates"], [])
+
+    def test_math_rubric_draft_is_authenticated_and_review_only(self):
+        class DraftModel:
+            def session(self, _request_id):
+                return nullcontext()
+
+            def request_structured(self, _request_id, _messages, _schema, _name):
+                return {"points": [{"description": "正确求解", "suggested_score": None,
+                                    "evidence_step_ids": ["step-1"], "review_note": "待核对"}]}
+
+        payload = {
+            "request_id": "rubric-draft-0001", "subject": "数学",
+            "question_candidate": {"question_no_normalized": "15", "question_type": "calculation", "stem": "解方程", "score": None},
+            "answer_candidate": {"standard_answer": "x=2"},
+            "solution_candidate": {"candidate_id": "s15", "question_no_normalized": "15",
+                                   "steps": [{"step_no": 1, "content": "移项后得到 x=2"}],
+                                   "source_refs": [{"source_id": "source-1", "block_id": "solution-15"}]},
+        }
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        request = urlrequest.Request(
+            f"{self.base_url}/paper/rubric-draft", data=body,
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {self.settings.service_token}"},
+            method="POST",
+        )
+        with patch("grading_agent.server.paper_model", return_value=DraftModel()):
+            with urlrequest.urlopen(request, timeout=2) as response:
+                result = json.loads(response.read())
+        draft = result["suggested_rubric_candidates"][0]
+        self.assertEqual(draft["status"], "review_required")
+        self.assertIsNone(draft["max_score"])
+        self.assertIsNone(draft["points"][0]["suggested_score"])
+        self.assertNotIn("rubric_candidates", result)
 
 
 if __name__ == "__main__":

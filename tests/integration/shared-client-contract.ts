@@ -3,6 +3,7 @@ import { EduGradeApi } from "@edugrade/sdk";
 import { ApiClient } from "../../apps/web-admin/src/api/client";
 import { DesktopApiClient } from "../../apps/desktop-client/src/api/client";
 
+// 在 Node 中比较两端共享契约和错误映射，不覆盖浏览器 Cookie、CORS 或桌面原生能力。
 export async function run(baseUrl: string) {
   const clients = [new ApiClient({ baseUrl }), new DesktopApiClient({ baseUrl })];
   const results = [];

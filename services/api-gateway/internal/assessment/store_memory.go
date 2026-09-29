@@ -87,6 +87,7 @@ func (s *MemoryStore) ConfigureQuestion(_ context.Context, tenantID string, exam
 		return QuestionAssessmentConfig{}, ErrRevisionConflict
 	}
 	if _, frozen := s.snapshots[key]; frozen {
+		// 冻结后拒绝覆盖配置，保证后续证据仍能解释当时使用的评分规则。
 		return QuestionAssessmentConfig{}, ErrExamFrozen
 	}
 	now := time.Now().UTC()
@@ -116,6 +117,7 @@ func (s *MemoryStore) FreezeQuestionSnapshot(_ context.Context, tenantID string,
 	defer s.mu.Unlock()
 	key := assessmentKey(tenantID, examID, questionID)
 	if existing, ok := s.snapshots[key]; ok {
+		// 重复冻结返回原快照，不重新读取可能变化的学科配置。
 		return cloneQuestionSnapshot(existing), nil
 	}
 	config, ok := s.configs[key]

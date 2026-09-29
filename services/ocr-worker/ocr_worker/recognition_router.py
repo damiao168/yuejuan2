@@ -410,6 +410,7 @@ class PaddleFormulaNetEngine:
                 self._cache.move_to_end(key)
                 results[index] = cached
                 continue
+            # 同批相同裁剪按内容哈希合并推理，结果仍回填到每个原始位置。
             misses.setdefault(key, []).append(index)
             miss_images.setdefault(key, image)
 

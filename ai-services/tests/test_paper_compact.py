@@ -1,4 +1,5 @@
 import pytest
+
 from grading_agent.errors import AgentError
 from grading_agent.paper_compact import (
     MAX_BLOCKS_PER_CHUNK,
@@ -309,6 +310,117 @@ def test_rule_fast_path_declines_unanchored_or_sparse_answer_material():
         _block("q2", "2. 简述导数概念", [50, 140, 500, 20]),
         _block("q3", "3. 简述数列概念", [50, 180, 500, 20]),
         _block("a3", "【答案】略", [50, 220, 100, 20]),
+    ]
+
+    assert anchored_paper_result([_document(blocks)]) is None
+
+
+def test_game_points_are_not_mistaken_for_question_marks():
+    blocks = [
+        _block("q8", "8. 取到1次白球得4分，求获胜概率", [50, 100, 500, 20]),
+        _block("a8", "【答案】二分之一", [50, 130, 200, 20]),
+        _block("q18", "18. 每局比赛胜者得1分，负者得0分", [50, 180, 500, 20]),
+        _block("a18", "【答案】见解析", [50, 210, 200, 20]),
+    ]
+
+    result = anchored_paper_result([_document(blocks)])
+
+    assert result is not None
+    assert [q["score"] for q in result["question_candidates"]] == [None, None]
+
+
+def test_question_heading_and_section_marks_are_grounded_separately():
+    blocks = [
+        _block("section", "一、选择题，每小题5分，共10分", [50, 50, 500, 20]),
+        _block("q1", "1. 计算1+1", [50, 100, 500, 20]),
+        _block("a1", "【答案】2", [50, 130, 200, 20]),
+        _block("q2", "2. （6分）计算2+2", [50, 180, 500, 20]),
+        _block("a2", "【答案】4", [50, 210, 200, 20]),
+    ]
+
+    result = anchored_paper_result([_document(blocks)])
+
+    assert result is not None
+    q1, q2 = result["question_candidates"]
+    assert [q1["score"], q2["score"]] == [5, 6]
+    assert {ref["block_id"] for ref in q1["source_refs"]} == {"section", "q1"}
+    assert {ref["block_id"] for ref in q2["source_refs"]} == {"q2"}
+
+
+def test_section_mark_on_separate_line_is_applied_with_its_own_source():
+    blocks = [
+        _block("section", "二、填空题", [50, 50, 500, 20]),
+        _block("section-mark", "每小题3分", [50, 75, 500, 20]),
+        _block("q12", "12. 填空：1+1=____", [50, 100, 500, 20]),
+        _block("a12", "【答案】2", [50, 130, 200, 20]),
+        _block("q13", "13. 填空：2+2=____", [50, 180, 500, 20]),
+        _block("a13", "【答案】4", [50, 210, 200, 20]),
+    ]
+
+    result = anchored_paper_result([_document(blocks)])
+
+    assert result is not None
+    assert [q["score"] for q in result["question_candidates"]] == [3, 3]
+    assert all("section-mark" in {ref["block_id"] for ref in q["source_refs"]} for q in result["question_candidates"])
+
+
+def test_explicit_marking_points_survive_anchored_fast_path():
+    blocks = [
+        _block("q1", "1. （4分）解方程", [50, 100, 500, 20]),
+        _block("a1", "【答案】x=2", [50, 130, 200, 20]),
+        _block("s1", "【详解】移项得2x=4。", [50, 160, 500, 20]),
+        _block("r1", "【评分标准】移项正确得2分；求得x=2得2分", [50, 190, 500, 20]),
+        _block("q2", "2. 计算1+1", [50, 230, 500, 20]),
+        _block("a2", "【答案】2", [50, 260, 200, 20]),
+    ]
+
+    result = anchored_paper_result([_document(blocks)])
+
+    assert result is not None
+    rubric = result["rubric_candidates"][0]
+    assert rubric["max_score"] == 4
+    assert [(p["description"], p["score"]) for p in rubric["points"]] == [
+        ("移项正确", 2), ("求得x=2", 2)
+    ]
+    assert [ref["block_id"] for ref in rubric["source_refs"]] == ["r1"]
+    assert result["answer_candidates"][0]["standard_answer"] == "x=2"
+    assert result["solution_candidates"][0]["raw_text"] == "移项得2x=4。"
+
+
+def test_problem_story_awarding_points_is_not_a_marking_scheme():
+    blocks = [
+        _block("q1", "1. 判断正确得2分，错误得0分；求小明的总得分", [50, 100, 500, 20]),
+        _block("a1", "【答案】6", [50, 130, 200, 20]),
+        _block("q2", "2. 计算1+1", [50, 180, 500, 20]),
+        _block("a2", "【答案】2", [50, 210, 200, 20]),
+    ]
+
+    result = anchored_paper_result([_document(blocks)])
+
+    assert result is not None
+    assert result["rubric_candidates"] == []
+    assert result["question_candidates"][0]["score"] is None
+
+
+def test_unstructured_explicit_marking_prose_routes_to_model():
+    blocks = [
+        _block("q1", "1. 解方程", [50, 100, 500, 20]),
+        _block("a1", "【答案】x=2", [50, 130, 200, 20]),
+        _block("r1", "【评分细则】方法合理且答案正确时酌情给分", [50, 160, 500, 20]),
+        _block("q2", "2. 计算1+1", [50, 200, 500, 20]),
+        _block("a2", "【答案】2", [50, 230, 200, 20]),
+    ]
+
+    assert anchored_paper_result([_document(blocks)]) is None
+
+
+def test_partial_explicit_marking_prose_routes_to_model_without_dropping_remainder():
+    blocks = [
+        _block("q1", "1. 解方程", [50, 100, 500, 20]),
+        _block("a1", "【答案】x=2", [50, 130, 200, 20]),
+        _block("r1", "【评分标准】移项正确得2分；其他合理解法酌情给分", [50, 160, 500, 20]),
+        _block("q2", "2. 计算1+1", [50, 200, 500, 20]),
+        _block("a2", "【答案】2", [50, 230, 200, 20]),
     ]
 
     assert anchored_paper_result([_document(blocks)]) is None

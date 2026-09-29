@@ -69,6 +69,7 @@ def public_json_transport(url, payload, headers, timeout):
 
 
 def paper_model(application, payload):
+    # 学校托管模型仅在当前解析请求内生效，同时移除凭据字段，避免进入后续题目内容。
     config = payload.pop("managed_model", None) if isinstance(payload, dict) else None
     if config is None:
         return application.model

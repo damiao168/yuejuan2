@@ -37,6 +37,7 @@ if (-not (Test-Path $ApiKeyFile)) {
     Set-Content -Path $ApiKeyFile -Value ([Convert]::ToBase64String($Bytes))
 }
 
+# 本地服务只监听回环地址，密钥通过文件传入，避免把密钥正文放进进程命令行。
 $Arguments = @(
     "--model", $Model,
     "--host", "127.0.0.1",

@@ -80,6 +80,7 @@ function responseSchema(spec, operation) {
   return "unknown";
 }
 
+// 生成器只处理这里显式支持的 JSON 和二进制正文；新增媒体类型需要同步扩展生成逻辑。
 function requestBodyDescriptor(operation) {
   const content = operation.requestBody?.content;
   const json = content?.["application/json"]?.schema;
@@ -160,6 +161,7 @@ export function generateClient(spec) {
   const methods = entries
     .map(({ method, pathTemplate, operation, parameters }) => {
       const operationId = operation.operationId;
+      // 仅完全没有必填路径、查询、请求头或正文时，生成的方法才允许省略整个参数对象。
       const hasRequiredArgs =
         parameters.some((parameter) => parameter?.in === "path" || parameter?.required) ||
         Boolean(operation.requestBody?.required);
@@ -190,6 +192,7 @@ export function generateClient(spec) {
     .join(",\n")}\n} from "./types";\n\nexport interface operations {\n${operationTypes}\n}\n\nexport class EduGradeApi {\n  constructor(private readonly transport: ApiTransport) {}\n\n${methods}\n}\n`;
 }
 
+// 基线仅保留白名单字段，描述文字不会进入兼容性比较；它不是原始契约的完整副本。
 function normalizeSchema(schema) {
   if (!schema || typeof schema !== "object") return schema ?? null;
   if (Array.isArray(schema)) return schema.map(normalizeSchema);

@@ -1,0 +1,62 @@
+ M ai-services/grading_agent/app_v2.py
+ M ai-services/grading_agent/contract_v2.py
+ M ai-services/grading_agent/paper_compact/anchors.py
+ M ai-services/grading_agent/paper_compact/schema.py
+ M ai-services/grading_agent/paper_parser.py
+ M ai-services/grading_agent/paper_visual.py
+ M ai-services/grading_agent/server.py
+ M ai-services/tests/test_http.py
+ M ai-services/tests/test_math_v2_production.py
+ M ai-services/tests/test_paper_compact.py
+ M apps/web-admin/src/api/papers.ts
+ M apps/web-admin/src/features/grading/workbench/reviewContext.test.ts
+ M apps/web-admin/src/features/grading/workbench/reviewContext.ts
+ M apps/web-admin/src/features/paper-import/PaperImportReviewPanel.test.ts
+ M apps/web-admin/src/features/paper-import/PaperImportReviewPanel.tsx
+ M apps/web-admin/src/features/paper-import/PaperImportWorkspace.tsx
+ M apps/web-admin/src/features/paper-import/usePaperConfigData.ts
+ M apps/web-admin/src/features/paper-import/usePaperImportWorkflow.test.tsx
+ M apps/web-admin/src/features/paper-import/usePaperImportWorkflow.ts
+ M apps/web-admin/src/features/paper-import/useScoringRules.ts
+ M apps/web-admin/src/features/paper-rubric/hooks/useQuestionEditor.ts
+ M apps/web-admin/src/features/paper-rubric/hooks/useRubricEditor.ts
+ M apps/web-admin/src/pages/PaperRubricPage.tsx
+ M apps/web-admin/src/styles/features/member-management.css
+ M apps/web-admin/src/styles/features/question-bank.css
+ M contracts/grading-agent/v2/request.schema.json
+ M infra/docker-compose/.env.example
+ M infra/docker-compose/docker-compose.yml
+ M packages/sdk/src/generated/client.ts
+ M packages/sdk/src/generated/types.ts
+ M services/api-gateway/internal/paper/handlers.go
+ M services/api-gateway/internal/paper/paper_import_json.go
+ M services/api-gateway/internal/paper/paper_import_postgres.go
+ M services/api-gateway/internal/paper/paper_import_reconcile.go
+ M services/api-gateway/internal/paper/paper_import_reconcile_test.go
+ M services/api-gateway/internal/paper/question_postgres.go
+ M services/api-gateway/internal/paper/readiness_snapshot.go
+ M services/api-gateway/internal/paper/store_memory.go
+ M services/api-gateway/internal/paper/types.go
+ M services/api-gateway/internal/server/routes_paper.go
+ M services/api-gateway/internal/subjective/grading_agent_v2_builder.go
+ M services/api-gateway/internal/subjective/grading_agent_v2_builder_test.go
+ M services/api-gateway/internal/subjective/grading_agent_v2_contract_test.go
+ M services/api-gateway/internal/subjective/math_grading.go
+ M services/api-gateway/internal/subjective/panel_orchestrator.go
+ M services/api-gateway/internal/subjective/store_postgres.go
+ M services/api-gateway/internal/subjective/store_postgres_batch.go
+ M services/api-gateway/internal/subjective/types.go
+ M services/api-gateway/openapi/edugrade-api.openapi.json
+ M services/api-gateway/openapi/route-coverage.json
+?? .tmp-pg-migration-verify/
+?? ai-services/grading_agent/math_rubric_draft.py
+?? ai-services/tests/test_math_rubric_draft.py
+?? docs/design-reviews/
+?? reports/code-review-2026-09-26/
+?? services/api-gateway/internal/paper/document_rubric_draft.go
+?? services/api-gateway/internal/paper/document_rubric_draft_test.go
+?? services/api-gateway/internal/paper/objective_scoring_rule.go
+?? services/api-gateway/internal/paper/objective_scoring_rule_test.go
+?? services/api-gateway/internal/subjective/grading_reference.go
+?? services/api-gateway/internal/subjective/grading_reference_test.go
+?? services/api-gateway/migrations/000179_question_import_options.sql

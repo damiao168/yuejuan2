@@ -40,6 +40,7 @@ export class MockGradingAdapter {
     const evidence = [];
     let score = 0;
 
+    // 按别名出现与否构造可重复的测试结果；不代表模型理解或真实判分能力。
     for (const point of input.rubric.points) {
       const aliases = [...(point.aliases ?? []), point.description];
       const excerpt = findFirstEvidence(answerText, aliases);

@@ -70,6 +70,7 @@ func (s *MemoryStore) UpdateMetadataSchema(ctx context.Context, scope auth.Acces
 			return MetadataSchema{}, ErrLocked
 		}
 		b.MetadataSchemaVersion++
+		// 新规则另存一版；已有题目继续绑定原 schema，新建版本才采用当前规则。
 		b.Revision++
 		b.UpdatedAt = time.Now().UTC()
 		s.banks[bankID] = b
@@ -140,6 +141,7 @@ func (s *MemoryStore) UpdateACL(ctx context.Context, scope auth.AccessScope, ban
 			return ACLDocument{}, ErrLocked
 		}
 		prefix := scope.TenantID + ":" + bankID + ":"
+		// 替换授权时保留创建者权限及当前操作者的 manage，避免把题库管理入口一并撤掉。
 		for key := range s.acl {
 			parts := strings.Split(key, ":")
 			if strings.HasPrefix(key, prefix) && len(parts) == 4 && parts[2] != b.CreatedBy {

@@ -84,6 +84,7 @@ pub fn update_durable_draft_status(
     sync_status: String,
     sync_message: Option<String>,
 ) -> Result<(), String> {
+    // 这里只更新可查询的状态元数据，不重加密正文；调用方必须先保存草稿，再更新同步状态。
     validate_draft_status(&sync_status)?;
     let conn = open_connection(&app)?;
     initialize_schema(&conn)?;

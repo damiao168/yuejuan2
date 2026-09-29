@@ -321,5 +321,6 @@ func TestStory061OfflineEvaluationMigrationEnforcesEvidenceAndCompletionBoundari
 }
 
 func compactMigrationSQL(value string) string {
+	// 这些断言只保护迁移源码契约；实际最终权限另由授权矩阵 PostgreSQL 测试核对。
 	return strings.Join(strings.Fields(value), " ")
 }

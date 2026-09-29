@@ -330,6 +330,7 @@ WHERE tenant_id = $1 AND exam_id::text = $2 AND deleted_at IS NULL AND locked = 
 }
 
 func (s *PostgresStore) PublishGrades(ctx context.Context, tenantID string, examID string, actorID string, input PublishInput) (PublishResult, error) {
+	// 总分公开、题分锁定、考试状态和命令回执在同一事务提交，失败不能只留下部分发布事实。
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return PublishResult{}, err
@@ -486,6 +487,8 @@ WHERE NOT EXISTS (
 }
 
 func (s *PostgresStore) createFinalsFromRuleTx(ctx context.Context, tx *sql.Tx, tenantID string, examID string, actorID string) (int64, error) {
+	// 已有 question_grade 时使用其当前已确认规则结果；旧 ai_grade 只兼容尚未迁入题分模型的答题区域。
+	// 兼容路径仍排除 Mock、待复核及非规则评分结果，避免把模型建议直接变为最终题分。
 	result, err := tx.ExecContext(ctx, `
 WITH confirmed_rule AS (
   SELECT g.tenant_id, g.exam_id, g.question_id, seg.question_no, g.answer_segment_id,
@@ -1020,6 +1023,7 @@ WHERE tenant_id = $1 AND exam_id::text = $2 AND deleted_at IS NULL
   AND (locked = true OR status <> $3)`, tenantID, examID, allowedStatus)
 }
 
+// 同一考试的汇总、确认、发布及出勤修改共用事务锁；新增同类写操作也应遵守此约定。
 func lockExamTx(ctx context.Context, tx *sql.Tx, tenantID string, examID string) error {
 	_, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`, tenantID, examID)
 	return err

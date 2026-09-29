@@ -50,6 +50,7 @@ func ValidRubricEvidenceRequirements(points []RubricPoint) bool {
 	return true
 }
 
+// 证据条件来自可编辑配置，限制嵌套深度和子项数量，避免无界递归及过宽条件树。
 func validEvidenceRequirement(requirement EvidenceRequirement, depth int) bool {
 	if depth > 8 {
 		return false

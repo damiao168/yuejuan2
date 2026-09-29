@@ -135,6 +135,7 @@ services:
         condition: service_completed_successfully
     restart: "no"
 
+  # 默认模型服务返回固定测试结果；此环境验证真实调用和落库链路，不能证明模型评分质量。
   model-stub:
     image: python:3.12-alpine
     environment:

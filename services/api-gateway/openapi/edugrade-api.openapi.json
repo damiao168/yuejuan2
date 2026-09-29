@@ -10337,6 +10337,95 @@
         }
       }
     },
+    "/api/v1/paper-imports/{id}/rubric-draft": {
+      "post": {
+        "operationId": "suggestPaperImportMathRubricDraft",
+        "summary": "Generate review-only mathematics marking suggestions from the current import solution",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PaperImportId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MathRubricDraftRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Read-only suggestions; accepting and saving them is a separate teacher action",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MathRubricDraftResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Candidate is not a subjective math question with a detailed solution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Import not found in current scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Import generation or review version changed, or matching solution is ambiguous",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Suggestion service is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Import service is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/paper-imports/{id}/review": {
       "put": {
         "operationId": "savePaperImportReview",
@@ -29782,6 +29871,142 @@
           }
         }
       },
+      "MathRubricDraftRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidate_id",
+          "expected_generation",
+          "expected_updated_at"
+        ],
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expected_generation": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "expected_updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MathRubricDraftPoint": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "description",
+          "suggested_score",
+          "evidence_step_ids",
+          "source_refs",
+          "review_note"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "suggested_score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "evidence_step_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PaperImportSourceRef"
+            }
+          },
+          "review_note": {
+            "type": "string"
+          }
+        }
+      },
+      "MathRubricDraftSuggestion": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidate_id",
+          "question_no_normalized",
+          "max_score",
+          "points",
+          "origin",
+          "status",
+          "provenance",
+          "issues"
+        ],
+        "properties": {
+          "candidate_id": {
+            "type": "string"
+          },
+          "question_no_normalized": {
+            "type": "string"
+          },
+          "max_score": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MathRubricDraftPoint"
+            }
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "ai_suggestion_from_solution"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "review_required"
+            ]
+          },
+          "provenance": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "MathRubricDraftResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "suggested_rubric_candidates"
+        ],
+        "properties": {
+          "suggested_rubric_candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MathRubricDraftSuggestion"
+            }
+          }
+        }
+      },
       "PaperImportDraftQuestion": {
         "type": "object",
         "additionalProperties": false,
@@ -29891,6 +30116,41 @@
             "items": {
               "type": "string"
             }
+          },
+          "parent_question_no": {
+            "type": "string"
+          },
+          "subquestion_no": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "score_source": {
+            "type": "string",
+            "enum": [
+              "material",
+              "missing",
+              "blueprint",
+              "human"
+            ]
+          },
+          "score_resolution": {
+            "type": "string",
+            "enum": [
+              "use_blueprint",
+              "use_material"
+            ]
+          },
+          "question_type_resolution": {
+            "type": "string",
+            "enum": [
+              "use_blueprint",
+              "use_material"
+            ]
           }
         }
       },

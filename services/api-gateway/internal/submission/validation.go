@@ -13,6 +13,7 @@ func IsValidSourceType(sourceType string) bool {
 	return validSourceTypes[sourceType]
 }
 
+// ready_for_ocr 只允许质量通过的答卷进入；已 ready 的答卷禁止再被普通流程改写。
 func CanTransition(current string, next string, qualityStatus string) bool {
 	if next == "rejected" {
 		return current != "ready_for_ocr"

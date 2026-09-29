@@ -145,6 +145,7 @@ WHERE cp.tenant_id=$1::uuid AND cp.submission_id=$2::uuid AND cp.status='needs_r
 	var templateAssetID, templateContentType string
 	routingMode := "barcode"
 	var layoutRaw []byte
+	// 已验证的实体纸张模板优先，其次是考试绑定；都没有时仅允许唯一锁定模板直接配准。
 	if controlled {
 		err = tx.QueryRowContext(ctx, `SELECT ast.id::text,ast.content_hash,ast.layout,ep.file_asset_id::text,fa.content_type
 FROM answer_sheet_template ast JOIN exam_paper ep ON ep.tenant_id=ast.tenant_id AND ep.id=ast.exam_paper_id JOIN file_asset fa ON fa.tenant_id=ep.tenant_id AND fa.id=ep.file_asset_id
@@ -162,6 +163,7 @@ SELECT ast.id::text,ast.content_hash,ast.layout,ep.file_asset_id::text,fa.conten
 		}
 	}
 	if err != nil {
+		// 多模板或无模板时先建立匹配任务，本次可以成功返回空配准列表，等待匹配结果继续排队。
 		if !controlled && routingMode == "single_template" && errors.Is(err, sql.ErrNoRows) {
 			if _, matchErr := queueTemplateMatchRun(ctx, tx, tenantID, examID, actorID, pages[0]); matchErr != nil {
 				return nil, matchErr
@@ -177,6 +179,7 @@ SELECT ast.id::text,ast.content_hash,ast.layout,ep.file_asset_id::text,fa.conten
 	if json.Unmarshal(layoutRaw, &layout) != nil || len(layout.Pages) == 0 {
 		return nil, ErrInvalidInput
 	}
+	// 绑定模板的路由可附带少量候选模板供算法比较；候选只是建议，最终绑定仍由事务校验。
 	fallbackTemplates := []registrationFallbackTemplate{}
 	if routingMode == "bound_auto" || routingMode == "locked_with_guard" {
 		fallbackRows, fallbackErr := tx.QueryContext(ctx, `SELECT ast.id::text,ast.content_hash,ast.name,ast.version_no,ast.layout,ep.file_asset_id::text,fa.content_type
@@ -352,6 +355,7 @@ ON CONFLICT (tenant_id,submission_id,question_id) DO UPDATE SET submission_page_
 			return RegistrationRun{}, err
 		}
 	}
+	// 配准计算完成不代表可直接使用；低于 0.75 的结果保留切片，但页面仍需人工确认。
 	matchStatus := "matched"
 	pageStatus := "ready"
 	if input.Confidence < 0.75 {

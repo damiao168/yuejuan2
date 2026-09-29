@@ -164,6 +164,7 @@ func calculateRolling(examID, questionID, graderID string, observations []seedqu
 	return result
 }
 
+// 窗口不足时只记录样本量，不计算趋势状态；完整窗口才更新 EWMA 并触发预警阈值。
 func calculateWindow(examID, questionID, graderID string, items []seedquality.Observation, size int, prior *float64, now time.Time) QualityWindow {
 	window := QualityWindow{ExamID: examID, QuestionID: questionID, GraderID: graderID, WindowSize: size,
 		SampleCount: len(items), Status: WindowInsufficientData, ComputedAt: now.UTC()}
@@ -250,6 +251,7 @@ func statusFor(window QualityWindow, normalizedBias float64) WindowStatus {
 	return WindowStable
 }
 
+// 事件由窗口快照幂等生成，偏差、严重错误率和 rubric 一致率分别保留，便于复核触发原因。
 func incidentsFor(window QualityWindow) []Incident {
 	if window.Status == WindowInsufficientData || window.SampleCount < window.WindowSize || window.EWMABias == nil {
 		return nil

@@ -32,6 +32,7 @@ func NewHandler(store Store, queue Queue, submissions submissionpkg.Store, audit
 	return handler
 }
 
+// 只有 ready_for_ocr 的答题卡允许建任务；幂等键同时保护接口重试和运行时任务，避免重复排队。
 func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	submissionID := r.PathValue("id")
@@ -147,6 +148,7 @@ func (h *Handler) GetTask(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"task": task})
 }
 
+// OCR 输入只返回租户内答题页和必要图片地址；需要整页的区域不下发局部裁剪，避免坐标语义错误。
 func (h *Handler) GetTaskInput(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	task, err := h.store.GetTask(r.Context(), user.TenantID, r.PathValue("id"))
@@ -225,6 +227,7 @@ func (h *Handler) StartTask(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"task": task})
 }
 
+// 完成前校验每个结果属于当前答题卡；配置 Runtime 时源任务和 Runtime 任务必须一起成功。
 func (h *Handler) CompleteTask(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	var input CompleteTaskInput

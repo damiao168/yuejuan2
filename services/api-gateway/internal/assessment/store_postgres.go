@@ -93,6 +93,7 @@ func (s *PostgresStore) ConfigureQuestion(ctx context.Context, tenantID string, 
 	defer tx.Rollback()
 
 	var examStatus, examSubject string
+	// 先锁考试再锁题目配置，状态确认与修订在同一事务中，避免考试已冻结仍接受旧页面保存。
 	if err := tx.QueryRowContext(ctx, `
 SELECT exam.status, exam.subject
 FROM exam
@@ -442,6 +443,7 @@ func validateConfigureInput(input ConfigureQuestionInput) error {
 	return nil
 }
 
+// 可选证据取学科能力与题型能力的交集；只符合其中一个维度的证据不能写入题目配置。
 func validateAllowedEvidence(selected []EvidenceType, profile SubjectProfile, archetype QuestionArchetype, requireEvidence bool) error {
 	if requireEvidence && len(selected) == 0 {
 		return ErrInvalidInput

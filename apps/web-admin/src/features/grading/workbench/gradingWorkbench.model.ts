@@ -200,6 +200,7 @@ export function gradingConclusion(item: ScoringRunItem) {
   return "部分得分";
 }
 
+// shadow_only 结果只用于后台评估；先排除它们，再按创建时间选择教师可见的最新 AI 建议。
 export function latestGrade(grades: AiGrade[]) {
   return [...grades]
     .filter((grade) => grade.delivery_mode !== "shadow_only")
@@ -215,6 +216,7 @@ export function isInputTarget(target: EventTarget | null) {
   return ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable;
 }
 
+// null 表示教师还没有提交最终分；0 是合法且已明确提交的分数，不能用假值判断代替。
 export function createInitialDraft(ctx: WorkbenchContext | null): ScoreDraft {
   const ocrText = ctx?.ocrText || ctx?.ocrResults.map((item) => item.text).filter(Boolean).join("\n") || "";
   const selections: Record<string, number> = {};

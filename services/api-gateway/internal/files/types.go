@@ -84,6 +84,7 @@ type FileResponse struct {
 	CreatedAt      time.Time  `json:"created_at"`
 }
 
+// Response 只公开文件元数据；存储桶和对象路径留在服务端，由下载接口执行授权。
 func (a FileAsset) Response() FileResponse {
 	return FileResponse{
 		ID:             a.ID,

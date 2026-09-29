@@ -226,10 +226,7 @@ func TestFiveHundredPageFixtureRecoversPage173WithoutDuplicateRegistration(t *te
 		t.Fatalf("final offset=%d want %d", updated.ConfirmedOffset, len(payload))
 	}
 
-	// The server can successfully register the durable capture file even when
-	// the client loses the completion response (represented by this response
-	// recorder). A later Init must return that same registration, not create a
-	// second page.
+	// 完成后再次 Init 模拟客户端未收到完成响应的重试；必须返回原登记，不能新增页面。
 	completed, err := service.Complete(ctx, testTenant, testActor, resumed.RemoteUploadID, CompleteInput{SHA256: input.SHA256})
 	if err != nil {
 		t.Fatalf("complete recovered page: %v", err)

@@ -13,6 +13,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/files"
 )
 
+// 文件对账默认只报告孤儿对象和待修复状态；--repair 由运维明确开启且不会删除对象。
 func main() {
 	envFile := flag.String("env-file", "", "optional dotenv configuration file")
 	repair := flag.Bool("repair", false, "explicitly repair safe metadata/saga states; never deletes orphan objects")

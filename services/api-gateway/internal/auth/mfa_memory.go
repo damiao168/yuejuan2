@@ -174,6 +174,7 @@ func (s *MemoryStore) VerifyMFAChallenge(ctx context.Context, proof MFAProof) er
 		if proof.Step <= record.LastUsedStep {
 			return ErrMFAInvalid
 		}
+		// 时间步在整份凭据上消费，不能换一个挑战重复使用同一时段验证码。
 		record.LastUsedStep = proof.Step
 		s.totpRecords[key] = record
 	}
@@ -211,6 +212,7 @@ func (s *MemoryStore) FinishMFACommand(ctx context.Context, proof MFAProof, oper
 		challenge.ConsumedAt = timePointer(proof.Now)
 		s.mfaChallenges[proof.ChallengeHash] = challenge
 	case MFAOperationDisable:
+		// 关闭 MFA 同时撤销会话、设备并推进安全版本，已有登录状态不能继续沿用。
 		delete(s.totpRecords, key)
 		delete(s.mfaRecovery, challenge.CredentialID)
 		for hash, old := range s.mfaChallenges {

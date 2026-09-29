@@ -74,6 +74,8 @@ type tenantScopedConn struct {
 }
 
 func (c *tenantScopedConn) applyTenant(ctx context.Context) error {
+	// 连接会被连接池复用，每次操作前都要覆盖租户设置，不能沿用上个请求的身份。
+	// 缺少租户时写入 unscoped，让受 RLS 保护的数据保持不可见。
 	if _, err := c.pgx.Conn().Exec(ctx, `SET ROLE `+tenantRuntimeRole); err != nil {
 		return fmt.Errorf("activate tenant RLS runtime role: %w", err)
 	}
@@ -134,6 +136,7 @@ func (c *tenantScopedConn) CheckNamedValue(value *driver.NamedValue) error {
 }
 
 func (c *tenantScopedConn) ResetSession(ctx context.Context) error {
+	// 归还后的连接必须清除业务租户；下一次操作再根据自己的上下文重新绑定。
 	if err := c.pgx.ResetSession(ctx); err != nil {
 		return err
 	}

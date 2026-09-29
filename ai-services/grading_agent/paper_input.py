@@ -152,6 +152,7 @@ def clean_visual_pages(raw_pages, documents, request_id):
                 status=400,
                 request_id=request_id,
             ) from exc
+        # 按解码后字节累计整批预算，单页合规不能替代整份导入的总大小限制。
         total_bytes += len(raw)
         digest = hashlib.sha256(raw).hexdigest()
         if (

@@ -108,6 +108,7 @@ def parse_restricted_latex(source: str) -> dict[str, Any]:
     compact = source.strip().replace("\\left", "").replace("\\right", "")
     if not compact or len(compact) > 4096:
         raise UnsupportedExpression("empty or oversized expression")
+    # 必须拒绝词法表之外的残留，不能跳过无法识别的公式片段后继续认证。
     tokens = TOKEN.findall(compact)
     residue = TOKEN.sub("", compact)
     if residue.strip():

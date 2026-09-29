@@ -24,6 +24,7 @@ var (
 	traceIDPattern   = regexp.MustCompile(`^[0-9a-fA-F]{32}$`)
 )
 
+// Chain 按传入顺序处理请求；反向包裹使第一个中间件成为最外层，返回时顺序相反。
 func Chain(handler http.Handler, middlewares ...Middleware) http.Handler {
 	for i := len(middlewares) - 1; i >= 0; i-- {
 		handler = middlewares[i](handler)
@@ -79,6 +80,7 @@ func CORS(allowedOrigins []string, allowedMethods []string, allowedHeaders []str
 				return
 			}
 			if !origins[origin] {
+				// CORS 约束浏览器读取响应；普通请求仍交给后续认证和 CSRF，不能将 CORS 当作权限检查。
 				if r.Method == http.MethodOptions {
 					httpx.Error(w, r, http.StatusForbidden, "cors_origin_forbidden", "origin is not allowed")
 					return

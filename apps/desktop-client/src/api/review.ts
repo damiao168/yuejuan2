@@ -27,6 +27,7 @@ export async function listAiGrades(client: DesktopApiClient, segmentId: string) 
 }
 
 export interface SubmitHumanGradePayload {
+  // 必须使用下载任务包时的版本；服务端据此阻止旧草稿覆盖后续评分。
   expected_revision: number;
   score: number;
   rubric_selections: RubricSelection[];

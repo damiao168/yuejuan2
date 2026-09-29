@@ -101,6 +101,7 @@ export function AppLayout({
       if (lockTriggered) return;
       lockTriggered = true;
       cancelStepUp();
+      // 公共电脑空闲时先遮住工作区，再请求服务端锁定；锁定请求失败也保持遮挡，避免凭网络抖动重新暴露内容。
       setWorkspaceLocked(true);
       setUnlockError(undefined);
       setLockingSession(true);

@@ -8,6 +8,7 @@ export function fillPath(template: string, values: Record<string, string | numbe
     if (value === undefined || value === null || value === "") {
       throw new Error(`Missing path parameter: ${key}`);
     }
+    // 只编码参数值，避免值里的斜杠变成新的路由层级。
     return encodeURIComponent(String(value));
   });
 }
@@ -15,6 +16,7 @@ export function fillPath(template: string, values: Record<string, string | numbe
 export function appendQuery(path: string, values: Record<string, unknown> | undefined): string {
   if (!values) return path;
   const params = new URLSearchParams();
+  // 0 和 false 是有效筛选值；数组使用重复键传递，保持服务端的多值查询约定。
   for (const [key, value] of Object.entries(values)) {
     if (value === undefined || value === null || value === "") continue;
     if (Array.isArray(value)) {
@@ -37,6 +39,7 @@ export interface ApiErrorShape {
 }
 
 export function normalizeApiError(payload: unknown): ApiErrorShape {
+  // 错误码可位于嵌套 error 中；追踪、字段校验和冲突版本仍从响应顶层提取。
   const candidate = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
   const envelope = candidate.error && typeof candidate.error === "object" ? (candidate.error as Record<string, unknown>) : candidate;
   return {

@@ -103,6 +103,7 @@ export function AnswerSheetTemplatePage({ examId, canManage, canCalibrate = fals
   const previewController = useTemplatePreview(selectedPaper);
   const { preview, pdfRef, pageNo, setPageNo } = previewController;
   const isTemplateDifference = selectedTemplate?.status === "locked" && selectedTemplate.layout.omr_profile?.mode === "template_difference";
+  // 校准针对已锁定的差分识别模板；查看/编辑模板权限本身不代表可审批自动确认。
   const calibration = useOMRCalibration({
     template: selectedTemplate,
     enabled: Boolean(selectedTemplate?.status === "locked" && selectedTemplate.layout.omr_profile?.mode === "template_difference" && canCalibrate),

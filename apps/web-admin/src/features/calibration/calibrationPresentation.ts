@@ -1,6 +1,7 @@
 import type { CalibrationMetrics, CalibrationPolicy } from "../../api/calibration";
 
 export function calibrationThresholdChecks(metrics: CalibrationMetrics, policy?: CalibrationPolicy) {
+  // 未设置采分点门槛时不据此拦截；已设置门槛但缺失数据时，按不达标处理。
   if (!policy) return [];
   return [
     { key: "mae", label: "平均绝对误差", value: metrics.mae, passed: metrics.mae <= policy.maximum_mae },

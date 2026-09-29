@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// 启动前只检查会被路由的供应商和部署；外部配置的密钥、价格计量和健康状态任一不完整都阻止上线。
 func ValidateProductionInventory(
 	providers []Provider,
 	deployments []Deployment,

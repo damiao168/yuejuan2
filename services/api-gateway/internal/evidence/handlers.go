@@ -19,6 +19,7 @@ func NewHandler(store Store, engine *Engine, audit auth.AuditRecorder) *Handler 
 	return &Handler{store: store, engine: engine, audit: audit}
 }
 
+// 先按当前租户读取 AI 成绩及答题上下文，再把验证结果作为独立 agent_job 保存；不会写回成绩本身。
 func (h *Handler) Verify(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	ctx, err := h.store.LoadContext(r.Context(), user.TenantID, r.PathValue("id"))

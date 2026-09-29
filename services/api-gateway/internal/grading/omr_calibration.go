@@ -210,6 +210,7 @@ FOR UPDATE OF t
 			}
 		}
 	}
+	// 同一模板内容、识别配置和参考图共用校准范围锁，避免并发创建两份有效会话。
 	scopeKey := strings.Join([]string{tenantID, templateID, contentHash, "template", policy.ProfileHash, policy.Reference.HashSHA256}, "|")
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, scopeKey); err != nil {
 		return OMRCalibrationDetail{}, err
@@ -341,6 +342,7 @@ func (s *PostgresStore) LabelOMRCalibrationCase(ctx context.Context, tenantID, c
 		}
 		expected = []string{input.ExpectedOption}
 	}
+	// nil 表示没有提交标签；空数组则是人工确认空白，二者不能合并处理。
 	if expected == nil {
 		return OMRCalibrationDetail{}, ErrInvalidInput
 	}
@@ -387,6 +389,7 @@ func (s *PostgresStore) ApproveOMRCalibration(ctx context.Context, tenantID, cal
 	if session.Status != "draft" {
 		return OMRCalibrationDetail{}, ErrInvalidTransition
 	}
+	// 审批人与创建人、任一样本标注人分离；样本标签和审批都先锁住同一会话行。
 	if session.CreatedBy == actorID {
 		return OMRCalibrationDetail{}, ErrForbidden
 	}
@@ -496,6 +499,8 @@ func (s *PostgresStore) populateOMRCalibrationCasesTx(ctx context.Context, tx *s
 	if err != nil {
 		return ErrInvalidInput
 	}
+	// 先取每题块最新的同配置结果，再按固定种子分层抽样；样本写入后不随后续识别更新。
+	// 优先抽取稀缺选项和结果层不等于保证覆盖，审批前仍须检查实际样本分布。
 	rows, err := tx.QueryContext(ctx, `
 WITH latest_by_segment AS (
   SELECT DISTINCT ON (o.answer_segment_id)
@@ -760,6 +765,7 @@ func summarizeOMRCalibration(session OMRCalibrationSession, cases []OMRCalibrati
 		summary.TotalCount++
 		summary.QuestionCoverage[item.QuestionID]++
 		summary.StratumCoverage[item.SampleStratum]++
+		// 模板校准只要求可能自动确认的高置信单个选项结果零错；其他层仍须标注并满足覆盖要求。
 		eligible := item.SampleStratum == "selected_high" || (session.ScopeType != "template" && item.SampleStratum == "")
 		if eligible {
 			summary.EligibleCount++
@@ -855,6 +861,7 @@ WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND deleted_at IS NULL
 
 	out := []calibrationQuestion{}
 	seenQuestions := map[string]bool{}
+	// 只按模板实际题区建立校准题集，并排除没有 OMR 自动路径的题型，避免校准范围悄悄扩大。
 	for _, page := range layout.Pages {
 		for _, region := range page.QuestionRegions {
 			item, ok := metadata[region.QuestionID]
@@ -929,6 +936,7 @@ func calibrationOptionsMatch(decision string, observed, expected []string) bool 
 	return decision == "selected" || decision == "multiple"
 }
 
+// 审批证据包含冻结配置和样本标签；按样本 ID 排序，避免查询返回顺序改变证据哈希。
 func omrCalibrationEvidenceHash(session OMRCalibrationSession, cases []OMRCalibrationCase) (string, error) {
 	sorted := append([]OMRCalibrationCase(nil), cases...)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].ID < sorted[j].ID })

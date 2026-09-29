@@ -30,6 +30,7 @@ func stateKey(tenantID, pageID string) string { return tenantID + ":" + pageID }
 // PutState is useful to isolate service/handler tests. It does not exist in
 // the Store interface because runtime production projection is source-driven.
 func (s *MemoryStore) PutState(tenantID string, state PageState) {
+	// 写入状态同时维护对应异常的幂等投影；同一来源更新原异常，来源变化才新建记录。
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	state = cloneState(state)
@@ -120,6 +121,7 @@ func (s *MemoryStore) Summary(_ context.Context, tenantID, examID string) (Summa
 }
 
 func (s *MemoryStore) ListExceptions(_ context.Context, tenantID string, filter ExceptionFilter) (ListResult, error) {
+	// 此测试实现按时间和 ID 倒序截取首页，尚未应用传入的游标或学科筛选。
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	items := []Exception{}
@@ -208,6 +210,7 @@ func (s *MemoryStore) ResolveException(_ context.Context, tenantID, exceptionID,
 }
 
 func (s *MemoryStore) RetryTarget(_ context.Context, tenantID, exceptionID string) (RetryTarget, error) {
+	// 已解决或来源不可重试的异常不能重新投递，避免把人工结案重新打开。
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	item, ok := s.exceptionForTenant(tenantID, exceptionID)

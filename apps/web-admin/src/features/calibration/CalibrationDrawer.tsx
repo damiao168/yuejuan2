@@ -139,6 +139,7 @@ export function CalibrationDrawer({
         submitted_score: score.score,
         rubric_selections: score.rubricSelections
       });
+      // 偏差只使用提交后返回的结果；当前样本的参考分不在作答前展示。
       setAttempts((current) => [...current, result.attempt]);
       setSession(result.session);
       setQualification(result.qualification ?? qualification);

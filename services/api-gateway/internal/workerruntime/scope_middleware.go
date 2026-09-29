@@ -29,8 +29,7 @@ func TaskCapabilityFromContext(ctx context.Context) (Task, bool) {
 	return task, ok
 }
 
-// RequireTaskSource binds a service request's route resource to the durable
-// task source. Human callers retain their normal RBAC and AccessScope checks.
+// RequireTaskSource 将服务请求路径资源绑定到持久任务来源；人工调用仍执行原有 RBAC 和 AccessScope 检查。
 func RequireTaskSource(sourceType string, pathParam string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -50,8 +49,7 @@ func RequireTaskSource(sourceType string, pathParam string) func(http.Handler) h
 	}
 }
 
-// RequireTaskPayloadValue binds a route resource to an explicit identifier in
-// the durable task payload, for dependent resources such as answer segments.
+// RequireTaskPayloadValue 将路径资源绑定到持久任务 payload 中的明确 ID，适用于答题段等依赖资源。
 func RequireTaskPayloadValue(pathParam string, payloadKey string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -71,9 +69,7 @@ func RequireTaskPayloadValue(pathParam string, payloadKey string) func(http.Hand
 	}
 }
 
-// RequireTaskFile limits a service download to file identifiers explicitly
-// captured from the durable task payload. Caller-provided tenant headers never
-// influence this decision.
+// RequireTaskFile 只允许下载持久任务 payload 明确记录的文件 ID；调用方提供的租户头不参与判断。
 func RequireTaskFile(pathParam string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -93,8 +89,7 @@ func RequireTaskFile(pathParam string) func(http.Handler) http.Handler {
 	}
 }
 
-// TaskScope derives the target tenant and resource scope from a currently
-// leased durable task. A service account cannot choose a tenant by header.
+// TaskScope 从当前租约任务推导目标租户和资源范围；服务账号不能通过请求头选择租户。
 func TaskScope(store Store) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -235,6 +235,41 @@ func TestPublishedExamCannotBeModified(t *testing.T) {
 	}
 }
 
+func TestExamUpdateRejectsChangedRosterAfterReadiness(t *testing.T) {
+	statuses := []string{"ready", "collecting", "grading", "reviewing", "finalized"}
+	for _, status := range statuses {
+		t.Run(status, func(t *testing.T) {
+			store := exam.NewMemoryStore()
+			router := testRouter(authStoreWithPermissions(t, []string{"exam:manage"}), store)
+			token := login(t, router)
+			created := createExam(t, router, token)
+			if err := store.SetStatusForTest("tenant-exam", created.ID, status); err != nil {
+				t.Fatalf("seed %s exam: %v", status, err)
+			}
+
+			// 进入准备完成阶段后，真正改变班级集合必须返回冻结错误，并保留原集合。
+			req := authedRequest(http.MethodPatch, "/api/v1/exams/"+created.ID, bytes.NewBufferString(`{"class_ids":["class-1"],"expected_revision":2}`), token)
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+			if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), "exam_candidates_frozen") {
+				t.Fatalf("changed roster in %s expected frozen conflict, got %d %s", status, rec.Code, rec.Body.String())
+			}
+			unchanged, err := store.GetExam(t.Context(), tenantScope("tenant-exam", "u-exam"), created.ID)
+			if err != nil || len(unchanged.ClassIDs) != 2 {
+				t.Fatalf("rejected roster update changed stored classes: %#v err=%v", unchanged.ClassIDs, err)
+			}
+
+			// 顺序或重复变化代表同一集合，不应触发名册重建，也不应误判为冻结后的变更。
+			req = authedRequest(http.MethodPatch, "/api/v1/exams/"+created.ID, bytes.NewBufferString(`{"class_ids":["class-2","class-1","class-1"],"expected_revision":2}`), token)
+			rec = httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("equivalent roster in %s expected 200, got %d %s", status, rec.Code, rec.Body.String())
+			}
+		})
+	}
+}
+
 func TestCollectionCannotBypassReadinessGate(t *testing.T) {
 	authStore := authStoreWithPermissions(t, []string{"exam:manage"})
 	router := testRouter(authStore, exam.NewMemoryStore())

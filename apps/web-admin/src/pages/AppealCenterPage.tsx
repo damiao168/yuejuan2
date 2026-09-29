@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, App, Button, Input, InputNumber, Select, Space, Tag, type TableColumnsType } from "antd";
 import { CheckCircle2, RefreshCw, Search, Send, UserRoundCheck } from "lucide-react";
 import type { SessionUser } from "../auth/session";
@@ -56,26 +56,57 @@ export function AppealCenterPage({ mode, canRead, canManage, canWork, canReadIde
   const [examFilter, setExamFilter] = useState(initialExamId || "all"); const [statusFilter, setStatusFilter] = useState("all"); const [keyword, setKeyword] = useState(""); const [assignedTo, setAssignedTo] = useState("");
   const [recommendation, setRecommendation] = useState<SubmitAppealRecommendationPayload["recommendation"]>("accept"); const [decision, setDecision] = useState("accepted"); const [score, setScore] = useState<number | null>(null); const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(true); const [detailLoading, setDetailLoading] = useState(false); const [actioning, setActioning] = useState(""); const [error, setError] = useState("");
+  const detailRequestRef = useRef(0);
+  // 点击列表时先同步记录目标，迟到请求和提交不能沿用上一条申诉。
+  const selectedIdRef = useRef("");
 
   const load = useCallback(async () => {
     if (!canRead) { setLoading(false); return; } setLoading(true); setError("");
     try {
       const response = await listAppeals({ exam_id: examFilter === "all" ? undefined : examFilter, status: statusFilter === "all" ? undefined : statusFilter, limit: 100 });
       const studentIds = Array.from(new Set(response.appeals.map((item) => item.student_id).filter(Boolean)));
+      // 身份与管理数据按能力单独请求，教师匿名复核不依赖学生姓名或管理员统计。
       const [studentResult, classResult, examResult, statsResult, workerResult] = await Promise.all([
         canReadIdentities && studentIds.length ? listStudents({ ids: studentIds, limit: 200 }) : Promise.resolve({ students: [] }),
         canReadIdentities ? listClasses() : Promise.resolve({ classes: [] }), canReadExams ? listExams({ limit: 200 }) : Promise.resolve({ exams: [] }),
         canManage ? getAppealStatistics(examFilter === "all" ? undefined : examFilter) : Promise.resolve({ statistics: null }), canManage ? listManagedUsers({ limit: 200 }) : Promise.resolve({ users: [] })
       ]);
-      setAppeals(response.appeals); setSelectedId((current) => response.appeals.some((item) => item.id === current) ? current : response.appeals[0]?.id ?? "");
+      const nextSelectedId = response.appeals.some((item) => item.id === selectedIdRef.current) ? selectedIdRef.current : response.appeals[0]?.id ?? "";
+      selectedIdRef.current = nextSelectedId;
+      setAppeals(response.appeals); setSelectedId(nextSelectedId);
       setIdentities({ students: Object.fromEntries(studentResult.students.map((item) => [item.id, item])), classes: Object.fromEntries(classResult.classes.map((item) => [item.id, item])), exams: Object.fromEntries(examResult.exams.map((item) => [item.id, item])) });
       setStatistics(statsResult.statistics as AppealStatistics | null); setWorkers(workerResult.users.filter((user) => user.status === "active" && user.roles.some((role) => ["teacher", "grader", "arbitrator"].includes(role))));
     } catch (failure) { setError(formatError(failure)); setAppeals([]); } finally { setLoading(false); }
   }, [canManage, canRead, canReadExams, canReadIdentities, examFilter, statusFilter]);
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
-    if (!selectedId) { setSelected(null); return; } setDetailLoading(true);
-    void getAppeal(selectedId).then(({ appeal }) => { setSelected(appeal); setAssignedTo(appeal.assigned_to ?? ""); setRecommendation((appeal.teacher_recommendation as SubmitAppealRecommendationPayload["recommendation"]) || "accept"); setDecision(["accepted", "rejected", "score_adjusted", "need_more_info"].includes(appeal.status) ? appeal.status : "accepted"); setScore(evidenceNumber(appeal, "score") ?? null); setReason(""); }).catch((failure) => setError(formatError(failure))).finally(() => setDetailLoading(false));
+    const requestId = ++detailRequestRef.current;
+    if (!selectedId) {
+      setSelected(null);
+      setDetailLoading(false);
+      return;
+    }
+
+    // 切换申诉时先清空旧详情；请求完成后还要核对序号和当前 ID，避免慢响应覆盖新任务。
+    setSelected(null);
+    setDetailLoading(true);
+    setAssignedTo("");
+    setRecommendation("accept");
+    setDecision("accepted");
+    setScore(null);
+    setReason("");
+    void getAppeal(selectedId).then(({ appeal }) => {
+      if (requestId !== detailRequestRef.current || selectedIdRef.current !== selectedId) return;
+      setSelected(appeal);
+      setAssignedTo(appeal.assigned_to ?? "");
+      setRecommendation((appeal.teacher_recommendation as SubmitAppealRecommendationPayload["recommendation"]) || "accept");
+      setDecision(["accepted", "rejected", "score_adjusted", "need_more_info"].includes(appeal.status) ? appeal.status : "accepted");
+      setScore(evidenceNumber(appeal, "score") ?? null);
+    }).catch((failure) => {
+      if (requestId === detailRequestRef.current && selectedIdRef.current === selectedId) setError(formatError(failure));
+    }).finally(() => {
+      if (requestId === detailRequestRef.current && selectedIdRef.current === selectedId) setDetailLoading(false);
+    });
   }, [selectedId]);
 
   const selectedStudent = selected ? identities.students[selected.student_id] : undefined; const selectedClass = selectedStudent ? identities.classes[selectedStudent.class_id] : undefined;
@@ -92,20 +123,54 @@ export function AppealCenterPage({ mode, canRead, canManage, canWork, canReadIde
     { title: "复核进度", key: "review", width: 150, render: (_, appeal) => appeal.assigned_to ? `已分派 · ${appeal.teacher_recommendation ? "已反馈" : "待反馈"}` : "待系统分派" },
     { title: "状态", dataIndex: "status", width: 110, render: (value: string) => <StatusTag tone={statusTone(value)}>{statusLabels[value] ?? "处理中"}</StatusTag> }, { title: "提交时间", dataIndex: "created_at", width: 170, render: formatTime }
   ], [identities.exams, identities.students, mode]);
-  const refreshSelected = async (id: string) => { await load(); const response = await getAppeal(id); setSelectedId(id); setSelected(response.appeal); };
-  const reassign = async () => { if (!selected || !assignedTo) return; setActioning("assign"); try { await assignAppeal(selected.id, assignedTo, selected.revision); message.success("复核任务已重新分派"); await refreshSelected(selected.id); } catch (failure) { message.error(formatError(failure)); } finally { setActioning(""); } };
-  const submitTeacherReview = async () => { if (!selected || !canSubmitTeacherRecommendation || reason.trim().length < 10) { message.error("请确认任务已分派给当前账号，并填写不少于 10 个字的复核依据"); return; } setActioning("recommend"); try { await submitAppealRecommendation(selected.id, { recommendation, reason: reason.trim(), ...(recommendation === "adjust_score" && score !== null ? { recommended_score: score } : {}), expected_revision: selected.revision }); message.success("独立复核意见已提交"); await refreshSelected(selected.id); } catch (failure) { message.error(formatError(failure)); } finally { setActioning(""); } };
+  const refreshSelected = async (id: string) => {
+    await load();
+    if (selectedIdRef.current !== id) return;
+    const requestId = ++detailRequestRef.current;
+    setDetailLoading(true);
+    try {
+      const response = await getAppeal(id);
+      if (requestId !== detailRequestRef.current || selectedIdRef.current !== id) return;
+      setSelected(response.appeal);
+      setAssignedTo(response.appeal.assigned_to ?? "");
+      setRecommendation((response.appeal.teacher_recommendation as SubmitAppealRecommendationPayload["recommendation"]) || "accept");
+      setDecision(["accepted", "rejected", "score_adjusted", "need_more_info"].includes(response.appeal.status) ? response.appeal.status : "accepted");
+      setScore(evidenceNumber(response.appeal, "score") ?? null);
+      setReason("");
+    } catch (failure) {
+      if (requestId === detailRequestRef.current && selectedIdRef.current === id) message.error(formatError(failure));
+    } finally {
+      if (requestId === detailRequestRef.current && selectedIdRef.current === id) setDetailLoading(false);
+    }
+  };
+  const reassign = async () => {
+    if (!selected || selected.id !== selectedIdRef.current || detailLoading || !assignedTo) return;
+    const appealId = selected.id;
+    setActioning("assign");
+    try { await assignAppeal(appealId, assignedTo, selected.revision); message.success("复核任务已重新分派"); await refreshSelected(appealId); } catch (failure) { message.error(formatError(failure)); } finally { setActioning(""); }
+  };
+  const submitTeacherReview = async () => {
+    if (!selected || selected.id !== selectedIdRef.current || detailLoading || !canSubmitTeacherRecommendation || reason.trim().length < 10) { message.error("请确认任务已分派给当前账号，并填写不少于 10 个字的复核依据"); return; }
+    const appealId = selected.id;
+    setActioning("recommend");
+    try { await submitAppealRecommendation(appealId, { recommendation, reason: reason.trim(), ...(recommendation === "adjust_score" && score !== null ? { recommended_score: score } : {}), expected_revision: selected.revision }); message.success("独立复核意见已提交"); await refreshSelected(appealId); } catch (failure) { message.error(formatError(failure)); } finally { setActioning(""); }
+  };
   const submitAdminDecision = () => {
-    if (!selected || reason.trim().length < 6) { message.error("请填写最终处理说明"); return; }
+    if (!selected || selected.id !== selectedIdRef.current || detailLoading || reason.trim().length < 6) { message.error("请填写最终处理说明"); return; }
+    const appealId = selected.id;
     const payload: ReviewAppealPayload = { status: decision, reason: reason.trim(), assigned_to: selected.assigned_to, final_grade_id: selected.final_grade_id, expected_revision: selected.revision, ...(decision === "score_adjusted" && score !== null ? { adjusted_score: score } : {}) };
-    modal.confirm({ title: decision === "score_adjusted" ? "确认调整成绩" : "确认提交最终结论", content: decision === "score_adjusted" ? `本题将由 ${formatScore(currentScore)} 分调整为 ${formatScore(score)} 分。` : "提交后该结论将作为学生可见的正式处理结果。", okText: "确认提交", cancelText: "取消", onOk: async () => { setActioning("decision"); try { await reviewAppeal(selected.id, payload); message.success("最终处理已提交"); await refreshSelected(selected.id); } catch (failure) { message.error(formatError(failure)); } finally { setActioning(""); } } });
+    modal.confirm({ title: decision === "score_adjusted" ? "确认调整成绩" : "确认提交最终结论", content: decision === "score_adjusted" ? `本题将由 ${formatScore(currentScore)} 分调整为 ${formatScore(score)} 分。` : "提交后该结论将作为学生可见的正式处理结果。", okText: "确认提交", cancelText: "取消", onOk: async () => {
+      if (selectedIdRef.current !== appealId) { message.error("申诉详情已切换，请重新确认当前任务"); return; }
+      setActioning("decision");
+      try { await reviewAppeal(appealId, payload); message.success("最终处理已提交"); await refreshSelected(appealId); } catch (failure) { message.error(formatError(failure)); } finally { setActioning(""); }
+    } });
   };
 
   return <div className={`appeal-shell appeal-shell-v2 ${mode === "teacher" ? "teacher" : "admin"}`}>
     <section className="appeal-topbar"><div><h1>{mode === "teacher" ? "复核任务" : "成绩复核"}</h1><p>{mode === "teacher" ? "独立核对匿名答卷和评分标准，提交复核结论。" : "查看学生复核申请、复核进度与需要终审的争议。"}</p></div><Space wrap><Select className="appeal-filter-select" value={examFilter} options={[{ value: "all", label: "全部考试" }, ...examOptions]} onChange={setExamFilter} /><Select className="appeal-filter-select narrow" value={statusFilter} options={[{ value: "all", label: "全部状态" }, ...Object.entries(statusLabels).map(([value, label]) => ({ value, label }))]} onChange={setStatusFilter} /><Button icon={<RefreshCw size={16} />} loading={loading} onClick={() => void load()}>刷新</Button></Space></section>
     {!canRead ? <Alert type="error" showIcon message="当前账号无权查看复核任务" /> : null}{error ? <ErrorState message={error} onRetry={() => void load()} /> : null}
     {mode === "admin" ? <section className="appeal-summary-strip compact"><div><span>全部申请</span><strong>{statistics?.total ?? appeals.length}</strong></div><div><span>等待处理</span><strong>{statistics ? (statistics.by_status.submitted ?? 0) + (statistics.by_status.under_review ?? 0) : appeals.filter((item) => ["submitted", "under_review"].includes(item.status)).length}</strong></div><div><span>需要终审</span><strong>{appeals.filter((item) => item.teacher_recommendation === "adjust_score" || item.status === "need_more_info").length}</strong></div></section> : null}
-    <section className="appeal-queue-panel"><div className="appeal-queue-head"><div><h2>{mode === "teacher" ? "分配给我的任务" : "复核申请"}</h2><p>{filtered.length} 条记录</p></div><Input prefix={<Search size={16} />} allowClear value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder={mode === "teacher" ? "搜索考试、题号或原因" : "搜索学生、考试、题号或原因"} /></div>{loading ? <LoadingState label="正在读取复核申请" /> : <ResponsiveTable className="dense-data-table" rowKey="id" size="small" columns={columns} dataSource={filtered} pagination={{ pageSize: 8 }} onRow={(record) => ({ onClick: () => setSelectedId(record.id) })} rowClassName={(record) => record.id === selectedId ? "selected-table-row" : ""} locale={{ emptyText: <EmptyState title="暂无复核申请" description="当前筛选条件下没有待处理记录。" /> }} />}</section>
+    <section className="appeal-queue-panel"><div className="appeal-queue-head"><div><h2>{mode === "teacher" ? "分配给我的任务" : "复核申请"}</h2><p>{filtered.length} 条记录</p></div><Input prefix={<Search size={16} />} allowClear value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder={mode === "teacher" ? "搜索考试、题号或原因" : "搜索学生、考试、题号或原因"} /></div>{loading ? <LoadingState label="正在读取复核申请" /> : <ResponsiveTable className="dense-data-table" rowKey="id" size="small" columns={columns} dataSource={filtered} pagination={{ pageSize: 8 }} onRow={(record) => ({ onClick: () => { selectedIdRef.current = record.id; setSelectedId(record.id); } })} rowClassName={(record) => record.id === selectedId ? "selected-table-row" : ""} locale={{ emptyText: <EmptyState title="暂无复核申请" description="当前筛选条件下没有待处理记录。" /> }} />}</section>
     {detailLoading ? <section className="appeal-case-panel"><LoadingState label="正在读取答卷与复核信息" /></section> : selected ? <section className="appeal-case-panel">
       <header className="appeal-case-head"><div><h2>{identities.exams[selected.exam_id]?.name ?? selected.exam_name ?? "考试"} · {selected.subject ? examSubjectLabel(selected.subject) : "未标注学科"} · {selected.question_no || "整卷"}</h2><p>{mode === "teacher" ? `匿名答卷 ${selected.anonymous_code || "未编号"}` : `${selectedStudent?.name ?? "学生信息未匹配"}${selectedClass?.name ? ` · ${selectedClass.name}` : ""} · 提交于 ${formatTime(selected.created_at)}`}</p></div><StatusTag tone={statusTone(selected.status)}>{statusLabels[selected.status] ?? "处理中"}</StatusTag></header>
       <div className="appeal-case-grid"><main className="appeal-evidence-main"><section><h3>申诉内容</h3><div className="appeal-reason-box"><Tag color="blue">{readableReason(selected.reason)}</Tag><p>{readableReasonDetail(selected.reason)}</p></div></section><section><h3>答题区域</h3><div className="appeal-answer-grid"><div><span>原卷作答</span><p>{selected.evidence?.raw_answer || "暂无可展示的原卷答题内容"}</p></div><div><span>文字识别结果</span><p>{selected.evidence?.ocr_text || "暂无识别文本，请以原卷作答为准"}</p></div></div></section><section><h3>评分标准</h3>{rubricItems(selected).length ? <div className="appeal-rubric-list">{rubricItems(selected).map((item, index) => <div key={`${item.label}-${index}`}><span>{item.label}</span><strong>{item.score === undefined ? "" : `${formatScore(item.score)} 分`}</strong></div>)}</div> : <p className="muted">暂无结构化评分要点，请按本题正式评分标准复核。</p>}</section>{mode === "admin" ? <section><h3>原处理结果</h3><div className="appeal-result-strip"><div><span>原最终分</span><strong>{formatScore(currentScore)} / {formatScore(maxScore)}</strong></div><div><span>复核教师</span><strong>{selected.assigned_to ? workerNames[selected.assigned_to] ?? "已分派" : "等待系统分派"}</strong></div><div><span>复核意见</span><strong>{selected.teacher_recommendation ? recommendationLabels[selected.teacher_recommendation] ?? "已反馈" : "待反馈"}</strong></div></div>{selected.teacher_recommendation_reason ? <p className="appeal-review-note">{selected.teacher_recommendation_reason}</p> : null}</section> : null}</main>

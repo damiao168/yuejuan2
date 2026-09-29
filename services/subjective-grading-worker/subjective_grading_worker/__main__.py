@@ -15,6 +15,7 @@ def run_cycle(api: EduGradeClient, runner: Runner, settings: Settings) -> int:
     if not api.token:
         api.login()
     processed = runner.process_once()
+    # 只有登录与本轮任务处理均正常返回才刷新健康标记，异常重试不会掩盖持续故障。
     mark_healthy(settings.health_file)
     return processed
 

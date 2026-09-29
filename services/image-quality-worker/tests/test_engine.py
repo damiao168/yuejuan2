@@ -328,6 +328,7 @@ def encode_image(image: Image.Image) -> bytes:
     return output.getvalue()
 
 
+# 逐角验证实际齐次变换结果，避免只检查输出宽高而漏掉旋转裁切。
 def assert_transformed_corners_inside_canvas(transform: dict) -> None:
     width = transform["source_pixel_width"]
     height = transform["source_pixel_height"]

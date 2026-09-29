@@ -13,6 +13,7 @@ export function useCaptureBatchDetail(
   const [matching, setMatching] = useState<MatchingQueue>();
   const [matchingLoading, setMatchingLoading] = useState(false);
   const [processingSummaries, setProcessingSummaries] = useState<Record<string, ProcessingSummary>>({});
+  // 详情与匹配分别计代次；切批次或重置后，两类旧请求都不能回填当前面板。
   const detailRequestRef = useRef(0);
   const matchingRequestRef = useRef(0);
 

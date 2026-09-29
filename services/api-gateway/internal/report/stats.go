@@ -139,6 +139,7 @@ func buildQuestionAnalysis(data dataset) []QuestionAnalysis {
 			}
 		}
 		options := optionDistribution(records)
+		// 难度按得分率表示，值越大越容易；正确率只计拿到该题满分的记录。
 		item := QuestionAnalysis{
 			QuestionID:      questionID,
 			QuestionNo:      first.QuestionNo,
@@ -175,6 +176,7 @@ func scoreStats(submissions []submissionRecord) ScoreStats {
 	for i, sub := range submissions {
 		scores[i] = sub.TotalScore
 		sum += sub.TotalScore
+		// 阈值和分段沿用保留两位小数的得分率，调整精度会改变边界分数的归类。
 		rate := ratio(sub.TotalScore, sub.MaxScore)
 		if rate >= 0.6 {
 			pass++
@@ -195,6 +197,7 @@ func scoreStats(submissions []submissionRecord) ScoreStats {
 	return out
 }
 
+// 同一题完整计入它的每个知识点，知识点之间不分摊分数，因此不能相加还原总分。
 func knowledgeMastery(records []gradeRecord) []KnowledgeMastery {
 	byPoint := map[string]*KnowledgeMastery{}
 	for _, record := range records {
@@ -336,6 +339,7 @@ func topBottomSubmissions(submissions []submissionRecord) (map[string]bool, map[
 	if len(sorted) == 0 {
 		return map[string]bool{}, map[string]bool{}
 	}
+	// 高低组各取总分排名两端的 27%，向上取整；极小样本的两组可能重叠。
 	size := int(math.Ceil(float64(len(sorted)) * 0.27))
 	if size < 1 {
 		size = 1
@@ -497,6 +501,7 @@ func median(sorted []float64) float64 {
 	return (sorted[mid-1] + sorted[mid]) / 2
 }
 
+// 这里描述已发布成绩的总体离散程度，分母用总人数，不作样本方差校正。
 func stddev(values []float64, mean float64) float64 {
 	if len(values) == 0 {
 		return 0

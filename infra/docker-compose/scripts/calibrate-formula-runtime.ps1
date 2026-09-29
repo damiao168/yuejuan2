@@ -39,6 +39,8 @@ if ($LASTEXITCODE -ne 0) {
   throw "Formula calibration failed with exit code $LASTEXITCODE. The existing runtime profile was not replaced."
 }
 
+
+# 测量已成功写入配置后重建 worker 使其生效；重启失败不等于配置未写入。
 & docker compose --env-file $envFile -f $composeFile --profile ocr up -d --no-deps --force-recreate paper-formula-worker
 if ($LASTEXITCODE -ne 0) {
   throw "The profile was written, but paper-formula-worker could not be restarted."

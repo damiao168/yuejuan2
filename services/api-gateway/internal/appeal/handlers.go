@@ -70,6 +70,7 @@ func (h *Handler) ListAppeals(w http.ResponseWriter, r *http.Request) {
 		CursorCreatedAt: cursor.CreatedAt,
 		CursorID:        cursor.ID,
 	}
+	// 查询参数不能扩展访问范围：工作人员限本人受派，学生限本人绑定的学生记录。
 	if hasPermission(user, "appeal:work") && !hasPermission(user, "appeal:manage") {
 		filter.StudentID = ""
 		filter.AssignedTo = user.ID

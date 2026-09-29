@@ -77,6 +77,7 @@ func (s *PostgresStore) startScoringRun(ctx context.Context, tenantID, examID, a
 	if !errors.Is(err, sql.ErrNoRows) {
 		return ScoringRun{}, err
 	}
+	// 已接受命令在前面直接重放；只有新启动才重新检查就绪条件，避免丢失响应后无法恢复。
 	if segmentID == "" {
 		readiness, readinessErr := calculateScoringReadiness(ctx, tx, tenantID, examID)
 		if readinessErr != nil {
@@ -328,6 +329,7 @@ ON CONFLICT (tenant_id,answer_segment_id,source,grade_round) WHERE status IN ('p
 					return ScoringRun{}, err
 				}
 			}
+			// 冻结服务端校准资格、参考图和阈值到 OMR 运行；Worker 只接收识别配置，不能自行授予自动确认。
 			policy := paper.OMRAutoConfirmPolicyForTemplateReferenceAndCalibration(templateLayout, segment.templateStatus, segment.currentTemplateHash, segment.templateHash, currentReference, segment.questionID, segment.templateID, calibration)
 			referenceAssetID, referenceSHA256 := "", ""
 			if policy.Reference != nil {

@@ -18,6 +18,7 @@ const (
 	maxAuthJSONBodyBytes = 4 * 1024
 )
 
+// 认证请求限制总字节数，并且只接受一个 JSON 值，避免合法对象后夹带额外内容被忽略。
 func decodeAuthJSON(w http.ResponseWriter, r *http.Request, target any, disallowUnknownFields bool) error {
 	r.Body = http.MaxBytesReader(w, r.Body, maxAuthJSONBodyBytes)
 	decoder := json.NewDecoder(r.Body)

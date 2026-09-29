@@ -12,6 +12,7 @@ type PostgresStore struct{ db *sql.DB }
 func NewPostgresStore(db *sql.DB) *PostgresStore { return &PostgresStore{db: db} }
 
 func (s *PostgresStore) Claim(ctx context.Context, owner string, limit int, leaseTTL time.Duration) ([]Event, error) {
+	// 领取与租约写入合并为一个 SQL，SKIP LOCKED 让并行分发器跳过其他实例占用的事件。
 	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
@@ -56,6 +57,7 @@ RETURNING e.id::text,e.tenant_id::text,e.aggregate_type,e.aggregate_id::text,
 }
 
 func (s *PostgresStore) MarkPublished(ctx context.Context, eventID string, owner string) error {
+	// 只有当前未过期租约的持有者能确认发布，迟到实例不能覆盖接管者的状态。
 	result, err := s.db.ExecContext(ctx, `
 UPDATE event_outbox
 SET published_at=now(),locked_by=NULL,lock_expires_at=NULL,last_error=NULL

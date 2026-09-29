@@ -674,6 +674,7 @@ func (h *Handler) RevokeModelApproval(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"model_approval": item})
 }
 
+// 普通用户只能访问自己的租户；平台用户也必须具备对应治理权限，不能仅靠 tenant_id 越权切换。
 func (h *Handler) targetTenant(w http.ResponseWriter, r *http.Request, requested string) (string, bool) {
 	user := mustUser(r)
 	requested = strings.TrimSpace(requested)

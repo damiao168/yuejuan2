@@ -38,6 +38,7 @@ func NewService(deps Dependencies) *Service {
 	return &Service{deps: deps}
 }
 
+// 汇总严格沿用请求上下文中的 AccessScope；单项数据源失败时保留可用统计并返回中文告警。
 func (s *Service) Summary(ctx context.Context, user auth.User, accessScope auth.AccessScope) (Summary, error) {
 	if s.deps.Exams == nil || s.deps.Submissions == nil || s.deps.Reviews == nil || s.deps.Audits == nil {
 		return Summary{}, fmt.Errorf("dashboard dependencies are incomplete")
@@ -209,7 +210,8 @@ func (s *Service) Summary(ctx context.Context, user auth.User, accessScope auth.
 	sort.Slice(result.ActiveExams, func(i, j int) bool {
 		return result.ActiveExams[i].CreatedAt.After(result.ActiveExams[j].CreatedAt)
 	})
-	result.BlockingIssues = blockingIssues(result.Statistics)
+	// 阻塞项只从统计结果推导，前端可据此直接跳转处理会卡住阅卷或成绩发布的问题。
+result.BlockingIssues = blockingIssues(result.Statistics)
 	return result, nil
 }
 

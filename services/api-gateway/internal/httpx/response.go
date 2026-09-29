@@ -30,6 +30,7 @@ func JSON(w http.ResponseWriter, status int, payload any) {
 	_ = json.NewEncoder(w).Encode(payload)
 }
 
+// Error 将稳定错误码同时写入响应头和正文，供客户端及监控识别；message 只能包含可公开的信息。
 func Error(w http.ResponseWriter, r *http.Request, status int, code string, message string) {
 	w.Header().Set(ErrorCodeHeader, code)
 	JSON(w, status, ErrorResponse{

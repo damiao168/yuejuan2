@@ -36,6 +36,7 @@ WHERE b.tenant_id=$1 AND b.id=$2::uuid
 	); err != nil {
 		return StudentPrintPackage{}, mapNotFound(err)
 	}
+	// 台账数量和模板页数必须先通过边界校验，后面才允许逐页组装可下载包。
 	if expectedSheetCount <= 0 || expectedPageCount <= 0 ||
 		expectedSheetCount > maxPrintPackagePages/expectedPageCount {
 		return StudentPrintPackage{}, ErrInvalidTransition

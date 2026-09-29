@@ -27,6 +27,7 @@ export function OcrWorkerAlert({ enabled }: { enabled: boolean }) {
     void load();
     const timer = window.setInterval(() => void load(), 30_000);
     return () => {
+      // 停用或卸载时使已发出的查询失效，避免迟到结果重新显示过期告警。
       requestRef.current += 1;
       window.clearInterval(timer);
     };

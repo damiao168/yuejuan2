@@ -77,6 +77,7 @@ status, grades = call_json(
 assert status == 200 and len(grades["grades"]) == 1, grades
 grade = grades["grades"][0]
 assert grade["grader_type"] == "llm_subjective"
+# 这里验证真实适配器链路的标记；默认上游仍是协议桩，不能据此认定模型评分质量。
 assert grade["mock"] is False
 assert grade["needs_human_review"] is True
 assert grade["confidence"] == 0

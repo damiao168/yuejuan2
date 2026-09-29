@@ -90,6 +90,7 @@ func (s *PostgresStore) Get(ctx context.Context, tenantID, uploadID string) (Ses
 }
 
 func (s *PostgresStore) AppendChunk(ctx context.Context, tenantID, uploadID string, input ChunkInput) (Session, error) {
+	// 锁住会话并把分块与确认偏移一起提交，避免客户端看到尚未持久化的进度。
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Session{}, err
@@ -169,6 +170,7 @@ func (s *PostgresStore) BeginComplete(ctx context.Context, tenantID, uploadID st
 		}
 		return session, false, nil
 	}
+	// 所有实例以数据库时钟判断租约，避免服务器时钟偏差导致提前接管。
 	var databaseNow time.Time
 	if err := tx.QueryRowContext(ctx, `SELECT clock_timestamp()`).Scan(&databaseNow); err != nil {
 		return Session{}, false, err
@@ -233,6 +235,7 @@ ORDER BY offset_bytes ASC
 }
 
 func (s *PostgresStore) Complete(ctx context.Context, tenantID, uploadID, fileAssetID, captureFileID, completionToken string) (Session, error) {
+	// 完成回执和分块清理同事务提交；失败回滚后仍可读取原分块重试。
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Session{}, err

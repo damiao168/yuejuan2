@@ -2,6 +2,7 @@ use super::connection::sql_error;
 use rusqlite::Connection;
 
 pub(crate) fn initialize_schema(conn: &Connection) -> Result<(), String> {
+    // 每个连接都需启用外键；RESTRICT 防止仍被上传、分块或队列引用的原件被直接删除。
     conn.execute_batch(
         "PRAGMA journal_mode = WAL;
          PRAGMA foreign_keys = ON;

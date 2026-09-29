@@ -296,6 +296,7 @@ func publishedQuestionReleaseKey(tenantID, examID, releaseID string) string {
 	return tenantID + "\x00" + examID + "\x00" + releaseID
 }
 
+// 申诉窗口包含开始时刻、不包含截止时刻；原因白名单为空时不额外限制原因类型。
 func sourceAppealWindowOpen(enabled bool, opensAt, closesAt *time.Time, allowed []string, reasonCode string, now time.Time) bool {
 	if !enabled || (opensAt != nil && now.Before(*opensAt)) || (closesAt != nil && !now.Before(*closesAt)) {
 		return false

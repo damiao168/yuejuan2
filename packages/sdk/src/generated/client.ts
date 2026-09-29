@@ -225,6 +225,8 @@ import type {
   CreatePaperImportRequest,
   AddPaperImportSourcesRequest,
   ReplacePaperImportSourcesRequest,
+  MathRubricDraftRequest,
+  MathRubricDraftResponse,
   ReviewPaperImportRequest,
   PaperImportResponse,
   PaperImportListResponse,
@@ -506,6 +508,7 @@ export interface operations {
   "getPaperImport": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: PaperImportResponse; };
   "addPaperImportSources": { args: { path: { "id": string; }; headers: { "Idempotency-Key": string; }; body: AddPaperImportSourcesRequest; signal?: AbortSignal; }; response: PaperImportResponse; };
   "replacePaperImportSources": { args: { path: { "id": string; }; headers: { "Idempotency-Key": string; }; body: ReplacePaperImportSourcesRequest; signal?: AbortSignal; }; response: PaperImportResponse; };
+  "suggestPaperImportMathRubricDraft": { args: { path: { "id": string; }; body: MathRubricDraftRequest; signal?: AbortSignal; }; response: MathRubricDraftResponse; };
   "savePaperImportReview": { args: { path: { "id": string; }; body: ReviewPaperImportRequest; signal?: AbortSignal; }; response: PaperImportResponse; };
   "applyPaperImport": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: PaperImportResponse; };
   "retryPaperImportParse": { args: { path: { "id": string; }; query: { "expected_generation": number; }; signal?: AbortSignal; }; response: PaperImportResponse; };
@@ -1627,6 +1630,11 @@ export class EduGradeApi {
   replacePaperImportSources(args: operations["replacePaperImportSources"]["args"]): Promise<operations["replacePaperImportSources"]["response"]> {
     const requestPath = fillPath("/api/v1/paper-imports/{id}/sources", args.path);
     return this.transport.request(requestPath, { method: "PUT", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body), headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) });
+  }
+
+  suggestPaperImportMathRubricDraft(args: operations["suggestPaperImportMathRubricDraft"]["args"]): Promise<operations["suggestPaperImportMathRubricDraft"]["response"]> {
+    const requestPath = fillPath("/api/v1/paper-imports/{id}/rubric-draft", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
   }
 
   savePaperImportReview(args: operations["savePaperImportReview"]["args"]): Promise<operations["savePaperImportReview"]["response"]> {

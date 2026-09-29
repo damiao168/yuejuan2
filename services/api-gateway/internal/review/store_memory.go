@@ -728,6 +728,7 @@ func (s *MemoryStore) SubmitArbitration(requestCtx context.Context, tenantID str
 	return cloneArbitration(task), cloneFinalGrade(finalGrade), nil
 }
 
+// Locked 辅助函数不再加锁；调用方必须持有 s.mu 写锁，才能一起更新任务、评分和会话。
 func (s *MemoryStore) createTaskLocked(tenantID string, actorID string, input CreateTaskInput, ctx Context) ReviewTask {
 	now := time.Now().UTC()
 	status := "pending"
@@ -1005,16 +1006,15 @@ func validateSubmit(input SubmitGradeInput, ctx Context) error {
 			return ErrInvalidInput
 		}
 	}
+	// 有细则时总分须等于所选得分点之和；只容忍 0.0001 分的浮点误差，不在这里改分或四舍五入。
 	if hasRubric && math.Abs(input.Score-selectedScore) > 0.0001 {
 		return ErrInvalidInput
 	}
 	return nil
 }
 
-// aiGradeIDFromContext resolves the AI suggestion identifier from the
-// server-loaded task context. Client input is never consulted: the value is
-// copied from the ai_grade row the reviewer saw when submitting. An empty
-// string means no AI suggestion existed and NULL is stored.
+// aiGradeIDFromContext 使用提交时服务端加载的 AI 建议 ID，不接受客户端指定关联。
+// 没有有效 ID 时返回空串；数据库写入时将其转为 NULL。
 func aiGradeIDFromContext(ctx Context) string {
 	value, _ := ctx.AISuggestion["ai_grade_id"].(string)
 	return strings.TrimSpace(value)

@@ -13,10 +13,21 @@ from .schema import (
     _QUESTION_NUMBER,
     _QUESTION_START,
     _REPEATED_FURNITURE_MARKER,
-    _SCORE,
     _SECTION_START,
     _SOLUTION_MARKER,
 )
+
+_NUMBER = r"\d+(?:\.\d+)?"
+# Exam marks must be attached to the question header or section instructions.
+# A bare "4分" in a stem may describe a game, not the value of the question.
+_QUESTION_MARK = re.compile(
+    rf"(?:本(?:小)?题|此题)\s*(?:满分|共|计|为)?\s*[:：]?\s*({_NUMBER})\s*分"
+)
+_LEADING_MARK = re.compile(rf"^\s*[（(]\s*({_NUMBER})\s*分\s*[）)]")
+_SECTION_MARK = re.compile(rf"每\s*(?:小)?题\s*(?:共|计|为)?\s*({_NUMBER})\s*分")
+_RUBRIC_HEADING = re.compile(r"^\s*[【\[]?(?:评分标准|评分细则|评分参考|给分点|采分点)[】\]]?\s*[:：]?")
+_MARK_CLAUSE = re.compile(rf"^\s*(.+?)\s*(?:可)?得\s*({_NUMBER})\s*分\s*$")
+_MARK_ACTION = re.compile(r"正确|完整|列出|写出|答出|求得|解得|算出|得到|证明|指出|画出|化简|步骤|过程")
 
 
 def anchored_paper_result(documents):
@@ -32,6 +43,7 @@ def anchored_paper_result(documents):
     questions = []
     answers = []
     solutions = []
+    rubrics = []
     for document in documents:
         blocks = document.get("blocks")
         direct_text = not isinstance(blocks, list) or not blocks
@@ -43,7 +55,7 @@ def anchored_paper_result(documents):
         if len(segments) < (1 if direct_text else 2):
             return None
         answer_count = sum(
-            any(_ANSWER_MARKER.match(_block_text(entry[1])) for entry in segment[2])
+            any(_ANSWER_MARKER.match(_block_text(entry[1])) for entry in segment[3])
             for segment in segments
         )
         if answer_count * 2 < len(segments):
@@ -51,23 +63,33 @@ def anchored_paper_result(documents):
         document_questions = []
         document_answers = []
         document_solutions = []
-        for question_no, section, entries in segments:
+        document_rubrics = []
+        for question_no, section, section_entry, entries in segments:
             question, answer, solution = _anchored_candidate(
                 document,
                 question_no,
                 section,
                 entries,
                 len(questions) + len(document_questions) + 1,
+                section_entry,
             )
             document_questions.append(question)
             if answer:
                 document_answers.append(answer)
             if solution:
                 document_solutions.append(solution)
+            rubric = _explicit_rubric(document, question_no, entries, question)
+            if rubric:
+                document_rubrics.append(rubric)
+            elif any(_RUBRIC_HEADING.match(_block_text(entry[1])) for entry in entries):
+                # Preserve an explicit but non-tabular marking scheme through
+                # the model path instead of declaring the fast path complete.
+                return None
         questions.extend(document_questions)
         answers.extend(document_answers)
         solutions.extend(document_solutions)
-        role = "mixed" if document_answers or document_solutions else "question"
+        rubrics.extend(document_rubrics)
+        role = "mixed" if document_answers or document_solutions or document_rubrics else "question"
         parsed_documents.append(
             {
                 "source_id": document["source_id"],
@@ -82,7 +104,7 @@ def anchored_paper_result(documents):
         "question_candidates": questions,
         "answer_candidates": answers,
         "solution_candidates": solutions,
-        "rubric_candidates": [],
+        "rubric_candidates": rubrics,
         "issues": [],
     }
 
@@ -110,19 +132,28 @@ def _anchored_segments(document, blocks):
     current = []
     current_number = 0
     current_section = None
+    current_section_entry = None
     segment_section = None
+    segment_section_entry = None
     in_solution = False
     section_seen = False
     for entry in ordered:
         text = _block_text(entry[1])
         if _SECTION_START.match(text):
             if current:
-                segments.append((current_number, segment_section, current))
+                segments.append((current_number, segment_section, segment_section_entry, current))
                 current = []
                 current_number = 0
                 in_solution = False
             current_section = text
+            current_section_entry = entry
             section_seen = True
+            continue
+        if not current and _SECTION_MARK.search(text):
+            # Printed papers often put "每小题 N 分" on a line below the
+            # section title. Keep the score-bearing block as provenance.
+            current_section = f"{current_section}\n{text}" if current_section else text
+            current_section_entry = entry
             continue
         match = _QUESTION_NUMBER.match(text)
         if match:
@@ -134,24 +165,25 @@ def _anchored_segments(document, blocks):
                 and not (in_solution and number <= current_number)
             ):
                 if current:
-                    segments.append((current_number, segment_section, current))
+                    segments.append((current_number, segment_section, segment_section_entry, current))
                 current = [entry]
                 current_number = number
                 segment_section = current_section
+                segment_section_entry = current_section_entry
                 in_solution = False
                 continue
         if current:
             current.append(entry)
             in_solution = in_solution or bool(_SOLUTION_MARKER.match(text))
     if current:
-        segments.append((current_number, segment_section, current))
+        segments.append((current_number, segment_section, segment_section_entry, current))
     numbers = [segment[0] for segment in segments]
     if len(numbers) != len(set(numbers)) or numbers != sorted(numbers):
         return [], section_seen
     return segments, section_seen
 
 
-def _anchored_candidate(document, question_no, section, entries, sequence):
+def _anchored_candidate(document, question_no, section, entries, sequence, section_entry=None):
     source_identity = re.sub(
         r"[^A-Za-z0-9]", "", str(document.get("source_id", ""))
     )[:12] or str(document.get("document_index", 0))
@@ -171,8 +203,16 @@ def _anchored_candidate(document, question_no, section, entries, sequence):
         ),
         None,
     )
+    rubric_index = next(
+        (
+            index
+            for index, entry in enumerate(entries)
+            if _RUBRIC_HEADING.match(_block_text(entry[1]))
+        ),
+        None,
+    )
     boundaries = [
-        value for value in (answer_index, solution_index) if value is not None
+        value for value in (answer_index, solution_index, rubric_index) if value is not None
     ]
     question_end = min(boundaries) if boundaries else len(entries)
     question_entries = entries[:question_end]
@@ -185,8 +225,9 @@ def _anchored_candidate(document, question_no, section, entries, sequence):
         if match:
             raw_lines[0] = match.group(2).strip()
     stem, options = _stem_and_options(raw_lines)
-    score_match = _SCORE.search("\n".join(raw_lines))
-    score = float(score_match.group(1)) if score_match else None
+    score, section_sourced = _explicit_question_score(raw_lines, section)
+    if section_sourced and section_entry is not None:
+        question_refs.append(_trusted_block_ref(document, section_entry[1]))
     question_type = _question_type(section, options)
     normalized = str(question_no)
     question = {
@@ -212,7 +253,10 @@ def _anchored_candidate(document, question_no, section, entries, sequence):
     if answer_index is not None:
         marker = _ANSWER_MARKER.match(_block_text(entries[answer_index][1]))
         value = marker.group(1).strip() if marker else ""
-        answer_end = solution_index if solution_index is not None else len(entries)
+        answer_end = min(
+            (index for index in (solution_index, rubric_index) if index is not None and index > answer_index),
+            default=len(entries),
+        )
         answer_entries = entries[answer_index:answer_end]
         if not value:
             value = " ".join(
@@ -236,7 +280,11 @@ def _anchored_candidate(document, question_no, section, entries, sequence):
 
     solution = None
     if solution_index is not None:
-        solution_entries = entries[solution_index:]
+        solution_end = min(
+            (index for index in (answer_index, rubric_index) if index is not None and index > solution_index),
+            default=len(entries),
+        )
+        solution_entries = entries[solution_index:solution_end]
         contents = []
         for offset, entry in enumerate(solution_entries):
             text = _block_text(entry[1])
@@ -262,6 +310,88 @@ def _anchored_candidate(document, question_no, section, entries, sequence):
                 "issues": [],
             }
     return question, answer, solution
+
+
+def _explicit_question_score(lines, section):
+    """Only accept marks explicitly attached to the question or section."""
+
+    if lines:
+        header = next((line for line in lines[:2] if line.strip()), "")
+        match = _QUESTION_MARK.search(header) or _LEADING_MARK.match(header)
+        if match:
+            return float(match.group(1)), False
+    match = _SECTION_MARK.search(str(section or ""))
+    return (float(match.group(1)), True) if match else (None, False)
+
+
+def _explicit_rubric(document, question_no, entries, question):
+    """Preserve explicit marking clauses on the deterministic answer path.
+
+    This does not infer marks from solution steps. When a marking heading is
+    present but its prose cannot be parsed safely, the caller must route the
+    document to the model instead of silently returning zero rubrics.
+    """
+
+    points = []
+    refs = []
+    unparsed_heading_content = False
+    answer_or_solution_seen = False
+    in_rubric = False
+    for _, block in entries:
+        line = _block_text(block)
+        heading = _RUBRIC_HEADING.match(line)
+        if heading:
+            in_rubric = True
+            line = line[heading.end():]
+        else:
+            if _ANSWER_MARKER.match(line) or _SOLUTION_MARKER.match(line):
+                answer_or_solution_seen = True
+                in_rubric = False
+            marker = _SOLUTION_MARKER.match(line)
+            if marker:
+                line = marker.group(1)
+        for clause in re.split(r"[；;，,。]\s*", line):
+            if not clause.strip():
+                continue
+            match = _MARK_CLAUSE.match(clause)
+            if not match or (not heading and (not answer_or_solution_seen or not _MARK_ACTION.search(match.group(1)))):
+                if in_rubric:
+                    unparsed_heading_content = True
+                continue
+            description = match.group(1).strip()
+            if not description:
+                if in_rubric:
+                    unparsed_heading_content = True
+                continue
+            points.append(
+                {
+                    "id": f"rp-rule-{question['candidate_id']}-{len(points) + 1:02d}",
+                    "description": description,
+                    "score": float(match.group(2)),
+                    "required": None,
+                    "evidence_requirements": [],
+                }
+            )
+            ref = _trusted_block_ref(document, block)
+            if ref not in refs:
+                refs.append(ref)
+    if unparsed_heading_content:
+        return None
+    if not points:
+        return None
+    normalized = str(question_no)
+    return {
+        "candidate_id": f"r-rule-{question['candidate_id']}",
+        "question_no_hint": normalized,
+        "question_no_normalized": normalized,
+        "max_score": question["score"],
+        "points": points,
+        "deductions": [],
+        "examples": [],
+        "confidence": _evidence_confidence([(0, block) for _, block in entries if _trusted_block_ref(document, block) in refs], 0.91),
+        "source_refs": refs,
+        "issues": [] if question["score"] is not None else ["题目满分未明确标注，评分点分值合计需核对"],
+    }
 
 
 def _stem_and_options(lines):

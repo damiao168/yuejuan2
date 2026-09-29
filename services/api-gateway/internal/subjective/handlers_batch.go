@@ -9,6 +9,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
+// 批次创建先按幂等键恢复已有命令，再校验题目上下文，避免重复请求产生第二批运行。
 func (h *Handler) CreateBatch(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	var input CreateBatchInput
@@ -104,6 +105,7 @@ func (h *Handler) GetFailedBatchSegments(w http.ResponseWriter, r *http.Request)
 	httpx.JSON(w, http.StatusOK, map[string]any{"segment_ids": segments})
 }
 
+// 入队计划先持久化再逐项创建任务；部分失败会保留计划，让客户端重试时沿用同一批运行身份。
 func (h *Handler) EnqueueBatch(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	if !h.requireAvailable(w, r) {

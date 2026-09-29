@@ -88,6 +88,7 @@ WHERE tenant_id=$1 AND source_type='paper_import_job' AND source_id=$2::uuid
 	return tx.Commit()
 }
 
+// 版本摘要只包含来源配置；识别状态或置信度的回写不应让同一批输入变成新版本。
 func paperImportSourceConfigurationHash(sources []PaperImportSource) string {
 	type sourceConfiguration struct {
 		ID            string `json:"id"`
@@ -125,6 +126,7 @@ func (s *PostgresStore) QueuePaperImportParse(ctx context.Context, tenantID stri
 	return tx.Commit()
 }
 
+// 解析输入、任务和派发状态使用调用方同一事务；任一步失败时不能留下没有任务的已完成上游。
 func queuePaperImportParseInTx(ctx context.Context, tx *sql.Tx, tenantID string, job PaperImportJob, actorID string, input PaperImportParseRequest) error {
 	if tx == nil || tenantID == "" || job.ID == "" || actorID == "" || len(input.Documents) == 0 {
 		return ErrInvalidInput
@@ -652,6 +654,7 @@ func paperBBox(value any) ([]float64, bool) {
 	return box, true
 }
 
+// 覆盖比例只是几何筛选；还要结合文本，避免把与公式重叠的中文正文整块替换。
 func paperFormulaReplacementSafe(block PaperImportOCRBlock, region PaperImportFormulaRegion) bool {
 	box, ok := paperBBox(block.BBox)
 	if !ok {
@@ -844,6 +847,7 @@ func inlineFormulaSegments(text, sourceBlockID string, previous []PaperImportCon
 
 var formulaCommandPattern = regexp.MustCompile(`\\[A-Za-z]+`)
 
+// 这里只生成 OCR 片段的查找键，会丢弃部分 LaTeX 结构，不能用来判断数学等价。
 func formulaSearchText(value string) string {
 	value = strings.NewReplacer(
 		`\times`, "*", `\cdot`, "*", `\div`, "/", `\leq`, "<=", `\geq`, ">=", `\neq`, "!=",
@@ -942,6 +946,7 @@ func normalizeFormulaSearchText(value string) string {
 	return value
 }
 
+// strings.Index 返回字节偏移，因此每个归一化后的 UTF-8 字节都映射回原字符的完整边界。
 func normalizeFormulaSearchWithOffsets(value string) (string, []int, []int) {
 	var builder strings.Builder
 	starts := []int{}
@@ -1081,6 +1086,7 @@ func (s *PostgresStore) FailPaperImportRuntime(ctx context.Context, tenantID, im
 	if err != nil {
 		return err
 	}
+	// 可重试失败只把任务重新入队，导入仍保持处理中；耗尽重试后才同步终止导入和来源。
 	if task.Status == workerruntime.StatusQueued {
 		return tx.Commit()
 	}

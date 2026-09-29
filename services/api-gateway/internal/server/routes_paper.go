@@ -6,6 +6,7 @@ import (
 	"net/http"
 )
 
+// 试卷、模板和导入均属于考试配置，写操作受 exam:manage 与考试资源边界保护；从题库实例化还需题库读取权限。
 func registerPaperRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("GET /api/v1/exams/{examId}/answer-sheet-templates", ctx.guards.requireExamManage(ctx.guards.withScopedExam(ctx.modules.Exam.PaperHandler.ListTemplates)))
 	mux.Handle("POST /api/v1/exams/{examId}/answer-sheet-templates", ctx.guards.requireExamManage(ctx.guards.withScopedExam(ctx.modules.Exam.PaperHandler.CreateTemplate)))
@@ -33,6 +34,7 @@ func registerPaperRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("POST /api/v1/paper-imports/{id}/sources", ctx.guards.requireExamManage(ctx.modules.Exam.PaperHandler.AddPaperImportSources))
 	mux.Handle("PUT /api/v1/paper-imports/{id}/sources", ctx.guards.requireExamManage(ctx.modules.Exam.PaperHandler.ReplacePaperImportSources))
 	mux.Handle("PUT /api/v1/paper-imports/{id}/review", ctx.guards.requireExamManage(ctx.modules.Exam.PaperHandler.SavePaperImportReview))
+	mux.Handle("POST /api/v1/paper-imports/{id}/rubric-draft", ctx.guards.requireExamManage(ctx.modules.Exam.PaperHandler.SuggestMathRubricDraft))
 	mux.Handle("POST /api/v1/paper-imports/{id}/apply", ctx.guards.requireExamManage(ctx.modules.Exam.PaperHandler.ApplyPaperImport))
 	mux.Handle("POST /api/v1/paper-imports/{id}/cancel", ctx.guards.requireExamManage(ctx.modules.Exam.PaperHandler.CancelPaperImport))
 	mux.Handle("POST /api/v1/paper-imports/{id}/retry-parse", ctx.guards.requireExamManage(ctx.modules.Exam.PaperHandler.RetryPaperImportParse))

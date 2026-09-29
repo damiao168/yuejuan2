@@ -70,6 +70,7 @@ export function TOTPManagement({ personalSession, accountLabel, refreshKey, onCh
     if (!personalSession) controller.close();
   }, [personalSession, controller]);
   useEffect(() => {
+    // 页面可能进入往返缓存而不卸载；离开时也要清除密钥界面和确认弹窗。
     const hide = () => {
       discardDialog.current?.destroy(); discardDialog.current = undefined;
       controller.close(); setPassword(""); setCode(""); setSaved(false);

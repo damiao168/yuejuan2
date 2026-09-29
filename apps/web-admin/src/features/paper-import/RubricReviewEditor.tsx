@@ -1,27 +1,22 @@
-import { useEffect, useState } from "react";
 import { Button, Input, InputNumber, Select, Space, Switch } from "antd";
 import { Plus, Trash2 } from "lucide-react";
 import type { RubricPayload, RubricPoint } from "../../api/papers";
 
-function JsonArrayEditor({ label, value, onChange }: { label: string; value: unknown[]; onChange: (value: unknown[]) => void }) {
-  const [text, setText] = useState(() => JSON.stringify(value, null, 2));
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    setText(JSON.stringify(value, null, 2));
-    setError("");
-  }, [value]);
-
-  function commit() {
+function JsonArrayEditor({ label, value, draftText, onChange, onDraftChange }: {
+  label: string; value: unknown[]; draftText?: string;
+  onChange: (value: unknown[]) => void;
+  onDraftChange: (text: string, error?: string) => void;
+}) {
+  const text = draftText ?? JSON.stringify(value, null, 2);
+  const error = draftText === undefined ? "" : (() => {
     try {
       const parsed = JSON.parse(text || "[]") as unknown;
       if (!Array.isArray(parsed)) throw new Error();
-      setError("");
-      onChange(parsed);
+      return "";
     } catch {
-      setError(`${label}必须是 JSON 数组`);
+      return `${label}必须是有效的 JSON 数组`;
     }
-  }
+  })();
 
   return <label className="paper-import-rubric-json-field">
     <span>{label}</span>
@@ -30,14 +25,29 @@ function JsonArrayEditor({ label, value, onChange }: { label: string; value: unk
       autoSize={{ minRows: 2, maxRows: 6 }}
       spellCheck={false}
       status={error ? "error" : undefined}
-      onChange={(event) => setText(event.target.value)}
-      onBlur={commit}
+      onChange={(event) => {
+        // 保留用户尚未写完的 JSON 文本，只有解析成功才更新可提交的结构化字段。
+        const nextText = event.target.value;
+        try {
+          const parsed: unknown = JSON.parse(nextText || "[]");
+          if (!Array.isArray(parsed)) throw new Error();
+          onDraftChange(nextText);
+          onChange(parsed);
+        } catch {
+          onDraftChange(nextText, `${label}必须是有效的 JSON 数组`);
+        }
+      }}
     />
     {error ? <small className="text-danger">{error}</small> : null}
   </label>;
 }
 
-export function RubricReviewEditor({ value, questionScore, onChange }: { value?: RubricPayload; questionScore: number; onChange: (value?: RubricPayload) => void }) {
+export function RubricReviewEditor({ value, questionScore, jsonTexts, onJsonTextChange, onChange }: {
+  value?: RubricPayload; questionScore: number;
+  jsonTexts?: { deductions?: string; examples?: string };
+  onJsonTextChange?: (field: "deductions" | "examples", text: string, error?: string) => void;
+  onChange: (value?: RubricPayload) => void;
+}) {
   const rubric = value ?? { status: "draft", max_score: questionScore, points: [], deductions: [], examples: [] };
   const total = rubric.points.reduce((sum, point) => sum + Number(point.score || 0), 0);
   const mismatch = Math.abs(total - questionScore) > 0.0001 || Math.abs(rubric.max_score - questionScore) > 0.0001;
@@ -56,8 +66,8 @@ export function RubricReviewEditor({ value, questionScore, onChange }: { value?:
     </div>)}
     <Button size="small" icon={<Plus size={14} />} onClick={() => onChange({ ...rubric, points: [...rubric.points, { id: `human-review-p${rubric.points.length + 1}`, description: "", score: 0, required: true }] })}>添加采分点</Button>
     <div className="paper-import-rubric-json-grid">
-      <JsonArrayEditor label="扣分点（JSON 数组）" value={rubric.deductions} onChange={(deductions) => onChange({ ...rubric, deductions })} />
-      <JsonArrayEditor label="样例答案（JSON 数组）" value={rubric.examples} onChange={(examples) => onChange({ ...rubric, examples })} />
+      <JsonArrayEditor label="扣分点（JSON 数组）" value={rubric.deductions} draftText={jsonTexts?.deductions} onDraftChange={(text, error) => onJsonTextChange?.("deductions", text, error)} onChange={(deductions) => onChange({ ...rubric, deductions })} />
+      <JsonArrayEditor label="样例答案（JSON 数组）" value={rubric.examples} draftText={jsonTexts?.examples} onDraftChange={(text, error) => onJsonTextChange?.("examples", text, error)} onChange={(examples) => onChange({ ...rubric, examples })} />
     </div>
     {mismatch ? <div className="text-danger">评分细则满分和采分点合计必须都等于题目分值，当前不能确认。</div> : null}
   </div>;

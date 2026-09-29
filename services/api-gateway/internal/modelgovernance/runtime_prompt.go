@@ -52,6 +52,7 @@ func NewHTTPRuntimePromptSource(baseURL string, token string, timeout time.Durat
 	}
 }
 
+// 运行时提示词必须来自固定部署清单，校验组件白名单、哈希和不可变标志后才允许评分服务使用。
 func (s *HTTPRuntimePromptSource) Current(ctx context.Context) (RuntimePrompt, error) {
 	if s == nil || s.baseURL == "" || len(s.token) < 32 {
 		return RuntimePrompt{}, ErrRuntimePromptUnavailable

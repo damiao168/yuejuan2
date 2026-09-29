@@ -24,6 +24,7 @@ func (s *PostgresStore) CreateRubric(ctx context.Context, tenantID string, quest
 	if err := ensureExamPaperMutableTx(ctx, tx, tenantID, question.ExamID); err != nil {
 		return Rubric{}, err
 	}
+	// 题目锁覆盖检查与新版本写入；任何有效锁定版本存在时都禁止追加，不能只查看最新版本。
 	var locked bool
 	if err := tx.QueryRowContext(ctx, `SELECT COALESCE(BOOL_OR(status='locked'),false) FROM rubric_version WHERE tenant_id=$1 AND question_id=$2::uuid AND deleted_at IS NULL`, tenantID, questionID).Scan(&locked); err != nil {
 		return Rubric{}, err

@@ -43,6 +43,7 @@ def validate_service_url(name: str, value: str, environment: str = "development"
 
 
 def _loopback_host(hostname: str) -> bool:
+    # 只接受 localhost 或回环 IP 字面量，不因域名当前解析到本机就放宽 HTTPS 要求。
     if hostname.lower() == "localhost":
         return True
     try:
@@ -72,6 +73,7 @@ def read_bounded(response: Any, limit: int) -> bytes:
             raise ResponseValidationError("response Content-Length is invalid")
         if declared > limit:
             raise ResponseTooLarge(f"response exceeds {limit} bytes")
+    # 多读一个字节用于判定超限，不能只信缺失或与实际不符的 Content-Length。
     body = response.read(limit + 1)
     if len(body) > limit:
         raise ResponseTooLarge(f"response exceeds {limit} bytes")

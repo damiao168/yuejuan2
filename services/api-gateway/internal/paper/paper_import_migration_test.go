@@ -7,6 +7,7 @@ import (
 	"testing"
 )
 
+// 此文件只检查迁移文本中的关键结构；不会执行 SQL，也不替代数据库升级与约束验证。
 func TestPaperImportMigrationAddsSourcesCandidatesAndFormalProvenance(t *testing.T) {
 	raw, err := os.ReadFile(filepath.Join("..", "..", "migrations", "000110_paper_import_sources_candidates.sql"))
 	if err != nil {

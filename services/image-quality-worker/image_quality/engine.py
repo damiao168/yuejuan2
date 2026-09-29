@@ -47,6 +47,7 @@ def analyze_and_normalize(data: bytes) -> QualityAnalysisResult:
                 or source.width * source.height > MAX_IMAGE_PIXELS
             ):
                 raise ImageQualityError("image_dimensions_out_of_range")
+            # 在完整像素解码前拦截超大尺寸，压缩文件大小不能代表解码后的内存占用。
             source.load()
             source_width, source_height = source.size
             source_format = source.format or "unknown"
@@ -91,6 +92,7 @@ def analyze_and_normalize(data: bytes) -> QualityAnalysisResult:
                 degradation=degradation,
             )
 
+        # 测量基于纠偏前的图像；是否允许纠偏由角度与证据强度共同决定。
         deskew_applied = _should_apply_deskew(skew_angle, skew_confidence)
         content_rotation = skew_angle if deskew_applied else 0.0
         deskew_matrix = np.eye(3, dtype=np.float64)

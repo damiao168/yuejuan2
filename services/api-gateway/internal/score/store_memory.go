@@ -204,6 +204,7 @@ func (s *MemoryStore) FinalizeExam(_ context.Context, tenantID string, examID st
 		}
 		var seed GradeSeed
 		source := ""
+		// 人工结果优先；只有明确自动通过、无需复核且非 Mock 的规则结果才补为最终题分。
 		if human, ok := s.humanGrades[seg.AnswerSegmentID]; ok {
 			seed = human
 			source = "single_review"
@@ -603,6 +604,7 @@ func (s *MemoryStore) rosterReportLocked(examID string) RosterReport {
 			AttendanceReason: decision.AttendanceReason, MarkedBy: decision.MarkedBy, MarkedAt: cloneTime(decision.MarkedAt),
 		}
 		if decision.Status == "absent" && submissionCount == 0 {
+			// 缺考只在没有答卷时消除缺交；已有答卷的缺考标记仍是待核对冲突。
 			entry.Status = "absent"
 			entry.ResolutionCode = "absent"
 			report.Summary.Absent++

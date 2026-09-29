@@ -75,6 +75,7 @@ func (s *PostgresStore) ListProcessingSummaries(ctx context.Context, tenantID, b
 	return s.queryProcessingSummaries(ctx, tenantID, "cp.capture_batch_id=$2::uuid", batchID)
 }
 
+// 每页只统计最近未失效配准的切片，不能让旧运行的成功结果掩盖当前处理阻塞。
 func (s *PostgresStore) queryProcessingSummaries(ctx context.Context, tenantID, predicate, resourceID string) ([]ProcessingSummary, error) {
 	rows, err := s.db.QueryContext(ctx, `
 WITH latest_registration AS (

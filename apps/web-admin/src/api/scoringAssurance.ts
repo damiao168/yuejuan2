@@ -25,6 +25,7 @@ import type {
 } from "@edugrade/sdk";
 import { ApiClient, apiClient } from "./client";
 
+// 平台代管请求携带所选租户；空值交由服务端按当前登录范围处理，页面离开时需清除选择。
 let selectedSchoolID = "";
 export function setScoringAssuranceSchool(tenantID: string) {
   selectedSchoolID = tenantID;

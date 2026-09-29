@@ -9,6 +9,7 @@ if (!baseUrl || !fixture) throw new Error("Usage: exam-command-client.mjs <test-
 const directory = await mkdtemp(path.join(os.tmpdir(), "edugrade-command-client-"));
 try {
   const outfile = path.join(directory, "client.mjs");
+  // 打包真实客户端并将 API 地址绑定到测试服务，避免替身请求绕开生产请求构造。
   await build({
     entryPoints: ["tests/integration/exam-command-client.ts"], outfile,
     bundle: true, platform: "node", format: "esm", target: "node24",

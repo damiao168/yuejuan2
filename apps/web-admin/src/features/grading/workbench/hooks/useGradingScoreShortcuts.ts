@@ -15,6 +15,7 @@ interface UseGradingScoreShortcutsOptions {
 
 export function useGradingScoreShortcuts({ draft, setDraft, rubricPoints, onInfo }: UseGradingScoreShortcutsOptions) {
   const lastChange = useRef<ScoreDraftChange | null>(null);
+  // 这里只撤销最近一次本地分数和采分点修改；不回滚评语，也不会撤销已提交的服务端评分。
   const [canUndo, setCanUndo] = useState(false);
 
   const rememberCurrent = useCallback(() => {

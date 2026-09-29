@@ -176,6 +176,7 @@ func (s *PostgresStore) GetPageBySubmissionPageID(ctx context.Context, tenantID,
 WHERE tenant_id=$1 AND submission_page_id=$2::uuid AND deleted_at IS NULL`, tenantID, submissionPageID))
 }
 
+// 事务锁住批次和待处理文件；失败文件会重置其任务租约，避免重试留下旧租约或重复页面。
 func (s *PostgresStore) QueueBatch(ctx context.Context, tenantID, batchID, actorID string) (Batch, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -284,6 +285,7 @@ func (s *PostgresStore) ApplyFileResult(ctx context.Context, tenantID, fileID st
 	if err != nil {
 		return File{}, err
 	}
+	// 重复提交相同页数直接返回已完成文件；页数不同视为同一文件的冲突，避免追加第二套页面。
 	if item.Status == "completed" {
 		if item.PageCount == len(pages) {
 			return item, tx.Commit()
@@ -446,6 +448,7 @@ VALUES ($1,'image_quality','image-quality','image_quality_run',$2::uuid,70,$3,'i
 			return File{}, err
 		}
 	}
+	// 只有整批页面指向同一受控纸张且没有重复身份时才自动绑定学生，否则保留人工处理状态。
 	if identifiedSheetSerial != "" && !identityConflict {
 		var expectedPageCount int
 		if err = tx.QueryRowContext(ctx, `
@@ -699,6 +702,7 @@ func (s *PostgresStore) ApplyQualityOutcome(ctx context.Context, tenantID, submi
 
 // ApplyQualityOutcomeInTx updates a linked capture page and aggregate. A
 // submission created outside capture is reported as linked=false, not an error.
+// 质检结果与批次聚合必须在同一事务中提交；找不到采集页时返回 linked=false，供外部提交保持兼容。
 func ApplyQualityOutcomeInTx(ctx context.Context, tx *sql.Tx, tenantID, submissionPageID, qualityStatus string) (bool, error) {
 	pageStatus := "quality_rejected"
 	if qualityStatus == "passed" {
@@ -754,6 +758,7 @@ func (s *PostgresStore) ApplyFileFailure(ctx context.Context, tenantID, fileID, 
 	return out, tx.Commit()
 }
 
+// Revision 防止旧界面覆盖新修改；旋转会改变坐标系，因此同时使配准和切片失效并要求重算。
 func (s *PostgresStore) UpdatePage(ctx context.Context, tenantID, pageID, actorID string, input UpdatePageInput) (Page, error) {
 	if input.Revision <= 0 {
 		return Page{}, ErrInvalidInput
@@ -846,6 +851,7 @@ func (s *PostgresStore) SetBatchStatus(ctx context.Context, tenantID, batchID, a
 	return out, tx.Commit()
 }
 
+// 聚合状态按文件失败、页面质量、身份匹配和页面就绪的优先级计算，供批次列表统一展示。
 func aggregateBatchTx(ctx context.Context, tx *sql.Tx, tenantID, batchID string) error {
 	_, err := tx.ExecContext(ctx, `UPDATE capture_batch b SET
 file_count=(SELECT count(*) FROM capture_file f WHERE f.tenant_id=b.tenant_id AND f.capture_batch_id=b.id AND f.deleted_at IS NULL),
@@ -908,6 +914,7 @@ func scanFile(r scanner) (File, error) {
 	}
 	return x, nil
 }
+// 页面附带的 JSON 证据来自历史行；解析失败不让整条记录消失，空值统一成可安全遍历的空集合。
 func scanPage(r scanner) (Page, error) {
 	var x Page
 	var identity, candidates, override []byte

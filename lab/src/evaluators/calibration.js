@@ -1,3 +1,4 @@
+// 这是规则构造的可靠性信号，不是模型自报概率；需用带 Gold 标签的数据再校准。
 export function reliabilitySignal(observation) {
   let signal = 1;
   if (!observation.schema_valid) signal -= 0.45;
@@ -30,6 +31,7 @@ export function fitIsotonicCalibration(observations) {
     } else {
       blocks.push({ min_signal: point.signal, max_signal: point.signal, sum: point.outcome, count: 1 });
     }
+    // 相邻块的成功率逆序时按样本数合并，得到随信号不下降的分段常数概率。
     while (blocks.length >= 2) {
       const right = blocks.at(-1);
       const left = blocks.at(-2);
@@ -62,6 +64,7 @@ export function predictCalibratedProbability(model, signal) {
     const block = model.blocks[index];
     if (signal <= block.max_signal) return block.probability;
     const next = model.blocks[index + 1];
+    // 未观测到的区间沿用左块概率，不插值制造新的校准结论。
     if (next && signal < next.min_signal) return block.probability;
   }
   return model.blocks.at(-1).probability;
@@ -94,6 +97,7 @@ export function evaluateCalibration(observations, model, bins = 10) {
     nonEmptyBins.push({ bin: index, count: bucket.length, average_probability: averageProbability, empirical_accuracy: accuracy });
   }
   const brier = predictions.reduce((sum, item) => sum + (item.probability - item.outcome) ** 2, 0) / predictions.length;
+  // 阈值下没有入选样本时风险未知，返回 null；不能解释成零风险。
   const coverageRisk = [0, 0.5, 0.6, 0.7, 0.8, 0.9].map((threshold) => {
     const selected = predictions.filter((item) => item.probability >= threshold);
     return {

@@ -27,6 +27,7 @@ func (h *Handler) StudentReport(w http.ResponseWriter, r *http.Request) {
 			httpx.Error(w, r, http.StatusForbidden, "report_permission_required", "report permission is required")
 			return
 		}
+		// 学生账号必须解析出明确的本人 ID；只有租户或班级范围不能视为本人授权。
 		scoped, ok := scopedStudentID(user)
 		if !ok || scoped != studentID {
 			httpx.Error(w, r, http.StatusForbidden, "student_report_scope_violation", "student can only view own report")

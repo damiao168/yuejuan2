@@ -191,6 +191,7 @@ func DefaultTenantPolicy() TenantPolicy {
 	}
 }
 
+// 外部供应商只能保存密钥引用，且必须声明不训练和受控留存策略；明文密钥不会通过校验。
 func ValidateProvider(provider Provider) error {
 	if !governanceKey.MatchString(provider.Key) ||
 		!governanceKey.MatchString(provider.AdapterType) ||
@@ -279,6 +280,7 @@ func ValidateTenantPolicy(policy TenantPolicy) error {
 	return nil
 }
 
+// 先按稳定键排序再筛选，保证同一策略下的路由结果可复现；外部模型还要同时满足租户授权和模态开关。
 func SelectDeployment(
 	policy TenantPolicy,
 	request RouteRequest,

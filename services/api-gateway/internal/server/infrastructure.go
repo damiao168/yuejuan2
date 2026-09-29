@@ -106,6 +106,7 @@ func newInfrastructure(cfg config.Config, logg *logger.Logger) (*Infrastructure,
 	return infra, nil
 }
 
+// 巡检以维护租户上下文运行且只读报告；关闭时等待后台协程退出，避免进程退出后仍访问数据库或对象存储。
 func (i *Infrastructure) startFileReconciliation() {
 	cfg := i.Config
 	if cfg.Files.ReconciliationInterval <= 0 {
@@ -151,6 +152,7 @@ func (i *Infrastructure) startFileReconciliation() {
 	})
 }
 
+// outbox dispatcher 负责提交事务后投递事件；它与 HTTP 请求同生命周期，关闭时先取消再等待最后一轮发送结束。
 func (i *Infrastructure) startOutboxDispatcher() {
 	dispatcher := outbox.NewDispatcher(
 		outbox.NewPostgresStore(i.DB),
@@ -178,6 +180,7 @@ func (i *Infrastructure) startOutboxDispatcher() {
 	})
 }
 
+// projection 刷新是独立维护任务，使用租约避免多实例重复处理；停止顺序由 cleanup 逆序保证资源仍可用到协程退出。
 func (i *Infrastructure) startProcessingProjector() {
 	projector := processing.NewProjector(
 		processing.NewPostgresStore(i.DB),
@@ -207,6 +210,7 @@ func (i *Infrastructure) startProcessingProjector() {
 	})
 }
 
+// 解析任务在维护上下文中消费持久化队列；失败日志保留导入、运行、代次和租约信息，便于区分过期回调与真实失败。
 func (i *Infrastructure) startPaperParseExecutor(executor *paper.ParseTaskExecutor) {
 	parseContext, stopParse := context.WithCancel(db.WithTenantMaintenance(context.Background()))
 	parseDone := make(chan struct{})

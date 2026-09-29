@@ -9,8 +9,8 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
-// Artifact activation and lease completion must commit together. A correction
-// appended while verification runs makes that task superseded, not current.
+// 激活验证结果与完成 worker 租约必须一起成功。
+// 验证期间新增了教师修订或识别版本时，过期任务只记录已完成，不把结果设为当前证据。
 func (h *Handler) completeVerifiedRuntime(ctx context.Context, task workerruntime.Task, parent Artifact, revision int64, input CreateArtifactInput, quality map[string]any, lease string, duration int) (Artifact, bool, error) {
 	switch store := h.artifacts.(type) {
 	case *PostgresStore:
@@ -88,6 +88,7 @@ func (s *PostgresStore) completeVerifiedRuntime(ctx context.Context, task worker
 	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM math_understanding_artifact WHERE tenant_id=$1::uuid AND parent_artifact_id=$2::uuid AND correction_revision=$3 AND stage='verified')`, task.TenantID, parent.ID, revision).Scan(&existing); err != nil {
 		return Artifact{}, false, err
 	}
+	// 已有同版本结果允许幂等重试；否则父记录已被替代或修订号改变，都不能再激活本次结果。
 	superseded := latestRevision != revision || (!current && !existing)
 	var derived Artifact
 	if !superseded {

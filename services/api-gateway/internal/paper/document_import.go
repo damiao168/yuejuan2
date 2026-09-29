@@ -224,6 +224,7 @@ func (s *DocumentImportService) beginParse(ctx context.Context, tenantID, import
 	return parseContext, func() {
 		cancel()
 		s.parseMu.Lock()
+		// 旧请求结束时只能清理自己的登记，不能删除已经接替它的新请求。
 		if s.activeParses[key] == entry {
 			delete(s.activeParses, key)
 		}
@@ -364,6 +365,7 @@ func incrementalPaperImportParseInput(binding PaperImportRunBinding) ([]normaliz
 	if binding.CommandType != "add_sources" || len(binding.NewSourceIDs) == 0 {
 		return binding.Input.Documents, binding.Input.Pages, binding.Input.ExtraIssues
 	}
+	// 追加资料只解析本次新增来源；历史候选由提交阶段合并，避免重复解析改写人工核对结果。
 	selected := make(map[string]bool, len(binding.NewSourceIDs))
 	for _, sourceID := range binding.NewSourceIDs {
 		selected[sourceID] = true
@@ -430,6 +432,7 @@ func possiblePageMissingIssues(sources []PaperImportSource, blocks []PaperImport
 				maxPage = page
 			}
 		}
+		// 这里只能发现已识别页码之间的空缺；没有总页数，不能据此判定末尾是否缺页。
 		for page := 1; page < maxPage; page++ {
 			if pages[page] {
 				continue

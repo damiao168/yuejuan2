@@ -291,6 +291,7 @@ func summarize(summary Summary) Summary {
 			}
 		}
 		if summary.Job.Status == StatusReadyForRelease && item.Status == ItemResolved && item.ReviewedScore != nil {
+			// 驳回的项也算处理完成，但没有复核分数；它不进入发布计划，继续沿用原发布分数。
 			resolved = append(resolved, ReleaseChange{SubmissionID: item.SubmissionID, OldFinalGradeID: item.OldFinalGradeID, SourceScore: item.OldScore, RegradedScore: *item.ReviewedScore, MaxScore: item.MaxScore, ReviewedGradeID: item.ReviewedGradeID})
 		}
 	}

@@ -26,6 +26,9 @@ type readinessPaperSnapshot struct {
 }
 
 type readinessQuestionSnapshot struct {
+	ParentQuestionNo    string                     `json:"parent_question_no,omitempty"`
+	SubquestionNo       string                     `json:"subquestion_no,omitempty"`
+	Options             []string                   `json:"options,omitempty"`
 	BankContent         map[string]any             `json:"bank_content,omitempty"`
 	SourceContentHash   string                     `json:"source_content_hash,omitempty"`
 	ID                  string                     `json:"id"`
@@ -55,6 +58,9 @@ type readinessImportSnapshot struct {
 }
 
 type readinessImportQuestionSnapshot struct {
+	ParentQuestionNo        string                     `json:"parent_question_no,omitempty"`
+	SubquestionNo           string                     `json:"subquestion_no,omitempty"`
+	Options                 []string                   `json:"options,omitempty"`
 	ID                      string                     `json:"id"`
 	AssessmentSnapshotID    string                     `json:"assessment_snapshot_id"`
 	AssessmentSnapshotHash  string                     `json:"assessment_snapshot_hash"`
@@ -154,6 +160,7 @@ func newReadinessConfigurationSnapshot(total float64, classIDs, candidateIDs []s
 			snapshot.Version = 2
 		}
 		question := readinessQuestionSnapshot{
+			ParentQuestionNo: item.ParentQuestionNo, SubquestionNo: item.SubquestionNo, Options: append([]string(nil), item.Options...),
 			BankContent: item.BankContent, SourceContentHash: item.SourceContentHash,
 			ID: item.ID, ExamPaperID: item.ExamPaperID, QuestionNo: item.QuestionNo,
 			QuestionType: item.QuestionType, AssessmentArchetype: readinessAssessmentArchetype(item),
@@ -199,6 +206,7 @@ func newReadinessImportSnapshot(configurationHash string, questions []Question) 
 	snapshot := readinessImportSnapshot{Version: 1, ConfigurationHash: configurationHash, Questions: []readinessImportQuestionSnapshot{}}
 	for _, item := range questions {
 		question := readinessImportQuestionSnapshot{
+			ParentQuestionNo: item.ParentQuestionNo, SubquestionNo: item.SubquestionNo, Options: append([]string(nil), item.Options...),
 			ID: item.ID, QuestionNo: item.QuestionNo, QuestionType: item.QuestionType,
 			AssessmentArchetype: readinessAssessmentArchetype(item), Score: item.Score,
 			Stem: item.Stem, KnowledgePoints: append([]string(nil), item.KnowledgePoints...),

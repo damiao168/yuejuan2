@@ -50,6 +50,7 @@ func (s *Service) CreateSession(ctx context.Context, tenantID, examID, questionI
 		}
 		return Session{}, err
 	}
+	// 会话保存当前 Gold 版本和内容哈希；后续 Gold 变更会让旧资格失效，不能继续沿用旧样本。
 	references, goldHash, err := s.currentReferences(ctx, tenantID, examID, questionID, policy)
 	if err != nil {
 		return Session{}, err
@@ -89,6 +90,7 @@ func (s *Service) SubmitAttempt(ctx context.Context, tenantID, sessionID string,
 	if reference == nil {
 		return Attempt{}, Session{}, nil, ErrSampleNotInSession
 	}
+	// 同一 Gold 样本只能提交一次；完全相同的最后一次请求允许重试完成事务，改过内容则拒绝以免覆盖已记录事实。
 	for _, previous := range attempts {
 		if previous.GoldPaperID == input.GoldPaperID {
 			if len(attempts) == len(references) && previous.SubmittedScore == input.SubmittedScore &&
@@ -126,6 +128,7 @@ func (s *Service) SubmitAttempt(ctx context.Context, tenantID, sessionID string,
 	return s.finishSession(ctx, tenantID, session, policy, attempts, attempt)
 }
 
+// 最后一份样本提交后统一计算指标，并由 Store 原子写入会话终态和资格记录。
 func (s *Service) finishSession(ctx context.Context, tenantID string, session Session, policy Policy, attempts []Attempt, attempt Attempt) (Attempt, Session, *Qualification, error) {
 	now := s.now()
 	metrics := calculateMetrics(attempts)
@@ -154,6 +157,7 @@ func (s *Service) GetQualification(ctx context.Context, tenantID, examID, questi
 	if err != nil {
 		return Qualification{}, err
 	}
+	// 资格读取不是单纯查缓存：过期或 Gold 集合哈希变化时先撤销，再交给认领门禁拒绝。
 	if qualification.Status != QualificationQualified {
 		return qualification, nil
 	}
@@ -197,6 +201,7 @@ func (s *Service) SuspendForQualityIncident(ctx context.Context, tenantID, examI
 }
 
 func (s *Service) currentReferences(ctx context.Context, tenantID, examID, questionID string, policy Policy) ([]goldReference, string, error) {
+	// 只取当前生效且已审批、题型和满分匹配的 Gold 版本，避免把不同评分标准混入同一校准会话。
 	items, err := s.gold.ListActiveApproved(ctx, tenantID, examID, questionID)
 	if err != nil {
 		return nil, "", err
@@ -254,6 +259,7 @@ func publicSamples(refs []goldReference) []GoldSample {
 	return out
 }
 
+// 指标同时保留样本数和 rubric criterion 分母；没有 criterion 数据时保持 nil，不能把缺失误算成零分。
 func calculateMetrics(attempts []Attempt) Metrics {
 	metrics := Metrics{SampleCount: len(attempts)}
 	var exact, withinOne, severe, criterionCorrect, criterionCount int
@@ -286,6 +292,7 @@ func calculateMetrics(attempts []Attempt) Metrics {
 	return metrics
 }
 
+// 资格必须同时通过所有配置阈值；配置了 criterion 门槛却没有可比较项时按失败处理。
 func passes(policy Policy, metrics Metrics) bool {
 	if metrics.SampleCount < policy.MinimumSamples || metrics.MAE > policy.MaximumMAE ||
 		metrics.ExactAgreement < policy.MinimumExactAgreement || metrics.WithinOneAgreement < policy.MinimumWithinOneAgreement ||

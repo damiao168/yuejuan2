@@ -166,6 +166,7 @@ func TestUploadFailureRemainsDurablyRetryable(t *testing.T) {
 }
 
 func TestActivationFailureRetryUsesExistingObjectPath(t *testing.T) {
+	// 模拟对象已写入但资产激活失败；重试必须复用原路径，不能产生第二个对象。
 	store := &activationFailureStore{MemoryStore: files.NewMemoryStore(), failOnce: true}
 	objects := &faultStorage{MemoryObjectStorage: files.NewMemoryObjectStorage()}
 	router := testRouter(authStoreWithPermissions(t, []string{"file:manage"}), store, objects)

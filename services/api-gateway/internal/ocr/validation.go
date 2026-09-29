@@ -30,6 +30,7 @@ func ValidateCreateInput(input CreateTaskInput) error {
 	return nil
 }
 
+// BBox 使用 x、y、宽、高表示；坐标不能为负、宽高必须大于零，这里不判断是否越出原图。
 func ValidateResultInput(input ResultInput) error {
 	if strings.TrimSpace(input.SubmissionPageID) == "" || strings.TrimSpace(input.Text) == "" {
 		return ErrInvalidInput

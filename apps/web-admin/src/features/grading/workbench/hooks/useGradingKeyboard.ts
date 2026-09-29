@@ -25,6 +25,7 @@ export interface UseGradingKeyboardOptions {
 export function useGradingKeyboard(options: UseGradingKeyboardOptions) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      // 输入法组合、弹层和控件自身的 Enter 优先，避免打字或确认对话框时误提交评分。
       const intent = gradingShortcutIntent({
         key: event.key,
         code: event.code,

@@ -155,6 +155,7 @@ class EduGradeImageQualityClient:
         return json.loads(raw.decode("utf-8"))
 
     def _build_request(self, method: str, path_or_url: str, payload: dict[str, Any] | None, require_auth: bool = True) -> request.Request:
+        # 下载和上传地址可能来自任务响应；发送服务令牌前必须验证仍为配置的 API 同源。
         url = _trusted_service_url(self.base_url, path_or_url)
         body = None if payload is None else json.dumps(payload).encode("utf-8")
         headers = {"Accept": "application/json"}

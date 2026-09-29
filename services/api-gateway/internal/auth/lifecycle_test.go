@@ -192,6 +192,7 @@ type epochChangingStore struct {
 }
 
 func (s epochChangingStore) CreateSession(ctx context.Context, input CreateSessionInput) (DeviceSession, error) {
+	// 精确在密码已通过、会话尚未落库之间改安全版本，复现旧凭据在途登录的竞争窗口。
 	s.memory.mu.Lock()
 	for key, user := range s.memory.users {
 		if user.ID == input.UserID && user.TenantID == input.TenantID {

@@ -118,6 +118,7 @@ function protectMarkdownCode(value: string) {
 }
 
 export function normalizeMathMarkdown(value: string) {
+  // 先隔离代码片段，避免代码里的美元符号或 TeX 示例被公式排版规则改写。
   const protectedCode = protectMarkdownCode(value);
   const normalized = protectedCode.content
     .replace(/\\\[([\s\S]*?)\\\]/g, (_match, formula: string) => `\n\n$$\n${formula.trim()}\n$$\n\n`)

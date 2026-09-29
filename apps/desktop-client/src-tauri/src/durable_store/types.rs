@@ -18,6 +18,7 @@ pub struct SpoolAssetInput {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SpoolAssetSession {
+    // 这里的确认偏移属于本地原件写入；不要与 DurableQueueItem 中服务端上传的确认偏移混用。
     pub local_asset_id: String,
     pub chunk_size: usize,
     pub confirmed_offset: i64,

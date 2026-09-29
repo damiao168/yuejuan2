@@ -200,27 +200,37 @@ docker load -i edugrade-base-images.tar
 .\scripts\backup.ps1
 ```
 
-每次备份生成独立目录，包含：
+脚本进入维护窗口：识别当前 Compose 项目实际运行的容器，停止除 PostgreSQL、Redis、MinIO、Qdrant 外的服务（包括各 profile 的 worker 和后续新增服务），再执行数据库快照和对象复制。成功或失败后，`finally` 都只重启原先运行的容器；原先停止的服务不会被启动。维护期间业务会暂时不可用，不得另行运行 `compose up/start` 或同时执行另一份备份/恢复。
+
+该维护边界仅覆盖当前 Compose 项目。备份前须停止项目外的数据库/S3 写入任务、直接连接数据库的工具、外部 worker 和对象生命周期删除规则；脚本不能冻结这些外部写入方。若部署存在这些来源，需先在其运行平台停写后再进入此流程。
+
+每次备份生成含时间戳和随机 ID 的独立目录，包含：
 
 - PostgreSQL custom dump
 - MinIO mirror 目录
-- `manifest-*.json`
+- 版本 3 的 `manifest-*.json`，绑定唯一 dump、MinIO 目录与引用清单
+- `file-references-*.json`，记录未删除且为 `active` / `orphan_recovered` 的文件引用、bucket、key、字节数和 SHA-256
 - 文件 SHA-256
 - 已应用 migration 数量
-- 当前 Compose 镜像 ID
+- 当前 Compose 镜像 ID（包含为备份暂时停止的应用容器）和维护停写证据
 
-脚本在容器内生成并用 `pg_restore --list` 校验 dump，再通过 `docker cp` 复制到主机，避免二进制数据经过 PowerShell 文本管道。
+脚本在容器内生成并用 `pg_restore --list` 校验 dump，再通过 `docker cp` 复制到主机，避免二进制数据经过 PowerShell 文本管道。随后逐条校验数据库有效文件引用对应的实际对象大小和 SHA-256；缺失、损坏或指向其他 bucket 时拒绝生成可用清单。进行中的上传、删除和隔离记录保留在数据库中，由恢复后的业务流程继续处理，不纳入已持久化对象承诺。
+
+旧版备份没有维护停写和引用证据，本流程会拒绝其清单；升级后应重新备份。不要手工把旧清单版本改成 3。
 
 备份目录包含敏感数据，必须限制 ACL，并在复制到外部介质时加密。
 
 ## 11. 隔离恢复验证
 
-不要先覆盖主数据库。建议恢复到隔离验证库：
+不要先覆盖主数据库。优先选择一份已通过校验的备份，恢复到隔离验证库和隔离 bucket：
 
 ```powershell
+$backup = Get-ChildItem .\backups -Directory | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+$verified = .\scripts\verify-backup.ps1 -BackupDirectory $backup.FullName | ConvertFrom-Json
 .\scripts\restore.ps1 `
-  -PostgresDump .\backups\edugrade-YYYYMMDD-HHMMSS\postgres-YYYYMMDD-HHMMSS.dump `
+  -PostgresDump $verified.postgres_path `
   -TargetDatabase edugrade_restore_verify `
+  -TargetBucket edugrade-restore-verify `
   -CreateTargetDatabase `
   -ConfirmRestore
 ```
@@ -232,22 +242,30 @@ docker compose --env-file .env -f docker-compose.yml exec -T postgres `
   psql -U edugrade -d edugrade_restore_verify -c "select count(*) from schema_migration"
 ```
 
-覆盖主数据库必须额外提供 `-AllowPrimaryDatabase`，并在操作前停止应用写流量、保留升级前备份和确认回退窗口。
+脚本在任何停服、删库或建库操作前验证完整清单、所有文件的大小/哈希，并确认传入 dump 和对象目录正是该清单绑定的路径。`-MinioBackupDirectory` 可省略，由清单选择；显式指定其他目录会失败。
 
-MinIO 恢复可附加：
+恢复时同样进入 Compose 维护窗口。对象复制完成后，在事务中将数据库中源 bucket 的文件引用重映射到目标 bucket；只暂时停用题库文件不可变保护触发器，并保留、恢复其原始启用模式，其他约束和触发器仍生效。随后读取恢复库的实际引用，并重新下载目标 bucket 中的对象验证大小与 SHA-256，全部通过才报告成功。
 
-```powershell
--MinioBackupDirectory .\backups\edugrade-YYYYMMDD-HHMMSS\minio-YYYYMMDD-HHMMSS
-```
+覆盖主数据库需额外提供 `-AllowPrimaryDatabase`，覆盖主 bucket 需 `-AllowPrimaryBucket`；生产环境还需 `-AllowProductionRestore`。保留升级前备份并确认回退窗口。数据库与对象存储之间没有跨系统事务；若主库/主 bucket 恢复已开始改动数据却未完成验证，脚本保留维护停服状态，并输出原运行容器的 `docker start` 命令。检查错误并重新执行完整恢复，在完整验证通过后再人工启动这些容器。若目标库和 bucket 均隔离，或失败发生在改动数据前，则自动恢复原运行集合。
 
 完整自动演练优先使用：
 
 ```powershell
-.\scripts\verify-backup.ps1 -BackupDirectory .\backups\edugrade-YYYYMMDD-HHMMSS
-.\scripts\restore-drill.ps1 -BackupDirectory .\backups\edugrade-YYYYMMDD-HHMMSS
+.\scripts\verify-backup.ps1 -BackupDirectory $backup.FullName
+.\scripts\restore-drill.ps1 -BackupDirectory $backup.FullName
 ```
 
-演练恢复到随机隔离数据库和 bucket，验证 migration、租户关系与对象数量后默认清理。建议预生产 RPO 不超过 24 小时、RTO 不超过 4 小时；正式考试窗口应缩短备份周期，并以演练实测值替代建议值。
+演练恢复到随机隔离数据库和 bucket，验证 migration、租户关系、数据库文件引用与实际对象字节/哈希后默认清理。`-KeepDrillData` 可保留演练数据供人工检查。建议预生产 RPO 不超过 24 小时、RTO 不超过 4 小时；正式考试窗口应缩短备份周期，并以演练实测值替代建议值。
+
+脚本回归测试（PowerShell 7）：
+
+```powershell
+.\scripts\tests\recovery.tests.ps1
+# 使用可创建临时数据库的独立 PostgreSQL 测试实例：
+.\scripts\tests\recovery-postgres.tests.ps1 -PostgresTestURL $env:EDUGRADE_RECOVERY_TEST_DATABASE_URL
+# 可选：使用真实 Docker，自动创建和清理唯一项目、临时卷与合成数据，不接触已有部署。
+.\scripts\tests\recovery-docker.tests.ps1
+```
 
 ## 12. 升级与回滚
 

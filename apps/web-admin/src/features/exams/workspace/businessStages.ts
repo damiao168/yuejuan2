@@ -28,6 +28,7 @@ function lifecycleBusinessStage(stage: string): ExamBusinessStage {
 }
 
 export function examBusinessStages(data: ExamWorkspaceProjection) {
+  // 导航阶段取服务端生命周期；阶段标为 completed 仅是顺序展示，不替代各环节的业务检查。
   const current = lifecycleBusinessStage(data.stage);
   const currentIndex = stageOrder.indexOf(current);
   return [

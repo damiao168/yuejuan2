@@ -60,6 +60,7 @@
   pointer-events: none;
 }
 
+/* 覆盖层本身透传点击，具体标记恢复命中；否则空白区域无法交给画布绘制工具。 */
 .review-annotation-overlay,
 .student-annotation-overlay {
   position: absolute;

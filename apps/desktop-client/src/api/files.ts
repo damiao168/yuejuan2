@@ -29,6 +29,7 @@ export function uploadFileWithProgress(
     }
 
     const xhr = new XMLHttpRequest();
+    // 此接口需要浏览器上传进度事件，因此使用 XHR；100% 仅表示发送完成，成功仍以响应为准。
     xhr.open("POST", client.url("/api/v1/files"));
     xhr.setRequestHeader("Accept", "application/json");
     const authorization = client.authorizationHeader();

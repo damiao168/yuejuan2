@@ -7,6 +7,7 @@ function ocrBand(value) {
 }
 
 export function evaluateOperationalSlices(predictions, minimumRecords = 1) {
+  // 按业务条件切片定位误差差异；这些维度不代表人口属性公平性结论。
   const dimensions = {
     subject: (item) => item.observation.subject,
     question_type: (item) => item.observation.question_type,
@@ -39,6 +40,7 @@ export function evaluateOperationalSlices(predictions, minimumRecords = 1) {
       if (records.length < minimumRecords) insufficient.push({ dimension, value, count: records.length, required: minimumRecords });
       return result;
     });
+    // 小样本分组仍展示，但不参与组间差距；不足样本另交门禁判断。
     const eligible = slices[dimension].filter((slice) => slice.count >= minimumRecords);
     const nmaes = eligible.map((slice) => slice.normalized_mae);
     disparities[dimension] = { eligible_slices: eligible.length, normalized_mae_gap: nmaes.length >= 2 ? Math.max(...nmaes) - Math.min(...nmaes) : null };

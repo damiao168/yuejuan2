@@ -130,6 +130,7 @@ export class ApiClient {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
+        // 网络块不等于 SSE 帧，末尾未闭合片段留待下次读取；结束时仍有残片即报错。
         const frames = buffer.split(/\r?\n\r?\n/);
         buffer = frames.pop() ?? "";
         for (const frame of frames) {
@@ -171,6 +172,7 @@ function addIdempotencyHeader(path: string, method: string | undefined, headers:
   if (!["POST", "PUT", "PATCH", "DELETE"].includes(normalizedMethod) || path.startsWith("/api/v1/auth/")) {
     return;
   }
+  // 默认键只覆盖这一次请求；业务重试要由调用方传入并复用原键。
   if (!headers.has("Idempotency-Key")) {
     headers.set("Idempotency-Key", crypto.randomUUID());
   }

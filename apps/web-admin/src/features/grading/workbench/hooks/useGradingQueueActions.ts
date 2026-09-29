@@ -100,6 +100,7 @@ export function useGradingQueueActions(options: UseGradingQueueActionsOptions) {
       if (options.pageError) {
         options.notify.info("后续任务加载失败，请在任务列表重试");
       } else {
+        // 记住触发翻页的任务，待新页到达后再定位下一份，不能把当前已加载末尾当作全部完成。
         options.pendingNextRef.current = options.selectedTaskId;
         void options.loadMoreTasks();
         options.notify.info("正在加载后续任务，请稍后继续");
@@ -121,6 +122,7 @@ export function useGradingQueueActions(options: UseGradingQueueActionsOptions) {
     await options.runAction("release", async () => {
       const result = await releaseReviewTask(options.selectedTaskId);
       options.setTasks((current) => current.map((item) => item.id === result.task.id ? result.task : item));
+      // 主动暂放后留在空选择，避免列表刷新立即把刚放回的任务自动选中。
       options.suppressAutoSelectRef.current = true;
       options.setSelectedTaskId("");
     }, "已放回队列，草稿已保留");

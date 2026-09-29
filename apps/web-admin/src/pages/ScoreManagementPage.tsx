@@ -163,6 +163,7 @@ export function ScoreManagementPage({
         runAction(
           "publish",
           async () => {
+            // 正式发布前必须再次通过校验；用户取消校验只是结束当前操作，不应被当成发布失败。
             await runWithStepUp({
               reason: "正式发布成绩",
               action: () => publishExamGrades(selectedExamId, publishReason.trim())

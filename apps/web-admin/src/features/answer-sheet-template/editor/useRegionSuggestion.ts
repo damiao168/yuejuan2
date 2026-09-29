@@ -30,6 +30,7 @@ export function useRegionSuggestion({
     try {
       const anchors = new Map<number, Array<{ question: Question; top: number }>>();
       const unmatched = new Set(questions.map((question) => question.id));
+      // 先匹配较长题号，避免 1.1 的文字锚点被较短的题号 1 抢占。
       const normalized = questions.map((question) => ({
         question, key: question.question_no.replace(/\s+/g, "").toLowerCase()
       })).sort((a, b) => b.key.length - a.key.length);
@@ -46,6 +47,7 @@ export function useRegionSuggestion({
               || text.startsWith(`${key}、`) || text.startsWith(`${key}．`)));
           if (!candidate) continue;
           const transform = raw.transform as number[];
+          // PDF 文字坐标从底部起算；区域编辑器使用从顶部起算的 0～1 页面比例。
           pageAnchors.push({
             question: candidate.question,
             top: clamp(1 - ((transform[5] || 0) + Math.abs(transform[3] || transform[0] || 12)) / viewport.height)

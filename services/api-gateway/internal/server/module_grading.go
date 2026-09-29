@@ -82,6 +82,7 @@ type GradingQualityDependencies struct {
 	AIRequestObserver    subjective.AIGradingRequestObserver
 }
 
+// 复核、校准、种子样本和漂移服务按依赖顺序组装；可选的 math grading v2 只有在配置开启且具备证据来源时才挂载。
 func NewGradingQualityModule(cfg config.Config, stores GradingQualityStores, dependencies GradingQualityDependencies) *GradingQualityModule {
 	gradingHandler := grading.NewHandler(stores.Grading, grading.NewEngine(), dependencies.Auth)
 	gradingHandler.SetProductionDependencies(dependencies.WorkerRuntime, dependencies.Files)
@@ -164,6 +165,7 @@ func newQualityDashboardService(db *sql.DB, stores GradingQualityStores, graderD
 	})
 }
 
+// 真实服务优先；只有开发/测试或显式允许的 demo 环境才使用 mock，其余未配置情况返回禁用适配器。
 func newSubjectiveAdapter(cfg config.Config, observer subjective.AIGradingRequestObserver) subjective.LLMGradingAdapter {
 	if useRealAIService(cfg) {
 		return subjective.NewHTTPAdapter(subjective.HTTPAdapterConfig{

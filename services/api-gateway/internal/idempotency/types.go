@@ -35,6 +35,7 @@ type Record struct {
 }
 
 type Store interface {
+	// Begin 返回的布尔值表示是否取得执行权；为 false 时只能重放已有结果。
 	Begin(ctx context.Context, input BeginInput) (Record, bool, error)
 	Complete(ctx context.Context, input BeginInput, status int, headers map[string]string, body []byte) error
 	Abort(ctx context.Context, input BeginInput) error

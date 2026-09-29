@@ -1,0 +1,231 @@
+{
+  "scope": "services/api-gateway/internal/modelgovernance/*.go",
+  "method": "逐文件阅读实现与测试，仅补充模型治理的状态机、权限租户边界、密钥/提示词脱敏、探测重试、租约幂等和事务并发说明；不逐行复述。",
+  "files": [
+    {
+      "path": "services/api-gateway/internal/modelgovernance/evaluation.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/evaluation_test.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/governance.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/governance_test.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/handlers.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/handlers_test.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_chat.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_chat_test.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_auto.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_auto_test.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_handlers.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_migration_test.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe_http_test.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_probe_test.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_store_memory.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_store_postgres.go",
+      "status": "annotated",
+      "reason": "已说明密钥事务加密、默认配置切换和探测结果的 updated_at 竞态保护。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_test.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_production.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_production_test.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/production.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/production_test.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/promotion.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/promotion_test.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/provider_registry.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/role_binding.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/role_binding_handlers.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/role_binding_handlers_test.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/role_binding_store_memory.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/role_binding_store_postgres.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/role_binding_test.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/runtime_prompt.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/runtime_prompt_test.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/sandbox_admission.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/sandbox_admission_test.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/sandbox_approval.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/sandbox_approval_test.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/secrets.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/secrets_test.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/store.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/store_memory.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/store_postgres.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/usage_ledger.go",
+      "status": "annotated",
+      "reason": "已逐文件阅读并补充关键状态、权限、租户边界、密钥脱敏或并发维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/usage_ledger_test.go",
+      "status": "existing_sufficient",
+      "reason": "已逐文件阅读；现有注释、函数结构和测试名称已直接表达规则，无需重复堆注释。"
+    }
+  ]
+}

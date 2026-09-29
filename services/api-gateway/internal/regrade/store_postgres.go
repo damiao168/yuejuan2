@@ -115,6 +115,7 @@ func (s *PostgresStore) Create(ctx context.Context, tenantID, examID, questionID
 		return Job{}, nil, err
 	}
 	defer tx.Rollback()
+	// 按租户和考试串行创建任务，让幂等键查询和任务写入处于同一临界区。
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`, tenantID, examID); err != nil {
 		return Job{}, nil, err
 	}
@@ -287,6 +288,7 @@ func (s *PostgresStore) Resume(ctx context.Context, tenantID, jobID, actorID str
 	})
 }
 
+// jobTransition 在任务行锁内检查状态，并把状态变化与事件一起提交；已到目标状态的重试直接返回。
 func (s *PostgresStore) jobTransition(ctx context.Context, tenantID, jobID, actorID, expected, target, eventType string, update func(context.Context, *sql.Tx) (Job, error)) (Job, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -440,6 +442,7 @@ func (s *PostgresStore) Review(ctx context.Context, tenantID, itemID, actorID st
 		args = append(args, *score)
 		query = `UPDATE regrade_item SET reviewed_by=$3::uuid,reviewed_grade_id=NULLIF($4,'')::uuid,reviewed_score=$6,delta=$6-old_score,status='resolved',review_note=$5,revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING ` + itemReturning
 	case ReviewReject:
+		// 驳回只是结束这项复核，清空新分数后，发布计划会保留原分数。
 		query = `UPDATE regrade_item SET reviewed_by=$3::uuid,reviewed_grade_id=NULL,reviewed_score=NULL,delta=NULL,status='resolved',review_note=$5,revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING ` + itemReturning
 	case ReviewException:
 		query = `UPDATE regrade_item SET reviewed_by=$3::uuid,status='exception',review_note=$5,revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING ` + itemReturning
@@ -554,6 +557,7 @@ func jobForUpdate(ctx context.Context, tx *sql.Tx, tenantID, jobID string) (Job,
 	return job, err
 }
 func itemAndJobForUpdate(ctx context.Context, tx *sql.Tx, tenantID, itemID string) (Item, Job, error) {
+	// 先锁明细，再锁所属任务；领题、候选提交和复核都在拿到两把锁后检查状态。
 	item, err := scanItem(tx.QueryRowContext(ctx, `SELECT `+itemColumns+` FROM regrade_item WHERE tenant_id=$1::uuid AND id=$2::uuid FOR UPDATE`, tenantID, itemID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return Item{}, Job{}, ErrNotFound

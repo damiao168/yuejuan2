@@ -13,6 +13,7 @@ func (s *PostgresStore) RecoverCommand(ctx context.Context, tenant, actor, id st
 func (s *MemoryStore) RecoverCommand(ctx context.Context, tenant, actor, id string) (commandreceipt.Receipt, error) {
 	return s.receipts.Recover(ctx, tenant, actor, id)
 }
+// RecoverCommand 只查询当前操作者的持久化回执，不重新执行确认或发布；客户端按返回状态决定后续动作。
 func (h *Handler) RecoverCommand(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	result, err := h.store.RecoverCommand(r.Context(), user.TenantID, user.ID, r.PathValue("commandId"))

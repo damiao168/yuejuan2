@@ -6,7 +6,7 @@ import (
 )
 
 func (s *PostgresStore) ProcessRuleCandidates(ctx context.Context, tenantID, runID, actorID string, engine *Engine) error {
-	// Replaying creation must not restart a deleted or terminal run.
+	// 重放创建命令不能重新启动已删除或已进入终态的评分运行。
 	var active bool
 	if err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM scoring_run WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL AND status IN ('queued','processing','needs_review'))`, tenantID, runID).Scan(&active); err != nil {
 		return err
@@ -49,6 +49,7 @@ func (s *PostgresStore) ProcessRuleCandidates(ctx context.Context, tenantID, run
 			}
 			source, reason = route.Source, route.Reason
 		case grade.AutoPass && !grade.NeedsHumanReview:
+			// 引擎通过只表示候选满足确认条件；ConfirmRuleGrade 会在事务内锁定运行状态，拒绝已取消任务的迟到结果。
 			if _, confirmErr := s.ConfirmRuleGrade(ctx, tenantID, segmentID, actorID, grade); confirmErr != nil {
 				if errors.Is(confirmErr, ErrInvalidTransition) {
 					return nil

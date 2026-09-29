@@ -71,6 +71,7 @@ type routerGuards struct {
 	withWorkerTaskPayload           func(string, string, http.HandlerFunc) http.HandlerFunc
 }
 
+// guard 的组合顺序本身就是权限边界；身份、资源作用域、幂等、租约和业务权限不能随意调换。
 func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuards {
 	authStore := modules.Identity.AuthStore
 	idempotencyStore := modules.Idempotency
@@ -281,6 +282,7 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 			"system:read",
 		)(handler))
 	}
+	// worker 写接口只接受具备 OCR 或编排权限的服务身份，具体任务的租户、来源和租约仍由 withWorkerTask* 再核验。
 	requireWorkerExecute := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequireAnyPermission("ocr:manage", "orchestrator:manage")(handler))
 	}

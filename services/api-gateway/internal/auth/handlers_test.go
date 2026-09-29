@@ -23,6 +23,7 @@ import (
 )
 
 func newTestStore(t *testing.T) *auth.MemoryStore {
+	// 这里显式设置权限以隔离 HTTP 行为；真实角色授权矩阵由 PostgreSQL 契约测试验证。
 	t.Helper()
 	hash, err := auth.HashPassword("ChangeMe123!")
 	if err != nil {

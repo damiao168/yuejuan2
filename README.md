@@ -639,6 +639,8 @@ docker compose --env-file .env -f docker-compose.yml logs --tail 200 ocr-worker 
 
 ## 本地开发（维护者 / 已授权开发者）
 
+开发与评审请遵循[代码注释与维护说明标准](docs/engineering/commenting-standard.md)，同步维护业务规则、状态边界及失败恢复说明。
+
 > [!WARNING]
 > 本节仅用于项目维护和经授权开发。公开开发命令不授予复制、修改、运行、部署或发布本项目的许可。
 

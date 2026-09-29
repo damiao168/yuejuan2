@@ -37,6 +37,7 @@ export function useRuntimeDiagnostics(
     try {
       const normalizedServerUrl = normalizeBaseUrl(serverUrl);
       setServerUrl(normalizedServerUrl);
+      // 此处只保存当前浏览器会话的地址；长期登录凭据由系统凭据库单独管理。
       window.sessionStorage.setItem("edugrade.desktop.server_url", normalizedServerUrl);
       await logEvent("info", "server url saved for current session", normalizedServerUrl);
     } catch (error) {

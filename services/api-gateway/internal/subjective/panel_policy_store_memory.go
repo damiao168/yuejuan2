@@ -53,6 +53,7 @@ func (s *MemoryStore) FindApprovedPanelPolicy(_ context.Context, tenantID string
 	return PanelPolicy{}, ErrNotFound
 }
 
+// 只有 shadow 策略且报告与策略范围、版本完全一致时才能批准；同一租户切片同时只保留一个 approved 策略。
 func (s *MemoryStore) ApprovePanelPolicy(_ context.Context, tenantID, policyID, actorID, evaluationRunID string, report gradingevaluation.PanelSliceReadiness, at time.Time) (PanelPolicy, error) {
 	if tenantID == "" || actorID == "" || evaluationRunID == "" || !report.Ready {
 		return PanelPolicy{}, ErrInvalidInput

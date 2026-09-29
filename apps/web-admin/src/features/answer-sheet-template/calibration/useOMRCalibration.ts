@@ -118,6 +118,7 @@ export function useOMRCalibration({ template, enabled, message, formatError }: O
     };
   }, [formatError, message, selectedCase?.answer_segment_id]);
 
+  // 每份样本重新盲标，不能把上份选项作为下一份的默认答案。
   useEffect(() => setExpectedOptions([]), [selectedCase?.id]);
 
   const open = useCallback(async (calibrationId: string) => {

@@ -36,6 +36,7 @@ func TestRenderStudentPrintPackageIsDeterministicAndContainsOnePagePerLedgerPage
 		}},
 	}
 
+	// 打印台账是不可变凭据；相同输入必须得到相同 PDF 字节和摘要，便于下载核对。
 	first, firstDigest, err := RenderStudentPrintPackage(pkg)
 	if err != nil {
 		t.Fatal(err)

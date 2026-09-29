@@ -199,6 +199,7 @@ func (s *MemoryStore) AssignAppeal(_ context.Context, tenantID string, id string
 	return s.withDetailsLocked(item), nil
 }
 
+// SubmitRecommendation 只保存受派教师的建议，实际分数仍由后续裁决决定。
 func (s *MemoryStore) SubmitRecommendation(_ context.Context, tenantID string, id string, actorID string, input SubmitRecommendationInput) (Appeal, error) {
 	input = normalizeRecommendationInput(input)
 	if err := validateRecommendationInput(input); err != nil {

@@ -70,6 +70,7 @@ export function loadPrompt(promptId) {
   if (!entry.prompt_version) throw new Error(`Prompt ${promptId} is missing prompt_version`);
   const absolutePath = join(here, entry.file_path);
   const text = readFileSync(absolutePath, "utf8");
+  // 校验和描述本次读到的文本，用于追溯；此处没有与冻结清单比较来阻止修改。
   const checksum = createHash("sha256").update(text).digest("hex");
   return { ...entry, absolute_path: absolutePath, checksum, text };
 }

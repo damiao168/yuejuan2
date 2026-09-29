@@ -71,14 +71,19 @@ func MaterializeBankQuestionTx(ctx context.Context, tx *sql.Tx, tenant, exam, ac
 		}
 		q.Rubric = &Rubric{ID: id, QuestionID: q.ID, Version: "v1", Status: "approved", MaxScore: r.MaxScore, Points: r.Points, Deductions: r.Deductions, Examples: r.Examples}
 	}
-	// Existing defaults retain the risk/evidence/AI gates. A missing profile
-	// remains missing; AnswerArea is deliberately unconfigured.
-	if _, err = tx.ExecContext(ctx, `SELECT assessment_apply_default_question_config($1,$2,$3)`, tenant, exam, q.ID); err != nil {
-		return q, err
+	err = syncQuestionAssessmentArchetypeTx(ctx, tx, tenant, exam, q.ID, f.Archetype)
+	return q, err
+}
+
+// Preserve existing risk and AI gates when authored content changes the
+// question archetype. A missing subject profile remains missing.
+func syncQuestionAssessmentArchetypeTx(ctx context.Context, tx *sql.Tx, tenant, exam, question, archetype string) error {
+	if _, err := tx.ExecContext(ctx, `SELECT assessment_apply_default_question_config($1,$2,$3)`, tenant, exam, question); err != nil {
+		return err
 	}
-	_, err = tx.ExecContext(ctx, `UPDATE question_assessment_config c SET archetype_code=$4,
+	_, err := tx.ExecContext(ctx, `UPDATE question_assessment_config c SET archetype_code=$4,
  allowed_evidence_types=COALESCE((SELECT jsonb_agg(e.value ORDER BY e.value) FROM question_archetype a,subject_profile p,jsonb_array_elements_text(a.evidence_types_json) e(value) WHERE a.code=$4 AND p.tenant_id=c.tenant_id AND p.id=c.subject_profile_id AND p.evidence_policy_json->'allowed_types' ? e.value),'[]'),
  scoring_policy_json=jsonb_set(c.scoring_policy_json,'{mode}',to_jsonb(CASE WHEN c.scoring_policy_json->>'mode'='DUAL_HUMAN' THEN 'DUAL_HUMAN' ELSE (SELECT default_scoring_mode FROM question_archetype WHERE code=$4) END)),revision=revision+1
- WHERE tenant_id=$1 AND exam_id=$2 AND question_id=$3 AND archetype_code<>$4`, tenant, exam, q.ID, f.Archetype)
-	return q, err
+ WHERE tenant_id=$1 AND exam_id=$2 AND question_id=$3 AND archetype_code<>$4`, tenant, exam, question, archetype)
+	return err
 }

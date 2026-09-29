@@ -5,6 +5,7 @@ import (
 	"sort"
 )
 
+// 少于该人数时不返回统计和排名，避免学生从聚合值推断同学成绩。
 const privacyMinCohortSize = 10
 
 func scoreRate(score, maxScore float64) float64 {
@@ -134,6 +135,7 @@ func quantile(values []float64, p float64) float64 {
 	if len(values) == 1 {
 		return values[0]
 	}
+	// 使用排序后相邻位置的线性插值，保证中位数等分位点稳定且可复现。
 	position := p * float64(len(values)-1)
 	lower := int(math.Floor(position))
 	upper := int(math.Ceil(position))

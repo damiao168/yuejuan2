@@ -10,6 +10,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
 
+// 学生接口同时验证身份范围和 DTO 脱敏；测试数据包含私有批注以防止过滤回归。
 func TestListStudentQuestionAnnotationsRequiresStudentScopeAndReturnsSafeDTO(t *testing.T) {
 	store := NewMemoryStore()
 	store.SetStudentQuestionAnnotations("tenant-a", "exam-a", "student-a", "question-a", []Annotation{

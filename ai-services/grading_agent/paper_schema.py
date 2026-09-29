@@ -59,6 +59,7 @@ def paper_import_schema():
             "ocr_confidence": _nullable("number"),
         },
     }
+    # 可缺失的事实使用 null 或空数组；schema 约束结构，来源是否真实由 paper_validation 校验。
     common = {
         "candidate_id": {"type": "string"},
         "question_no_hint": _nullable("string"),

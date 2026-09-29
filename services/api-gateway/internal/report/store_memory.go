@@ -7,6 +7,7 @@ import (
 	"sync"
 )
 
+// MemoryStore 为测试提供单份报表数据集；种子数据不模拟数据库的租户和考试过滤。
 type MemoryStore struct {
 	receipts                 commandreceipt.Memory
 	mu                       sync.RWMutex

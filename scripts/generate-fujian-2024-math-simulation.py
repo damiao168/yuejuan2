@@ -89,6 +89,7 @@ def answer(
     }
 
 
+# 答案、置信度和分流结果均为手工设定的仿真预期，不能当作 OCR 或评分模型实测表现。
 CANDIDATES: list[dict[str, Any]] = [
     {
         "candidate_no": "SIM-FJ2024-001",
@@ -236,6 +237,7 @@ def draw_centered(
     draw.text((xy[0] - width // 2, xy[1]), text, font=fnt, fill=fill)
 
 
+# 用摘要生成可重复的条纹外观，不编码项目签名条码协议，只用于仿真版式。
 def draw_barcode(draw: ImageDraw.ImageDraw, candidate_no: str) -> None:
     digest = hashlib.sha256(candidate_no.encode("utf-8")).digest()
     x = 1280
@@ -500,6 +502,7 @@ def main() -> None:
         raise SystemExit(f"official source PDF has only {len(reader.pages)} pages")
     question_pdf = REFERENCE_DIR / "official-fujian-2024-math-questions.pdf"
     answer_pdf = REFERENCE_DIR / "official-fujian-2024-math-reference-answers.pdf"
+    # 页码为此固定来源 PDF 的零基、左闭右开区间；更换源文件时必须重新核对科目页。
     extract_pdf_pages(reader, 10, 17, question_pdf)
     extract_pdf_pages(reader, 17, 24, answer_pdf)
 
@@ -546,6 +549,7 @@ def main() -> None:
                 "pdf_file": pdf_path.relative_to(DATASET_DIR).as_posix(),
             }
         )
+        # 区域坐标以未旋转模板的宽高归一化；这里不会跟随扫描旋转变换，使用时须结合配准。
         all_regions[candidate["candidate_no"]] = {**page1_regions, **page2_regions}
 
     questions = build_questions()

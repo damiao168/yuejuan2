@@ -43,6 +43,7 @@ func (s *MemoryStore) CreateTenant(_ context.Context, input TenantProvision) (Te
 	return item, nil
 }
 
+// 非平台用户只能看到自己的租户；内存实现也保留这个租户隔离规则以对齐生产库。
 func (s *MemoryStore) ListTenants(_ context.Context, tenantID string, canListAll bool, filter TenantListFilter) ([]Tenant, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

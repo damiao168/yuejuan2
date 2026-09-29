@@ -6,6 +6,7 @@ import { baseInput } from "./helpers.js";
 
 function successfulRawOutput(overrides = {}) {
   return {
+    // 故意给出越界总分，验证适配器按得分点重算，而不是照信模型总分。
     suggested_score: 99,
     confidence: 0.7,
     matched_points: [

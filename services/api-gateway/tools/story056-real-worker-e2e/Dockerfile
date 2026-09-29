@@ -1,3 +1,4 @@
+# 构建阶段编译独立 E2E 客户端，运行阶段只保留证书和单个可执行文件。
 ARG GO_BUILD_IMAGE=golang:1.26-alpine
 ARG API_RUNTIME_IMAGE=alpine:3.22
 

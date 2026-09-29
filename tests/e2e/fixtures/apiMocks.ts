@@ -32,6 +32,7 @@ function json(route: Route, body: unknown, status = 200) {
   });
 }
 
+// 统一模拟权限和页面数据；专用夹具应后注册并 fallback 到这里，未配置接口统一报错以暴露漏配。
 export async function installApiMocks(
   page: Page,
   options: { role?: TestRole; initiallyAuthenticated?: boolean; dashboardMode?: "default" | "empty"; sessionSubjects?: boolean } = {}

@@ -57,6 +57,7 @@ function formatTime(value?: string) {
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString("zh-CN", { hour12: false });
 }
 
+// datetime-local 表示本地墙上时间且不带时区；先抵消本地偏移，再截取输入格式，避免默认到期时间被误当成 UTC。
 function localDateTimeValue(value: Date) {
   const shifted = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
   return shifted.toISOString().slice(0, 16);

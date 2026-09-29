@@ -100,6 +100,7 @@ export function useStudentPrinting(selectedTemplate: AnswerSheetTemplate | undef
     const studentIds = printableCandidates.filter((item) => selectedClasses.has(item.class_id)).map((item) => item.student_id);
     if (!studentIds.length) { message.error("所选班级没有可签发的应考学生"); return; }
     const signature = [...studentIds].sort().join(",");
+    // 同一名单在签发结果未确认前复用请求键，避免网络失败后重试重复签发。
     if (issueRequestRef.current?.signature !== signature) {
       issueRequestRef.current = { signature, key: `web-print-${crypto.randomUUID()}` };
     }

@@ -97,6 +97,7 @@ func (s *MemoryStore) Transition(ctx context.Context, scope auth.AccessScope, id
 			s.items[i.ID] = i
 		}
 		v.UpdatedAt = r.CreatedAt
+		// 审核记录保留当时的修订号与哈希；退回草稿会增加修订号，旧审核结果不能继续沿用。
 		s.versions[id] = copyVersion(v)
 		return copyVersion(v), nil
 	})

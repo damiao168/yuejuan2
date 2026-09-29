@@ -14,6 +14,7 @@ $ModelPath = Join-Path $LabRoot $Manifest.model.model_path
 New-Item -ItemType Directory -Force $Downloads | Out-Null
 New-Item -ItemType Directory -Force (Split-Path $ModelPath) | Out-Null
 
+# 这里仅跳过大小相符的重复下载；调用方随后仍需验证 SHA256，大小一致不等于内容可信。
 function Download-VerifiedFile($Url, $Destination, $ExpectedBytes) {
     if ((Test-Path $Destination) -and ((Get-Item $Destination).Length -eq $ExpectedBytes)) {
         return

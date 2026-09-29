@@ -30,6 +30,7 @@ func scanScoringRun(row ruleScanner) (ScoringRun, error) {
 }
 
 func (s *PostgresStore) GetScoringSummary(ctx context.Context, tenantID, examID string) (ScoringSummary, error) {
+	// 概要以该考试最近一次未删除的运行作为计数口径；每题的排队、确认和复核数都限定在这次运行。
 	var summary ScoringSummary
 	summary.Questions = []ScoringQuestionSummary{}
 	run, err := scanScoringRun(s.db.QueryRowContext(ctx, scoringRunSelect+` WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1`, tenantID, examID))
@@ -248,10 +249,8 @@ func scanScoringRunItem(row ruleScanner, runStatus string) (ScoringRunItem, erro
 		value := maxScore.Float64
 		item.MaxScore = &value
 	}
-	// answer_segment.normalized_bbox is written straight from the page-processing
-	// callback with no column constraint and no server-side validation, and the
-	// strict map[string]float64 here is narrower than every other reader of the
-	// column. Degrade to an empty box rather than failing the whole listing.
+	// 展示坐标采用宽松解析，避免一个异常字段让整份列表失败；解析失败时可能保留部分字段。
+	// 此处不保证返回完整、有效的几何区域。
 	decodeJSONBLenient(normalizedBBoxRaw, &item.NormalizedBBox)
 	if err := decodeJSONB(standardAnswerRaw, &item.StandardAnswer, "question_answer_key.standard_answer"); err != nil {
 		return ScoringRunItem{}, err
@@ -260,6 +259,7 @@ func scanScoringRunItem(row ruleScanner, runStatus string) (ScoringRunItem, erro
 	return item, nil
 }
 
+// 先展示取消与失败，再展示待复核；仍有人工任务时，已有分数不能把题块显示为已确认。
 func scoringItemState(runStatus, omrStatus, reviewStatus, gradeID string) string {
 	if runStatus == "cancelled" || runStatus == "cancelling" {
 		return runStatus

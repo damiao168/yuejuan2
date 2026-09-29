@@ -11,6 +11,7 @@ import (
 
 const paperImportDispatchMaxAttempts = 3
 
+// 同一轮识别的来源快照只写一次；追加资料通过比较前后快照确定新增来源。
 func savePaperImportSourceSnapshot(ctx context.Context, tx *sql.Tx, tenantID, runID string, sources []PaperImportSource) error {
 	raw, err := json.Marshal(append([]PaperImportSource{}, sources...))
 	if err != nil {
@@ -40,6 +41,7 @@ func (s *PostgresStore) ClaimPendingPaperImportDispatch(ctx context.Context, own
 	}
 	defer tx.Rollback()
 	var tenantID, importID, runID string
+	// 多实例跳过已被锁定的工作，并只领取当前代次；领取次数与派发租约一起提交。
 	err = tx.QueryRowContext(ctx, `SELECT run.tenant_id::text,run.paper_import_id::text,run.id::text
 FROM paper_import_run run JOIN paper_import_job job ON job.tenant_id=run.tenant_id AND job.id=run.paper_import_id AND job.current_generation=run.generation
 WHERE run.status='processing' AND run.dispatch_status IN ('pending','failed') AND run.dispatch_available_at<=now()
@@ -195,6 +197,7 @@ WHERE tenant_id=$1 AND paper_import_run_id IN (
 	return err
 }
 
+// 按任务 ID 固定加锁顺序，供替换、取消和重新排队共用，减少并发事务的锁顺序冲突。
 func lockPaperImportTasksInTx(ctx context.Context, tx *sql.Tx, tenantID, importID string) error {
 	_, err := tx.ExecContext(ctx, `SELECT t.id FROM agent_worker_task t JOIN paper_import_run r ON r.tenant_id=t.tenant_id AND r.id=t.paper_import_run_id WHERE t.tenant_id=$1 AND r.paper_import_id=$2::uuid AND t.status IN ('queued','leased','running') ORDER BY t.id FOR UPDATE OF t`, tenantID, importID)
 	return err

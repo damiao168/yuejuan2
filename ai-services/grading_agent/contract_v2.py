@@ -1,6 +1,7 @@
 import base64
 import binascii
 import hashlib
+import json
 import math
 import re
 
@@ -107,6 +108,7 @@ def _bbox_units(bbox, request_id):
         _fail("media_evidence.normalized_bbox must stay within its source page", request_id)
     if width * height >= MAX_BBOX_AREA:
         _fail("whole-page or near-whole-page media evidence is forbidden", request_id)
+    # 跨语言绑定统一使用百万分之一页尺寸的整数单位，避免浮点格式差异改变摘要。
     units = tuple(round(value * BBOX_SCALE) for value in values)
     if any(not math.isclose(value, unit / BBOX_SCALE, abs_tol=1e-12) for value, unit in zip(values, units)):
         _fail("media_evidence.normalized_bbox supports at most six decimal places", request_id)
@@ -126,6 +128,7 @@ def compute_media_binding_hash(request):
         media["sha256"],
         *(str(value) for value in units),
     )
+    # 每段以 UTF-8 字节长度定界，避免字段拼接产生歧义。
     material = "".join(f"{len(part.encode('utf-8'))}:{part}" for part in parts).encode("utf-8")
     return hashlib.sha256(material).hexdigest()
 
@@ -200,7 +203,8 @@ def validate_request_v2(payload):
     leaked = sorted(set(payload) & _FORBIDDEN_FIELDS)
     if leaked:
         _fail(f"request contains forbidden identity, storage, or final-grade fields: {leaked}", request_id)
-    _exact_fields(payload, _REQUEST_FIELDS, "request", request_id)
+    optional = {"reference_context"} if "reference_context" in payload else set()
+    _exact_fields(payload, _REQUEST_FIELDS | optional, "request", request_id)
     if payload["schema_version"] != SCHEMA_VERSION:
         _fail("schema_version is unsupported", request_id)
     for field in ("request_id", "question_id", "answer_segment_id"):
@@ -210,12 +214,41 @@ def validate_request_v2(payload):
     # Reuse the already-parsed values without duplicating the bounded Base64
     # string. The v1 validator is read-only, so a shallow inherited envelope is
     # sufficient and keeps peak memory predictable for the future v2 seam.
-    inherited = {key: value for key, value in payload.items() if key not in {"media_evidence", "math_evidence"}}
+    inherited = {key: value for key, value in payload.items() if key not in {"media_evidence", "math_evidence", "reference_context"}}
     inherited["schema_version"] = "grading-agent-v1"
     validate_request(inherited)
     validate_media_evidence(payload["media_evidence"], payload)
     validate_math_evidence(payload["math_evidence"], request_id)
+    if "reference_context" in payload:
+        validate_reference_context(payload["reference_context"], request_id)
     return payload
+
+
+def validate_reference_context(reference, request_id):
+    fields = {"source", "snapshot_hash", "standard_answer", "equivalent_answers", "solution_text", "solution_steps"}
+    _exact_fields(reference, fields, "reference_context", request_id)
+    if reference["source"] != "confirmed_exam_import_snapshot":
+        _fail("reference_context.source is unsupported", request_id)
+    if not isinstance(reference["snapshot_hash"], str) or not _SHA256.fullmatch(reference["snapshot_hash"]):
+        _fail("reference_context.snapshot_hash must be a lowercase SHA-256", request_id)
+    if len(json.dumps(reference["standard_answer"], ensure_ascii=False)) > 20_000:
+        _fail("reference_context.standard_answer is too long", request_id)
+    answers = reference["equivalent_answers"]
+    if not isinstance(answers, list) or len(answers) > 100 or any(len(json.dumps(item, ensure_ascii=False)) > 4_000 for item in answers):
+        _fail("reference_context.equivalent_answers is invalid", request_id)
+    if not isinstance(reference["solution_text"], str) or len(reference["solution_text"]) > 20_000:
+        _fail("reference_context.solution_text is invalid", request_id)
+    steps = reference["solution_steps"]
+    if not isinstance(steps, list) or len(steps) > 100:
+        _fail("reference_context.solution_steps is invalid", request_id)
+    for index, step in enumerate(steps):
+        _exact_fields(step, {"step_no", "content"}, f"reference_context.solution_steps[{index}]", request_id)
+        if isinstance(step["step_no"], bool) or not isinstance(step["step_no"], int) or step["step_no"] <= 0:
+            _fail("reference_context.solution_steps.step_no is invalid", request_id)
+        if not isinstance(step["content"], str) or len(step["content"]) > 4_000:
+            _fail("reference_context.solution_steps.content is invalid", request_id)
+    if reference["standard_answer"] is None and not reference["solution_text"].strip() and not steps:
+        _fail("reference_context has no authored answer or solution", request_id)
 
 
 def validate_math_evidence(evidence, request_id):

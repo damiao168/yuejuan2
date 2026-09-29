@@ -99,6 +99,7 @@ func (s *Service) Complete(ctx context.Context, tenantID, calibrationID string) 
 	if len(evidence) == 0 {
 		return Calibration{}, ErrEvaluationRequired
 	}
+	// 先根据冻结的证据生成不可变 artifact，再计算哈希；审批引用的是这份完整产物。
 	artifact := buildArtifact(calibration.Method, evidence)
 	raw, err := json.Marshal(artifact)
 	if err != nil {
@@ -193,6 +194,7 @@ func (s *Service) RecordCandidate(ctx context.Context, tenantID string, input Re
 	}
 	input = normalizeCandidate(input)
 	candidate := Candidate{CandidateKey: input.CandidateKey, Axis: input.Axis, RawConfidence: input.RawConfidence, TargetRisk: input.TargetRisk, CreatedAt: s.now().UTC()}
+	// 找不到或来源评估已失效时记录 abstain；候选仍可落库供审计，但不会伪造可用置信度。
 	calibration, err := s.store.FindApproved(ctx, tenantID, input.Axis)
 	if err == ErrNotFound {
 		candidate.AbstainReason = "approved_calibration_not_found"
@@ -219,6 +221,7 @@ func (s *Service) RecordCandidate(ctx context.Context, tenantID string, input Re
 	return s.store.CreateOrGetCandidate(ctx, tenantID, candidate)
 }
 
+// auto 会在同一批证据上比较三种确定性方法，选择 Brier 分数更低者；平分时按方法名稳定决策。
 func buildArtifact(method Method, evidence []CalibrationEvidence) Artifact {
 	methods := []Method{method}
 	if method == MethodAuto {
@@ -397,6 +400,7 @@ func metricsFor(bins []Bin, items []CalibrationEvidence) Metrics {
 	return metrics
 }
 
+// 风险覆盖曲线只统计达到置信度阈值的样本；没有样本的阈值保持零覆盖，不能被当成低风险证明。
 func riskCoverage(bins []Bin, items []CalibrationEvidence) []RiskCoveragePoint {
 	points := make([]RiskCoveragePoint, 0, 21)
 	for step := 0; step <= 20; step++ {

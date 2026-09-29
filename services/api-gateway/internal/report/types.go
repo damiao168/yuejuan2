@@ -17,6 +17,7 @@ type EmptyState struct {
 	Reason string `json:"reason,omitempty"`
 }
 
+// Metric 用 Available 区分无样本与真实零值；比例型指标的 Value 为小数，不是百分数。
 type Metric struct {
 	Available   bool    `json:"available"`
 	Value       float64 `json:"value"`

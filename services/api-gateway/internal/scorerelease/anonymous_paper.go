@@ -221,6 +221,7 @@ WHERE tenant_id=$1::uuid AND release_id=$2::uuid AND source_submission_page_id=$
 		Visibility: "private", UploadedBy: actorID,
 	})
 	if err != nil {
+		// 对象已写入但资产登记失败时尝试清理；清理错误不覆盖本次登记错误。
 		_ = m.objects.Remove(ctx, m.bucket, key)
 		return err
 	}
@@ -252,6 +253,7 @@ WHERE tenant_id=$1::uuid AND id=$2::uuid AND lifecycle_status='active' AND delet
 }
 
 func redactAnonymousPNG(source []byte, page anonymousSourcePage) ([]byte, error) {
+	// 身份区域按模板中的归一化坐标遮白，再重新编码 PNG，原文件附带的元数据不会复制过去。
 	config, _, err := image.DecodeConfig(bytes.NewReader(source))
 	if err != nil || config.Width <= 0 || config.Height <= 0 || int64(config.Width)*int64(config.Height) > maxAnonymousPixels {
 		return nil, ErrAnonymousPaperUnavailable

@@ -15,6 +15,7 @@ var (
 	ErrRevisionConflict  = errors.New("appeal revision conflict")
 )
 
+// Appeal 保留旧版按可变成绩处理的申诉；基于发布快照的新流程使用 PublishedQuestionAppeal。
 type Appeal struct {
 	ID                   string            `json:"id"`
 	TenantID             string            `json:"tenant_id"`

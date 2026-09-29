@@ -167,6 +167,7 @@ func (o *PanelOrchestrator) Grade(ctx context.Context, tenantID, actorID string,
 	return o.gradeWithConfig(ctx, tenantID, actorID, gradingContext, config)
 }
 
+// 两个主评并行但互不共享结果；只有主评出现分歧才调用盲仲裁，无法安全收敛时转人工。
 func (o *PanelOrchestrator) gradeWithConfig(ctx context.Context, tenantID, actorID string, gradingContext Context, config PanelDecisionConfig) (PanelResult, error) {
 	config = NormalizePanelDecisionConfig(config)
 	if strings.TrimSpace(tenantID) == "" || strings.TrimSpace(actorID) == "" || validateCreatePanel(CreatePanelInput{
@@ -468,6 +469,7 @@ func newBlindPanelInput(requestID string, gradingContext Context, policy ModelPo
 		ModelPolicy: policy, PromptGuard: InspectPromptInjection(gradingContext.AnswerText),
 		OutputConstraint: aieligibility.OutputConstraint{CriteriaEvidenceOnly: true, AllowModelFinalScore: false, FinalScoreAuthority: "server_rubric_and_deterministic_rule"},
 		MathEvidence:     gradingContext.MathEvidence,
+		ReferenceContext: gradingContext.ReferenceContext,
 	}
 }
 

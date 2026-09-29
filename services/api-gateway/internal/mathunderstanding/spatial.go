@@ -10,9 +10,8 @@ import (
 
 type SpatialGraphOptions struct{ MinimumNextScore float64 }
 
-// BuildSpatialRelations uses geometry as evidence, not as a global reading
-// order. It emits local candidate transitions that the Solution DAG builder
-// may accept, merge or reject with mathematical verification evidence.
+// BuildSpatialRelations 根据位置、连接符和共用字母产生候选连线。
+// 这些分数只是排列线索，不能证明两个步骤在数学上有推导关系。
 func BuildSpatialRelations(blocks []MathAnswerBlock, options SpatialGraphOptions) []SpatialRelation {
 	minimum := options.MinimumNextScore
 	if minimum <= 0 {
@@ -51,6 +50,7 @@ func BuildSpatialRelations(blocks []MathAnswerBlock, options SpatialGraphOptions
 	return out
 }
 
+// transitionGeometry 按输入图像的 0–1 坐标计算；向上或同行向左的候选不给几何分。
 func transitionGeometry(from, to BoundingBox) (float64, []string) {
 	fromX, fromY := from.X+from.Width/2, from.Y+from.Height/2
 	toX, toY := to.X+to.Width/2, to.Y+to.Height/2

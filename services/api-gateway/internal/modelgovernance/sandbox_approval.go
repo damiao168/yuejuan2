@@ -53,6 +53,7 @@ type SandboxApprovalRevokeInput struct {
 	Reason string `json:"reason"`
 }
 
+// 一次审批只能对应托管模型或旧版供应商部署之一，并要求合成数据、留存、区域和有效期证据齐全。
 func ValidateSandboxApprovalInput(input SandboxApprovalInput, now time.Time) error {
 	managed := strings.TrimSpace(input.ModelConfigID) != ""
 	legacy := strings.TrimSpace(input.ProviderID) != "" && strings.TrimSpace(input.DeploymentID) != ""

@@ -272,6 +272,7 @@ test("annotation workflow CLI verifies packet hashes and completes the file prot
 
   const packetPath = `${root}/plan/${plan.packets[0].file}`;
   const packetText = readFileSync(packetPath, "utf8");
+  // 仅追加空格也必须使哈希失败，保护的是分发包原文，而不只是解析后的 JSON 值。
   writeFileSync(packetPath, `${packetText} `, "utf8");
   const tamperedMerge = run(
     "--action", "merge", "--dataset", datasetPath, "--roster", rosterPath, "--plan", `${root}/plan/coordinator-plan.json`,

@@ -39,6 +39,7 @@ export function mathSuggestionState(grade: AiGrade, evidence: MathWorkbenchEvide
     return { current: false, label: "缺少数学版本绑定" };
   }
   const response = evidence.understanding;
+  // 建议绑定的是已吸收校正与当前未吸收校正之和；任一层变化都会让旧建议失效。
   if (response && (grade.math_artifact_id !== response.artifact.id || grade.math_artifact_version !== response.artifact.version
     || grade.math_correction_revision !== (response.artifact.correction_revision ?? 0) + (response.correction_revision ?? 0))) {
     return { current: false, label: "已过期 · 数学证据已更新" };
@@ -59,6 +60,7 @@ export function mathSuggestionState(grade: AiGrade, evidence: MathWorkbenchEvide
 }
 
 function validBBox(value: unknown): value is MathStepSelection["bbox"] {
+  // 框坐标相对题块归一化，边界只容忍浮点运算误差，不能把页面像素坐标直接传入。
   if (!value || typeof value !== "object") return false;
   const { x, y, width, height } = value as MathStepSelection["bbox"];
   return [x, y, width, height].every(Number.isFinite) && x >= 0 && y >= 0 && width > 0 && height > 0

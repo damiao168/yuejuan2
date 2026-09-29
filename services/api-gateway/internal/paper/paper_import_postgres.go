@@ -93,6 +93,7 @@ RETURNING id::text,tenant_id::text,exam_id::text,COALESCE(exam_paper_id::text,''
 		}
 		job.Sources = append(job.Sources, item)
 	}
+	// 导入记录与待派发意图一并提交，HTTP 返回后进程退出也能由执行器接续准备资料。
 	job.Generation = 1
 	job.SourceRevision = paperImportSourceConfigurationHash(job.Sources)
 	if err = tx.QueryRowContext(ctx, `INSERT INTO paper_import_run
@@ -113,6 +114,7 @@ VALUES($1,$2::uuid,1,$3,'create',$4,$5::uuid,$6,'processing','pending') RETURNIN
 	return job, nil
 }
 
+// AddPaperImportSources 先识别已接受命令的重放，再校验代次；否则首次成功后的客户端重试会被当成过期请求。
 func (s *PostgresStore) AddPaperImportSources(ctx context.Context, tenantID, id, userID string, input AddPaperImportSourcesInput) (PaperImportJob, error) {
 	if input.CommandID == "" {
 		input.CommandID = uuid.NewString()
@@ -278,6 +280,7 @@ func (s *PostgresStore) ReplacePaperImportSources(ctx context.Context, tenantID,
 			return PaperImportJob{}, ErrConflict
 		}
 	}
+	// 删除全部来源仍生成新代次并作废旧任务，但不派发空输入，避免旧识别结果重新出现。
 	if len(input.Sources) == 0 {
 		issues, _ := json.Marshal([]string{"已删除全部考试资料，请重新上传正确的资料"})
 		_, err = tx.ExecContext(ctx, `UPDATE paper_import_job SET status='failed',error_code='paper_import_no_sources',issues=$3,structured_issues='[]'::jsonb,updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, id, issues)
@@ -328,7 +331,7 @@ func (s *PostgresStore) CompletePaperImportCandidates(ctx context.Context, tenan
 
 func (s *PostgresStore) applyPaperImportAssessmentArchetypes(ctx context.Context, tenantID, importID string, drafts []PaperImportDraftQuestion) error {
 	rows, err := s.db.QueryContext(ctx, `
-SELECT q.question_no,COALESCE(config.archetype_code,'')
+SELECT q.question_no,q.question_type,COALESCE(config.archetype_code,'')
 FROM paper_import_job job
 JOIN question q ON q.tenant_id=job.tenant_id AND q.exam_id=job.exam_id AND q.deleted_at IS NULL AND q.status<>'deleted'
 LEFT JOIN question_assessment_config config ON config.tenant_id=q.tenant_id AND config.exam_id=q.exam_id AND config.question_id=q.id
@@ -338,22 +341,23 @@ WHERE job.tenant_id=$1 AND job.id=$2::uuid AND job.deleted_at IS NULL
 		return err
 	}
 	defer rows.Close()
-	byNumber := map[string]string{}
+	type assessmentMatch struct{ kind, archetype string }
+	byNumber := map[string]assessmentMatch{}
 	for rows.Next() {
-		var number, archetype string
-		if err := rows.Scan(&number, &archetype); err != nil {
+		var number, kind, archetype string
+		if err := rows.Scan(&number, &kind, &archetype); err != nil {
 			return err
 		}
 		if archetype != "" {
-			byNumber[normalizePaperImportQuestionNumber(number)] = archetype
+			byNumber[normalizePaperImportQuestionNumber(number)] = assessmentMatch{kind, archetype}
 		}
 	}
 	if err := rows.Err(); err != nil {
 		return err
 	}
 	for index := range drafts {
-		if archetype := byNumber[normalizePaperImportQuestionNumber(drafts[index].QuestionNo)]; archetype != "" {
-			drafts[index].AssessmentArchetype = archetype
+		if matched := byNumber[normalizePaperImportQuestionNumber(drafts[index].QuestionNo)]; matched.archetype != "" && matched.kind == drafts[index].QuestionType {
+			drafts[index].AssessmentArchetype = matched.archetype
 		} else if drafts[index].AssessmentArchetype == "" {
 			drafts[index].AssessmentArchetype = defaultPaperImportArchetype(drafts[index].QuestionType)
 		}
@@ -388,6 +392,11 @@ func (s *PostgresStore) SavePaperImportReview(ctx context.Context, tenantID, id,
 	if err != nil {
 		return PaperImportJob{}, err
 	}
+	var reconciliationIssues []string
+	input.Questions, reconciliationIssues, err = reconcilePaperImportQuestions(ctx, tx, tenantID, job.ExamID, input.Questions, nil)
+	if err != nil {
+		return PaperImportJob{}, err
+	}
 	for i := range input.Questions {
 		normalizeAnswerKeyOnlyPaperImportDraft(&input.Questions[i])
 		input.Questions[i].HumanConfirmedFields = normalizeHumanConfirmedFields(input.Questions[i].HumanConfirmedFields)
@@ -395,6 +404,7 @@ func (s *PostgresStore) SavePaperImportReview(ctx context.Context, tenantID, id,
 	}
 	structured := appendReviewedDraftIssues(issuesAfterHumanReview(job.StructuredIssues, input.Questions, true), input.Questions)
 	structured = s.appendPaperImportBlueprintIssues(ctx, tenantID, id, questionCandidatesFromDrafts(input.Questions), withoutBlueprintIssues(structured))
+	structured = withPaperImportReconciliationIssues(structured, reconciliationIssues)
 	q, _ := json.Marshal(input.Questions)
 	si, _ := json.Marshal(structured)
 	messages, _ := json.Marshal(issueMessages(structured))
@@ -504,7 +514,7 @@ func reconcilePaperImportQuestions(ctx context.Context, reader paperImportQuesti
 		return nil, nil, err
 	}
 
-	rows, err := reader.QueryContext(ctx, `SELECT id::text,question_no,question_type,score::float8,sort_order FROM question WHERE tenant_id=$1 AND exam_id=$2::uuid AND deleted_at IS NULL AND status<>'deleted' ORDER BY sort_order,question_no`, tenantID, examID)
+	rows, err := reader.QueryContext(ctx, `SELECT id::text,question_no,question_type,score::float8,sort_order FROM question WHERE tenant_id=$1 AND exam_id=$2::uuid AND deleted_at IS NULL AND status<>'deleted' ORDER BY sort_order,question_no FOR UPDATE`, tenantID, examID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -749,6 +759,7 @@ FOR UPDATE OF run`, tenantID, id).Scan(&generation, &resultGeneration, &jobResul
 		return PaperImportJob{}, err
 	}
 	verifiedResult := resultGeneration.Valid && resultGeneration.Int64 == generation && jobResultTaskID != "" && jobResultTaskID == runResultTaskID && jobResultHash != "" && jobResultHash == runResultHash
+	// 迁移前的人工待核对数据没有任务回执，只对明确标记为 legacy-unverified 的记录保留兼容入口。
 	legacyHumanReview := runSourceRevision == "legacy-unverified" && jobResultTaskID == "" && runResultTaskID == ""
 	if runStatus != "review_required" || (!verifiedResult && !legacyHumanReview) {
 		return PaperImportJob{}, ErrConflict
@@ -784,7 +795,8 @@ FOR UPDATE OF run`, tenantID, id).Scan(&generation, &resultGeneration, &jobResul
 			}
 			kp, _ := json.Marshal(draft.KnowledgePoints)
 			refs, _ := json.Marshal(draft.SourceRefs)
-			result, updateErr := tx.ExecContext(ctx, `UPDATE question SET exam_paper_id=NULLIF($3,'')::uuid,stem=$4,knowledge_points=$5,paper_import_id=$7::uuid,paper_import_candidate_id=NULLIF($8,''),paper_import_source_refs=$9,updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid AND exam_id=$6::uuid AND deleted_at IS NULL AND status<>'deleted'`, tenantID, draft.MatchedQuestionID, job.ExamPaperID, draft.Stem, kp, job.ExamID, job.ID, draft.CandidateID, refs)
+			options, _ := json.Marshal(wireList(draft.Options))
+			result, updateErr := tx.ExecContext(ctx, `UPDATE question SET exam_paper_id=NULLIF($3,'')::uuid,stem=$4,knowledge_points=$5,paper_import_id=$7::uuid,paper_import_candidate_id=NULLIF($8,''),paper_import_source_refs=$9,question_type=$10,score=$11,assessment_archetype=$12,parent_question_no=$13,subquestion_no=$14,options=$15,updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid AND exam_id=$6::uuid AND deleted_at IS NULL AND status<>'deleted'`, tenantID, draft.MatchedQuestionID, job.ExamPaperID, draft.Stem, kp, job.ExamID, job.ID, draft.CandidateID, refs, draft.QuestionType, draft.Score, draft.AssessmentArchetype, draft.ParentQuestionNo, draft.SubquestionNo, options)
 			if updateErr != nil {
 				return PaperImportJob{}, updateErr
 			}
@@ -795,27 +807,40 @@ FOR UPDATE OF run`, tenantID, id).Scan(&generation, &resultGeneration, &jobResul
 			if affected != 1 {
 				return PaperImportJob{}, ErrConflict
 			}
-			// A core mismatch is intentionally review-only. The blueprint score and
-			// type remain authoritative, and importing an answer/rubric for a
-			// different question shape would create a second inconsistency.
-			if draft.MatchStatus == "mismatch" {
-				continue
+			// Applying reviewed material replaces the question's grading context.
+			// Keep historical rules for audit, but never let a rule published for
+			// the previous question version grade the newly imported content.
+			if _, err := tx.ExecContext(ctx, `UPDATE scoring_rule SET status='retired',updated_at=now() WHERE tenant_id=$1::uuid AND question_id=$2::uuid AND status='published' AND deleted_at IS NULL`, tenantID, draft.MatchedQuestionID); err != nil {
+				return PaperImportJob{}, err
 			}
 			if err := s.applyImportedAnswerSolutionAndRubric(ctx, tx, tenantID, job.ID, draft.MatchedQuestionID, userID, *draft); err != nil {
+				return PaperImportJob{}, err
+			}
+			if err := insertImportedObjectiveRuleDraft(ctx, tx, tenantID, job.ExamID, draft.MatchedQuestionID, userID, *draft); err != nil {
+				return PaperImportJob{}, err
+			}
+			if err := syncQuestionAssessmentArchetypeTx(ctx, tx, tenantID, job.ExamID, draft.MatchedQuestionID, draftAssessmentArchetype(*draft)); err != nil {
 				return PaperImportJob{}, err
 			}
 			continue
 		}
 		kp, _ := json.Marshal(draft.KnowledgePoints)
 		refs, _ := json.Marshal(draft.SourceRefs)
+		options, _ := json.Marshal(wireList(draft.Options))
 		area := []byte(`{}`)
 		var questionID string
-		if err := tx.QueryRowContext(ctx, `INSERT INTO question (tenant_id,exam_id,exam_paper_id,question_no,question_type,score,stem,knowledge_points,answer_area,sort_order,status,paper_import_id,paper_import_candidate_id,paper_import_source_refs) VALUES ($1,$2,NULLIF($3,'')::uuid,$4,$5,$6,$7,$8,$9,$10,'active',$11::uuid,NULLIF($12,''),$13) RETURNING id::text`, tenantID, job.ExamID, job.ExamPaperID, draft.QuestionNo, draft.QuestionType, draft.Score, draft.Stem, kp, area, index+1, job.ID, draft.CandidateID, refs).Scan(&questionID); err != nil {
+		if err := tx.QueryRowContext(ctx, `INSERT INTO question (tenant_id,exam_id,exam_paper_id,question_no,question_type,score,stem,knowledge_points,answer_area,sort_order,status,paper_import_id,paper_import_candidate_id,paper_import_source_refs,assessment_archetype,parent_question_no,subquestion_no,options) VALUES ($1,$2,NULLIF($3,'')::uuid,$4,$5,$6,$7,$8,$9,$10,'active',$11::uuid,NULLIF($12,''),$13,$14,$15,$16,$17) RETURNING id::text`, tenantID, job.ExamID, job.ExamPaperID, draft.QuestionNo, draft.QuestionType, draft.Score, draft.Stem, kp, area, index+1, job.ID, draft.CandidateID, refs, draft.AssessmentArchetype, draft.ParentQuestionNo, draft.SubquestionNo, options).Scan(&questionID); err != nil {
 			return PaperImportJob{}, err
 		}
 		draft.MatchedQuestionID = questionID
 		draft.MatchStatus = "matched"
 		if err := s.applyImportedAnswerSolutionAndRubric(ctx, tx, tenantID, job.ID, questionID, userID, *draft); err != nil {
+			return PaperImportJob{}, err
+		}
+		if err := insertImportedObjectiveRuleDraft(ctx, tx, tenantID, job.ExamID, questionID, userID, *draft); err != nil {
+			return PaperImportJob{}, err
+		}
+		if err := syncQuestionAssessmentArchetypeTx(ctx, tx, tenantID, job.ExamID, questionID, draftAssessmentArchetype(*draft)); err != nil {
 			return PaperImportJob{}, err
 		}
 	}
@@ -882,6 +907,7 @@ func (s *PostgresStore) applyImportedAnswerSolutionAndRubric(ctx context.Context
 	if !IsValidRubricStatus(status) {
 		return ErrInvalidInput
 	}
+	// 导入可以生成评分细则草稿；锁定必须有人工确认，不能把模型候选直接当成最终规则。
 	if status == "locked" && !stringSet(draft.HumanConfirmedFields)["rubric"] {
 		return ErrInvalidInput
 	}

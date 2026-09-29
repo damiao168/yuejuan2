@@ -7,6 +7,7 @@ import (
 	"testing"
 )
 
+// 此测试核对迁移文本中的任务筛选条件，不执行数据库迁移，也不覆盖实际行更新结果。
 func TestMixedPerceptionMigrationRoutesOnlyUnstartedMathTasks(t *testing.T) {
 	raw, err := os.ReadFile(filepath.Join("..", "..", "migrations", "000145_story_math09a_mixed_perception.sql"))
 	if err != nil {

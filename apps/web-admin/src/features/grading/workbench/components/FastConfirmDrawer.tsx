@@ -67,6 +67,7 @@ export function FastConfirmDrawer({ tasks, examId, currentUserId, onTasksChanged
           appQueryClient.removeQueries({ queryKey: reviewTaskContextKeys.detail(item.context.task.id) });
           const fresh = await loadTaskContext(item.context.task.id, false);
           const candidate = fastConfirmCandidate(fresh, currentUserId);
+          // 教师核对的是当时那份图像与建议；任务版本或建议改变后必须重新核对，不能沿用勾选。
           if (!candidate || candidate.grade.id !== item.candidate.grade.id || fresh.task.revision !== item.context.task.revision) throw new Error("任务或 AI 建议已更新");
           await submitHumanGrade(item.context.task.id, {
             expected_revision: fresh.reviewContext.expected_revision,

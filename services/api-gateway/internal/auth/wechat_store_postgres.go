@@ -71,6 +71,7 @@ WHERE id=$1::uuid AND poll_token_hash=$2
 }
 
 func (s *PostgresStore) FindUserByWechatIdentity(ctx context.Context, tenantCode, appID, unionID, openID string) (UserWithPassword, error) {
+	// 微信身份必须在发起挑战的租户和应用内已有绑定；回调不会自动建号或跨租户匹配。
 	var username string
 	err := s.db.QueryRowContext(ctx, `
 SELECT u.username
@@ -139,6 +140,7 @@ WHERE id=$1::uuid AND status='pending' AND expires_at>$3
 }
 
 func (s *PostgresStore) ConsumeWechatLoginChallenge(ctx context.Context, id, pollTokenHash string, now time.Time) (WechatLoginChallenge, error) {
+	// 授权状态、有效期和轮询凭据在同一次更新里检查，并发轮询只有一个能消费成功。
 	return scanWechatChallenge(s.db.QueryRowContext(ctx, `
 UPDATE auth_wechat_login_challenge
 SET status='consumed', consumed_at=$3, updated_at=$3

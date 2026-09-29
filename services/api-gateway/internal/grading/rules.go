@@ -13,6 +13,7 @@ import (
 )
 
 var ErrRevisionConflict = errors.New("grading revision conflict")
+var ErrStaleScoringRule = errors.New("scoring rule conflicts with current question")
 
 type ScoringRule struct {
 	ID          string         `json:"id"`
@@ -143,12 +144,24 @@ func (s *PostgresStore) PublishScoringRule(ctx context.Context, tenantID, id, ac
 		return ScoringRule{}, err
 	}
 	defer tx.Rollback()
-	var questionID string
-	if err := tx.QueryRowContext(ctx, `SELECT question_id::text FROM scoring_rule WHERE tenant_id=$1 AND id::text=$2 AND status='draft' AND deleted_at IS NULL FOR UPDATE`, tenantID, id).Scan(&questionID); err != nil {
+	var questionID, ruleType, questionType string
+	var questionScore float64
+	var configRaw []byte
+	if err := tx.QueryRowContext(ctx, `SELECT sr.question_id::text,sr.rule_type,sr.config,q.question_type,q.score::float8
+FROM scoring_rule sr JOIN question q ON q.tenant_id=sr.tenant_id AND q.id=sr.question_id AND q.deleted_at IS NULL AND q.status<>'deleted'
+WHERE sr.tenant_id=$1 AND sr.id::text=$2 AND sr.status='draft' AND sr.deleted_at IS NULL FOR UPDATE OF sr,q`, tenantID, id).Scan(&questionID, &ruleType, &configRaw, &questionType, &questionScore); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ScoringRule{}, ErrNotFound
 		}
 		return ScoringRule{}, err
+	}
+	var config map[string]any
+	if err := json.Unmarshal(configRaw, &config); err != nil {
+		return ScoringRule{}, err
+	}
+	// 发布前在锁内重核题型与满分；导入可能已改变题目，旧草稿不能直接替代当前规则。
+	if !scoringRuleMatchesQuestion(ruleType, config, questionType, questionScore) {
+		return ScoringRule{}, ErrStaleScoringRule
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE scoring_rule SET status='retired', updated_at=now() WHERE tenant_id=$1 AND question_id::text=$2 AND status='published' AND deleted_at IS NULL`, tenantID, questionID); err != nil {
 		return ScoringRule{}, err
@@ -167,6 +180,19 @@ RETURNING id::text, tenant_id::text, exam_id::text, question_id::text, version,
 		return ScoringRule{}, err
 	}
 	return rule, nil
+}
+
+func scoringRuleMatchesQuestion(ruleType string, config map[string]any, questionType string, score float64) bool {
+	objective := questionType == "single_choice" || questionType == "true_false" || questionType == "multiple_choice" || questionType == "fill_blank" || questionType == "numeric"
+	if ruleType != questionType && !(ruleType == "manual" && !objective) {
+		return false
+	}
+	if raw, present := config["max_score"]; present {
+		maximum, ok := floatValue(raw)
+		return ok && !math.IsNaN(maximum) && !math.IsInf(maximum, 0) && math.Abs(maximum-score) <= 1e-6
+	}
+	// Legacy authored rules use the question score rather than a copied maximum.
+	return true
 }
 
 type ruleScanner interface{ Scan(...any) error }

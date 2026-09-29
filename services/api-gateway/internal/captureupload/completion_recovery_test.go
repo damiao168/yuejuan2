@@ -39,6 +39,7 @@ func (s contextAwareResume) Resume(ctx context.Context, tenant, id, code, token 
 }
 
 func TestCancelledCompletionRestoresRetryableState(t *testing.T) {
+	// 模拟存储写入中取消请求，要求恢复动作脱离已取消的上下文，避免卡在 finalizing。
 	ctx, service, _, _, objects, batch := newTestService(t)
 	id, input := readyCompletion(t, service, batch)
 	request, cancel := context.WithCancel(ctx)

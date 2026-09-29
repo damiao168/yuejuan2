@@ -36,9 +36,8 @@ func (s *PostgresStore) GetOMRRun(ctx context.Context, tenantID, id string) (OMR
 	return out, nil
 }
 
-// ApplyOMRResult commits the worker result, OMR facts, and either an automatic
-// grade or an actionable review task in one transaction. A worker result must
-// never become durable without a durable next grading action.
+// ApplyOMRResult 在一个事务中提交 Worker 结果、OMR 事实，以及自动成绩或人工复核任务。
+// Worker 回调不能在没有持久化下一步评分动作时单独落库。
 func (s *PostgresStore) ApplyOMRResult(ctx context.Context, tenantID, id, actorID string, input OMRResultInput, engine *Engine) (OMRRun, *QuestionGrade, error) {
 	if input.Decision != "selected" && input.Decision != "blank" && input.Decision != "multiple" && input.Decision != "ambiguous" {
 		return OMRRun{}, nil, ErrInvalidInput
@@ -71,6 +70,7 @@ func (s *PostgresStore) ApplyOMRResult(ctx context.Context, tenantID, id, actorI
 	if currentStatus != "completed" && (input.ProfileVersion != expectedProfileVersion || input.ProfileHash != expectedProfileHash || input.ReferenceSHA256 != expectedReferenceSHA256) {
 		return OMRRun{}, nil, ErrInvalidInput
 	}
+	// 任务排队后校准可能被撤销；回调仍保存识别事实，但失去自动确认资格后必须转人工。
 	if currentStatus != "completed" && expectedCalibrationID != "" && (calibrationStatus != "approved" || calibrationEvidenceHash != expectedCalibrationEvidenceHash) {
 		autoConfirmEligible = false
 		autoConfirmReason = paper.OMRAutoConfirmReasonCalibrationRevoked
@@ -208,6 +208,7 @@ func omrRuntimeResult(id string, input OMRResultInput) map[string]any {
 	}
 }
 
+// 自动确认同时需要服务端资格、单个选项、Worker 未要求复核及达标置信度；多选结果不走此分支。
 func omrResultCanAutoConfirm(input OMRResultInput, autoConfirmEligible bool, minimumConfidence float64) bool {
 	return autoConfirmEligible && input.Decision == "selected" && len(input.Selected) == 1 && !input.NeedsHumanReview && input.Confidence >= minimumConfidence
 }
@@ -304,9 +305,8 @@ FOR UPDATE OF seg,ans`, tenantID, segmentID, answerID)
 	return Context{SegmentID: segmentIDOut, Question: question, AnswerKey: answerKey, Answer: answer}, nil
 }
 
-// confirmRuleGradeForCandidateTx is the transaction-scoped counterpart of
-// ConfirmRuleGrade. Its candidate ID is explicit so a concurrent or older
-// answer can never be graded by accident.
+// confirmRuleGradeForCandidateTx 是事务内的 ConfirmRuleGrade；显式传入候选 ID，
+// 防止并发或旧答案被误判为当前候选。
 func (s *PostgresStore) confirmRuleGradeForCandidateTx(ctx context.Context, tx *sql.Tx, tenantID, segmentID, candidateID, actorID string, grade Grade) (QuestionGrade, error) {
 	if grade.AnswerSegmentID != segmentID || grade.NeedsHumanReview || !grade.AutoPass || grade.SuggestedScore < 0 || grade.SuggestedScore > grade.MaxScore {
 		return QuestionGrade{}, ErrInvalidInput
@@ -364,6 +364,7 @@ RETURNING id::text,answer_segment_id::text,question_id::text,score::float8,max_s
 }
 
 func (s *PostgresStore) ApplyOMRFailure(ctx context.Context, tenantID, id, errorCode string, detail map[string]any, retryable bool) (OMRRun, error) {
+	// 可重试失败保留 retryable_error 供显式重试，终止失败写入完成时间；两种结果都在同一事务刷新运行汇总。
 	status := "terminal_error"
 	if retryable {
 		status = "retryable_error"
@@ -407,8 +408,7 @@ func (s *PostgresStore) ConfirmRuleGrade(ctx context.Context, tenantID, segmentI
 		return QuestionGrade{}, err
 	}
 	defer tx.Rollback()
-	// Lock the parent run before the segment. Cancellation takes the same run
-	// lock, so a late rule result cannot write into a cancelling/cancelled run.
+	// 先锁父运行再锁答题段；取消流程使用同一运行锁，迟到的规则结果不能写入正在取消或已取消的运行。
 	var expectedRunID sql.NullString
 	err = tx.QueryRowContext(ctx, `SELECT scoring_run_id::text FROM answer_candidate WHERE tenant_id=$1::uuid AND answer_segment_id=$2::uuid AND is_current AND decision='confirmed' AND deleted_at IS NULL`, tenantID, segmentID).Scan(&expectedRunID)
 	if errors.Is(err, sql.ErrNoRows) {

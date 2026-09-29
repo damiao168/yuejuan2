@@ -41,6 +41,7 @@ func (s *projectorStoreStub) FailProjection(_ context.Context, owner string, ref
 }
 
 func TestProjectorCompletesClaimedSourceVersion(t *testing.T) {
+	// 成功路径必须确认同一租约被应用并完成，避免误确认别的考试版本。
 	store := &projectorStoreStub{
 		claim:   true,
 		refresh: ProjectionRefresh{TenantID: "tenant-a", ExamID: "exam-a", RequestedVersion: 7, AttemptCount: 1},
@@ -57,6 +58,7 @@ func TestProjectorCompletesClaimedSourceVersion(t *testing.T) {
 }
 
 func TestProjectorRetainsFailedVersionForRetryWithBoundedBackoff(t *testing.T) {
+	// 连续失败按指数退避并封顶，版本不能被标记为已投影。
 	store := &projectorStoreStub{
 		claim:      true,
 		refresh:    ProjectionRefresh{TenantID: "tenant-a", ExamID: "exam-a", RequestedVersion: 9, AttemptCount: 4},

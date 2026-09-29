@@ -104,6 +104,7 @@ func (h *Handler) CompleteRecovery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tokenHash := HashToken(input.Token)
+	// 预检只减少无效请求的哈希开销；是否仍可消费令牌，由最终的 CompleteRecovery 再确认。
 	if _, err := h.store.FindRecovery(r.Context(), tokenHash, time.Now().UTC()); err != nil {
 		if errors.Is(err, ErrRecoveryInvalid) {
 			httpx.Error(w, r, http.StatusBadRequest, "recovery_invalid", "recovery link is invalid or expired")

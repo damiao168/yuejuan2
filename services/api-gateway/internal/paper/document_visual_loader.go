@@ -14,6 +14,7 @@ import (
 )
 
 const maxDocumentVisualPageBytes = 8 << 20
+// 此限额统计编码前的图像字节，Base64 和 JSON 封装还会增加请求大小。
 const maxDocumentVisualPayloadBytes = 32 << 20
 
 type documentVisualPage struct {
@@ -90,6 +91,7 @@ func (l storedDocumentVisualPageLoader) Load(ctx context.Context, tenantID strin
 		if len(data) == 0 || len(data) > maxDocumentVisualPageBytes || totalBytes+len(data) > maxDocumentVisualPayloadBytes {
 			return nil, errors.New("paper page images exceed the multimodal request limit")
 		}
+		// 同时核对解码页引用和文件登记摘要，防止同一对象键内容变化后混入旧页面结果。
 		digest := fmt.Sprintf("%x", sha256.Sum256(data))
 		if expected := strings.TrimSpace(page.SHA256); expected != "" && !strings.EqualFold(expected, digest) {
 			return nil, errors.New("paper page image checksum mismatch")

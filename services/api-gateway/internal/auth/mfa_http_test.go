@@ -61,6 +61,7 @@ func TestMFAHTTPDoesNotCacheSecretsOrReplayOneTimeCommands(t *testing.T) {
 		return out
 	}
 	setup := send("/api/v1/auth/mfa/totp/enroll", `{"password":"ChangeMe123!"}`, http.StatusOK)
+	// 注册用允许偏差内的上一时间步，给后续命令保留当前步，避免被防重放规则拒绝。
 	code, err := totp.GenerateCode(setup["secret"].(string), time.Now().UTC().Add(-30*time.Second))
 	if err != nil {
 		t.Fatal(err)

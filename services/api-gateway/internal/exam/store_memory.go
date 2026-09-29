@@ -127,6 +127,10 @@ func (s *MemoryStore) UpdateExam(_ context.Context, scope auth.AccessScope, id s
 	if IsCoreLocked(item.Status) {
 		return Exam{}, ErrLocked
 	}
+	classIDsChanged := input.ClassIDs != nil && !classIDSetsEqual(item.ClassIDs, *input.ClassIDs)
+	if classIDsChanged && !CanChangeCandidateRoster(item.Status) {
+		return Exam{}, ErrCandidatesFrozen
+	}
 	if input.SchoolID != nil {
 		item.SchoolID = *input.SchoolID
 	}
@@ -184,6 +188,7 @@ func (s *MemoryStore) UpdateStatus(_ context.Context, scope auth.AccessScope, id
 }
 
 func (s *MemoryStore) RefreshCandidateSnapshot(_ context.Context, scope auth.AccessScope, id string) (CandidateRefreshResult, error) {
+	// 内存实现只模拟权限和冻结状态检查，名册重建数量由 PostgreSQL 实现提供。
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	item, ok := s.items[id]

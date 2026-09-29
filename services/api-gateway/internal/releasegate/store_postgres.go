@@ -19,6 +19,7 @@ func (s *PostgresStore) CreatePolicy(ctx context.Context, tenantID, examID, acto
 		return Policy{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	// 同一考试串行切换策略，旧版停用与新版创建必须一起提交，避免出现没有生效策略的空档。
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, tenantID+":"+examID+":release-gate-policy"); err != nil {
 		return Policy{}, err
 	}

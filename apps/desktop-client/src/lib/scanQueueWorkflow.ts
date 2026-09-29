@@ -1,6 +1,7 @@
 import type { QueueStatus, SyncQueueItem } from "../types";
 
 const transitions: Record<QueueStatus, ReadonlySet<QueueStatus>> = {
+  // 成功是终态；冲突必须先回到待处理或失败，不能绕过人工处理直接上传。
   pending: new Set(["pending", "uploading", "failed", "conflict"]),
   uploading: new Set(["uploading", "pending", "failed", "succeeded", "conflict"]),
   failed: new Set(["failed", "pending", "uploading", "conflict"]),

@@ -60,6 +60,7 @@ export function AIContextPanel({
   onReveal: () => void;
 }) {
   const explicit = requiresExplicitSecondOpinion(context);
+  // 显式揭示前跳过整个候选与证据面板，避免只隐藏分数却提前透露 AI 结论。
   if (explicit && !visible) {
     return (
       <section className="evidence-panel" aria-label="AI 第二意见">

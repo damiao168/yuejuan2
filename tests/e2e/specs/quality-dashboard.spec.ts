@@ -58,6 +58,7 @@ test("所有范围字段修改后必须重新预览，第二页阅卷员可分�
 test("延迟返回的旧预览不能恢复创建入口", async ({ page }) => {
   const state = await installQualityDashboardMocks(page);
   let release: () => void = () => {};
+  // 先挂起预览，再改筛选范围后放行旧响应，稳定复现过期响应覆盖当前表单的时序。
   state.previewWait = new Promise<void>((resolve) => { release = resolve; });
   await page.goto("/#/admin/exams/exam-1/quality");
   await page.getByRole("button", { name: "创建回标", exact: true }).click();

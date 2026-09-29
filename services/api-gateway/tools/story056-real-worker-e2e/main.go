@@ -58,6 +58,7 @@ type apiClient struct {
 	client        *http.Client
 }
 
+// STORY-056 E2E 使用临时数据库和真实 Worker 验证租约、证据文件及权限边界，失败时保留诊断状态。
 func main() {
 	phase := flag.String("phase", "", "acceptance phase: seed or verify")
 	flag.Parse()

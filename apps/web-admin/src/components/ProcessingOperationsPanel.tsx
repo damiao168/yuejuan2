@@ -99,6 +99,7 @@ export function ProcessingOperationsPanel({ examId, canManage }: { examId: strin
   const load = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
+    // 汇总和异常列表允许各自降级，单侧失败时保留另一侧并明确提示加载不完整。
     const [summaryResult, exceptionResult] = await Promise.allSettled([
       getProcessingSummary(examId, signal),
       listProcessingExceptions({ examId, severity, status, limit: 25 }, signal)

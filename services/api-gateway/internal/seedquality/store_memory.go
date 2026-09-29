@@ -76,6 +76,7 @@ func (s *MemoryStore) GetPolicy(_ context.Context, tenantID, examID, questionID 
 	return item.policy, nil
 }
 
+// 内存实现也要在同一把锁内推进游标和创建任务，保持测试行为与生产事务一致。
 func (s *MemoryStore) AdvanceAndMaybeCreate(_ context.Context, tenantID string, decision IssueDecision) (Task, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -129,6 +130,7 @@ func (s *MemoryStore) GetTask(_ context.Context, tenantID, id string) (Task, err
 	return cloneTask(item.task), nil
 }
 
+// 命令收据和任务状态一起更新，重复提交返回第一次结果，不重复写观察记录。
 func (s *MemoryStore) CompleteTask(ctx context.Context, tenantID, taskID, graderID string, input SubmitInput, observation Observation) (Task, Observation, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -231,6 +231,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request, tokenResponse bo
 	if result.ClearDeviceCookie {
 		http.SetCookie(w, h.clearDeviceCookie())
 	}
+	// 桌面/服务端使用 Bearer 响应，浏览器登录只通过会话 cookie 交付令牌。
 	if tokenResponse {
 		httpx.JSON(w, http.StatusOK, map[string]any{
 			"token_type": "Bearer", "access_token": result.Token,

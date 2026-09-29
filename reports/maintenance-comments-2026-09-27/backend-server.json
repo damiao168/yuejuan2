@@ -1,0 +1,431 @@
+{
+  "scope": "services/api-gateway/internal/server/**/*.go",
+  "method": "逐文件阅读实现、现有注释和测试场景；仅在非直观权限、租户边界、事务、租约及失败恢复处补充中文维护注释。",
+  "entries": [
+    {
+      "path": "services/api-gateway/internal/server/appeal_route_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称和断言已直接表达场景与保护的规则"
+    },
+    {
+      "path": "services/api-gateway/internal/server/application_modules.go",
+      "status": "annotated",
+      "reason": "模块构造的事务模式与托管模型解析回退已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/application_stores.go",
+      "status": "annotated",
+      "reason": "内存/生产存储图及缺失装配校验边界已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_anonymous_paper_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_auth_security_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_business_command_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_compose_bootstrap_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_core_workflow_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称和断言已直接表达场景与保护的规则"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_dashboard_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_file_reconciliation_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_idempotency_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_effective_evidence_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_grading_binding_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_rubric_score_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_math_verification_runtime_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_mfa_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_paper_import_reconciliation_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_postgres_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_import_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_metadata_acl_search_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_publication_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_bank_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_question_coverage_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_reliability_command_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_review_assignment_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_review_recovery_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_review_repairs_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_scoring_command_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_scoring_double_mark_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story056_calibration_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story056_lease_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story056_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_capture_recovery_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_provision_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_roster_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story060_sheet_identity_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story061_active_crop_resolver_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_story061_governance_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_subjective_command_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_subjective_panel_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_subjective_usage_ledger_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_template_routing_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/e2e_worker_runtime_reliability_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/evidence_route_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称和断言已直接表达场景与保护的规则"
+    },
+    {
+      "path": "services/api-gateway/internal/server/infrastructure.go",
+      "status": "annotated",
+      "reason": "后台巡检、outbox、投影和解析协程的租户上下文及关闭顺序已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/managed_config_postgres_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/migration_split_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称和断言已直接表达场景与保护的规则"
+    },
+    {
+      "path": "services/api-gateway/internal/server/migration_upgrade_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/module_ai_foundation.go",
+      "status": "annotated",
+      "reason": "评估证据与校准依赖顺序、可选准入能力已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/module_ai_governance.go",
+      "status": "annotated",
+      "reason": "治理 handler 与审计/worker runtime 的装配关系已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/module_capture.go",
+      "status": "annotated",
+      "reason": "事务协调器选择和启动前依赖校验已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/module_exam.go",
+      "status": "annotated",
+      "reason": "试卷导入、分段图片共享存储的边界已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/module_grading.go",
+      "status": "annotated",
+      "reason": "评分相关服务装配顺序及 mock/真实适配器限制已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/module_identity.go",
+      "status": "annotated",
+      "reason": "认证和组织 handler 共享存储及风控配置来源已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/module_release.go",
+      "status": "annotated",
+      "reason": "发布协调器、regrade 阻断及高分试卷能力依赖已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/modules_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称和断言已直接表达场景与保护的规则"
+    },
+    {
+      "path": "services/api-gateway/internal/server/onboarding_readers.go",
+      "status": "annotated",
+      "reason": "readiness 回退查询的作用域和角色筛选已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/onboarding_readers_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称和断言已直接表达场景与保护的规则"
+    },
+    {
+      "path": "services/api-gateway/internal/server/platform_schools_route_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称和断言已直接表达场景与保护的规则"
+    },
+    {
+      "path": "services/api-gateway/internal/server/recent_auth_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称和断言已直接表达场景与保护的规则"
+    },
+    {
+      "path": "services/api-gateway/internal/server/report_route_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称和断言已直接表达场景与保护的规则"
+    },
+    {
+      "path": "services/api-gateway/internal/server/review_route_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/router_context.go",
+      "status": "annotated",
+      "reason": "路由共享系统/onboarding读模型和guard的构造关系已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/router_guards.go",
+      "status": "annotated",
+      "reason": "guard 组合顺序、幂等回放和 worker 任务作用域边界已有说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_auth.go",
+      "status": "annotated",
+      "reason": "登录、MFA、恢复和近期认证 guard 选择已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_capture.go",
+      "status": "annotated",
+      "reason": "submission/capture 写入权限及考试资源边界已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_exam.go",
+      "status": "annotated",
+      "reason": "考试管理、评估只读和数学 worker 回调边界已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_files.go",
+      "status": "annotated",
+      "reason": "普通文件与 worker 文件作用域恢复规则已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_governance.go",
+      "status": "annotated",
+      "reason": "旧模型兼容层、学校切换和治理权限边界已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_governance_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称和断言已直接表达场景与保护的规则"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_grading.go",
+      "status": "annotated",
+      "reason": "自动评分/证据/复核/仲裁最小权限已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_onboarding.go",
+      "status": "annotated",
+      "reason": "readiness 聚合接口的可见范围已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_org.go",
+      "status": "annotated",
+      "reason": "组织权限和高影响租户变更的近期认证要求已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_paper.go",
+      "status": "annotated",
+      "reason": "试卷及导入写权限、考试边界和题库读取要求已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_platform_schools.go",
+      "status": "annotated",
+      "reason": "平台学校接口及 tenant_id 受控查询边界已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_processing.go",
+      "status": "annotated",
+      "reason": "OCR/编排回调租约绑定和分段证据读取权限已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_questionbank.go",
+      "status": "annotated",
+      "reason": "题库动作权限和独立导入 mux 的幂等边界已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_release.go",
+      "status": "annotated",
+      "reason": "成绩发布写权限、近期认证和学生读取权限已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_review.go",
+      "status": "existing_sufficient",
+      "reason": "Gold/Seed 等质量事实对普通 grader 隐藏的权限原因已有注释"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_system.go",
+      "status": "existing_sufficient",
+      "reason": "旧 /ready 权限兼容与公共 readiness 脱敏说明已有注释"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_worker.go",
+      "status": "annotated",
+      "reason": "worker 回调来源/路径/payload 任务绑定已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/score_route_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称和断言已直接表达场景与保护的规则"
+    },
+    {
+      "path": "services/api-gateway/internal/server/server.go",
+      "status": "annotated",
+      "reason": "生产装配失败清理、路由中间件链和 mock AI 环境限制已说明"
+    },
+    {
+      "path": "services/api-gateway/internal/server/server_test.go",
+      "status": "existing_sufficient",
+      "reason": "测试名称、场景注释和断言共同说明权限/事务/恢复边界，无需逐句重复"
+    },
+    {
+      "path": "services/api-gateway/internal/server/worker_source_lease.go",
+      "status": "annotated",
+      "reason": "image_quality_run 独立来源租约与错误映射已说明"
+    }
+  ]
+}

@@ -59,6 +59,7 @@ type ReadinessSummary struct {
 	AIModel      string
 }
 
+// 就绪只反映核心依赖和 AI 可用模式；详细租户/Worker 数据留在受保护的系统状态接口。
 func (h *Handlers) ReadinessSummary(ctx context.Context) (ReadinessSummary, error) {
 	results, coreReady := deps.CheckAll(ctx, h.cfg.Service.ReadinessTimeout, h.checkers)
 	aiConfigured := false
@@ -112,6 +113,7 @@ func (h *Handlers) Ready(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, status, map[string]any{"status": overall, "dependencies": publicResults})
 }
 
+// 系统状态把依赖、OCR Worker 和 AI 模式汇总为运维信号，不把答卷、学生或密钥内容写入响应。
 func (h *Handlers) SystemStatus(w http.ResponseWriter, r *http.Request) {
 	results, ready := deps.CheckAll(r.Context(), h.cfg.Service.ReadinessTimeout, h.checkers)
 	now := time.Now().UTC()

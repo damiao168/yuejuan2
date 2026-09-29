@@ -1,0 +1,91 @@
+{
+  "passed": true,
+  "checked": 17,
+  "files": [
+    {
+      "path": ".env.example",
+      "passed": true,
+      "method": "non-comment configuration lines"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "passed": true,
+      "method": "YAML parsed values, including embedded commands"
+    },
+    {
+      "path": ".github/workflows/release-images.yml",
+      "passed": true,
+      "method": "YAML parsed values, including embedded commands"
+    },
+    {
+      "path": "ai-services/Dockerfile",
+      "passed": true,
+      "method": "non-comment configuration lines"
+    },
+    {
+      "path": "apps/web-admin/Dockerfile",
+      "passed": true,
+      "method": "non-comment configuration lines"
+    },
+    {
+      "path": "infra/docker-compose/.env.example",
+      "passed": true,
+      "method": "non-comment configuration lines"
+    },
+    {
+      "path": "infra/docker-compose/docker-compose.story060-e2e.yml",
+      "passed": true,
+      "method": "YAML parsed values, including embedded commands"
+    },
+    {
+      "path": "infra/docker-compose/docker-compose.yml",
+      "passed": true,
+      "method": "YAML parsed values, including embedded commands"
+    },
+    {
+      "path": "infra/docker-compose/nginx/nginx.conf",
+      "passed": true,
+      "method": "non-comment configuration lines"
+    },
+    {
+      "path": "services/api-gateway/Dockerfile",
+      "passed": true,
+      "method": "non-comment configuration lines"
+    },
+    {
+      "path": "services/api-gateway/tools/story056-postgres-e2e/Dockerfile",
+      "passed": true,
+      "method": "non-comment configuration lines"
+    },
+    {
+      "path": "services/api-gateway/tools/story056-real-worker-e2e/Dockerfile",
+      "passed": true,
+      "method": "non-comment configuration lines"
+    },
+    {
+      "path": "services/image-quality-worker/Dockerfile",
+      "passed": true,
+      "method": "non-comment configuration lines"
+    },
+    {
+      "path": "services/math-verification-worker/Dockerfile",
+      "passed": true,
+      "method": "non-comment configuration lines"
+    },
+    {
+      "path": "services/subjective-grading-worker/Dockerfile",
+      "passed": true,
+      "method": "non-comment configuration lines"
+    },
+    {
+      "path": "tests/e2e/fixtures/story060-grading-agent-verify.sql",
+      "passed": true,
+      "method": "non-comment fixture SQL lines"
+    },
+    {
+      "path": "tests/e2e/fixtures/story060-grading-agent.sql",
+      "passed": true,
+      "method": "non-comment fixture SQL lines"
+    }
+  ]
+}

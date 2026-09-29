@@ -51,6 +51,7 @@ func (s *MemoryStore) GetActivePolicy(_ context.Context, tenantID string, subjec
 }
 
 func (s *MemoryStore) CreateOrGetDecision(_ context.Context, tenantID string, input Decision) (Decision, error) {
+	// 一次运行的决定一经记录就不重算；输入或策略改变后需使用新的运行标识。
 	key := decisionKey(tenantID, input.RunItemID)
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -177,6 +177,10 @@ func (s *PostgresStore) UpdateExam(ctx context.Context, scope auth.AccessScope, 
 	if IsCoreLocked(current.Status) {
 		return Exam{}, ErrLocked
 	}
+	classIDsChanged := input.ClassIDs != nil && !classIDSetsEqual(current.ClassIDs, *input.ClassIDs)
+	if classIDsChanged && !CanChangeCandidateRoster(current.Status) {
+		return Exam{}, ErrCandidatesFrozen
+	}
 	merged := current
 	if input.SchoolID != nil {
 		merged.SchoolID = *input.SchoolID
@@ -212,16 +216,49 @@ func (s *PostgresStore) UpdateExam(ctx context.Context, scope auth.AccessScope, 
 	if err := s.requireSchoolInTenant(ctx, tx, scope.TenantID, merged.SchoolID); err != nil {
 		return Exam{}, err
 	}
-	row := tx.QueryRowContext(ctx, `
+	// 只写入真正变化的基本字段，避免 name 等无关修改触发 readiness 失效触发器。
+	setClauses := []string{}
+	args := []any{scope.TenantID, id}
+	addChangedField := func(column string, value any) {
+		args = append(args, value)
+		setClauses = append(setClauses, fmt.Sprintf("%s = $%d", column, len(args)))
+	}
+	if merged.SchoolID != current.SchoolID {
+		addChangedField("school_id", merged.SchoolID)
+	}
+	if merged.Name != current.Name {
+		addChangedField("name", merged.Name)
+	}
+	if merged.Subject != current.Subject {
+		addChangedField("subject", merged.Subject)
+	}
+	if merged.ExamType != current.ExamType {
+		addChangedField("exam_type", merged.ExamType)
+	}
+	if merged.TotalScore != current.TotalScore {
+		addChangedField("total_score", merged.TotalScore)
+	}
+	if merged.GradingMode != current.GradingMode {
+		addChangedField("grading_mode", merged.GradingMode)
+	}
+	if merged.AppealEnabled != current.AppealEnabled {
+		addChangedField("appeal_enabled", merged.AppealEnabled)
+	}
+	if merged.PublishPolicy != current.PublishPolicy {
+		addChangedField("publish_policy", merged.PublishPolicy)
+	}
+	setClauses = append(setClauses, "revision = revision + 1", "updated_at = now()")
+	args = append(args, input.ExpectedRevision)
+	revisionPlaceholder := len(args)
+	query := fmt.Sprintf(`
 UPDATE exam
-SET school_id = $3, name = $4, subject = $5, exam_type = $6, total_score = $7,
-    grading_mode = $8, appeal_enabled = $9, publish_policy = $10,
-    revision = revision + 1, updated_at = now()
-WHERE tenant_id = $1 AND id::text = $2 AND revision = $11 AND deleted_at IS NULL
+SET %s
+WHERE tenant_id = $1 AND id::text = $2 AND revision = $%d AND deleted_at IS NULL
 RETURNING id::text, tenant_id::text, school_id::text, name, subject, exam_type,
           total_score::float8, status, grading_mode, appeal_enabled, publish_policy,
           created_by::text, revision, created_at, updated_at
-`, scope.TenantID, id, merged.SchoolID, merged.Name, merged.Subject, merged.ExamType, merged.TotalScore, merged.GradingMode, merged.AppealEnabled, merged.PublishPolicy, input.ExpectedRevision)
+`, strings.Join(setClauses, ", "), revisionPlaceholder)
+	row := tx.QueryRowContext(ctx, query, args...)
 	var out Exam
 	if err := scanExam(row, &out); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -230,11 +267,13 @@ RETURNING id::text, tenant_id::text, school_id::text, name, subject, exam_type,
 		return Exam{}, err
 	}
 	if input.ClassIDs != nil {
-		if err := s.replaceClasses(ctx, tx, scope, id, *input.ClassIDs); err != nil {
-			return Exam{}, err
-		}
-		if err := s.refreshExamCandidateSnapshot(ctx, tx, scope.TenantID, id); err != nil {
-			return Exam{}, err
+		if classIDsChanged {
+			if err := s.replaceClasses(ctx, tx, scope, id, *input.ClassIDs); err != nil {
+				return Exam{}, err
+			}
+			if err := s.refreshExamCandidateSnapshot(ctx, tx, scope.TenantID, id); err != nil {
+				return Exam{}, err
+			}
 		}
 		out.ClassIDs = cloneStrings(*input.ClassIDs)
 	} else {
@@ -353,6 +392,7 @@ func (s *PostgresStore) classIDsTx(ctx context.Context, tx *sql.Tx, tenantID str
 }
 
 func (s *PostgresStore) getExamForUpdate(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, id string) (Exam, error) {
+	// 同一查询同时限定作用域并锁定考试，随后在该事务内检查修订号和修改关联数据。
 	row := tx.QueryRowContext(ctx, `
 SELECT e.id::text, e.tenant_id::text, e.school_id::text, e.name, e.subject, e.exam_type,
        e.total_score::float8, e.status, e.grading_mode, e.appeal_enabled, e.publish_policy,

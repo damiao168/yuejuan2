@@ -4,6 +4,7 @@ import (
 	"net/http"
 )
 
+// 题库版本转换按动作权限拆分；跨考试导入通过独立 mux 注册，命令型导入才启用幂等身份。
 func registerQuestionBankRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("GET /api/v1/question-banks", ctx.guards.requireQuestionBankAny(ctx.modules.Exam.QuestionBankHandler.ListBanks, "read", "manage"))
 	mux.Handle("POST /api/v1/question-banks", ctx.guards.requireQuestionBank("create", ctx.modules.Exam.QuestionBankHandler.CreateBank))

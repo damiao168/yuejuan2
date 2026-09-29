@@ -42,6 +42,7 @@ type PanelDecisionConfig struct {
 	HardRiskCodes               []string `json:"hard_risk_codes"`
 }
 
+// GradingPanel 保存两名主评、仲裁和人工复核的完整轨迹；ResolvedScore 只能由记录的决策来源产生。
 type GradingPanel struct {
 	ID                    string              `json:"id"`
 	TenantID              string              `json:"tenant_id"`

@@ -175,6 +175,8 @@ func (h *Handler) OverridePageQuality(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"page": page, "registration_runs": runs})
 }
 
+// ClaimJobs 启用 Runtime 时先领取统一任务，再把租约同步到质量运行。
+// 质量运行租约同步失败会尝试标记任务失败并跳过；心跳失败则直接返回错误。
 func (h *Handler) ClaimJobs(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	var input ClaimInput
@@ -282,6 +284,7 @@ func (h *Handler) CreateNormalizedAssetSlot(w http.ResponseWriter, r *http.Reque
 	})
 }
 
+// 结果接口只接受当前租约和尝试次数，成功后才把标准化文件和质量结论应用到答题页。
 func (h *Handler) SubmitResult(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	runID := r.PathValue("runId")

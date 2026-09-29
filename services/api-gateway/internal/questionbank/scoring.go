@@ -19,6 +19,7 @@ func bundleHash(content Content, scoring Scoring) string {
 	var value any
 	_ = json.Unmarshal(raw, &value)
 	facts := value.(map[string]any)["scoring"].(map[string]any)
+	// 模板和文件 ID 只记录来源；哈希保留评分内容与附件摘要，避免同内容因重新分配 ID 而改变。
 	delete(facts, "template_version_id")
 	for _, a := range facts["assets"].([]any) {
 		delete(a.(map[string]any), "file_asset_id")
@@ -70,7 +71,7 @@ func normalizeScoring(s Scoring) (Scoring, error) {
 		if len(s.Answer.EquivalentAnswers) > 64 {
 			return s, ErrInvalidInput
 		}
-		// Numeric tolerances are absolute, finite, non-negative decimal values.
+		// absolute 和 relative 分别表示绝对、相对容差，两者都必须是有限非负数。
 		if s.Answer.Tolerance == nil {
 			s.Answer.Tolerance = map[string]any{}
 		}
@@ -204,6 +205,7 @@ func publishable(v Version, kind string) error {
 	return nil
 }
 func validateRubric(v Version) error {
+	// 用百分之一分的整数比较，要求评分点合计、Rubric 满分和题目默认分值完全一致。
 	r := v.Scoring.Rubric
 	max, _ := scoreUnits(r.MaxScore)
 	score, _ := scoreUnits(v.DefaultScore)
@@ -231,6 +233,7 @@ func transitionAction(decision string, author bool) string {
 	return "edit"
 }
 func nextStatus(v Version, kind, actor, decision string, in ReviewInput) (string, error) {
+	// 修订号和整包哈希一起匹配，防止审核的是旧内容；作者也不能批准自己的版本。
 	if in.ExpectedRevision != v.Revision || in.BundleHash != v.BundleHash {
 		return "", ErrConflict
 	}

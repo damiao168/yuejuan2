@@ -1,0 +1,131 @@
+{
+  "scope": "redo-client-scope.json",
+  "method": "逐文件全文审读；仅修订普通维护注释，不改业务逻辑、字符串或指令。",
+  "entries": [
+    {
+      "path": "apps/desktop-client/scripts/check-security-config.mjs",
+      "status": "annotated",
+      "reason": "静态扫描源码中的字面量 IPC 调用，并双向核对允许命令；新增命令需同步能力审查。"
+    },
+    {
+      "path": "apps/student-portal/src/App.test.tsx",
+      "status": "self_explanatory",
+      "reason": "已全文审读；测试名称和断言直接表达发布快照、迟到响应、复核窗口及隐私边界，无需重复注释。"
+    },
+    {
+      "path": "apps/student-portal/src/App.tsx",
+      "status": "self_explanatory",
+      "reason": "已全文审读；组件结构、用户可见状态和事件处理已清楚表达登录、学生权限、发布成绩与复核流程。"
+    },
+    {
+      "path": "apps/student-portal/src/styles.css",
+      "status": "annotated",
+      "reason": "补充整卷图像与批注共用显示矩形、百分比坐标不漂移的定位约束。"
+    },
+    {
+      "path": "apps/web-admin/scripts/check-production-routes.mjs",
+      "status": "annotated",
+      "reason": "说明源码检查始终执行、构建产物存在时才核对入口包的前提。"
+    },
+    {
+      "path": "apps/web-admin/src/components/AppLayout.tsx",
+      "status": "annotated",
+      "reason": "说明公共电脑空闲锁定先遮挡、服务端失败仍保持遮挡的安全边界。"
+    },
+    {
+      "path": "apps/web-admin/src/components/features/assessment/AssessmentProfileEditor.tsx",
+      "status": "annotated",
+      "reason": "说明快照生成或考试离开配置阶段后评分策略不可编辑。"
+    },
+    {
+      "path": "apps/web-admin/src/components/features/review-annotation/ReviewAnnotationWorkspace.tsx",
+      "status": "annotated",
+      "reason": "说明批注保存归一化坐标而非屏幕像素，依附当前图像显示矩形。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ModelApprovalWorkspace.tsx",
+      "status": "annotated",
+      "reason": "说明 datetime-local 本地墙上时间转换，避免时区误读。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.tsx",
+      "status": "annotated",
+      "reason": "说明指标高亮逐项取最优值，不表示单一候选整体最优。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/MathEvidenceInspector.tsx",
+      "status": "annotated",
+      "reason": "说明提交原始工件版本与校正修订号，服务端拒绝并发覆盖。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/grading-workbench.css",
+      "status": "existing_sufficient",
+      "reason": "已全文审读；现有文件职责和沉浸式布局边界注释准确，新增注释不会提高维护信息。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/gradingWorkbench.model.ts",
+      "status": "annotated",
+      "reason": "说明排除 shadow_only 后选择教师可见最新建议，并区分 null 与 0 分。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useExamScoring.ts",
+      "status": "annotated",
+      "reason": "说明失败批次按固定重试键续入队，避免重复创建。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "status": "annotated",
+      "reason": "重写会话归属、任务切换、证据快照和冲突修订号注释，限定迟到响应影响范围。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/BankQuestionPicker.tsx",
+      "status": "annotated",
+      "reason": "说明未确定响应时复用幂等键和修订号，明确冲突后才新建请求。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/HistoryQuestionImporter.tsx",
+      "status": "annotated",
+      "reason": "说明逐题命令先本地持久化、按回执移除成功项，失败项可重试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankPage.tsx",
+      "status": "annotated",
+      "reason": "说明历史版本按创建时绑定 schema 解析，不套用当前规则。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/ScoringEditor.tsx",
+      "status": "annotated",
+      "reason": "说明合法 JSON 保留答案结构，解析失败按普通文本提交。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/CaptureBatchPage.tsx",
+      "status": "annotated",
+      "reason": "说明待确认命令复用原载荷与幂等键，表单编辑不改变原操作。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/LearningReportsPage.tsx",
+      "status": "annotated",
+      "reason": "说明样本不足隐藏指标，不显示误导性的 0%。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ScoreManagementPage.tsx",
+      "status": "annotated",
+      "reason": "说明正式发布需再次校验，取消校验不是发布失败。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/SubmissionCapturePage.tsx",
+      "status": "annotated",
+      "reason": "说明页面关联成功后后续刷新失败仍保留上传事实，避免重复提交。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/exam-preparation.css",
+      "status": "annotated",
+      "reason": "说明图像铺满确定画布，避免 contain 留白造成归一化坐标视觉偏移。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/layout.css",
+      "status": "annotated",
+      "reason": "说明只让导航中部滚动，顶部入口和底部账号操作保持可见。"
+    }
+  ]
+}

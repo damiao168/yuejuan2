@@ -29,6 +29,7 @@ func (s *MemoryStore) ClaimNextTask(_ context.Context, tenantID, reviewerID stri
 		}
 	}
 
+	// 本人已分配的任务优先；内存实现的候补池只含未分配任务，不接管别人的过期租约。
 	candidates := assigned
 	if len(candidates) == 0 {
 		candidates = unassigned

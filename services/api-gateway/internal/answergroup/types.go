@@ -246,6 +246,7 @@ func minimumSample(memberCount int, homogeneity float64) int {
 	return count
 }
 
+// 采样数量达到最低值还不够：所有离群成员必须复核且不能有拒绝样本，才允许确认。
 func refreshReadiness(group *Group) {
 	reviewed := 0
 	rejected := false

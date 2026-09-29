@@ -4,6 +4,7 @@ import (
 	"net/http"
 )
 
+// OCR 和编排写回接口必须同时验证任务来源与租约；分段证据读取另用角色和权限组合，允许复核人员查看而不授予处理写权。
 func registerProcessingRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("POST /api/v1/submissions/{id}/ocr-tasks", ctx.guards.requireOCRManage(ctx.modules.Capture.OCRHandler.CreateTask))
 	mux.Handle("GET /api/v1/submissions/{id}/ocr-tasks", ctx.guards.requireOCRManage(ctx.modules.Capture.OCRHandler.ListBySubmission))

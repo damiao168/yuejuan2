@@ -51,6 +51,7 @@ func (s *DownloadService) ReadDownload(ctx context.Context, user auth.User, id s
 		ContentType: asset.ContentType, Size: asset.SizeBytes,
 		Disposition: mime.FormatMediaType("attachment", map[string]string{"filename": asset.OriginalName}),
 		Open: func(ctx context.Context) (io.ReadCloser, error) {
+			// 使用资产记录中的桶，不能用当前默认桶替换历史文件的实际位置。
 			return s.objects.Get(ctx, asset.StorageBucket, asset.StorageKey)
 		},
 		OpenErrorMessage: "failed to read object storage",

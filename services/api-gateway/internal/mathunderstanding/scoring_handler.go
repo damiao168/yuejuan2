@@ -81,7 +81,7 @@ WHERE seg.tenant_id=$1::uuid AND seg.id::text=$2 AND snap.id::text=$3
 
 func (h *Handler) WithFrozenRubrics(source FrozenRubricSource) *Handler { h.rubrics = source; return h }
 
-// GetRubricScore is a read-only teacher preview, not an AI grading submission.
+// GetRubricScore 返回教师评分预览，不提交成绩。生产环境还会检查当前裁剪图是否与证据来源一致。
 func (h *Handler) GetRubricScore(w http.ResponseWriter, r *http.Request) {
 	user, ok := currentMathUser(w, r)
 	if !ok {
@@ -119,8 +119,8 @@ func (h *Handler) GetRubricScore(w http.ResponseWriter, r *http.Request) {
 		writeMathError(w, r, err)
 		return
 	}
-	// Refuse a preview already superseded during calculation. Returned binding
-	// must also be checked by any future persisted grading consumer.
+	// 计算期间可能又有教师修订或新识别结果，返回前再检查一次。
+	// 这不是锁定承诺；将来若保存该建议，保存时仍须核对返回的版本信息。
 	latest, err := ResolveEffectiveArtifact(r.Context(), h.artifacts, h.corrections, user.TenantID, item.AnswerSegmentID)
 	if err != nil {
 		writeMathError(w, r, err)

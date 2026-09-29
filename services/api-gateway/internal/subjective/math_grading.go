@@ -57,7 +57,7 @@ func (h *Handler) buildAdapterInput(ctx context.Context, tenantID, requestID str
 	input := AdapterInput{RequestID: requestID, SegmentID: value.SegmentID, Subject: value.Subject, GradeLevel: value.GradeLevel,
 		Question: value.Question, Rubric: value.Rubric, AnswerText: value.AnswerText, AnswerImageRef: value.AnswerImageRef,
 		OCRConfidence: value.OCRConfidence, AssessmentSnapshot: value.AssessmentSnapshot, ModelPolicy: policy, PromptGuard: guard,
-		MathEvidence: value.MathEvidence, OutputConstraint: constraint}
+		MathEvidence: value.MathEvidence, ReferenceContext: value.ReferenceContext, OutputConstraint: constraint}
 	if !h.useMathV2(value) {
 		return input, h.adapter, false, nil
 	}

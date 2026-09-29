@@ -9,6 +9,7 @@ function readJsonl(path) {
 }
 
 const path = process.argv[2] ?? "evals/regression/failed_cases.jsonl";
+// 此回归固定使用模拟适配器，只校验规则与输出契约；不能代表真实模型的评分准确度。
 const adapter = createAdapter("mock");
 const cases = readJsonl(path);
 const failures = [];

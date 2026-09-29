@@ -75,6 +75,7 @@ function BarChart({ items, studentVisible, averageVisible }: { items: BalanceIte
 
 function point(cx: number, cy: number, radius: number, angle: number): Point { return { x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius }; }
 function pair(value: Point) { return `${value.x},${value.y}`; }
+// 接口得分率使用 0～1；绘图时限制范围，数字明细另行显示缺失数据，避免产生无效 SVG 坐标。
 function clamp(value: number) { return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0)); }
 function percent(value: number) { return `${Math.round(clamp(value) * 1000) / 10}%`; }
 function signedPercent(value: number) { const amount = Math.round(value * 1000) / 10; return `${amount > 0 ? "+" : ""}${amount}%`; }

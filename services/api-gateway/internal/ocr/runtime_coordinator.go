@@ -15,6 +15,7 @@ type atomicRuntimeCoordinator interface {
 	FailTask(ctx context.Context, tenantID, taskID string, input FailTaskInput) (Task, error)
 }
 
+// 只有生产 PostgreSQL 或成对的内存存储支持原子协调；不匹配时拒绝降级为两次独立写入。
 func newAtomicRuntimeCoordinator(source Store, runtime workerruntime.Store) atomicRuntimeCoordinator {
 	switch sourceStore := source.(type) {
 	case *PostgresStore:

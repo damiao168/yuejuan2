@@ -30,6 +30,8 @@ if (-not $SkipPublic) {
   Assert-HttpOk "Web entry" "$($PublicUrl.TrimEnd('/'))/" | Out-Null
 }
 
+
+# 无凭据只验证公开健康入口；提供部分凭据则失败，避免把认证链路误报为已通过。
 $credentialsProvided = -not [string]::IsNullOrWhiteSpace($TenantCode) -and -not [string]::IsNullOrWhiteSpace($Username) -and -not [string]::IsNullOrWhiteSpace($Password)
 if ($credentialsProvided) {
   $session = New-Object Microsoft.PowerShell.Commands.WebRequestSession

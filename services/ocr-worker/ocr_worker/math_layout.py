@@ -80,7 +80,7 @@ class PaddleFormulaLayoutDetector:
                 if score < min_score or not isinstance(coords, (list, tuple)) or len(coords) != 4:
                     continue
                 x1, y1, a, b = map(float, coords)
-                # Paddle layout coordinates are x1,y1,x2,y2. Accept xywh from adapters too.
+                # Paddle 通常给出 x1,y1,x2,y2；后两值未同时大于起点时，兼容分支按宽高解释。
                 width, height = (a - x1, b - y1) if a > x1 and b > y1 else (a, b)
                 if width > 1 and height > 1:
                     boxes.append(([x1, y1, width, height], score))
@@ -179,6 +179,7 @@ def crop_formula(image: Any, bbox: list[float], padding: int) -> tuple[bytes, li
         [pixels[xx, yy] < 200 for yy in range(band) for xx in range(crop.width)],
         [pixels[xx, yy] < 200 for yy in range(max(0, crop.height - band), crop.height) for xx in range(crop.width)],
     ]
+    # 用四边中最大的墨迹比例发现截断迹象；这是扩裁启发式，不是完整性证明。
     edge_ink = max((sum(side) / len(side) for side in sides if side), default=1.0)
     output = io.BytesIO()
     crop.save(output, format="PNG")

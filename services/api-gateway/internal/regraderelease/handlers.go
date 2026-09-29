@@ -16,6 +16,7 @@ type Handler struct{ service *Service }
 
 func NewHandler(service *Service) *Handler { return &Handler{service: service} }
 
+// 创建后继成绩发布属于管理操作，路由层先拦截普通阅卷和学生账号。
 func RegisterRoutes(mux *http.ServeMux, h *Handler, requireManage func(http.HandlerFunc) http.Handler) {
 	mux.Handle("POST /api/v1/regrade-jobs/{jobId}/score-release", requireManage(h.Create))
 }

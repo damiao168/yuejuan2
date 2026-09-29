@@ -104,6 +104,7 @@ func (h *Handler) CompleteActivation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tokenHash := HashToken(input.Token)
+	// 先检查邀请再计算昂贵的密码哈希；最终消费仍由 ActivateUser 核查，不能依赖这次预检。
 	if _, err := h.store.FindActivation(r.Context(), tokenHash, time.Now().UTC()); err != nil {
 		if errors.Is(err, ErrActivationInvalid) {
 			httpx.Error(w, r, http.StatusBadRequest, "activation_invalid", "activation link is invalid or expired")

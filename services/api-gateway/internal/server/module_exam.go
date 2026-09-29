@@ -60,6 +60,7 @@ type ExamPreparationDependencies struct {
 	DocumentModelResolver func(context.Context, string) (*paper.DocumentModelConfig, error)
 }
 
+// 试卷导入、分段图片和工作区共享同一组文件/对象存储；这样读到的资源边界与写入导入状态保持一致。
 func NewExamPreparationModule(cfg config.Config, stores ExamPreparationStores, dependencies ExamPreparationDependencies) *ExamPreparationModule {
 	fileHandler := files.NewHandler(stores.Files, dependencies.ObjectStore, dependencies.AuthStore, cfg.Files).WithReconciliationReader(dependencies.Reconciliation)
 	segmentHandler := segment.NewHandler(stores.Segments, stores.Paper, stores.Submissions, dependencies.AuthStore, stores.Files, dependencies.ObjectStore)

@@ -227,11 +227,28 @@ JOIN question_row q ON q.exam_id=e.id
 	valid := postgresPaperImportDraft("1.", "short_answer", 10)
 	valid.Solution = &paper.SolutionInput{RawText: "先列式，再计算", Steps: []paper.SolutionStep{{StepNo: 1, Content: "列式"}}}
 	valid.HumanConfirmedFields = []string{"question_no", "question_type", "score", "stem", "answer", "solution", "rubric"}
-	if _, err := store.SavePaperImportReview(ctx, tenantID, job.ID, userID, paper.ReviewPaperImportInput{ExpectedGeneration: job.Generation, Questions: []paper.PaperImportDraftQuestion{valid}}); err != nil {
+	beforeReview, err := store.GetPaperImport(ctx, tenantID, job.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reviewed, err := store.SavePaperImportReview(ctx, tenantID, job.ID, userID, paper.ReviewPaperImportInput{ExpectedGeneration: job.Generation, Questions: []paper.PaperImportDraftQuestion{valid}})
+	if err != nil {
 		t.Fatalf("preview corrected candidate: %v", err)
+	}
+	if reviewed.Generation != beforeReview.Generation || reviewed.UpdatedAt.Equal(beforeReview.UpdatedAt) {
+		t.Fatalf("review save must change the DB-backed review version within one generation: before=%d/%s after=%d/%s", beforeReview.Generation, beforeReview.UpdatedAt, reviewed.Generation, reviewed.UpdatedAt)
+	}
+	var previousRuleID string
+	if err := db.QueryRowContext(ctx, `INSERT INTO scoring_rule(tenant_id,exam_id,question_id,version,rule_type,config,status,revision,content_hash,created_by,published_by,published_at)
+VALUES($1::uuid,$2::uuid,$3::uuid,1,'manual','{}'::jsonb,'published',1,$4,$5::uuid,$5::uuid,now()) RETURNING id::text`, tenantID, examID, questionID, strings.Repeat("a", 64), userID).Scan(&previousRuleID); err != nil {
+		t.Fatalf("seed previously published scoring rule: %v", err)
 	}
 	if _, err := store.ApplyPaperImport(ctx, tenantID, job.ID, userID); err != nil {
 		t.Fatalf("corrected PostgreSQL import did not apply: %v", err)
+	}
+	var previousRuleStatus string
+	if err := db.QueryRowContext(ctx, `SELECT status FROM scoring_rule WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, previousRuleID).Scan(&previousRuleStatus); err != nil || previousRuleStatus != "retired" {
+		t.Fatalf("old published scoring rule remained active after question import: status=%q err=%v", previousRuleStatus, err)
 	}
 	var appliedRunStatus string
 	if err := db.QueryRowContext(ctx, `SELECT status FROM paper_import_run WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, job.RunID).Scan(&appliedRunStatus); err != nil || appliedRunStatus != "applied" {

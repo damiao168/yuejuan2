@@ -8,6 +8,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 )
 
+// 同步评分把资格准入、模型调用、确定性结算和运行状态更新串成一条链；任何不确定结果都落为人工复核。
 func (h *Handler) Grade(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	if !h.requireAvailable(w, r) {

@@ -1,0 +1,2462 @@
+[
+  {
+    "path": "apps/desktop-client/index.html",
+    "status": "self_explanatory",
+    "reason": "已审读：路由权限组合、工作台角色映射、构建入口与依赖声明含义清楚"
+  },
+  {
+    "path": "apps/desktop-client/scripts/check-security-config.mjs",
+    "status": "annotated",
+    "reason": "逐文件审读，说明前端 IPC 命令与允许清单的双向门禁。"
+  },
+  {
+    "path": "apps/desktop-client/src-tauri/Cargo.toml",
+    "status": "self_explanatory",
+    "reason": "已审读：路由权限组合、工作台角色映射、构建入口与依赖声明含义清楚"
+  },
+  {
+    "path": "apps/desktop-client/src-tauri/build.rs",
+    "status": "self_explanatory",
+    "reason": "单行 Tauri 构建入口"
+  },
+  {
+    "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+    "status": "annotated",
+    "reason": "说明文件路径和凭据一并提交或回滚，原有测试意图清楚"
+  },
+  {
+    "path": "apps/desktop-client/src-tauri/src/durable_store/connection.rs",
+    "status": "self_explanatory",
+    "reason": "连接路径、时间和错误转换是直接包装"
+  },
+  {
+    "path": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+    "status": "existing_sufficient",
+    "reason": "现有详细注释已说明独立账户密钥及旧数据丢钥拒绝替换"
+  },
+  {
+    "path": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+    "status": "annotated",
+    "reason": "说明先建草稿再更新元数据，正文不随同步状态重加密"
+  },
+  {
+    "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+    "status": "annotated",
+    "reason": "说明 scoped_root 调用方会话锁前提；现有恢复测试已有足够场景说明"
+  },
+  {
+    "path": "apps/desktop-client/src-tauri/src/durable_store/paths.rs",
+    "status": "annotated",
+    "reason": "说明作用域哈希分隔符及文件不得覆盖和提前确认"
+  },
+  {
+    "path": "apps/desktop-client/src-tauri/src/durable_store/queue.rs",
+    "status": "annotated",
+    "reason": "说明幂等键不可变、归档保留原件、状态列覆盖密文旧快照"
+  },
+  {
+    "path": "apps/desktop-client/src-tauri/src/durable_store/schema.rs",
+    "status": "annotated",
+    "reason": "说明每连接外键与原件引用保护"
+  },
+  {
+    "path": "apps/desktop-client/src-tauri/src/durable_store/spool.rs",
+    "status": "annotated",
+    "reason": "说明业务身份去重、崩溃孤立分块、完整性校验后入队"
+  },
+  {
+    "path": "apps/desktop-client/src-tauri/src/durable_store/types.rs",
+    "status": "annotated",
+    "reason": "区分本地分块写入偏移与服务端上传偏移"
+  },
+  {
+    "path": "apps/desktop-client/src-tauri/src/lib.rs",
+    "status": "annotated",
+    "reason": "说明原生入口校验脱敏、密码生命周期和会话锁边界"
+  },
+  {
+    "path": "apps/desktop-client/src-tauri/src/main.rs",
+    "status": "existing_sufficient",
+    "reason": "平台编译指令保留，单行运行入口无需复述"
+  },
+  {
+    "path": "apps/desktop-client/src-tauri/src/scanner.rs",
+    "status": "annotated",
+    "reason": "说明 WIA 单对象兼容及磁盘可用量估算限制，未修改所发现缺陷"
+  },
+  {
+    "path": "apps/desktop-client/src/App.tsx",
+    "status": "existing_sufficient",
+    "reason": "逐文件审读，界面已有真实接口、无 token 不造假、未接入能力及本地日志边界说明。"
+  },
+  {
+    "path": "apps/desktop-client/src/api/auth.ts",
+    "status": "self_explanatory",
+    "reason": "登录客户端类型、令牌和退出请求直接映射接口"
+  },
+  {
+    "path": "apps/desktop-client/src/api/captureUploads.test.ts",
+    "status": "existing_sufficient",
+    "reason": "逐文件审读，已有测试注释覆盖断点续传、已完成恢复、冲突校验和确认偏移。"
+  },
+  {
+    "path": "apps/desktop-client/src/api/captureUploads.ts",
+    "status": "annotated",
+    "reason": "说明恢复身份核对与上传确认位置持久化顺序"
+  },
+  {
+    "path": "apps/desktop-client/src/api/client.test.ts",
+    "status": "self_explanatory",
+    "reason": "接口地址和共用错误样例测试命名已说明边界"
+  },
+  {
+    "path": "apps/desktop-client/src/api/client.ts",
+    "status": "annotated",
+    "reason": "说明幂等键跨重试职责及已知错误码本地化边界"
+  },
+  {
+    "path": "apps/desktop-client/src/api/exams.ts",
+    "status": "existing_sufficient",
+    "reason": "现有注释已说明采集批次 ID 来自服务端，其余查询自明"
+  },
+  {
+    "path": "apps/desktop-client/src/api/files.ts",
+    "status": "annotated",
+    "reason": "说明 XHR 上传进度并非服务端成功"
+  },
+  {
+    "path": "apps/desktop-client/src/api/papers.ts",
+    "status": "self_explanatory",
+    "reason": "单一题目列表请求直接转发参数"
+  },
+  {
+    "path": "apps/desktop-client/src/api/review.test.ts",
+    "status": "self_explanatory",
+    "reason": "单一断言明确离线版本发送契约"
+  },
+  {
+    "path": "apps/desktop-client/src/api/review.ts",
+    "status": "annotated",
+    "reason": "说明旧任务包 expected_revision 防覆盖契约"
+  },
+  {
+    "path": "apps/desktop-client/src/api/submissions.ts",
+    "status": "self_explanatory",
+    "reason": "答卷页和质量检查等方法直接映射对应请求"
+  },
+  {
+    "path": "apps/desktop-client/src/api/userError.test.ts",
+    "status": "self_explanatory",
+    "reason": "测试直接说明后台消息不展示、中文降级及网络错误"
+  },
+  {
+    "path": "apps/desktop-client/src/api/userError.ts",
+    "status": "annotated",
+    "reason": "说明中文可读性筛选不是 HTML 清洗"
+  },
+  {
+    "path": "apps/desktop-client/src/components/DesktopStatusViews.tsx",
+    "status": "self_explanatory",
+    "reason": "状态标签、预览、进度与重试禁用条件是直接展示"
+  },
+  {
+    "path": "apps/desktop-client/src/components/OfflineWorkbench.test.tsx",
+    "status": "existing_sufficient",
+    "reason": "测试已解释原生仅更新契约、元数据分离、旧回调和重新挂载场景"
+  },
+  {
+    "path": "apps/desktop-client/src/components/OfflineWorkbench.tsx",
+    "status": "annotated",
+    "reason": "说明 ref 互斥、部分证据不等于完整任务包、预检不替代服务端版本判断"
+  },
+  {
+    "path": "apps/desktop-client/src/experience.css",
+    "status": "self_explanatory",
+    "reason": "常规字体、触达尺寸和窄屏样式覆盖，无额外隐含规则"
+  },
+  {
+    "path": "apps/desktop-client/src/features/capture/useExamCaptureContext.test.tsx",
+    "status": "self_explanatory",
+    "reason": "延迟请求测试名称与断言清楚覆盖切考和清空选择"
+  },
+  {
+    "path": "apps/desktop-client/src/features/capture/useExamCaptureContext.ts",
+    "status": "annotated",
+    "reason": "说明作用域与请求序号分别防止串账号和旧考试回填"
+  },
+  {
+    "path": "apps/desktop-client/src/features/quality/useSubmissionQuality.test.tsx",
+    "status": "self_explanatory",
+    "reason": "质量结果成功、失败及缺失答卷 ID 场景清晰"
+  },
+  {
+    "path": "apps/desktop-client/src/features/quality/useSubmissionQuality.ts",
+    "status": "annotated",
+    "reason": "说明质量结果账号隔离"
+  },
+  {
+    "path": "apps/desktop-client/src/features/runtime/useLocalLogs.ts",
+    "status": "annotated",
+    "reason": "说明日志失败不应覆盖业务成功"
+  },
+  {
+    "path": "apps/desktop-client/src/features/runtime/useRuntimeDiagnostics.ts",
+    "status": "annotated",
+    "reason": "说明会话地址与系统凭据长期保存的区分"
+  },
+  {
+    "path": "apps/desktop-client/src/features/scan-queue/useScanQueue.test.tsx",
+    "status": "self_explanatory",
+    "reason": "队列恢复、原件保留、迟到恢复、切账号隔离及重新选文件测试意图清楚"
+  },
+  {
+    "path": "apps/desktop-client/src/features/scan-queue/useScanQueue.ts",
+    "status": "annotated",
+    "reason": "说明恢复列表与当前新扫描件合并优先级"
+  },
+  {
+    "path": "apps/desktop-client/src/features/scan/ScanWorkspace.tsx",
+    "status": "self_explanatory",
+    "reason": "扫描参数变更重置预检、原生设备入口与按钮前置条件在当前表达式和界面说明中清楚"
+  },
+  {
+    "path": "apps/desktop-client/src/features/scanner/scannerDraft.test.ts",
+    "status": "self_explanatory",
+    "reason": "测试名明确仅空项补默认值且保留用户选择"
+  },
+  {
+    "path": "apps/desktop-client/src/features/scanner/scannerDraft.ts",
+    "status": "self_explanatory",
+    "reason": "默认字段及仅在空值补默认项的 reducer 分支自明"
+  },
+  {
+    "path": "apps/desktop-client/src/features/scanner/useScannerController.test.tsx",
+    "status": "self_explanatory",
+    "reason": "设备缺失、预检失败和换账号旧请求隔离都有明确测试名称"
+  },
+  {
+    "path": "apps/desktop-client/src/features/scanner/useScannerController.ts",
+    "status": "annotated",
+    "reason": "说明修改设备配置使旧预检失效"
+  },
+  {
+    "path": "apps/desktop-client/src/features/session/useDesktopSession.test.tsx",
+    "status": "self_explanatory",
+    "reason": "测试名完整说明远端吊销与离线本机退出场景"
+  },
+  {
+    "path": "apps/desktop-client/src/features/session/useDesktopSession.ts",
+    "status": "annotated",
+    "reason": "说明退出使旧登录失效及远端吊销失败仍退出本机"
+  },
+  {
+    "path": "apps/desktop-client/src/features/tasks/useReviewTasks.ts",
+    "status": "annotated",
+    "reason": "说明异步回填核对当前账号"
+  },
+  {
+    "path": "apps/desktop-client/src/features/upload/uploadState.test.ts",
+    "status": "self_explanatory",
+    "reason": "状态映射和成功不可重新上传断言直接可读"
+  },
+  {
+    "path": "apps/desktop-client/src/features/upload/uploadState.ts",
+    "status": "self_explanatory",
+    "reason": "双向状态映射清晰，状态合法性统一交给 transitionScanQueueItem"
+  },
+  {
+    "path": "apps/desktop-client/src/features/upload/useUploadSync.test.tsx",
+    "status": "self_explanatory",
+    "reason": "测试名和受控 Promise 明确断网恢复、重复调用和账号切换时序"
+  },
+  {
+    "path": "apps/desktop-client/src/features/upload/useUploadSync.ts",
+    "status": "annotated",
+    "reason": "说明账号切换双重防护及进度落盘后才能续传"
+  },
+  {
+    "path": "apps/desktop-client/src/lib/durableStore.test.ts",
+    "status": "existing_sufficient",
+    "reason": "账号租约和延迟哈希隔离的测试名称明确，已有重启模拟注释"
+  },
+  {
+    "path": "apps/desktop-client/src/lib/durableStore.ts",
+    "status": "annotated",
+    "reason": "说明账号切换串行绑定、确认偏移续写及不可持久化的预览地址"
+  },
+  {
+    "path": "apps/desktop-client/src/lib/incrementalSha256.ts",
+    "status": "annotated",
+    "reason": "说明分块摘要生命周期及末尾大端长度补位"
+  },
+  {
+    "path": "apps/desktop-client/src/lib/localRuntime.test.ts",
+    "status": "self_explanatory",
+    "reason": "日志消息和上下文脱敏测试输入与断言直接可读"
+  },
+  {
+    "path": "apps/desktop-client/src/lib/localRuntime.ts",
+    "status": "annotated",
+    "reason": "说明日志写入前脱敏及可降级诊断与必要存储的边界"
+  },
+  {
+    "path": "apps/desktop-client/src/lib/offlineStore.ts",
+    "status": "annotated",
+    "reason": "说明状态元数据优先及旧密文派生参数兼容性"
+  },
+  {
+    "path": "apps/desktop-client/src/lib/scanFiles.ts",
+    "status": "annotated",
+    "reason": "说明缓存估算口径、Blob 地址释放责任、浏览器恢复需重选原件"
+  },
+  {
+    "path": "apps/desktop-client/src/lib/scanQueueWorkflow.test.ts",
+    "status": "self_explanatory",
+    "reason": "测试名和断言说明恢复偏移及成功终态"
+  },
+  {
+    "path": "apps/desktop-client/src/lib/scanQueueWorkflow.ts",
+    "status": "annotated",
+    "reason": "说明成功终态及冲突不得直接上传"
+  },
+  {
+    "path": "apps/desktop-client/src/lib/scannerProfile.ts",
+    "status": "annotated",
+    "reason": "说明毫米和 DPI 换算及缩略图尺寸与阈值关联"
+  },
+  {
+    "path": "apps/desktop-client/src/main.tsx",
+    "status": "annotated",
+    "reason": "说明设计变量和样式覆盖层导入顺序"
+  },
+  {
+    "path": "apps/desktop-client/src/statusLabels.test.ts",
+    "status": "self_explanatory",
+    "reason": "中文状态标签固定映射测试自明"
+  },
+  {
+    "path": "apps/desktop-client/src/statusLabels.ts",
+    "status": "self_explanatory",
+    "reason": "状态和学科文案直接映射，未知状态降级明确"
+  },
+  {
+    "path": "apps/desktop-client/src/styles.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/desktop-client/src/types.ts",
+    "status": "existing_sufficient",
+    "reason": "逐文件审读，类型名称直观；现有注释已说明本地资源标识不是路径以及稳定上传标识。"
+  },
+  {
+    "path": "apps/desktop-client/src/vite-env.d.ts",
+    "status": "self_explanatory",
+    "reason": "环境类型引用及可选 Tauri 标记自明"
+  },
+  {
+    "path": "apps/desktop-client/vite.config.ts",
+    "status": "self_explanatory",
+    "reason": "本地服务与打包分块配置字段自明"
+  },
+  {
+    "path": "apps/student-portal/index.html",
+    "status": "self_explanatory",
+    "reason": "已审读：路由权限组合、工作台角色映射、构建入口与依赖声明含义清楚"
+  },
+  {
+    "path": "apps/student-portal/src/App.test.tsx",
+    "status": "existing_sufficient",
+    "reason": "已审读，测试场景覆盖学生登录、成绩展示和权限边界。"
+  },
+  {
+    "path": "apps/student-portal/src/App.tsx",
+    "status": "annotated",
+    "reason": "补充 hash 路由容错与学生角色/成绩权限双重校验说明。"
+  },
+  {
+    "path": "apps/student-portal/src/api.ts",
+    "status": "existing_sufficient",
+    "reason": "逐文件审读，发布版本锚点、学生隔离图片 URL、SDK 批注和错误处理已有必要说明。"
+  },
+  {
+    "path": "apps/student-portal/src/experience.css",
+    "status": "annotated",
+    "reason": "说明移动表格依赖 data-label 的组件协作"
+  },
+  {
+    "path": "apps/student-portal/src/features/questions/AnswerReview.tsx",
+    "status": "annotated",
+    "reason": "说明相对图片比例坐标随图缩放"
+  },
+  {
+    "path": "apps/student-portal/src/features/results/ResultOverview.tsx",
+    "status": "self_explanatory",
+    "reason": "展示得分、排名和失分题排序，回退和筛选规则直观"
+  },
+  {
+    "path": "apps/student-portal/src/features/results/SubjectPerformance.tsx",
+    "status": "annotated",
+    "reason": "解释得分率单位及缺失数据绘图边界"
+  },
+  {
+    "path": "apps/student-portal/src/main.tsx",
+    "status": "self_explanatory",
+    "reason": "StrictMode 与设计变量后加载页面样式的标准入口"
+  },
+  {
+    "path": "apps/student-portal/src/styles.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/student-portal/src/test/setup.ts",
+    "status": "self_explanatory",
+    "reason": "每个测试后卸载组件的标准测试清理"
+  },
+  {
+    "path": "apps/student-portal/src/vite-env.d.ts",
+    "status": "self_explanatory",
+    "reason": "Vite 类型引用指令保留"
+  },
+  {
+    "path": "apps/student-portal/vite.config.ts",
+    "status": "self_explanatory",
+    "reason": "开发和预览共用本机 API 代理配置明确"
+  },
+  {
+    "path": "apps/student-portal/vitest.config.ts",
+    "status": "self_explanatory",
+    "reason": "复用 Vite 配置并启用 DOM 测试环境"
+  },
+  {
+    "path": "apps/web-admin/Dockerfile",
+    "status": "annotated",
+    "reason": "说明前端配置在构建期固化，运行容器变量不会替换产物"
+  },
+  {
+    "path": "apps/web-admin/index.html",
+    "status": "self_explanatory",
+    "reason": "已审读：路由权限组合、工作台角色映射、构建入口与依赖声明含义清楚"
+  },
+  {
+    "path": "apps/web-admin/nginx.conf",
+    "status": "existing_sufficient",
+    "reason": "现有注释解释安全头继承及 PDF.js 模块 MIME 兼容要求"
+  },
+  {
+    "path": "apps/web-admin/scripts/check-production-routes.mjs",
+    "status": "annotated",
+    "reason": "逐文件审读，说明源码门禁和可选生产构建产物检查的覆盖范围。"
+  },
+  {
+    "path": "apps/web-admin/src/App.tsx",
+    "status": "self_explanatory",
+    "reason": "错误边界、查询和路由 Provider 的标准组合"
+  },
+  {
+    "path": "apps/web-admin/src/AppShell.tsx",
+    "status": "annotated",
+    "reason": "说明退出清理共享查询缓存及深链接的三层展示权限边界"
+  },
+  {
+    "path": "apps/web-admin/src/api/answerGroups.ts",
+    "status": "self_explanatory",
+    "reason": "答卷分组请求直接转发 SDK，版本及回滚参数明确"
+  },
+  {
+    "path": "apps/web-admin/src/api/appeals.ts",
+    "status": "self_explanatory",
+    "reason": "申诉、教师建议和最终审核分别定义明确请求及版本字段"
+  },
+  {
+    "path": "apps/web-admin/src/api/assessment.ts",
+    "status": "self_explanatory",
+    "reason": "评估配置 API 和类型的直接导出"
+  },
+  {
+    "path": "apps/web-admin/src/api/audit.ts",
+    "status": "self_explanatory",
+    "reason": "审计筛选查询及导出接口包装自明"
+  },
+  {
+    "path": "apps/web-admin/src/api/auth.ts",
+    "status": "self_explanatory",
+    "reason": "会话、激活、恢复和再认证请求契约与用途直接"
+  },
+  {
+    "path": "apps/web-admin/src/api/authWechat.test.ts",
+    "status": "self_explanatory",
+    "reason": "测试名说明单次扫码挑战、Cookie 和 CSRF 约束"
+  },
+  {
+    "path": "apps/web-admin/src/api/backmark.test.ts",
+    "status": "self_explanatory",
+    "reason": "验证生成路由与 E2E 类型样例一致，场景直接"
+  },
+  {
+    "path": "apps/web-admin/src/api/backmark.ts",
+    "status": "self_explanatory",
+    "reason": "复核 SDK 包装、参数透传与图片下载路径清楚"
+  },
+  {
+    "path": "apps/web-admin/src/api/businessCommand.test.ts",
+    "status": "self_explanatory",
+    "reason": "命令并发合并、未知结果、冻结载荷接管及明确拒绝的断言与名称充分"
+  },
+  {
+    "path": "apps/web-admin/src/api/businessCommand.ts",
+    "status": "existing_sufficient",
+    "reason": "已有注释解释仅保存命令 ID、旧载荷擦除、冻结输入恢复和明确拒绝边界"
+  },
+  {
+    "path": "apps/web-admin/src/api/calibration.ts",
+    "status": "self_explanatory",
+    "reason": "试评校准 SDK 的路径和请求参数直接包装"
+  },
+  {
+    "path": "apps/web-admin/src/api/capture.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：请求类型与 API 适配直接，版本、租户和幂等键由参数显式传递"
+  },
+  {
+    "path": "apps/web-admin/src/api/client.test.ts",
+    "status": "self_explanatory",
+    "reason": "SSE分块、错误上下文、再认证和重试间隔断言清楚"
+  },
+  {
+    "path": "apps/web-admin/src/api/client.ts",
+    "status": "annotated",
+    "reason": "说明 SSE 分帧边界以及业务重试必须复用调用方幂等键"
+  },
+  {
+    "path": "apps/web-admin/src/api/configuration.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：请求类型与 API 适配直接，版本、租户和幂等键由参数显式传递"
+  },
+  {
+    "path": "apps/web-admin/src/api/contractSamples.test.ts",
+    "status": "self_explanatory",
+    "reason": "共享样例测试明确保留 Go 错误追踪字段"
+  },
+  {
+    "path": "apps/web-admin/src/api/dashboard.ts",
+    "status": "self_explanatory",
+    "reason": "仪表盘统计和钻取字段均为直接数据契约"
+  },
+  {
+    "path": "apps/web-admin/src/api/examTemplates.ts",
+    "status": "self_explanatory",
+    "reason": "模板类型和筛选请求是直观声明"
+  },
+  {
+    "path": "apps/web-admin/src/api/exams.test.ts",
+    "status": "self_explanatory",
+    "reason": "测试名和请求对比明确响应丢失后重用同一命令与正文"
+  },
+  {
+    "path": "apps/web-admin/src/api/exams.ts",
+    "status": "self_explanatory",
+    "reason": "考试及场次契约、命令恢复和版本更新请求直接"
+  },
+  {
+    "path": "apps/web-admin/src/api/files.ts",
+    "status": "annotated",
+    "reason": "说明 XHR 上传进度不代表服务端处理成功"
+  },
+  {
+    "path": "apps/web-admin/src/api/goldPapers.ts",
+    "status": "self_explanatory",
+    "reason": "标杆卷提名、版本和审批接口直接包装"
+  },
+  {
+    "path": "apps/web-admin/src/api/graderDrift.ts",
+    "status": "self_explanatory",
+    "reason": "评分漂移事件查询和解决接口直接包装"
+  },
+  {
+    "path": "apps/web-admin/src/api/mathUnderstanding.ts",
+    "status": "self_explanatory",
+    "reason": "数学证据、评分与纠正 SDK 请求直接包装"
+  },
+  {
+    "path": "apps/web-admin/src/api/mfa.test.ts",
+    "status": "self_explanatory",
+    "reason": "MFA 超时、取消与不自动重试的测试场景和断言直接可读"
+  },
+  {
+    "path": "apps/web-admin/src/api/mfa.ts",
+    "status": "existing_sufficient",
+    "reason": "现有注释明确秘密不缓存、超时非回滚和禁止自动重试"
+  },
+  {
+    "path": "apps/web-admin/src/api/modelApiConfig.test.ts",
+    "status": "self_explanatory",
+    "reason": "测试名明确学校作用域角色绑定与同密钥发现请求"
+  },
+  {
+    "path": "apps/web-admin/src/api/modelApiConfig.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：请求类型与 API 适配直接，版本、租户和幂等键由参数显式传递"
+  },
+  {
+    "path": "apps/web-admin/src/api/modelGovernance.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：数据类型与请求适配直白，审核代次、租户、命令键和版本均显式传参"
+  },
+  {
+    "path": "apps/web-admin/src/api/onboarding.ts",
+    "status": "self_explanatory",
+    "reason": "就绪状态和操作建议仅为结构化响应声明"
+  },
+  {
+    "path": "apps/web-admin/src/api/org.ts",
+    "status": "self_explanatory",
+    "reason": "组织、学生与学籍 CRUD 请求和字段直接"
+  },
+  {
+    "path": "apps/web-admin/src/api/papers.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：数据类型与请求适配直白，审核代次、租户、命令键和版本均显式传参"
+  },
+  {
+    "path": "apps/web-admin/src/api/platformSchools.ts",
+    "status": "annotated",
+    "reason": "说明平台学校详情使用租户 ID 而非 school_id"
+  },
+  {
+    "path": "apps/web-admin/src/api/printing.ts",
+    "status": "self_explanatory",
+    "reason": "打印字段契约、幂等键和下载请求直接表达"
+  },
+  {
+    "path": "apps/web-admin/src/api/processing.ts",
+    "status": "self_explanatory",
+    "reason": "处理汇总和异常列表 SDK 包装直接映射筛选、取消信号"
+  },
+  {
+    "path": "apps/web-admin/src/api/qualityDashboard.ts",
+    "status": "self_explanatory",
+    "reason": "单个质量看板请求直接包装"
+  },
+  {
+    "path": "apps/web-admin/src/api/qualityOperations.ts",
+    "status": "self_explanatory",
+    "reason": "种子策略和回标列表包装，版本参数显式传递"
+  },
+  {
+    "path": "apps/web-admin/src/api/query.test.ts",
+    "status": "self_explanatory",
+    "reason": "查询编码及旧版省略规则测试直接可读"
+  },
+  {
+    "path": "apps/web-admin/src/api/query.ts",
+    "status": "annotated",
+    "reason": "解释旧版零值和 false 筛选省略语义"
+  },
+  {
+    "path": "apps/web-admin/src/api/questionAppeals.ts",
+    "status": "self_explanatory",
+    "reason": "申诉上下文、处理和图片接口直接包装"
+  },
+  {
+    "path": "apps/web-admin/src/api/questionBank.ts",
+    "status": "self_explanatory",
+    "reason": "单一 SDK 实例导出"
+  },
+  {
+    "path": "apps/web-admin/src/api/regrade.ts",
+    "status": "self_explanatory",
+    "reason": "重评领取和候选评分接口直接包装"
+  },
+  {
+    "path": "apps/web-admin/src/api/reports.ts",
+    "status": "annotated",
+    "reason": "说明指标不可计算与零值不同及恢复回执文件解码"
+  },
+  {
+    "path": "apps/web-admin/src/api/review.ts",
+    "status": "existing_sufficient",
+    "reason": "现有注释准确说明空草稿契约兼容和模型治理归网关；请求适配直接"
+  },
+  {
+    "path": "apps/web-admin/src/api/reviewAnnotations.ts",
+    "status": "self_explanatory",
+    "reason": "批注及模板版本请求直接传给 SDK"
+  },
+  {
+    "path": "apps/web-admin/src/api/schoolAiChat.ts",
+    "status": "self_explanatory",
+    "reason": "流式事件和非流式聊天接口类型与请求清楚"
+  },
+  {
+    "path": "apps/web-admin/src/api/scoreReleases.ts",
+    "status": "self_explanatory",
+    "reason": "成绩发布与重评请求仅透传 SDK 契约"
+  },
+  {
+    "path": "apps/web-admin/src/api/scores.ts",
+    "status": "self_explanatory",
+    "reason": "成绩汇总、质检、确认与发布各请求分开且命令包装明确"
+  },
+  {
+    "path": "apps/web-admin/src/api/scoringAssurance.ts",
+    "status": "annotated",
+    "reason": "说明平台代管所选租户和空值请求的登录范围边界"
+  },
+  {
+    "path": "apps/web-admin/src/api/subjectiveGrading.ts",
+    "status": "annotated",
+    "reason": "解释传输和业务批次共用键及结果不明时保留身份"
+  },
+  {
+    "path": "apps/web-admin/src/api/submissions.ts",
+    "status": "self_explanatory",
+    "reason": "答卷页、OCR 和切题接口是直接契约及请求包装"
+  },
+  {
+    "path": "apps/web-admin/src/api/system.ts",
+    "status": "self_explanatory",
+    "reason": "依赖与工作器状态字段含时间单位，查询包装直接"
+  },
+  {
+    "path": "apps/web-admin/src/api/userError.test.ts",
+    "status": "self_explanatory",
+    "reason": "中文错误映射和禁止展示后台原始消息的测试名清楚"
+  },
+  {
+    "path": "apps/web-admin/src/api/userError.ts",
+    "status": "annotated",
+    "reason": "说明 API 错误按受控代码翻译而不透传内部信息"
+  },
+  {
+    "path": "apps/web-admin/src/api/users.test.ts",
+    "status": "self_explanatory",
+    "reason": "分页、重复和无效游标断言直接说明完整列表要求"
+  },
+  {
+    "path": "apps/web-admin/src/api/users.ts",
+    "status": "annotated",
+    "reason": "说明分页游标异常时必须拒绝返回不完整名单"
+  },
+  {
+    "path": "apps/web-admin/src/api/workspace.ts",
+    "status": "self_explanatory",
+    "reason": "工作区类型及单一投影请求包装"
+  },
+  {
+    "path": "apps/web-admin/src/auth/capabilities.test.ts",
+    "status": "self_explanatory",
+    "reason": "教师能力、分派与终态组合测试清楚"
+  },
+  {
+    "path": "apps/web-admin/src/auth/capabilities.ts",
+    "status": "annotated",
+    "reason": "说明界面入口不能替代服务端最终权限校验"
+  },
+  {
+    "path": "apps/web-admin/src/auth/loginSecurity.test.ts",
+    "status": "self_explanatory",
+    "reason": "Unicode 长度、UTF-8 上限和当前用户清理场景已清楚"
+  },
+  {
+    "path": "apps/web-admin/src/auth/loginSecurity.ts",
+    "status": "existing_sufficient",
+    "reason": "原有注释已解释 Go Unicode 对齐及旧凭据单向清理的容错原因"
+  },
+  {
+    "path": "apps/web-admin/src/auth/mfaFlow.test.ts",
+    "status": "existing_sufficient",
+    "reason": "测试名称清楚说明挑战绑定、过期、网络不确定性和敏感数据清理；已注明纯合成数据"
+  },
+  {
+    "path": "apps/web-admin/src/auth/mfaFlow.ts",
+    "status": "existing_sufficient",
+    "reason": "现有注释覆盖短期状态、取消代次、未知结果不重放及验证后需明确执行"
+  },
+  {
+    "path": "apps/web-admin/src/auth/reviewDraftFallback.ts",
+    "status": "existing_sufficient",
+    "reason": "现有注释解释仅内存草稿、服务端权威及禁用存储容错"
+  },
+  {
+    "path": "apps/web-admin/src/auth/session.test.ts",
+    "status": "self_explanatory",
+    "reason": "服务端组织范围映射测试输入与断言明确"
+  },
+  {
+    "path": "apps/web-admin/src/auth/session.ts",
+    "status": "annotated",
+    "reason": "说明组织范围缺失不代表全机构授权"
+  },
+  {
+    "path": "apps/web-admin/src/auth/stepUpContext.test.tsx",
+    "status": "self_explanatory",
+    "reason": "再认证仅重试一次、取消和不同 HTTP 错误边界都有明确断言"
+  },
+  {
+    "path": "apps/web-admin/src/auth/stepUpContext.tsx",
+    "status": "annotated",
+    "reason": "说明再认证仅重试一次，原注释已说明全局兜底弹窗顺序"
+  },
+  {
+    "path": "apps/web-admin/src/components/AppLayout.tsx",
+    "status": "annotated",
+    "reason": "逐文件审读，解释公共电脑本地遮挡先于服务端锁定请求。"
+  },
+  {
+    "path": "apps/web-admin/src/components/BackmarkQueue.tsx",
+    "status": "existing_sufficient",
+    "reason": "已有图片失败回退注释，界面明确独立回标不直接改原成绩"
+  },
+  {
+    "path": "apps/web-admin/src/components/ErrorBoundary.tsx",
+    "status": "existing_sufficient",
+    "reason": "现有注释说明 resetKey 避免重挂载以及 lazy 错误需刷新恢复"
+  },
+  {
+    "path": "apps/web-admin/src/components/MathMarkdown.test.ts",
+    "status": "self_explanatory",
+    "reason": "公式分隔符、长公式、代码片段和转义场景清晰"
+  },
+  {
+    "path": "apps/web-admin/src/components/MathMarkdown.tsx",
+    "status": "annotated",
+    "reason": "补充代码片段需先保护，原注释已解释复杂公式换行及不可信链接限制"
+  },
+  {
+    "path": "apps/web-admin/src/components/MockBadge.tsx",
+    "status": "self_explanatory",
+    "reason": "示例数据标签纯展示"
+  },
+  {
+    "path": "apps/web-admin/src/components/OcrWorkerAlert.tsx",
+    "status": "annotated",
+    "reason": "说明停止轮询时废弃未返回查询"
+  },
+  {
+    "path": "apps/web-admin/src/components/PageState.tsx",
+    "status": "self_explanatory",
+    "reason": "加载、空、错、禁止和未找到等纯展示组件"
+  },
+  {
+    "path": "apps/web-admin/src/components/PendingBusinessCommands.tsx",
+    "status": "annotated",
+    "reason": "说明同步锁防重入及结果未知时保留原命令"
+  },
+  {
+    "path": "apps/web-admin/src/components/ProcessingOperationsPanel.tsx",
+    "status": "annotated",
+    "reason": "说明汇总和异常列表分别降级而不把部分成功当完整成功"
+  },
+  {
+    "path": "apps/web-admin/src/components/QuestionAppealWorkspace.tsx",
+    "status": "annotated",
+    "reason": "说明申诉圈选仅接受标准答题图归一化坐标"
+  },
+  {
+    "path": "apps/web-admin/src/components/RegistrationCorrectionWorkspace.tsx",
+    "status": "annotated",
+    "reason": "说明四角顺序、归一化坐标及预览冻结与正式应用的关系"
+  },
+  {
+    "path": "apps/web-admin/src/components/RegradeQueue.tsx",
+    "status": "existing_sufficient",
+    "reason": "现有注释完整解释独立冻结细则重评、候选提交和图像不可用降级"
+  },
+  {
+    "path": "apps/web-admin/src/components/ResponsiveTable.tsx",
+    "status": "existing_sufficient",
+    "reason": "现有注释说明复杂交互保留完整表格；移动分页与键盘事件分支已核对"
+  },
+  {
+    "path": "apps/web-admin/src/components/ScoringPaperMonitor.tsx",
+    "status": "annotated",
+    "reason": "说明处理进度包含待人工和失败，区别已确认得分"
+  },
+  {
+    "path": "apps/web-admin/src/components/StatusTag.tsx",
+    "status": "self_explanatory",
+    "reason": "状态色与组件直接映射"
+  },
+  {
+    "path": "apps/web-admin/src/components/TOTPManagement.tsx",
+    "status": "annotated",
+    "reason": "说明 pagehide 清理避免浏览器往返缓存继续保留恢复码和设置密钥"
+  },
+  {
+    "path": "apps/web-admin/src/components/features/assessment/AssessmentProfileEditor.tsx",
+    "status": "annotated",
+    "reason": "逐文件审读，说明评分配置冻结的两类独立条件。"
+  },
+  {
+    "path": "apps/web-admin/src/components/features/assessment/assessmentPolicy.test.ts",
+    "status": "self_explanatory",
+    "reason": "高风险论述题禁快确认的组合测试清楚"
+  },
+  {
+    "path": "apps/web-admin/src/components/features/assessment/assessmentPolicy.ts",
+    "status": "self_explanatory",
+    "reason": "高风险论述题禁快确认条件及默认题型映射清楚"
+  },
+  {
+    "path": "apps/web-admin/src/components/features/review-annotation/CommentTemplateManager.tsx",
+    "status": "self_explanatory",
+    "reason": "评语模板编辑状态、校验和关闭重置流程直接"
+  },
+  {
+    "path": "apps/web-admin/src/components/features/review-annotation/ReviewAnnotationWorkspace.tsx",
+    "status": "annotated",
+    "reason": "逐文件审读，说明批注使用图片边界换算统一坐标。"
+  },
+  {
+    "path": "apps/web-admin/src/components/features/review-annotation/StudentAnnotationOverlay.tsx",
+    "status": "existing_sufficient",
+    "reason": "现有注释说明只接收学生可见 SDK DTO 的边界"
+  },
+  {
+    "path": "apps/web-admin/src/components/features/review-annotation/geometry.test.ts",
+    "status": "self_explanatory",
+    "reason": "跨缩放不变、反向拖拽、越界裁剪的输入断言明确"
+  },
+  {
+    "path": "apps/web-admin/src/components/features/review-annotation/geometry.ts",
+    "status": "annotated",
+    "reason": "说明视口像素与图像比例坐标以及最小边长单位"
+  },
+  {
+    "path": "apps/web-admin/src/components/features/review-annotation/index.ts",
+    "status": "self_explanatory",
+    "reason": "纯模块导出"
+  },
+  {
+    "path": "apps/web-admin/src/components/features/review-annotation/reviewAnnotations.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/components/features/review-annotation/templateShortcuts.test.ts",
+    "status": "self_explanatory",
+    "reason": "仅尾部命令替换测试命名与样例明确"
+  },
+  {
+    "path": "apps/web-admin/src/components/features/review-annotation/templateShortcuts.ts",
+    "status": "existing_sufficient",
+    "reason": "现有注释解释只替换尾部命令并保留编辑文本"
+  },
+  {
+    "path": "apps/web-admin/src/components/features/review-annotation/useReviewAnnotations.ts",
+    "status": "annotated",
+    "reason": "说明修订冲突带回最新批注但不自动覆盖重试"
+  },
+  {
+    "path": "apps/web-admin/src/components/model-governance/ManagedGovernanceWorkspace.tsx",
+    "status": "self_explanatory",
+    "reason": "策略表单和模型筛选规则直接；异步租户切换疑点单独报告不改逻辑"
+  },
+  {
+    "path": "apps/web-admin/src/components/model-governance/ModelApprovalWorkspace.tsx",
+    "status": "annotated",
+    "reason": "逐文件审读，补充本地日期输入与 UTC 时间之间的转换原因。"
+  },
+  {
+    "path": "apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.tsx",
+    "status": "annotated",
+    "reason": "逐文件审读，说明各指标独立比较且非整体排名；以空行替换避免增加大文件行数。"
+  },
+  {
+    "path": "apps/web-admin/src/components/model-governance/PromptVersionWorkspace.tsx",
+    "status": "existing_sufficient",
+    "reason": "已有注释说明只在进入或显式操作时刷新，运行时只读规则界面充分"
+  },
+  {
+    "path": "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.tsx",
+    "status": "self_explanatory",
+    "reason": "逐文件审读，准入、冻结、校准和分歧边界已由类型、函数与界面说明清楚表达。"
+  },
+  {
+    "path": "apps/web-admin/src/constants/examCatalog.ts",
+    "status": "self_explanatory",
+    "reason": "考试与题型枚举文案声明"
+  },
+  {
+    "path": "apps/web-admin/src/constants/examStatus.ts",
+    "status": "self_explanatory",
+    "reason": "考试状态及学科别名映射明确"
+  },
+  {
+    "path": "apps/web-admin/src/experience.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.tsx",
+    "status": "self_explanatory",
+    "reason": "逐文件审读，候选、抽检、版本冲突和回滚边界已由命名及界面说明清楚表达。"
+  },
+  {
+    "path": "apps/web-admin/src/features/answer-groups/answerGroupingPresentation.test.ts",
+    "status": "self_explanatory",
+    "reason": "抽检门槛与非互斥角色标签测试清楚"
+  },
+  {
+    "path": "apps/web-admin/src/features/answer-groups/answerGroupingPresentation.ts",
+    "status": "self_explanatory",
+    "reason": "按状态、抽样和拒绝样本分支给出明确阻止原因"
+  },
+  {
+    "path": "apps/web-admin/src/features/answer-groups/index.ts",
+    "status": "self_explanatory",
+    "reason": "纯模块导出"
+  },
+  {
+    "path": "apps/web-admin/src/features/answer-sheet-template/binding/useTemplateBinding.ts",
+    "status": "self_explanatory",
+    "reason": "仅锁定模板可绑定，版本随请求发送，确认对话框已说明作用范围"
+  },
+  {
+    "path": "apps/web-admin/src/features/answer-sheet-template/calibration/useOMRCalibration.ts",
+    "status": "annotated",
+    "reason": "说明盲标样本切换清空选项，核对列表请求代次与图片 URL 清理"
+  },
+  {
+    "path": "apps/web-admin/src/features/answer-sheet-template/editor/saveTemplateDraft.test.ts",
+    "status": "self_explanatory",
+    "reason": "测试明确返回权威版本和区分409冲突"
+  },
+  {
+    "path": "apps/web-admin/src/features/answer-sheet-template/editor/saveTemplateDraft.ts",
+    "status": "self_explanatory",
+    "reason": "服务端返回结果与409分类简单直观"
+  },
+  {
+    "path": "apps/web-admin/src/features/answer-sheet-template/editor/templateLayoutReducer.test.ts",
+    "status": "self_explanatory",
+    "reason": "题目跨页移动与保留无关区域的测试名及断言清楚"
+  },
+  {
+    "path": "apps/web-admin/src/features/answer-sheet-template/editor/templateLayoutReducer.ts",
+    "status": "annotated",
+    "reason": "说明跨页替换去重及建议不得覆盖未匹配人工区域"
+  },
+  {
+    "path": "apps/web-admin/src/features/answer-sheet-template/editor/useRegionEditor.ts",
+    "status": "annotated",
+    "reason": "说明显示像素归一化和拖拽相对起点计算避免累计漂移"
+  },
+  {
+    "path": "apps/web-admin/src/features/answer-sheet-template/editor/useRegionSuggestion.ts",
+    "status": "annotated",
+    "reason": "说明长题号优先及 PDF 底部坐标转换成页面比例"
+  },
+  {
+    "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateEditor.ts",
+    "status": "annotated",
+    "reason": "说明草稿深复制以隔离模板缓存"
+  },
+  {
+    "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateLifecycle.test.tsx",
+    "status": "self_explanatory",
+    "reason": "修订冲突重载与成功后推进版本的测试名和断言明确"
+  },
+  {
+    "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateLifecycle.ts",
+    "status": "annotated",
+    "reason": "说明版本冲突重读服务端状态，不沿用旧修订保存"
+  },
+  {
+    "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplatePreview.ts",
+    "status": "annotated",
+    "reason": "说明过期 PDF 销毁以及渲染像素和编辑坐标尺寸的区别"
+  },
+  {
+    "path": "apps/web-admin/src/features/answer-sheet-template/printing/useStudentPrinting.ts",
+    "status": "annotated",
+    "reason": "说明签发结果未知前同名单复用幂等键，模板键范围疑点单独报告"
+  },
+  {
+    "path": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+    "status": "annotated",
+    "reason": "说明校准样本提交后才展示参考偏差"
+  },
+  {
+    "path": "apps/web-admin/src/features/calibration/calibrationPresentation.ts",
+    "status": "annotated",
+    "reason": "说明可选采分点门槛和缺失数据的保守处理"
+  },
+  {
+    "path": "apps/web-admin/src/features/calibration/index.ts",
+    "status": "self_explanatory",
+    "reason": "纯模块导出"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/ImageQualityWorkspace.tsx",
+    "status": "annotated",
+    "reason": "说明质检记录与图片预览使用独立请求代次"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/MatchingWorkspace.tsx",
+    "status": "self_explanatory",
+    "reason": "已审读：学生候选排除已占用身份，页码和匹配操作显式携带版本，展示逻辑清楚"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/SubmissionCaptureSummary.tsx",
+    "status": "self_explanatory",
+    "reason": "采集计数纯展示"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/batchCreateCommand.test.ts",
+    "status": "self_explanatory",
+    "reason": "恢复原始命令、作用域和损坏数据拒覆盖的测试明确"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/batchCreateCommand.ts",
+    "status": "existing_sufficient",
+    "reason": "现有注释解释恢复数据损坏不能静默创建新命令"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/captureBatchSummary.ts",
+    "status": "self_explanatory",
+    "reason": "完成优先、就绪页占比和异常页筛选直观"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/captureColumns.tsx",
+    "status": "self_explanatory",
+    "reason": "文件与页面列为状态呈现和明确的权限按钮判断"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/capturePresentation.ts",
+    "status": "self_explanatory",
+    "reason": "采集状态文案和颜色映射自明"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/captureQueries.test.ts",
+    "status": "self_explanatory",
+    "reason": "权限投影与可选查询失败的测试场景清楚"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/captureQueries.ts",
+    "status": "annotated",
+    "reason": "说明部分详情失败保留错误以及按权限补查当前页姓名"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/captureWorkflow.test.ts",
+    "status": "self_explanatory",
+    "reason": "序号废弃、命令互斥和仅成功后重载的时序断言明确"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/captureWorkflow.ts",
+    "status": "annotated",
+    "reason": "说明序号不取消请求、页面互斥不等于跨端幂等"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/imageQualityModel.test.ts",
+    "status": "self_explanatory",
+    "reason": "测试明确页面质量与采集失败区分及七维顺序"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/imageQualityModel.ts",
+    "status": "annotated",
+    "reason": "说明报告优先及旧格式完成状态后才能推导质量决定"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/submissionColumns.tsx",
+    "status": "annotated",
+    "reason": "说明答卷完整性检查先于图像质量任务的操作顺序"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/submissionPresentation.ts",
+    "status": "annotated",
+    "reason": "说明答卷列表完整详情与汇总字段两种投影的回退关系"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/useCaptureBatchDetail.ts",
+    "status": "annotated",
+    "reason": "说明详情和匹配代次独立以及重置后丢弃旧响应"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/useCaptureBatchList.ts",
+    "status": "self_explanatory",
+    "reason": "共享请求序号和按 ID 合并分页逻辑明确"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/useCaptureMatchActions.ts",
+    "status": "self_explanatory",
+    "reason": "匹配、拆合卷和页面恢复请求及刷新流程直接"
+  },
+  {
+    "path": "apps/web-admin/src/features/capture/useCaptureUpload.ts",
+    "status": "self_explanatory",
+    "reason": "上传文件、注册批次、刷新详情的顺序清楚"
+  },
+  {
+    "path": "apps/web-admin/src/features/dashboard/SchoolDashboard.tsx",
+    "status": "self_explanatory",
+    "reason": "仪表盘分区展示和按考试状态导航是直接映射"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+    "status": "self_explanatory",
+    "reason": "已审读：创建模式、科目范围与学校年级联动清空行为直接，界面文案说明业务流程"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/create/CreateExamPage.tsx",
+    "status": "existing_sufficient",
+    "reason": "现有注释准确说明命令快照、同步持久化先于网络及未知结果恢复边界"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/create/createExamDraft.test.ts",
+    "status": "self_explanatory",
+    "reason": "模板结构复制和本地新 ID 测试直接"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/create/createExamDraft.ts",
+    "status": "annotated",
+    "reason": "说明模板分区 ID 与考试编辑 ID 区分"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/create/createExamValidation.test.ts",
+    "status": "self_explanatory",
+    "reason": "资料先行与模板模式差异测试名称清楚"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/create/createExamValidation.ts",
+    "status": "annotated",
+    "reason": "说明资料先行允许空分区而模板需满分合计"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/create/exam-create.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/create/examCreateCommand.test.ts",
+    "status": "self_explanatory",
+    "reason": "冻结载荷、未知结果、明确拒绝、成功清理失败及限次恢复测试完整直观"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/create/examCreateCommand.ts",
+    "status": "annotated",
+    "reason": "说明深拷贝冻结提交输入和按操作保留独立回执"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/create/presentation.ts",
+    "status": "self_explanatory",
+    "reason": "阅卷方式与发布策略文案映射"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/create/types.ts",
+    "status": "self_explanatory",
+    "reason": "考试草稿字段与模式声明"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/examGroups.test.ts",
+    "status": "self_explanatory",
+    "reason": "多科场次分组和显式学科筛选优先级测试可读"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/examGroups.ts",
+    "status": "annotated",
+    "reason": "说明显式选择优先于筛选及非空分组前提"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/preparation/preparationModel.test.ts",
+    "status": "self_explanatory",
+    "reason": "仅分组服务端检查而不发明额外阻断的断言清楚"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/preparation/preparationModel.ts",
+    "status": "self_explanatory",
+    "reason": "学生、材料、检查分组和非空完整条件直接"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/preparation/preparationSteps.ts",
+    "status": "self_explanatory",
+    "reason": "准备导航步骤声明"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/workspace/ExamWorkspaceLayout.tsx",
+    "status": "self_explanatory",
+    "reason": "按服务器投影展示导航和科目切换，回调直接"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/workspace/businessStages.ts",
+    "status": "annotated",
+    "reason": "说明导航完成状态非业务检查授权"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/workspace/defaultExamWorkspaceRoute.test.ts",
+    "status": "self_explanatory",
+    "reason": "状态到默认入口的参数化测试"
+  },
+  {
+    "path": "apps/web-admin/src/features/exams/workspace/defaultExamWorkspaceRoute.ts",
+    "status": "self_explanatory",
+    "reason": "状态映射和URL构建简单直观"
+  },
+  {
+    "path": "apps/web-admin/src/features/gold-papers/GoldCoverageGaps.tsx",
+    "status": "annotated",
+    "reason": "说明无法判断不能当作没有缺口"
+  },
+  {
+    "path": "apps/web-admin/src/features/gold-papers/GoldPaperManagerDrawer.tsx",
+    "status": "self_explanatory",
+    "reason": "标准卷版本审批及退役界面规则直接；覆盖查询失败误报通过已独立报告"
+  },
+  {
+    "path": "apps/web-admin/src/features/gold-papers/GoldPaperNominationDrawer.tsx",
+    "status": "self_explanatory",
+    "reason": "提名冻结评分事实和需审批的界面说明充分，表单重置及提交直接"
+  },
+  {
+    "path": "apps/web-admin/src/features/gold-papers/goldPaperPresentation.test.ts",
+    "status": "self_explanatory",
+    "reason": "保留采分点证据与未知模式代码测试明确"
+  },
+  {
+    "path": "apps/web-admin/src/features/gold-papers/goldPaperPresentation.ts",
+    "status": "existing_sufficient",
+    "reason": "现有注释说明冻结快照与 required 字段兼容，筛选采分点明确"
+  },
+  {
+    "path": "apps/web-admin/src/features/gold-papers/index.ts",
+    "status": "self_explanatory",
+    "reason": "纯模块导出"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/SharedScoreControl.tsx",
+    "status": "self_explanatory",
+    "reason": "评分点合计与人工总分调整通过界面说明表达充分"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/subjectiveBatchCommand.test.ts",
+    "status": "self_explanatory",
+    "reason": "持久化原始命令、响应丢失恢复与损坏拒绝测试清楚"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/subjectiveBatchCommand.ts",
+    "status": "existing_sufficient",
+    "reason": "现有注释说明先保存批次结果再清理待恢复命令"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/AIContextPanel.tsx",
+    "status": "annotated",
+    "reason": "说明显式揭示前必须整段跳过 AI 候选与证据展示"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx",
+    "status": "existing_sufficient",
+    "reason": "逐文件审读，已有注释覆盖串行草稿保存、预取失效、盲测不持久化和立即续租。"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/MathEvidenceInspector.test.ts",
+    "status": "self_explanatory",
+    "reason": "公式学科开关和有效证据优先及旧响应降级测试清楚"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/MathEvidenceInspector.tsx",
+    "status": "annotated",
+    "reason": "逐文件审读，说明数学结构校正同时绑定识别版本与校正修订号。"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/ReviewContextInspector.tsx",
+    "status": "self_explanatory",
+    "reason": "统一控制两个面板的第二意见展开状态，逻辑直接"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/SubjectToolPanel.tsx",
+    "status": "self_explanatory",
+    "reason": "第二意见按钮权限由命名清楚的上下文函数决定"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/components/AnswerEvidencePane.tsx",
+    "status": "annotated",
+    "reason": "说明图片实际尺寸缩放让百分比证据框同步缩放"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/components/DraftConflictModal.tsx",
+    "status": "self_explanatory",
+    "reason": "冲突字段对照、初始选择及手动合并行为直接表达"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/components/EvidenceInspector.tsx",
+    "status": "self_explanatory",
+    "reason": "建议历史状态、显式第二意见和自动确认来源判断清楚"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/components/ExamScoringPanel.tsx",
+    "status": "self_explanatory",
+    "reason": "已审读：启动门禁、未完成批次、AI建议与人工路线的界面说明和状态分支明确"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/components/FastConfirmDrawer.tsx",
+    "status": "annotated",
+    "reason": "说明快捷确认提交前需校验已核对任务版本和建议仍一致"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/components/MathRubricMatrix.tsx",
+    "status": "self_explanatory",
+    "reason": "服务器判定只展示、未知不当零、校正和阶段禁用均在界面直观表达"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/components/ScoreEditor.tsx",
+    "status": "self_explanatory",
+    "reason": "人工调整原因、反馈可见范围、快捷键和提交边界均有清楚界面说明"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/components/TaskRail.tsx",
+    "status": "self_explanatory",
+    "reason": "任务选择、批分配禁用条件和分页错误重试是直接 UI 绑定"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/components/WorkbenchHeader.tsx",
+    "status": "self_explanatory",
+    "reason": "只读管理入口、未完整统计和保存冲突提示清楚"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/components/WorkbenchOverlays.tsx",
+    "status": "self_explanatory",
+    "reason": "工作台弹层和回调的纯组合"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/draftConflict.test.ts",
+    "status": "self_explanatory",
+    "reason": "持久字段逐项选择、本地专属字段保留的断言明确"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/draftConflict.ts",
+    "status": "existing_sufficient",
+    "reason": "已有注释说明本地专属编辑字段不属于服务端API，冲突合并必须保留"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/fastConfirm.test.ts",
+    "status": "self_explanatory",
+    "reason": "归属、置信度、证据和高风险转完整复核的测试清楚"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/fastConfirm.ts",
+    "status": "existing_sufficient",
+    "reason": "已有注释强调快速确认比普通复核更窄，条件与文案一致"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/grading-workbench.css",
+    "status": "existing_sufficient",
+    "reason": "文件头已有功能范围说明，样式分区命名清楚，无需重复补注释。"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/gradingTaskContext.ts",
+    "status": "annotated",
+    "reason": "说明预取上下文不能绕过第二意见显式揭示规则"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/gradingWorkbench.model.test.ts",
+    "status": "self_explanatory",
+    "reason": "任务间草稿隔离、无效恢复数据及影子评分保护有明确测试名称"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/gradingWorkbench.model.ts",
+    "status": "annotated",
+    "reason": "逐文件审读，说明影子评分展示隔离和未判分与零分的区别。"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/gradingWorkbench.types.ts",
+    "status": "self_explanatory",
+    "reason": "工作台上下文、草稿与视图快照的字段声明直观"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/hooks/scoringCommand.test.ts",
+    "status": "self_explanatory",
+    "reason": "响应不明恢复、成功不重建、存储失败不发送的测试明确"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/hooks/scoringCommand.ts",
+    "status": "annotated",
+    "reason": "说明恢复原命令时不重跑就绪检查和不换身份"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/hooks/taskDraftSaveQueue.test.ts",
+    "status": "self_explanatory",
+    "reason": "延迟响应、不同任务独立队列和失败后继续保存的测试场景明确"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/hooks/taskDraftSaveQueue.ts",
+    "status": "annotated",
+    "reason": "说明错误传给调用方但不中断队尾后续保存"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/hooks/useAnswerViewer.ts",
+    "status": "annotated",
+    "reason": "说明图片内容修订后绕过任务预取缓存，以及核对坐标缩放和权限分支"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/hooks/useExamScoring.ts",
+    "status": "annotated",
+    "reason": "逐文件审读，补充失败 AI 批次重试的幂等边界；已有注释解释评分启动后的恢复。"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingKeyboard.ts",
+    "status": "annotated",
+    "reason": "说明输入法、弹层和控件 Enter 优先于评分快捷键"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingMathActions.ts",
+    "status": "annotated",
+    "reason": "说明数学证据生成前后刷新及异步切任务隔离"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingPrefetch.ts",
+    "status": "self_explanatory",
+    "reason": "只预取本人活动任务、失败删除可重试与列表外淘汰规则明确"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingQueue.ts",
+    "status": "annotated",
+    "reason": "说明共享分页请求、列表代次与读完后续页才回绕的顺序约束"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingQueueActions.ts",
+    "status": "annotated",
+    "reason": "说明下一份跨分页定位与暂放后抑制自动选择"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.test.tsx",
+    "status": "existing_sufficient",
+    "reason": "逐文件审读，现有注释和用例名称已解释跨题回执、账号切换与继续阅卷边界。"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+    "status": "annotated",
+    "reason": "说明数学建议采纳前复查实时评分草稿，以及草稿冲突合并更新基准版本"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingScoreShortcuts.ts",
+    "status": "annotated",
+    "reason": "说明单步本地撤销范围不含评语或服务端评分"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/hooks/useMathWorkbenchEvidence.ts",
+    "status": "existing_sufficient",
+    "reason": "已有注释说明只刷新当前任务、编辑时暂停轮询及保存成功独立于刷新"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/keyboardShortcuts.test.ts",
+    "status": "self_explanatory",
+    "reason": "快捷键、输入焦点、权限和缺失评分点边界均有明确测试名称"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/keyboardShortcuts.ts",
+    "status": "existing_sufficient",
+    "reason": "已有注释说明纯意图映射和保留浏览器快捷键"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/mathEffectiveEvidence.ts",
+    "status": "existing_sufficient",
+    "reason": "已有注释强调服务端决定校正投影，不重放有界审计历史"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/mathEvidenceSubjects.ts",
+    "status": "existing_sufficient",
+    "reason": "已有注释强调定量科目按实验验证显式加入而不是所有科目开放"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/mathWorkbenchEvidence.test.ts",
+    "status": "self_explanatory",
+    "reason": "证据绑定、已吸收与本地校正版本、未决分数及几何边界测试明确"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/mathWorkbenchEvidence.ts",
+    "status": "annotated",
+    "reason": "说明校正版本叠加和题块归一化坐标的浮点容差"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/reviewContext.test.ts",
+    "status": "self_explanatory",
+    "reason": "冻结快照、人工优先和第二意见展示规则有明确测试名称"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/reviewContext.ts",
+    "status": "annotated",
+    "reason": "说明冻结评分细则不能替换为当前题库版本"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/scoringAIBatches.test.ts",
+    "status": "self_explanatory",
+    "reason": "稳定批次键和重新加载恢复已存在批次的测试直接"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/scoringAIBatches.ts",
+    "status": "annotated",
+    "reason": "说明排除已有覆盖并排序形成稳定分块键"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/scoringPlan.test.ts",
+    "status": "self_explanatory",
+    "reason": "受支持题型和许可策略才能走 AI 通道的测试清楚"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/scoringPlan.ts",
+    "status": "annotated",
+    "reason": "说明冻结策略失败后保守转人工"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/taskPaging.test.ts",
+    "status": "existing_sufficient",
+    "reason": "已有注释解释不可见提交锚点仍决定分页续接"
+  },
+  {
+    "path": "apps/web-admin/src/features/grading/workbench/taskPaging.ts",
+    "status": "annotated",
+    "reason": "说明从完整列表定位锚点再筛选可操作任务"
+  },
+  {
+    "path": "apps/web-admin/src/features/members/classes/ClassManagementPage.tsx",
+    "status": "annotated",
+    "reason": "解释年级序号倒推入学届别的显示规则"
+  },
+  {
+    "path": "apps/web-admin/src/features/members/students/studentImport.test.ts",
+    "status": "self_explanatory",
+    "reason": "班级代码解析、歧义、坏CSV和原始行号映射测试清楚"
+  },
+  {
+    "path": "apps/web-admin/src/features/members/students/studentImport.ts",
+    "status": "annotated",
+    "reason": "说明过滤坏行后服务端行号需映射原 CSV"
+  },
+  {
+    "path": "apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx",
+    "status": "annotated",
+    "reason": "说明人员管理按钮对多角色账号采用全部角色授权交集"
+  },
+  {
+    "path": "apps/web-admin/src/features/onboarding/AISetupCard.tsx",
+    "status": "self_explanatory",
+    "reason": "根据已返回的模式展示介绍和导航，未承载判断逻辑"
+  },
+  {
+    "path": "apps/web-admin/src/features/onboarding/DataPolicyCard.tsx",
+    "status": "self_explanatory",
+    "reason": "展示服务端策略元数据，不执行权限决策"
+  },
+  {
+    "path": "apps/web-admin/src/features/onboarding/FirstSchoolCard.tsx",
+    "status": "self_explanatory",
+    "reason": "首次学校创建表单完成后关闭并刷新检查，流程直观"
+  },
+  {
+    "path": "apps/web-admin/src/features/onboarding/NextActionCard.tsx",
+    "status": "self_explanatory",
+    "reason": "使用服务端下一动作并提供首页回退，纯展示"
+  },
+  {
+    "path": "apps/web-admin/src/features/onboarding/OnboardingCheckCard.tsx",
+    "status": "self_explanatory",
+    "reason": "就绪状态与视觉标签对应明确"
+  },
+  {
+    "path": "apps/web-admin/src/features/onboarding/OnboardingGate.tsx",
+    "status": "annotated",
+    "reason": "说明引导每挂载只处理一次，避免查询刷新反复导航"
+  },
+  {
+    "path": "apps/web-admin/src/features/onboarding/OnboardingProgress.tsx",
+    "status": "self_explanatory",
+    "reason": "完成数进度与就绪状态文案映射"
+  },
+  {
+    "path": "apps/web-admin/src/features/onboarding/ReadinessBanner.tsx",
+    "status": "self_explanatory",
+    "reason": "读取失败不挡使用，阻断项优先于建议项的分支直观"
+  },
+  {
+    "path": "apps/web-admin/src/features/onboarding/SystemReadinessCard.tsx",
+    "status": "self_explanatory",
+    "reason": "运维导航按钮的简单组合"
+  },
+  {
+    "path": "apps/web-admin/src/features/onboarding/queries.ts",
+    "status": "self_explanatory",
+    "reason": "就绪查询启用条件、15秒过期及一次重试配置清楚"
+  },
+  {
+    "path": "apps/web-admin/src/features/paper-import/PaperImportReviewPanel.suggestions.test.tsx",
+    "status": "self_explanatory",
+    "reason": "AI 建议须显式复制、过期代次和未保存解析不得生成的测试明确"
+  },
+  {
+    "path": "apps/web-admin/src/features/paper-import/PaperImportReviewPanel.test.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：静态渲染和转换测试明确覆盖建议草稿、数学显示、匹配状态与分页限制"
+  },
+  {
+    "path": "apps/web-admin/src/features/paper-import/PaperImportReviewPanel.tsx",
+    "status": "annotated",
+    "reason": "说明模型建议的任务版本/题目上下文校验，以及确认弹窗延迟期间再次验证"
+  },
+  {
+    "path": "apps/web-admin/src/features/paper-import/PaperImportWorkspace.tsx",
+    "status": "annotated",
+    "reason": "说明识别进行中保留历史内容但隐藏旧问题，历史题目只读"
+  },
+  {
+    "path": "apps/web-admin/src/features/paper-import/RubricReviewEditor.tsx",
+    "status": "annotated",
+    "reason": "说明 JSON 草稿文本和结构化可提交值分离"
+  },
+  {
+    "path": "apps/web-admin/src/features/paper-import/answerShape.ts",
+    "status": "annotated",
+    "reason": "说明文本编辑结构化答案必须解析回原始顶层形态"
+  },
+  {
+    "path": "apps/web-admin/src/features/paper-import/materials.test.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：测试名称与断言完整覆盖剪贴板保真、重排、进度和无关内容阻断"
+  },
+  {
+    "path": "apps/web-admin/src/features/paper-import/materials.ts",
+    "status": "annotated",
+    "reason": "说明阶段进度只依据 Worker 实际计数，保留剪贴板和问题聚合原注释"
+  },
+  {
+    "path": "apps/web-admin/src/features/paper-import/usePaperConfigData.ts",
+    "status": "annotated",
+    "reason": "说明手动刷新与轮询通过代次避免过期请求覆盖"
+  },
+  {
+    "path": "apps/web-admin/src/features/paper-import/usePaperImportPolling.test.ts",
+    "status": "self_explanatory",
+    "reason": "失败保留状态、互斥轮询与dispose后忽略旧结果的测试清楚"
+  },
+  {
+    "path": "apps/web-admin/src/features/paper-import/usePaperImportPolling.ts",
+    "status": "existing_sufficient",
+    "reason": "已有注释说明临时轮询失败保留权威投影并下次重试"
+  },
+  {
+    "path": "apps/web-admin/src/features/paper-import/usePaperImportWorkflow.test.tsx",
+    "status": "self_explanatory",
+    "reason": "已审读：测试清楚覆盖代次切换、上传部分失败、资产去重及填空题确认边界"
+  },
+  {
+    "path": "apps/web-admin/src/features/paper-import/usePaperImportWorkflow.ts",
+    "status": "annotated",
+    "reason": "说明填空题答案边界、同代轮询保留草稿和上传资产去重"
+  },
+  {
+    "path": "apps/web-admin/src/features/paper-import/useScoringRules.ts",
+    "status": "annotated",
+    "reason": "说明脏表单保护仅限同一题目"
+  },
+  {
+    "path": "apps/web-admin/src/features/paper-rubric/hooks/useQuestionEditor.test.ts",
+    "status": "self_explanatory",
+    "reason": "结构化标准答案保持形态、非法JSON拒绝和文本兼容测试明确"
+  },
+  {
+    "path": "apps/web-admin/src/features/paper-rubric/hooks/useQuestionEditor.ts",
+    "status": "annotated",
+    "reason": "说明结构化答案保真与相对容差百分数换算"
+  },
+  {
+    "path": "apps/web-admin/src/features/paper-rubric/hooks/useRubricEditor.ts",
+    "status": "annotated",
+    "reason": "说明评分细则保存创建新版本并使用当前题目满分"
+  },
+  {
+    "path": "apps/web-admin/src/features/paper-rubric/paperPresentation.ts",
+    "status": "self_explanatory",
+    "reason": "评分标准标签、错误处理和学科题型开关直接可读"
+  },
+  {
+    "path": "apps/web-admin/src/features/platform-model-config/components/SchoolModelSelector.tsx",
+    "status": "self_explanatory",
+    "reason": "学校选择、停用选项和连接计数纯展示"
+  },
+  {
+    "path": "apps/web-admin/src/features/platform-model-config/components/SchoolModelTable.tsx",
+    "status": "self_explanatory",
+    "reason": "按是否选择学校展示配置表的纯组合"
+  },
+  {
+    "path": "apps/web-admin/src/features/platform-model-config/hooks/useModelConfigDrafts.ts",
+    "status": "annotated",
+    "reason": "说明可能含密钥的草稿只存内存，超时及卸载清理"
+  },
+  {
+    "path": "apps/web-admin/src/features/platform-model-config/lib/modelConfig.ts",
+    "status": "annotated",
+    "reason": "说明能力探测结果必须同时匹配协议版本"
+  },
+  {
+    "path": "apps/web-admin/src/features/platform/schools/CreateSchoolForm.tsx",
+    "status": "self_explanatory",
+    "reason": "二次验证创建机构及首管理员，表单和确认文案已解释高影响操作"
+  },
+  {
+    "path": "apps/web-admin/src/features/platform/schools/SchoolActivityTab.tsx",
+    "status": "annotated",
+    "reason": "说明学校切换使旧活动回填失效"
+  },
+  {
+    "path": "apps/web-admin/src/features/platform/schools/SchoolDetailDrawer.tsx",
+    "status": "self_explanatory",
+    "reason": "学校详情标签页与销毁隐藏面板的组件组合清楚"
+  },
+  {
+    "path": "apps/web-admin/src/features/platform/schools/SchoolManagementToolbar.tsx",
+    "status": "annotated",
+    "reason": "说明筛选或排序改变必须重置分页游标"
+  },
+  {
+    "path": "apps/web-admin/src/features/platform/schools/SchoolMembersTab.tsx",
+    "status": "annotated",
+    "reason": "说明切换学校时旧成员请求不得回填"
+  },
+  {
+    "path": "apps/web-admin/src/features/platform/schools/SchoolModelsTab.tsx",
+    "status": "annotated",
+    "reason": "说明学校切换使旧模型健康结果失效"
+  },
+  {
+    "path": "apps/web-admin/src/features/platform/schools/SchoolOverviewTab.tsx",
+    "status": "self_explanatory",
+    "reason": "学校规模、状态、用量和关注项纯展示"
+  },
+  {
+    "path": "apps/web-admin/src/features/platform/schools/SchoolSummaryTable.tsx",
+    "status": "self_explanatory",
+    "reason": "已审读：表格展示、筛选类型、弹窗与审计/质量展示逻辑直接；测试名称清楚说明状态保护"
+  },
+  {
+    "path": "apps/web-admin/src/features/platform/schools/SchoolUsageTab.tsx",
+    "status": "annotated",
+    "reason": "说明完整日期才查询及旧范围结果失效"
+  },
+  {
+    "path": "apps/web-admin/src/features/platform/schools/schoolPresentation.ts",
+    "status": "self_explanatory",
+    "reason": "数值、日期相对时间及角色功能文案转换明确"
+  },
+  {
+    "path": "apps/web-admin/src/features/question-bank/BankQuestionPicker.tsx",
+    "status": "annotated",
+    "reason": "逐文件审读，补充复制题目失败重试时幂等键与考试版本的绑定规则。"
+  },
+  {
+    "path": "apps/web-admin/src/features/question-bank/ContentFields.tsx",
+    "status": "self_explanatory",
+    "reason": "逐文件审读，表单字段、受控词表与权限/版本说明已直观，无需重复注释。"
+  },
+  {
+    "path": "apps/web-admin/src/features/question-bank/HistoryQuestionImporter.tsx",
+    "status": "annotated",
+    "reason": "逐文件审读，解释导入请求持久化顺序与部分成功后重试范围。"
+  },
+  {
+    "path": "apps/web-admin/src/features/question-bank/QuestionBankDialogs.tsx",
+    "status": "self_explanatory",
+    "reason": "逐文件审读，表单字段、受控词表与权限/版本说明已直观，无需重复注释。"
+  },
+  {
+    "path": "apps/web-admin/src/features/question-bank/QuestionBankPage.tsx",
+    "status": "annotated",
+    "reason": "逐文件审读，说明历史题目绑定 schema；保留后台刷新不得覆盖草稿的现有注释。"
+  },
+  {
+    "path": "apps/web-admin/src/features/question-bank/QuestionBankWorkspace.tsx",
+    "status": "self_explanatory",
+    "reason": "逐文件审读，编辑区互斥、权限与审核状态已由属性条件和界面说明表达。"
+  },
+  {
+    "path": "apps/web-admin/src/features/question-bank/ScoringEditor.tsx",
+    "status": "annotated",
+    "reason": "逐文件审读，说明答案编辑框如何保留多种答案类型。"
+  },
+  {
+    "path": "apps/web-admin/src/features/question-bank/history-question-importer.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/features/question-bank/question-bank.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/features/question-bank/questionBankOptions.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：表格展示、筛选类型、弹窗与审计/质量展示逻辑直接；测试名称清楚说明状态保护"
+  },
+  {
+    "path": "apps/web-admin/src/features/question-bank/questionBankTypes.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：表格展示、筛选类型、弹窗与审计/质量展示逻辑直接；测试名称清楚说明状态保护"
+  },
+  {
+    "path": "apps/web-admin/src/features/score-management/components/AuditPanel.tsx",
+    "status": "self_explanatory",
+    "reason": "已审读：表格展示、筛选类型、弹窗与审计/质量展示逻辑直接；测试名称清楚说明状态保护"
+  },
+  {
+    "path": "apps/web-admin/src/features/score-management/components/QualityPanel.tsx",
+    "status": "self_explanatory",
+    "reason": "已审读：表格展示、筛选类型、弹窗与审计/质量展示逻辑直接；测试名称清楚说明状态保护"
+  },
+  {
+    "path": "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx",
+    "status": "self_explanatory",
+    "reason": "已审读：状态按钮和表单约束直观，版本冻结和复评边界已由界面说明表达"
+  },
+  {
+    "path": "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx",
+    "status": "self_explanatory",
+    "reason": "已审读：状态按钮和表单约束直观，版本冻结和复评边界已由界面说明表达"
+  },
+  {
+    "path": "apps/web-admin/src/features/score-management/hooks/scoreWorkspaceState.test.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：表格展示、筛选类型、弹窗与审计/质量展示逻辑直接；测试名称清楚说明状态保护"
+  },
+  {
+    "path": "apps/web-admin/src/features/score-management/hooks/scoreWorkspaceState.ts",
+    "status": "annotated",
+    "reason": "说明翻页追加必须校验考试与预期游标"
+  },
+  {
+    "path": "apps/web-admin/src/features/score-management/hooks/useRegradeWorkflow.tsx",
+    "status": "annotated",
+    "reason": "说明复评创建须与题目和来源版本的预览一致"
+  },
+  {
+    "path": "apps/web-admin/src/features/score-management/hooks/useRosterAttendance.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：表格展示、筛选类型、弹窗与审计/质量展示逻辑直接；测试名称清楚说明状态保护"
+  },
+  {
+    "path": "apps/web-admin/src/features/score-management/hooks/useScoreReleaseWorkflow.tsx",
+    "status": "annotated",
+    "reason": "说明发布确认读取版本自身冻结的可见性设置"
+  },
+  {
+    "path": "apps/web-admin/src/features/score-management/hooks/useScoreWorkspaceData.test.tsx",
+    "status": "self_explanatory",
+    "reason": "已审读：测试名称及 deferred 时序清楚覆盖快照失败、过期结果、审计降级与翻页"
+  },
+  {
+    "path": "apps/web-admin/src/features/score-management/hooks/useScoreWorkspaceData.ts",
+    "status": "annotated",
+    "reason": "说明全量刷新和翻页共用请求代次，原子发布必要数据"
+  },
+  {
+    "path": "apps/web-admin/src/features/score-management/hooks/workflowModal.test.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：表格展示、筛选类型、弹窗与审计/质量展示逻辑直接；测试名称清楚说明状态保护"
+  },
+  {
+    "path": "apps/web-admin/src/features/score-management/hooks/workflowModal.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：表格展示、筛选类型、弹窗与审计/质量展示逻辑直接；测试名称清楚说明状态保护"
+  },
+  {
+    "path": "apps/web-admin/src/features/score-management/scorePresentation.ts",
+    "status": "annotated",
+    "reason": "说明人数回退与服务端发布门禁的边界"
+  },
+  {
+    "path": "apps/web-admin/src/features/shared/latestRequest.test.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：入口、查询键、失效范围和路由测试含义直接明确"
+  },
+  {
+    "path": "apps/web-admin/src/features/shared/latestRequest.ts",
+    "status": "existing_sufficient",
+    "reason": "现有类注释明确仅当前票据结果可以写入页面状态"
+  },
+  {
+    "path": "apps/web-admin/src/main.tsx",
+    "status": "self_explanatory",
+    "reason": "已审读：入口、查询键、失效范围和路由测试含义直接明确"
+  },
+  {
+    "path": "apps/web-admin/src/pages/ActivationPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/AdminGradingOperationsPage.test.ts",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/AdminGradingOperationsPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/AppealCenterPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/ArbitrationPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/ArbitrationPanels.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/AuditLogPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/CaptureBatchPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/DashboardPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/ExamManagementPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/ExamPreparationPage.test.ts",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/ExamWorkspacePage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/GradingWorkbenchPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/IdentityLandingPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/LearningReportsPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/LoginPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/ModulePage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/OrganizationSetupPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/PanelModelBindingsSection.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/PaperRubricPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/PlatformGettingStartedPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/PlatformModelConfigPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/PlatformSchoolsPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/QualityDashboardPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/RecoveryPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/SchoolAIChatPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/ScoreManagementPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/SessionManagementPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/StudentManagementPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/SubjectiveGradingBatchPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/SubmissionCapturePage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/SystemStatusPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/TeacherDashboardPage.tsx",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/arbitrationPresentation.model.ts",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/learningReports.model.ts",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/school-ai-chat.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/schoolAiChatMessages.test.ts",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/pages/schoolAiChatMessages.ts",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/query/client.test.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：入口、查询键、失效范围和路由测试含义直接明确"
+  },
+  {
+    "path": "apps/web-admin/src/query/client.ts",
+    "status": "annotated",
+    "reason": "说明查询与写操作的重试边界"
+  },
+  {
+    "path": "apps/web-admin/src/query/examWorkspace.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：入口、查询键、失效范围和路由测试含义直接明确"
+  },
+  {
+    "path": "apps/web-admin/src/query/reviewTaskContext.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：入口、查询键、失效范围和路由测试含义直接明确"
+  },
+  {
+    "path": "apps/web-admin/src/router/appRouter.tsx",
+    "status": "annotated",
+    "reason": "说明兼容路由将页面解析和访问检查交给 AppShell"
+  },
+  {
+    "path": "apps/web-admin/src/router/experience.test.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：入口、查询键、失效范围和路由测试含义直接明确"
+  },
+  {
+    "path": "apps/web-admin/src/router/experience.ts",
+    "status": "annotated",
+    "reason": "说明角色入口与细粒度业务权限不能相互替代"
+  },
+  {
+    "path": "apps/web-admin/src/router/navigation.test.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：入口、查询键、失效范围和路由测试含义直接明确"
+  },
+  {
+    "path": "apps/web-admin/src/router/navigation.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：路由权限组合、工作台角色映射、构建入口与依赖声明含义清楚"
+  },
+  {
+    "path": "apps/web-admin/src/router/query.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：路由权限组合、工作台角色映射、构建入口与依赖声明含义清楚"
+  },
+  {
+    "path": "apps/web-admin/src/router/routes.test.tsx",
+    "status": "self_explanatory",
+    "reason": "已审读：路由权限组合、工作台角色映射、构建入口与依赖声明含义清楚"
+  },
+  {
+    "path": "apps/web-admin/src/router/routes.tsx",
+    "status": "existing_sufficient",
+    "reason": "路由权限组合清楚，已有注释说明生产注册表不包含 mock 页面"
+  },
+  {
+    "path": "apps/web-admin/src/styles.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/answer-sheet-template-calibration.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/appeals-workspace.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/appeals.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/arbitration.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/audit-system.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/capture-core.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/capture-matching.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/capture.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/correction.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/dashboard-operations.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/dashboard-workbench.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/dashboard.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/exam-management.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/exam-preparation.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/exam-setup.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/exam.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/gold-paper.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/immersive.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/member-management.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/model-config.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/model-governance-prompts.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/model-governance.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/onboarding.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/paper-editor.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/platform-schools.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/print-and-scope.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/question-appeal.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/question-bank.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/reports.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/scoring-paper-monitor.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/scoring.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/features/student-management.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/forms.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/foundation-controls.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/foundation-reset.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/foundation.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/layout-responsive.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/layout.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/styles/tables.css",
+    "status": "pending",
+    "reason": "尚未逐文件审读"
+  },
+  {
+    "path": "apps/web-admin/src/types.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：路由权限组合、工作台角色映射、构建入口与依赖声明含义清楚"
+  },
+  {
+    "path": "apps/web-admin/src/vite-env.d.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：路由权限组合、工作台角色映射、构建入口与依赖声明含义清楚"
+  },
+  {
+    "path": "apps/web-admin/src/workspaces/registry.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：路由权限组合、工作台角色映射、构建入口与依赖声明含义清楚"
+  },
+  {
+    "path": "apps/web-admin/vite.config.ts",
+    "status": "self_explanatory",
+    "reason": "已审读：路由权限组合、工作台角色映射、构建入口与依赖声明含义清楚"
+  }
+]

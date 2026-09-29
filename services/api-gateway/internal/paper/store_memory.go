@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+// MemoryStore 以进程内锁维护状态，不提供数据库事务回滚或跨进程任务租约。
+// 用它验证业务分支时，不能据此推断 PostgreSQL 的并发提交和持久化恢复行为。
 type MemoryStore struct {
 	mu         sync.RWMutex
 	next       int
@@ -222,6 +224,8 @@ func (s *MemoryStore) SavePaperImportReview(_ context.Context, tenantID, id, _ s
 	if job.Status != "review_required" || job.Generation != input.ExpectedGeneration {
 		return PaperImportJob{}, ErrConflict
 	}
+	reviewedQuestions, reconciliationIssues := s.reconcileMemoryPaperImport(job.ExamID, input.Questions, nil)
+	input.Questions = reviewedQuestions
 	for i := range input.Questions {
 		normalizeAnswerKeyOnlyPaperImportDraft(&input.Questions[i])
 		if input.Questions[i].AssessmentArchetype == "" {
@@ -231,7 +235,7 @@ func (s *MemoryStore) SavePaperImportReview(_ context.Context, tenantID, id, _ s
 		refreshDraftCompleteness(&input.Questions[i], len(job.QuestionCandidates) > 0)
 	}
 	job.Questions = input.Questions
-	job.StructuredIssues = appendReviewedDraftIssues(issuesAfterHumanReview(job.StructuredIssues, job.Questions, true), job.Questions)
+	job.StructuredIssues = withPaperImportReconciliationIssues(appendReviewedDraftIssues(issuesAfterHumanReview(job.StructuredIssues, job.Questions, true), job.Questions), reconciliationIssues)
 	job.Issues = issueMessages(job.StructuredIssues)
 	job.UpdatedAt = time.Now().UTC()
 	s.imports[id] = job
@@ -371,8 +375,10 @@ func (s *MemoryStore) ApplyPaperImport(_ context.Context, tenantID, id, userID s
 				return PaperImportJob{}, ErrConflict
 			}
 			q.ExamPaperID, q.Stem, q.KnowledgePoints = job.ExamPaperID, draft.Stem, cloneStrings(draft.KnowledgePoints)
+			q.QuestionType, q.Score, q.AssessmentArchetype = draft.QuestionType, draft.Score, draft.AssessmentArchetype
+			q.ParentQuestionNo, q.SubquestionNo, q.Options = draft.ParentQuestionNo, draft.SubquestionNo, cloneStrings(draft.Options)
 			q.PaperImportID, q.PaperImportCandidateID, q.PaperImportSourceRefs = job.ID, draft.CandidateID, append([]PaperImportSourceRef{}, draft.SourceRefs...)
-			if draft.MatchStatus != "mismatch" {
+			{
 				if draft.AnswerKey != nil {
 					q.AnswerKey = &AnswerKey{ID: s.id("answer"), QuestionID: q.ID, AnswerVersion: fmt.Sprintf("v%d", 1), StandardAnswer: draft.AnswerKey.StandardAnswer, EquivalentAnswers: draft.AnswerKey.EquivalentAnswers, Tolerance: draft.AnswerKey.Tolerance, PaperImportID: job.ID, PaperImportCandidateID: draft.AnswerCandidateID, PaperImportSourceRefs: append([]PaperImportSourceRef{}, draft.SourceRefs...)}
 				}
@@ -398,7 +404,7 @@ func (s *MemoryStore) ApplyPaperImport(_ context.Context, tenantID, id, userID s
 			continue
 		}
 		qid := s.id("question")
-		q := Question{ID: qid, TenantID: tenantID, ExamID: job.ExamID, ExamPaperID: job.ExamPaperID, QuestionNo: draft.QuestionNo, QuestionType: draft.QuestionType, Score: draft.Score, Stem: draft.Stem, KnowledgePoints: cloneStrings(draft.KnowledgePoints), AnswerArea: map[string]any{}, SortOrder: i + 1, Status: "active", PaperImportID: job.ID, PaperImportCandidateID: draft.CandidateID, PaperImportSourceRefs: append([]PaperImportSourceRef{}, draft.SourceRefs...)}
+		q := Question{ID: qid, TenantID: tenantID, ExamID: job.ExamID, ExamPaperID: job.ExamPaperID, QuestionNo: draft.QuestionNo, QuestionType: draft.QuestionType, AssessmentArchetype: draft.AssessmentArchetype, Score: draft.Score, Stem: draft.Stem, ParentQuestionNo: draft.ParentQuestionNo, SubquestionNo: draft.SubquestionNo, Options: cloneStrings(draft.Options), KnowledgePoints: cloneStrings(draft.KnowledgePoints), AnswerArea: map[string]any{}, SortOrder: i + 1, Status: "active", PaperImportID: job.ID, PaperImportCandidateID: draft.CandidateID, PaperImportSourceRefs: append([]PaperImportSourceRef{}, draft.SourceRefs...)}
 		if draft.AnswerKey != nil {
 			q.AnswerKey = &AnswerKey{ID: s.id("answer"), QuestionID: qid, AnswerVersion: "v1", StandardAnswer: draft.AnswerKey.StandardAnswer, EquivalentAnswers: draft.AnswerKey.EquivalentAnswers, Tolerance: draft.AnswerKey.Tolerance, PaperImportID: job.ID, PaperImportCandidateID: draft.AnswerCandidateID, PaperImportSourceRefs: append([]PaperImportSourceRef{}, draft.SourceRefs...)}
 		}
@@ -527,18 +533,21 @@ func (s *MemoryStore) CreateQuestion(_ context.Context, tenantID string, examID 
 		}
 	}
 	question := Question{
-		ID:              s.id("question"),
-		TenantID:        tenantID,
-		ExamID:          examID,
-		ExamPaperID:     input.ExamPaperID,
-		QuestionNo:      input.QuestionNo,
-		QuestionType:    input.QuestionType,
-		Score:           input.Score,
-		Stem:            input.Stem,
-		KnowledgePoints: cloneStrings(input.KnowledgePoints),
-		AnswerArea:      cloneMap(input.AnswerArea),
-		SortOrder:       input.SortOrder,
-		Status:          "active",
+		ParentQuestionNo: input.ParentQuestionNo,
+		SubquestionNo:    input.SubquestionNo,
+		Options:          cloneStrings(input.Options),
+		ID:               s.id("question"),
+		TenantID:         tenantID,
+		ExamID:           examID,
+		ExamPaperID:      input.ExamPaperID,
+		QuestionNo:       input.QuestionNo,
+		QuestionType:     input.QuestionType,
+		Score:            input.Score,
+		Stem:             input.Stem,
+		KnowledgePoints:  cloneStrings(input.KnowledgePoints),
+		AnswerArea:       cloneMap(input.AnswerArea),
+		SortOrder:        input.SortOrder,
+		Status:           "active",
 	}
 	if input.AnswerKey != nil {
 		question.AnswerKey = &AnswerKey{
@@ -582,6 +591,15 @@ func (s *MemoryStore) UpdateQuestion(_ context.Context, tenantID string, id stri
 	}
 	if input.QuestionNo != nil {
 		item.QuestionNo = *input.QuestionNo
+	}
+	if input.ParentQuestionNo != nil {
+		item.ParentQuestionNo = *input.ParentQuestionNo
+	}
+	if input.SubquestionNo != nil {
+		item.SubquestionNo = *input.SubquestionNo
+	}
+	if input.Options != nil {
+		item.Options = cloneStrings(*input.Options)
 	}
 	if input.QuestionType != nil {
 		item.QuestionType = *input.QuestionType
@@ -702,6 +720,7 @@ func cloneStrings(in []string) []string {
 	return out
 }
 
+// 这里只复制第一层键值；嵌套 map、切片和指针仍共享，调用方不能把返回值当成深拷贝。
 func cloneMap(in map[string]any) map[string]any {
 	if in == nil {
 		return nil

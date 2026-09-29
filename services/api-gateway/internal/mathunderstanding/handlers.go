@@ -48,6 +48,7 @@ func (h *Handler) WithRuntime(runtime workerruntime.Store) *Handler {
 	return h
 }
 
+// RegisterRoutes 接入调用方提供的评阅、管理权限中间件；题块分配权限在各处理器内进一步检查。
 func RegisterRoutes(mux *http.ServeMux, handler *Handler, requireWork, requireManage func(http.HandlerFunc) http.Handler) {
 	mux.Handle("GET /api/v1/math-answer-segments/{segmentId}/understanding", requireWork(handler.GetLatest))
 	mux.Handle("GET /api/v1/math-answer-segments/{segmentId}/rubric-score", requireWork(handler.GetRubricScore))
@@ -125,6 +126,7 @@ func (h *Handler) CompleteRuntimeTask(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_math_runtime_result", "math runtime result does not match its immutable task input")
 		return
 	}
+	// 服务端重新构建解题步骤和连线；worker 已给出的空间关系会保留，缺失时才根据几何位置补算。
 	preparedArtifact, err := prepareRuntimeArtifact(input.Artifact)
 	if err != nil {
 		writeMathError(w, r, err)
@@ -257,6 +259,7 @@ func (h *Handler) verificationTaskContract(ctx context.Context, tenantID string,
 		stringPayload(task.Payload, "input_hash") != artifact.InputHash {
 		return Artifact{}, CreateArtifactInput{}, 0, ErrInvalidInput
 	}
+	// 任务绑定的是创建时的修订号，不能改读“最新修订”；否则相同任务重试会得到不同输入。
 	contract := cloneInput(artifact.CreateArtifactInput)
 	if revision > 0 {
 		correction, correctionErr := h.corrections.GetCorrection(ctx, tenantID, artifact.ID, revision)
@@ -316,6 +319,7 @@ func applySymbolicVerifications(contract CreateArtifactInput, checks []MathVerif
 	knownIDs := map[string]bool{}
 	criticalConfidence := contract.SolutionGraph.OverallConfidence
 	requiresReview := false
+	// 保留识别阶段的语法检查，再替换符号验证结果；后续计算成功不能抹掉原先的识别疑点。
 	for _, check := range contract.Verifications {
 		if check.Kind == "syntax" {
 			retained = append(retained, check)
@@ -616,6 +620,7 @@ func (h *Handler) ExportTraining(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"samples": safe})
 }
 
+// canAccess 按精确题块分配判断评阅权限；管理权限可绕过分配，查询失败则关闭访问。
 func (h *Handler) canAccess(r *http.Request, user auth.User, segmentID string) bool {
 	for _, permission := range user.Permissions {
 		if permission == "review:manage" {

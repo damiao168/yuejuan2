@@ -22,6 +22,7 @@ class CapabilityMatrix:
             raise ValueError("capability matrix must disable final grade publication")
         if self.payload.get("grade_levels") != ["junior", "senior"]:
             raise ValueError("local pilot must use canonical junior/senior stages")
+        # 能力表同时限制交付方式和人工复核要求，不能仅凭模型支持题型就允许发布成绩。
         for item in self.payload.get("capabilities", []):
             if item.get("review_policy") != "always":
                 raise ValueError("all model-backed capabilities must require review")

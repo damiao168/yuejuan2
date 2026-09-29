@@ -26,6 +26,7 @@ export function PendingBusinessCommands({ tenant, actor }: { tenant: string; act
   }, [prefix]);
 
   async function resume(key: string) {
+    // ref 在本次点击内立即上锁，防止 React 更新按钮状态前重复恢复同一个命令。
     if (busyRef.current) return;
     busyRef.current = true;
     setBusy(key); setError("");
@@ -59,6 +60,7 @@ export function PendingBusinessCommands({ tenant, actor }: { tenant: string; act
       } else await recoverBusinessCommand(operation, command,
         (id, original) => apiClient.request(entry.path(encodeURIComponent(target)), { method: "POST", headers: { "Idempotency-Key": id }, body: JSON.stringify(original) }),
         () => undefined, reject, fallback);
+      // 只有恢复成功或服务端明确拒绝时才移除记录；结果未知时保留原命令供下次确认。
       localStorage.removeItem(key);
       setKeys(current => current.filter(item => item !== key));
     } catch (cause) { setError(getUserErrorMessage(cause, "确认操作结果失败，请稍后继续")); }

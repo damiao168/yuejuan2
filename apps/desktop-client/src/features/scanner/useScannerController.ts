@@ -111,6 +111,7 @@ export function useScannerController({ workspace, isOnline, durableScopeKey, log
       if (scopeRef.current !== durableScopeKey) return;
       setScannerProfiles((current) => [profile, ...current.filter((item) => item.id !== profile.id)]);
       setSelectedScannerProfileId(profile.id);
+      // 已通过的预检绑定旧设备配置；保存新配置后必须重新检查，不能沿用旧结果放行。
       setScannerPreflight(null);
       setIsScannerProfileModalOpen(false);
       await logEvent("info", "scanner profile saved", profile.name);

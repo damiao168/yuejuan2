@@ -20,6 +20,7 @@ func legacyModelWriteGone(w http.ResponseWriter, r *http.Request) {
 	httpx.Error(w, r, http.StatusGone, "legacy_model_registration_closed", "请在模型管理中配置学校模型")
 }
 
+// 兼容层只拒绝已下线的旧字段并保留原请求体；真正的模型配置校验仍由治理 handler 完成。
 func requireManagedModelWrite(handler http.HandlerFunc, policy bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
@@ -50,6 +51,7 @@ func requireManagedModelWrite(handler http.HandlerFunc, policy bool) http.Handle
 	}
 }
 
+// 默认使用登录用户租户；只有平台管理员同时具备配置权限时，才可通过合法 UUID 临时切换目标学校。
 func withGovernanceSchoolScope(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, ok := auth.UserFromContext(r.Context())
@@ -71,6 +73,7 @@ func withGovernanceSchoolScope(handler http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// 治理读写和平台托管配置分开授权；学校级治理请求通过 withGovernanceSchoolScope 重写后续 handler 看到的租户。
 func registerGovernanceRoutes(mux *http.ServeMux, ctx routerContext) {
 	ctx.modules.AIGovernance.ModelGovernanceHandler.WithManagedAPIProbeObserver(ctx.metrics)
 	mux.Handle("GET /api/v1/model-providers", ctx.guards.requireModelRead(ctx.modules.AIGovernance.ModelGovernanceHandler.ListProviders))

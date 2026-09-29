@@ -68,6 +68,7 @@ export function PlatformSchoolsPage() {
   const changeStatus = useCallback(async (school: PlatformSchoolSummary) => {
     const status = school.status === "active" ? "disabled" : "active";
     try {
+      // 学校启停影响整个租户，实际变更必须在再次验证管理员身份后执行。
       await runWithStepUp({
         reason: `${status === "active" ? "启用" : "停用"}学校“${school.name}”`,
         description: "此操作会改变整个学校机构的可用状态，需要验证平台管理员身份。",

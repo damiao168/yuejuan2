@@ -77,6 +77,7 @@ func validateOptionRegion(region OptionRegion) error {
 	return validateRegion(LayoutRegion{X: region.X, Y: region.Y, Width: region.Width, Height: region.Height})
 }
 
+// 坐标和宽高均已归一化；右、下边界的微小余量用于容纳浮点计算误差。
 func validateRegion(region LayoutRegion) error {
 	values := []float64{region.X, region.Y, region.Width, region.Height}
 	for _, value := range values {
@@ -208,6 +209,7 @@ func buildReadinessForScope(total float64, classIDs, candidateIDs []string, pape
 	return ReadinessResult{Ready: ready, ConfigurationHash: stableContentHash(configuration), Checks: checks, Advisories: buildReadinessAdvisories(questions)}
 }
 
+// 自动评分能力不足只生成维护提示；能否开始考试由上方就绪检查决定。
 func buildReadinessAdvisories(questions []Question) []ReadinessAdvisory {
 	advisories := []ReadinessAdvisory{}
 	manualOnly := []ReadinessAdvisoryQuestion{}

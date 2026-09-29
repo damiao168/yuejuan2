@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (...parts) => readFileSync(join(root, ...parts), "utf8");
+// 包括测试在内做源码存在性检查；关键字出现不代表运行时编排和权限已通过集成测试。
 const readGoDirectory = (...parts) => readdirSync(join(root, ...parts), { withFileTypes: true })
   .filter((entry) => entry.isFile() && entry.name.endsWith(".go"))
   .map((entry) => read(...parts, entry.name))

@@ -154,6 +154,7 @@ class OCRRunner:
                             continue
                         bbox = list(block.bbox)
                         if region is not None:
+                            # 用实际取整后的裁剪偏移还原整页像素坐标，保留证据定位一致性。
                             bbox[0] += offset[0]
                             bbox[1] += offset[1]
                         results.append(
@@ -349,6 +350,7 @@ class _LeaseHeartbeat(LeaseHeartbeat):
                 "event_seq": self._progress_event_seq,
                 "progress_changed_at": datetime.now(UTC).isoformat(),
             }
+        # 锁只保护快照和序号；网络发送在锁外，避免慢心跳阻塞进度更新。
         if flush:
             self._send()
 

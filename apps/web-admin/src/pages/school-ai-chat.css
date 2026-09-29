@@ -23,6 +23,7 @@
 .school-chat-model-status { display: flex; min-width: 0; align-items: center; gap: 7px; overflow: hidden; color: #7b8493; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .school-chat-model-status i { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: #c4cbd5; }
 .school-chat-model-status i.is-online { background: #39a778; }
+/* 禁用浏览器滚动锚定，流式追加内容时由聊天组件决定是否跟随底部。 */
 .school-chat-flow { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; overflow-anchor: none; }
 .school-chat-flow.is-empty { display: grid; place-items: center; }
 .school-chat-welcome { width: min(100% - 40px, 630px); margin: -35px auto 0; text-align: center; animation: school-chat-enter .3s ease-out; }

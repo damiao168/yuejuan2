@@ -69,6 +69,7 @@ function issueCount(quality: QualityCheckResult | null, code: string) {
   return quality?.quality.issues.find((issue) => issue.code === code)?.count ?? 0;
 }
 
+// 页面人数优先采用名册汇总；能否发布始终以服务端质量门禁结果为准。
 export function createSummary(
   submissions: Submission[],
   completedGradeCount: number,

@@ -81,6 +81,7 @@
   display: none;
 }
 
+/* 只让导航中部滚动；顶部入口和底部账号操作固定可见，长菜单不能挤走退出入口。 */
 .sidebar-main {
   min-height: 0;
   flex: 1;

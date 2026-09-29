@@ -11,6 +11,7 @@ func validateCorrectionPoints(source, target []NormalizedPoint) error {
 	if !validNormalizedQuad(source) || !validNormalizedQuad(target) {
 		return ErrInvalidInput
 	}
+	// 对应四角必须按相同方向排列，反向会把透视校正变成镜像翻转。
 	if signedQuadArea(source)*signedQuadArea(target) <= 0 {
 		return ErrInvalidInput
 	}
@@ -39,6 +40,7 @@ func validNormalizedQuad(points []NormalizedPoint) bool {
 		}
 		crossSign = cross
 	}
+	// 坐标归一到整幅图像；有效四边形至少覆盖 5% 面积，排除退化的小区域。
 	return math.Abs(signedQuadArea(points)) >= 0.05
 }
 

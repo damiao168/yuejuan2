@@ -7,6 +7,7 @@ import (
 	"net/http"
 )
 
+// 成绩发布和 release 写操作要求 score:manage，关键发布再检查近期认证；学生读取与申诉读取使用独立的最小权限。
 func registerReleaseRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("POST /api/v1/exams/{examId}/finalize", ctx.guards.requireScoreManage(ctx.guards.withScopedExam(ctx.modules.Release.ScoreHandler.FinalizeExam)))
 	mux.Handle("GET /api/v1/exams/{examId}/grades", ctx.guards.requireScoreManage(ctx.guards.withScopedExam(ctx.modules.Release.ScoreHandler.ListExamGrades)))

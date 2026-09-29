@@ -11,6 +11,7 @@ var (
 	ErrNotFound     = errors.New("math understanding artifact not found")
 )
 
+// BoundingBox 使用相对于输入图像的 0–1 坐标；X、Y 是左上角，宽高不是像素值。
 type BoundingBox struct {
 	X      float64 `json:"x"`
 	Y      float64 `json:"y"`
@@ -209,6 +210,8 @@ var validVerificationKinds = set("syntax", "equivalence", "substitution", "unit"
 var validVerificationStatuses = set("verified", "contradicted", "uncertain", "not_applicable")
 var validEvidenceStatuses = set("supported", "contradicted", "uncertain", "not_applicable", "unsupported")
 
+// ValidateCreateArtifact 检查字段范围、证据引用和图结构。
+// 它不查询数据库；题块是否属于该租户和考试快照，由存储层核实。
 func ValidateCreateArtifact(input CreateArtifactInput) error {
 	if !set("mathematics", "physics", "chemistry")[input.SubjectCode] || input.AnswerSegmentID == "" || input.ExamQuestionSnapshotID == "" || input.InputHash == "" || input.EngineVersion == "" {
 		return ErrInvalidInput
@@ -295,6 +298,7 @@ func ValidateCreateArtifact(input CreateArtifactInput) error {
 	return nil
 }
 
+// validateGraph 要求所有边连接已存在的步骤且不能形成环；否则后续依赖回溯没有可靠的起止关系。
 func validateGraph(graph SolutionGraph, blocks, formulas map[string]bool) error {
 	if graph.ID == "" || graph.AnswerSegmentID == "" || graph.BuilderVersion == "" || graph.FormulaModelVersion == "" || !validConfidence(graph.OverallConfidence) || len(graph.Steps) == 0 || len(graph.Steps) > 512 || len(graph.Edges) > 2048 {
 		return ErrInvalidInput
@@ -349,6 +353,7 @@ func validateGraph(graph SolutionGraph, blocks, formulas map[string]bool) error 
 	return nil
 }
 
+// 深度、总节点数和单节点子项数分别受限，避免异常公式让递归校验耗尽资源。
 func validAST(node FormulaAST, depth int, count *int) bool {
 	*count++
 	if depth > 32 || *count > 2048 || !validASTKinds[node.Kind] || len(node.Children) > 64 {

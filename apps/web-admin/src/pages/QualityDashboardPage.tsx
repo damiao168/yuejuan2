@@ -190,6 +190,7 @@ export function QualityDashboardPage({ examId, canManage = false }: { examId: st
     try {
       const values = await backmarkForm.validateFields();
       if (revision !== backmarkPreviewRevision.current) return;
+      // 提交预览的范围哈希，由服务端识别预览后已变化的任务集合。
       const response = await createBackmarkBatch(examId, values.question_id, {
         selector_hash: preview.selector_hash,
         source_incident_id: values.source_incident_id.trim(), selector: selectorFromForm(values), reassigned_to: values.reassigned_to,
@@ -203,6 +204,7 @@ export function QualityDashboardPage({ examId, canManage = false }: { examId: st
       if (reason instanceof ApiClientError) message.error(errorMessage(reason));
     }
   };
+  // 筛选变化立即淘汰在途预览；请求返回和表单校验结束都需核对同一代次。
   function invalidateBackmarkPreview() {
     backmarkPreviewRevision.current += 1;
     setBackmarkPreview(undefined);

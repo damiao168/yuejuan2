@@ -109,6 +109,7 @@ func (s *MemoryStore) StartTask(_ context.Context, tenantID string, id string) (
 	return task, nil
 }
 
+// 完成任务时按置信度决定是否转人工复核；任务和运行状态在同一把锁内更新。
 func (s *MemoryStore) CompleteTask(_ context.Context, tenantID string, id string, input CompleteTaskInput) (Task, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -122,6 +123,7 @@ func (s *MemoryStore) CompleteTask(_ context.Context, tenantID string, id string
 	if input.Confidence != nil && (*input.Confidence < 0 || *input.Confidence > 1) {
 		return Task{}, ErrInvalidInput
 	}
+	// 低置信度或显式复核都会进入人工复核；成功状态不能掩盖不可靠的智能体输出。
 	status := "succeeded"
 	if input.RequiresHumanReview || (input.Confidence != nil && *input.Confidence < 0.8) {
 		status = "requires_human_review"
@@ -191,6 +193,7 @@ func (s *MemoryStore) tasksForRunLocked(tenantID string, runID string) []Task {
 	return out
 }
 
+// 运行状态由所有任务的最严重状态汇总，失败和待人工复核优先于“进行中”。
 func (s *MemoryStore) refreshRunStatusLocked(tenantID string, runID string) {
 	run, ok := s.runs[runID]
 	if !ok || run.TenantID != tenantID {

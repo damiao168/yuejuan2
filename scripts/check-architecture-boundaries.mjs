@@ -12,6 +12,7 @@ function walk(directory, extension) {
   });
 }
 
+// 这些门禁依赖仓库约定的源码写法与正则，不是完整的 Go 语法或依赖图分析。
 export function checkModuleBoundaries(source) {
   const failures = [];
   const moduleTypes = [...source.matchAll(/^type\s+(\w+Module)\s+struct\s*\{/gm)].map((match) => match[1]);
@@ -44,6 +45,7 @@ export function pageWarning(source, filename, threshold = 700) {
   return lines > threshold ? `${filename}: ${lines} lines` : null;
 }
 
+// 行数按物理文本计算，注释和空行也计入；整理注释不能顺手放宽冻结的债务预算。
 export function checkFrontendDebt(sources, debt) {
   const failures = [];
   const seen = new Set();

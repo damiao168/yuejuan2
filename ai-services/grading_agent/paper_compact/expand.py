@@ -89,6 +89,7 @@ def _hydrate_refs(aliases, chunk):
         )
     refs = []
     seen = set()
+    # rNNN 只在当前分片内有效；不存在或重复的短引用直接拒绝，不能猜测相邻分片来源。
     for alias in aliases:
         if not isinstance(alias, str) or alias in seen or alias not in chunk.references:
             raise AgentError(

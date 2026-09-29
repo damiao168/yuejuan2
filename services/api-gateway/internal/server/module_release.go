@@ -47,6 +47,7 @@ type ReleaseDependencies struct {
 	FileBucket            string
 }
 
+// 发布协调器同时接入成绩发布与 regrade 阻断器；高分试卷能力只有数据库、文件、对象存储和 bucket 全部可用时才启用。
 func NewReleaseModule(stores ReleaseStores, dependencies ReleaseDependencies) *ReleaseModule {
 	scoreReleaseService := scorerelease.NewService(stores.ScoreRelease)
 	var highScorePaper scorerelease.HighScorePaperManager

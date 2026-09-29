@@ -128,6 +128,7 @@ export function useRegradeWorkflow({
       message.error("请完成题目、原因、阅卷员分派和影响预览");
       return;
     }
+    // 预览只适用于同一题目和来源发布版本，切换目标后必须重新确认影响范围。
     if (!regradePreview || regradePreview.question_id !== regradeQuestionId || regradePreview.source_release_id !== publishedRelease.id) {
       message.error("请先预览本次复评的影响范围");
       return;

@@ -50,6 +50,7 @@ type Values = {
 	use_policy: QuestionBankScoring["use_policy"];
 };
 const json = (v: unknown) => JSON.stringify(v, null, 2);
+// 答案可能是文本、布尔值或数组；合法 JSON 保留原结构，解析失败则按普通文本提交，避免改写教师输入。
 function answerValue(v: string): unknown {
 	try {
 		return JSON.parse(v);

@@ -360,6 +360,7 @@ func (h *Handler) finishMFA(w http.ResponseWriter, r *http.Request, operation st
 			return
 		}
 	}
+	// 最终命令由存储层再次校验并消费已验证挑战，不能只信任此前 verify 的响应。
 	proof := MFAProof{TenantID: user.TenantID, UserID: user.ID, SessionHash: HashToken(sessionToken(r, h.cookieName)), ChallengeHash: HashToken(input.ChallengeID), Now: time.Now().UTC()}
 	if err = store.FinishMFACommand(h.mfaSecurityContext(r.Context(), h.remoteIP(r), r.UserAgent()), proof, operation, hashes); err != nil {
 		h.mfaError(w, r, err)

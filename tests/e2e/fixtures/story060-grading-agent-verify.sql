@@ -1,3 +1,4 @@
+-- 验收 Worker、AI 建议与审计已落库，同时确认未生成最终成绩；仅查询隔离夹具的固定租户与 ID。
 CREATE TEMP TABLE story060_expected_migration_count (value INT NOT NULL);
 INSERT INTO story060_expected_migration_count (value) VALUES (:'expected_migration_count'::INT);
 

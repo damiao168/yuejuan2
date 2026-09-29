@@ -21,6 +21,7 @@ func (s *PostgresStore) CreateArtifact(ctx context.Context, tenantID string, inp
 	}
 	defer tx.Rollback()
 	var lockedSegmentID string
+	// 先核实题块与考试快照的归属，并锁住题块；并发写入同一题块时串行分配版本、切换当前记录。
 	if err = tx.QueryRowContext(ctx, `
 SELECT seg.id::text
 FROM answer_segment seg
@@ -127,6 +128,7 @@ WHERE tenant_id=$1::uuid AND parent_artifact_id=$2::uuid AND stage='verified' AN
 	if !errors.Is(err, sql.ErrNoRows) {
 		return Artifact{}, err
 	}
+	// 重试可复用上方查到的已有结果；创建新结果则要求父版本仍是当前版本，且输入来源没有改变。
 	if !parent.IsCurrent || !sameArtifactBinding(input, parent) {
 		return Artifact{}, ErrRevisionConflict
 	}

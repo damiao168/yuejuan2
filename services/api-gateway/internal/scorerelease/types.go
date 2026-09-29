@@ -321,10 +321,8 @@ type StudentImageGeometry struct {
 	Height float64 `json:"height"`
 }
 
-// StudentQuestionImageSource is an internal authorization result. The answer
-// segment ID is never returned to a student; the dedicated handler resolves it
-// only after proving that the current published release contains this
-// student's question.
+// StudentQuestionImageSource 保存图片接口内部使用的资源 ID，不直接序列化给学生。
+// 各查询负责核对学生、当前发布版本和展示策略，图片读取器再检查所需资产信息。
 type StudentQuestionImageSource struct {
 	AnswerSegmentID      string `json:"-"`
 	AnonymousPageID      string `json:"-"`

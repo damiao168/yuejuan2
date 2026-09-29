@@ -119,6 +119,7 @@ type EvaluationTransitionInput struct {
 	Reason string `json:"reason"`
 }
 
+// 评测运行先固定证据类型、数据摘要和样本上限，防止把未经授权的数据当成质量结论。
 func ValidateEvaluationRunInput(input EvaluationRunInput) error {
 	if !governanceKey.MatchString(strings.TrimSpace(input.Key)) ||
 		!safeEvaluationText(input.DisplayName) ||
@@ -180,6 +181,7 @@ func ValidateEvaluationCandidateInput(input EvaluationCandidateInput, run Evalua
 	return nil
 }
 
+// 指标分母保持原始样本口径；没有可比较样本时返回 0，避免伪造稳定性或接受率。
 func PopulateEvaluationMetrics(candidate EvaluationCandidate) EvaluationCandidate {
 	candidate.Metrics = EvaluationMetrics{
 		TeacherAcceptanceRate: ratio(candidate.TeacherAcceptedSamples, candidate.TeacherReviewedSamples),

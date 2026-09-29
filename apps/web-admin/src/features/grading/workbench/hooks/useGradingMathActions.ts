@@ -62,6 +62,7 @@ export function useGradingMathActions({
     setMathRequesting(true);
     setMathRequestNotice("");
     try {
+      // 生成前后重读证据；每次 await 后检查任务，防止旧任务的建议回填到新答卷。
       const evidence = await math.refresh();
       if (activeTask.current !== taskId || evidence?.phase !== "ready") return;
       const result = await createSubjectiveAiGrade(segmentId);

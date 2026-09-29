@@ -9,6 +9,7 @@ export function useLocalLogs() {
     try {
       await appendLocalLog({ level, message, context });
     } catch (error) {
+      // 日志是附加信息，写入失败不能把已完成的上传或登录变成业务失败。
       console.warn("local log write failed", error);
     } finally {
       refreshLogs();

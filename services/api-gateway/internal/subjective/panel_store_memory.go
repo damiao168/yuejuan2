@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// 面板按答案段、答案版本和量规版本复用；关键题目字段不一致时返回幂等冲突，避免混用不同评分上下文。
 func (s *MemoryStore) GetOrCreatePanel(_ context.Context, tenantID, actorID string, input CreatePanelInput) (GradingPanel, error) {
 	input.DecisionConfig = NormalizePanelDecisionConfig(input.DecisionConfig)
 	if tenantID == "" || actorID == "" || validateCreatePanel(input) != nil {
@@ -43,6 +44,7 @@ func (s *MemoryStore) GetPanel(_ context.Context, tenantID, panelID string) (Gra
 	return clonePanel(panel), nil
 }
 
+// 更新同时检查状态迁移、分数范围和角色运行是否已成功，保证终态面板具备可追溯的运行证据。
 func (s *MemoryStore) UpdatePanel(_ context.Context, tenantID, panelID string, input UpdatePanelInput) (GradingPanel, error) {
 	if !validPanelStatus(input.Status) {
 		return GradingPanel{}, ErrInvalidInput

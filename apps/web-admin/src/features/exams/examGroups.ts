@@ -31,6 +31,7 @@ export function groupExams(exams: Exam[]): ExamGroup[] {
 }
 
 export function selectedGroupExam(group: ExamGroup, selectedId: string | undefined, subjectFilter: string, statusFilter = ""): Exam {
+  // 用户显式选中的科目优先于列表筛选；调用方须保证分组至少含一场科目考试。
   const matches = (exam: Exam) => (!subjectFilter || exam.subject === subjectFilter)
     && (!statusFilter || (statusFilter === "active" ? !["published", "archived"].includes(exam.status) : exam.status === statusFilter));
   return group.exams.find((exam) => exam.id === selectedId)

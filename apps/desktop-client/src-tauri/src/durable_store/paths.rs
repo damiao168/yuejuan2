@@ -50,6 +50,7 @@ pub(crate) fn scope_path_component(
     let tenant = uuid::Uuid::parse_str(tenant_id).map_err(|_| "invalid tenant ID")?;
     let actor = uuid::Uuid::parse_str(actor_id).map_err(|_| "invalid actor ID")?;
     let base_url = url.as_str().trim_end_matches('/');
+    // 服务地址、租户和用户共同隔离本地目录；零字节分隔可避免不同字段拼接成相同输入。
     let digest = Sha256::digest(format!("{base_url}\0{tenant}\0{actor}").as_bytes());
     Ok(digest
         .iter()
@@ -170,6 +171,7 @@ pub(crate) fn ensure_controlled_path(root: &Path, path: &Path) -> Result<(), Str
 }
 
 pub(crate) fn write_new_private_file(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    // 只允许创建新文件，写完并刷新到磁盘后再返回，避免覆盖原件或提前确认落盘。
     reject_symbolic_path(path)?;
     let mut file = fs::OpenOptions::new()
         .write(true)

@@ -9,9 +9,8 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 )
 
-// TaskContextStore exposes the immutable and task-scoped facts used by the
-// grading workbench. It is a read projection only; submitted scores continue
-// to be written exclusively through Store.SubmitGrade.
+// TaskContextStore 汇集工作台所需的题目快照、当前任务、答案和辅助材料。
+// 读取不会领取任务或写入成绩；正式评分通过 Store.SubmitGrade 提交。
 type TaskContextStore interface {
 	GetTaskContext(context.Context, string, string) (TaskContext, error)
 }
@@ -148,6 +147,7 @@ func taskContextFromWorkspace(workspace Workspace) TaskContext {
 	return out
 }
 
+// R3 且以人工评分为主时，AI 只能提供辅助材料，不能提供可预填的分数字段。
 func allowsAIScorePrefill(snapshot assessment.ExamQuestionSnapshot) bool {
 	return !(snapshot.RiskTier == assessment.RiskR3 &&
 		snapshot.ScoringPolicySnapshot.Mode == assessment.ScoringHumanPrimary)

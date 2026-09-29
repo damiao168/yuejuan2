@@ -215,6 +215,7 @@ func (s *LoginService) Login(ctx context.Context, command LoginCommand) (LoginRe
 	}
 
 	passwordHash := user.PasswordHash
+	// 账号不存在时也进行密码校验，避免直接跳过哈希计算形成明显的账号枚举时序差异。
 	if errors.Is(findErr, ErrInvalidCredentials) {
 		passwordHash = dummyPasswordHash
 	}
@@ -286,6 +287,7 @@ func (s *LoginService) Login(ctx context.Context, command LoginCommand) (LoginRe
 			return LoginResult{}, loginServiceError(LoginFailureServiceUnavailable)
 		}
 	}
+	// 传入校验时读取的旧哈希，让存储层拒绝在并发改密后继续按旧凭据确认登录。
 	if err := s.credentials.RecordSuccessfulLogin(ctx, user.TenantID, user.ID, user.PasswordHash, replacementHash); err != nil {
 		if errors.Is(err, ErrInvalidCredentials) {
 			return LoginResult{}, loginServiceError(LoginFailureInvalidCredentials)

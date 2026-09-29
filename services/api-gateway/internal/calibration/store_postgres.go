@@ -167,6 +167,7 @@ func (s *PostgresStore) CompleteSession(ctx context.Context, tenantID string, se
 	if err != nil {
 		return Session{}, Qualification{}, ErrInvalidInput
 	}
+	// 会话状态和资格必须在同一事务中提交；任一写入失败都回滚，认领门禁不会看到半成品资格。
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Session{}, Qualification{}, err

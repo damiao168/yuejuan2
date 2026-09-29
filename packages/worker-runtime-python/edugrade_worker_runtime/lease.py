@@ -55,6 +55,7 @@ class LeaseHeartbeat:
         self._last_success = time.monotonic()
 
     def __enter__(self) -> Self:
+        # 先同步确认能续租，再让调用方开始处理；首次失败不交给后台线程吞掉。
         self._send()
         self._last_success = time.monotonic()
         self._thread = threading.Thread(target=self._run, name=self.thread_name, daemon=True)
@@ -65,6 +66,7 @@ class LeaseHeartbeat:
         try:
             self.stop()
         except Exception:
+            # 业务本身已抛错时保留原异常，避免清理错误覆盖真正的失败原因。
             if exc_type is None:
                 raise
 
@@ -95,5 +97,6 @@ class LeaseHeartbeat:
                     return
 
     def _renewal_window_exhausted(self) -> bool:
+        # 秒数预算须容纳下一次等待和完整请求；单调时钟不受系统时间校准影响。
         elapsed = time.monotonic() - self._last_success
         return elapsed + self.interval + self.request_timeout >= self.lease_seconds

@@ -98,6 +98,7 @@ export function ImageQualityWorkspace({ pages, canManage, onOverride, onRefresh 
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [showFocusMap, setShowFocusMap] = useState(true);
+  // 质检历史与图片预览各自计代次，切页后的迟到响应不能覆盖新选择。
   const runRequest = useRef(0);
   const previewRequest = useRef(0);
 

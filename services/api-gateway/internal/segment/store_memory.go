@@ -27,6 +27,7 @@ func (s *MemoryStore) CreateSegments(_ context.Context, inputs []CreateSegmentIn
 			return nil, err
 		}
 		if existing, ok := s.findExistingLocked(input.TenantID, input.SubmissionID, input.QuestionID); ok {
+			// 以租户、提交物和题目作为幂等键，重复生成只返回原片段，不覆盖人工修改。
 			out = append(out, existing)
 			continue
 		}
@@ -75,6 +76,7 @@ func (s *MemoryStore) Update(_ context.Context, tenantID string, id string, acto
 		}
 		item.BBox = append([]float64{}, (*input.BBox)...)
 		item.Source = "manual"
+		// 只要人工调整坐标，就标记来源为 manual，避免后续自动生成误认为仍是模板坐标。
 	}
 	if input.Status != nil {
 		if !IsValidStatus(*input.Status) {

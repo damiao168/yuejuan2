@@ -68,6 +68,7 @@ def test_latex_normalizer_and_parser_cover_printed_math() -> None:
     assert normalize_latex(r"\left.0.25\right|") == "0.25|"
 
 
+# 同一合成图同时充当源图和渲染结果，仅验证阈值分流，不衡量公式识别准确率。
 def test_render_validation_routes_only_visual_mismatch_to_l() -> None:
     image = Image.new("L", (40, 20), "white")
     ImageDraw.Draw(image).line((5, 10, 35, 10), fill="black", width=2)

@@ -201,6 +201,7 @@ def build_report(
     adjacent_tolerance: float,
     exact_tolerance: float,
 ) -> dict[str, Any]:
+    # 按预测记录计数，同一样本可有多个模型/提示词结果；整体指标不等于去重样本上的指标。
     rows = joined_rows(predictions, samples_by_id)
     metric_kwargs = {
         "low_confidence_threshold": low_confidence_threshold,

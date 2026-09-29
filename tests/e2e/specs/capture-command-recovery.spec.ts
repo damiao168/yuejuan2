@@ -20,6 +20,7 @@ test("capture creation reload and double click retain the original command", asy
   await expect.poll(()=>page.evaluate(key=>Boolean(localStorage.getItem(key)),key)).toBe(true);
   await page.reload();
   await page.getByRole("button",{name:"新建批次"}).first().click();
+  // 新草稿故意与首次提交不同，恢复动作仍须重放已持久化的原请求和幂等键。
   await page.getByRole("textbox",{name:"批次名称"}).fill("修改后的草稿");
   await page.getByRole("button",{name:"继续确认原操作"}).click();
   await expect.poll(()=>requests.length).toBe(2);

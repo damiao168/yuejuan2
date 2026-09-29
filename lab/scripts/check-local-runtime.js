@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { inspectLocalRuntime, loadLocalRuntimeManifest, resolveLocalRuntimePaths, sha256File } from "../src/runtime/localRuntime.js";
 
+// 默认只检查存在性和大小；完整内容校验必须显式传入 --full-hash。
 const fullHash = process.argv.includes("--full-hash");
 const manifest = loadLocalRuntimeManifest();
 const inspection = inspectLocalRuntime(manifest);

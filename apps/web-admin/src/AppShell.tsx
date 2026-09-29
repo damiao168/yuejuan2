@@ -188,6 +188,7 @@ export function AppShell() {
       clearReviewDraftFallbacks(user.id);
       if (user.publicComputer) clearPublicComputerData(user.tenant, user.id);
     }
+    // 查询键不带账户身份；退出时清空缓存，防止下一位用户看到前一会话的结果。
     queryClient.clear();
     setUser(null);
   };
@@ -275,6 +276,7 @@ export function AppShell() {
     }
   })() : undefined;
 
+  // 深链接也在这里同时检查产品身份、路由权限和考试分区，菜单可见性不能代替此边界。
   const content =
     route === notFoundRoute ? (
       <NotFoundState onBack={() => navigate("/dashboard")} />

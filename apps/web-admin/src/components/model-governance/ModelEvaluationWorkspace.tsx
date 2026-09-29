@@ -143,7 +143,7 @@ export function ModelEvaluationWorkspace({
     && (selectedRun.candidates.some((candidate) => candidate.provider_key === "local")
       || selectedRun.candidates.filter((candidate) => candidate.model_config_id).length >= 2)
   );
-
+  // 每项指标分别取同批次的最好值用于高亮；这些值可能来自不同候选，不能据此宣称某个模型整体最好。
   const bestMetrics = useMemo(() => {
     if (!selectedRun?.candidates.length) return undefined;
     const metrics = selectedRun.candidates.map((candidate) => candidate.metrics);

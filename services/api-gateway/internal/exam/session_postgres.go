@@ -16,6 +16,7 @@ func (s *PostgresStore) CreateExamSession(ctx context.Context, scope auth.Access
 	if !scopeAllowsRequestedClasses(scope, input.SchoolID, input.ClassIDs) || !scopeAllowsRequestedGrade(scope, input.GradeID) {
 		return ExamSession{}, ErrScopeForbidden
 	}
+	// 场次、各科考试、名册和题目蓝图同事务创建，任何科目失败都不能留下半场考试。
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return ExamSession{}, err
@@ -177,6 +178,7 @@ GROUP BY e.id ORDER BY e.created_at,e.id`, tenantID, session.ID)
 }
 
 func examSessionCommandHash(input CreateSessionInput) (string, error) {
+	// 命令键标识操作，哈希只比较业务正文；同键重试不得更换正文。
 	input.CommandID = ""
 	raw, err := json.Marshal(input)
 	if err != nil {

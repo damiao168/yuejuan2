@@ -4,6 +4,7 @@ import (
 	"net/http"
 )
 
+// 自动评分、证据、复核和仲裁分别使用最小权限；考试级操作统一附带 exam 资源边界检查。
 func registerGradingRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("PUT /api/v1/answer-segments/{id}/answer", ctx.guards.requireGradingManage(ctx.modules.Grading.GradingHandler.RecordAnswer))
 	mux.Handle("POST /api/v1/answer-segments/{id}/rule-grade", ctx.guards.requireGradingManage(ctx.modules.Grading.GradingHandler.RuleGrade))

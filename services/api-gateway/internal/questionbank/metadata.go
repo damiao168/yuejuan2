@@ -121,6 +121,7 @@ func numberValue(value any) (float64, bool) {
 }
 
 func validateMetadataValues(schema MetadataSchema, values map[string]any, requireRequired bool) MetadataValidationResult {
+	// 按题目绑定的 schema 校验，未知字段一律报错；调用方决定本次是否要求补齐必填项。
 	result := MetadataValidationResult{Valid: true, FieldErrors: map[string][]string{}}
 	definitions := map[string]MetadataFieldDefinition{}
 	for _, f := range schema.Fields {
@@ -200,6 +201,7 @@ func validateContentMetadata(schema MetadataSchema, content Content, requireRequ
 		}
 	}
 	if controlled != nil {
+		// 配置受控知识点后，存稳定 ID 而非显示名称；停用词条不能用于通过本次校验。
 		active := map[string]bool{}
 		for _, term := range controlled.Terms {
 			active[term.ID] = term.Active

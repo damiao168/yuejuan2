@@ -133,6 +133,7 @@ fn move_legacy_store_with_commit(
     }
 
     let complete = (|| -> Result<(), String> {
+        // 文件位置、库内绝对路径和凭据必须一起生效；后续失败时按原位置回滚，保留旧数据可恢复性。
         rewrite_stored_paths(target, legacy, target)?;
         commit_key()?;
         Ok(())

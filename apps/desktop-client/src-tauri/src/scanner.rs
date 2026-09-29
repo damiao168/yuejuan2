@@ -660,6 +660,7 @@ fn parse_windows_inventory(json: &str) -> Result<Vec<ScannerDevice>, String> {
         return Ok(Vec::new());
     }
     let entries: Vec<WindowsInventoryEntry> = match serde_json::from_str(json) {
+        // PowerShell 在单台设备时可能输出对象，多台时输出数组；两种形式都要接受。
         Ok(items) => items,
         Err(_) => vec![serde_json::from_str(json)
             .map_err(|_| "Windows WIA inventory returned invalid device data")?],
@@ -685,6 +686,7 @@ fn parse_windows_inventory(json: &str) -> Result<Vec<ScannerDevice>, String> {
 }
 
 fn available_disk_bytes() -> Option<u64> {
+    // 当前取所有文件系统盘中最大的空闲值，尚未定位 spool 所在盘，不能视为该目录的容量保证。
     #[cfg(windows)]
     {
         let output = Command::new("powershell")

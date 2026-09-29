@@ -16,6 +16,7 @@ func NewPostgresStore(db *sql.DB) *PostgresStore {
 }
 
 func (s *PostgresStore) CreateSegments(ctx context.Context, inputs []CreateSegmentInput) ([]Segment, error) {
+	// 逐条写入，没有包住整批的事务；中途失败时前面的记录可能已保存，重试靠唯一键复用。
 	out := make([]Segment, 0, len(inputs))
 	for _, input := range inputs {
 		if err := ValidateBBox(input.BBox); err != nil {
@@ -33,6 +34,7 @@ RETURNING id::text, tenant_id::text, submission_id::text, submission_page_id::te
   question_id::text, question_no, bbox, source, status, COALESCE(review_notes, ''),
   COALESCE(reviewed_by::text, ''), reviewed_at, created_at
 `, input.TenantID, input.SubmissionID, input.SubmissionPageID, input.QuestionID, input.QuestionNo, bbox, input.Source, input.Status)
+		// 冲突时保持原记录和人工审核字段，只刷新返回值，保证接口重复调用不会覆盖审核结果。
 		var item Segment
 		if err := scanSegment(row, &item); err != nil {
 			return nil, err
@@ -73,6 +75,7 @@ func (s *PostgresStore) Update(ctx context.Context, tenantID string, id string, 
 		return Segment{}, err
 	}
 	merged := current
+	// 先读取再合并可选字段，使 PATCH 只改变请求提供的内容；坐标变化同时转为人工来源。
 	if input.BBox != nil {
 		if err := ValidateBBox(*input.BBox); err != nil {
 			return Segment{}, err
@@ -141,6 +144,7 @@ func (s *PostgresStore) GetEvidenceForQuestion(ctx context.Context, tenantID str
 }
 
 func (s *PostgresStore) getEvidence(ctx context.Context, tenantID string, id string, questionID string) (SegmentEvidence, error) {
+	// 查询核对租户及可选题目归属；操作者是否有权查看这张答卷，仍由业务入口检查。
 	var out SegmentEvidence
 	var normalized, pixels []byte
 	err := s.db.QueryRowContext(ctx, `SELECT s.id::text,s.submission_id::text,s.submission_page_id::text,sub.exam_id::text,s.question_id::text,s.question_no,COALESCE(s.template_id::text,''),COALESCE(s.template_content_hash,''),COALESCE(s.registration_run_id::text,''),COALESCE(r.method,''),COALESCE(r.confidence,0),COALESCE(s.normalized_bbox,'{}'),COALESCE(s.pixel_bbox,'{}'),COALESCE(s.crop_file_asset_id::text,''),COALESCE(c.id::text,''),COALESCE(s.crop_sha256,''),COALESCE(s.question_version,1),s.processing_status,COALESCE(r.processing_status,''),COALESCE(s.confidence,0) FROM answer_segment s JOIN submission sub ON sub.tenant_id=s.tenant_id AND sub.id=s.submission_id LEFT JOIN page_registration_run r ON r.tenant_id=s.tenant_id AND r.id=s.registration_run_id LEFT JOIN page_registration_correction c ON c.tenant_id=s.tenant_id AND c.applied_registration_run_id=s.registration_run_id AND c.status='applied' AND c.deleted_at IS NULL WHERE s.tenant_id=$1 AND s.id=$2::uuid AND ($3='' OR s.question_id::text=$3) AND s.deleted_at IS NULL`, tenantID, id, questionID).Scan(&out.SegmentID, &out.SubmissionID, &out.SubmissionPageID, &out.ExamID, &out.QuestionID, &out.QuestionNo, &out.TemplateID, &out.TemplateContentHash, &out.RegistrationRunID, &out.RegistrationMethod, &out.RegistrationConfidence, &normalized, &pixels, &out.CropFileAssetID, &out.CorrectionID, &out.CropSHA256, &out.QuestionVersion, &out.ProcessingStatus, &out.RegistrationStatus, &out.Confidence)

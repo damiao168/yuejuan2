@@ -25,6 +25,7 @@ func scopeFor(w http.ResponseWriter, r *http.Request) (auth.AccessScope, bool) {
 	return scope, true
 }
 func decodeBody(w http.ResponseWriter, r *http.Request, out any) bool {
+	// 写操作必须有命令 ID，用于重试时返回原结果；纯校验和预览走下方不要求命令 ID 的解码器。
 	if commandreceipt.ID(r.Context()) == "" {
 		httpx.Error(w, r, http.StatusBadRequest, "idempotency_key_required", "a command identity is required")
 		return false
@@ -437,6 +438,7 @@ func (h *Handler) ConfirmImportBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out := BatchImportResult{Items: make([]BatchImportResultItem, 0, len(in.Items))}
+	// 每题使用自己的命令 ID 和事务；单题失败不回滚已导入的题，客户端按逐题结果重试。
 	for _, requested := range in.Items {
 		item := BatchImportResultItem{QuestionID: requested.QuestionID, CommandID: requested.CommandID, Status: "failed"}
 		ctx := commandreceipt.WithID(r.Context(), requested.CommandID)

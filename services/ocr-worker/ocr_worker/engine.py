@@ -98,6 +98,7 @@ class PaddleOCREngine:
         try:
             blocks = self.recognize(_READINESS_PROBE_IMAGE)
         except Exception as exc:
+            # 仅自动模式且命中兼容性错误才降级，显式开启或其他初始化错误继续失败。
             if self.enable_mkldnn == "auto" and self.effective_mkldnn and _is_mkldnn_compatibility_error(exc):
                 logging.getLogger(__name__).warning(
                     "OCR MKLDNN readiness probe failed; falling back to plain CPU executor",
@@ -295,6 +296,7 @@ def _bbox_from_points(value: object) -> list[float]:
             ys.append(float(point[1]))
     if not xs or not ys:
         return [0.0, 0.0, 0.0, 0.0]
+    # 输出统一为输入图像像素坐标 [左, 上, 宽, 高]，不是 Paddle 的四角点。
     left = min(xs)
     top = min(ys)
     return [left, top, max(xs) - left, max(ys) - top]

@@ -64,6 +64,7 @@ func ValidatePolicy(policy ModelPolicy) error {
 	return nil
 }
 
+// 这里校验格式、量规覆盖和证据归属；通过只代表结果可进入服务器结算，不代表模型拥有最终评分权。
 func ValidateOutput(output AdapterOutput, ctx Context) error {
 	if output.SuggestedScore < 0 || output.SuggestedScore > ctx.Question.Score {
 		return ErrInvalidModelOutput
@@ -257,6 +258,7 @@ func IsSupportedQuestionType(kind string) bool {
 	return supportedQuestionTypes[kind]
 }
 
+// 风险、置信度和题型规则统一收敛到人工复核标记，避免不同入口对同一模型结果给出不同处置。
 func ApplyReviewPolicy(output *AdapterOutput, ctx Context, policy ModelPolicy) {
 	if !output.Mock {
 		output.NeedsHumanReview = true

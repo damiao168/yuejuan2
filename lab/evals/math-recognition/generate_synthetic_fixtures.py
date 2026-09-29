@@ -751,6 +751,7 @@ def write_manifest(path: Path, samples: dict[str, dict[str, Any]]) -> None:
     path.write_text("\n".join(kept) + "\n", encoding="utf-8")
 
 
+# 清理目标目录内所有未列入 keep 的同后缀文件；调用方只能传入专用夹具目录。
 def prune_stale(directory: Path, keep: set[str], suffix: str) -> None:
     if not directory.exists():
         return

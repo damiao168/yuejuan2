@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ReviewTaskContext } from "../../../api/review";
 import {
   frozenRubricFromContext,
+  questionFromContext,
   requiresExplicitSecondOpinion,
   secondOpinionMetadata,
   subjectToolDescriptor
@@ -26,6 +27,9 @@ function fixture(overrides: Partial<ReviewTaskContext> = {}): ReviewTaskContext 
 }
 
 describe("review task context presentation", () => {
+  it("supplies an empty option list for the compact review context", () => {
+    expect(questionFromContext(fixture()).options).toEqual([]);
+  });
   it("keeps immutable R3 human-primary policy active before any AI suggestion exists", () => {
     expect(requiresExplicitSecondOpinion(fixture({ ai_second_opinion: undefined }))).toBe(true);
   });

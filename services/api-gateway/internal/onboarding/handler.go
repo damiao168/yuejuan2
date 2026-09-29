@@ -17,6 +17,7 @@ type Handler struct{ service ReadinessService }
 
 func NewHandler(service ReadinessService) *Handler { return &Handler{service: service} }
 
+// 先校验管理员角色，再把访问范围复制进服务层；响应只给准备状态，不暴露底层租户数据。
 func (h *Handler) Readiness(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())
 	if !ok {

@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { PAPER_REVIEW_PAGE_SIZE, PaperImportReviewPanel, displayPaperImportValue, rubricFromCandidate } from "./PaperImportReviewPanel";
+import { PAPER_REVIEW_PAGE_SIZE, PaperImportReviewPanel, displayPaperImportValue, rubricFromCandidate, rubricFromSuggestion } from "./PaperImportReviewPanel";
 
 describe("paper import review value display", () => {
+  it("copies an AI suggestion as a review draft with the confirmed question score", () => {
+    const rubric = rubricFromSuggestion({
+      candidate_id: "q1", max_score: null, status: "review_required", origin: "ai_suggestion_from_solution", issues: [],
+      points: [{ id: "p1", description: "正确列式", suggested_score: 3, evidence_step_ids: ["step-1"], source_refs: [], review_note: "人工核对" }]
+    }, 3);
+    expect(rubric).toMatchObject({ status: "draft", max_score: 3, points: [{ id: "p1", score: 3 }], deductions: [], examples: [] });
+  });
   it("preserves scalar answers and serializes structured answers safely", () => {
     expect(displayPaperImportValue("A")).toBe("A");
     expect(displayPaperImportValue(42)).toBe("42");

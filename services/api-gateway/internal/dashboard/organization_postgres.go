@@ -22,7 +22,8 @@ func (s *PostgresOrganizationSummaryStore) DashboardOrganizationSummary(ctx cont
 		return OrganizationStatistics{}, fmt.Errorf("dashboard organization database is unavailable")
 	}
 	result := OrganizationStatistics{}
-	queries := []struct {
+	// 每个组织计数都先带租户条件，再追加学校/年级/班级范围，避免跨范围统计。
+queries := []struct {
 		target *int
 		base   string
 		filter scopedColumns

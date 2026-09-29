@@ -195,6 +195,7 @@ func cloneEvidence(in []Evidence) []Evidence {
 	return out
 }
 
+// 复制容器用于隔离常见顶层修改；嵌套 map、证据坐标等仍共享，不能据此视为完整深拷贝。
 func cloneGrades(in []Grade) []Grade {
 	out := make([]Grade, len(in))
 	for i, grade := range in {

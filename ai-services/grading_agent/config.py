@@ -142,6 +142,7 @@ class Settings:
             raise ValueError("provider and deployment identity fields must be non-empty bounded identifiers")
         if settings.adapter_type not in {"local_llama_cpp", "dashscope_native"}:
             raise ValueError("EDUGRADE_GRADING_ADAPTER_TYPE is not enabled in this build")
+        # 原生协议仅允许固定供应商 HTTPS 根路径；兼容接口不应混用此适配器。
         if settings.adapter_type == "dashscope_native":
             if model_url.scheme != "https" or model_url.hostname != "dashscope.aliyuncs.com":
                 raise ValueError(

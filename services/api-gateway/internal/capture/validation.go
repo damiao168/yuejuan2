@@ -2,6 +2,7 @@ package capture
 
 import "strings"
 
+// 来源类型是持久化枚举；未知值直接拒绝，避免后续处理器收到无法识别的批次。
 var validSourceTypes = map[string]bool{
 	"web_upload": true, "scanner_upload": true, "folder_import": true, "desktop_sync": true,
 }
@@ -30,6 +31,7 @@ func validRotation(value int) bool {
 	return value == 0 || value == 90 || value == 180 || value == 270
 }
 
+// 批次完成要求聚合状态已经是 ready；完成或取消后只能显式重开，不能绕过质检和身份匹配。
 func canSetBatchStatus(current, next string) bool {
 	switch next {
 	case "cancelled":

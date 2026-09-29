@@ -53,6 +53,7 @@ export async function buildSubmissionView(
   formatError: (error: unknown) => string,
   dependencies = productionDependencies
 ): Promise<SubmissionView> {
+  // 各详情独立加载；单项失败仍展示已成功的数据，并保留错误提示，不能伪装成完整空结果。
   const [pagesResult, ocrResult, segmentResult] = await Promise.allSettled([
     dependencies.listSubmissionPages(submission.id),
     dependencies.listOcrTasks(submission.id, { limit: 20 }),
@@ -81,6 +82,7 @@ export async function loadCapturePage(
   const studentIDs = Array.from(new Set(result.submissions.map((item) => item.student_id).filter((id): id is string => Boolean(id))));
   let students: Student[] = [];
   let studentLookupError: unknown;
+  // 只有可读姓名的视图才补查当前页学生，避免为匿名阅卷额外读取身份资料。
   if (canReadStudentNames && studentIDs.length > 0) {
     try {
       students = (await dependencies.listStudents({ ids: studentIDs, limit: 200 })).students;

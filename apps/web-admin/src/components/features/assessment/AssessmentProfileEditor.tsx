@@ -148,6 +148,7 @@ export function AssessmentProfileEditor({
   );
   const selectedArchetypeDefinition = archetypes.find((item) => item.code === selectedArchetype);
   const policyBlocked = isAssessmentPolicyBlocked(riskTier, selectedArchetype, scoringMode);
+  // 已生成评分快照或考试已离开配置阶段时，配置就是运行依据；任一条件成立都必须禁止再改评分策略。
   const frozen = Boolean(snapshot) || !["draft", "configured"].includes(examStatus);
   const editable = canManage && !frozen;
   const effectiveProfile = snapshot ?? savedProfile;

@@ -84,6 +84,7 @@ export async function loadOfflineDraft(taskId: string, passphrase?: string, expe
 }
 
 export async function updateOfflineDraftStatus(taskId: string, patch: { syncStatus: OfflineSyncStatus; syncMessage?: string }, expectedSessionId?: string) {
+  // 同步状态单独保存在外层元数据中；这里不重写加密正文，读取时不能只相信正文里的旧状态。
   if (hasDurableDesktopStore()) {
     await updateDurableDraftStatus(taskId, patch, expectedSessionId);
     return;
@@ -144,6 +145,7 @@ async function decryptJson<T>(payload: EncryptedPayload, passphrase: string): Pr
 }
 
 async function deriveKey(passphrase: string, salt: Uint8Array) {
+  // 解密旧草稿也使用这些参数；修改迭代次数或算法时，需要同时设计旧版本的读取方式。
   const material = await crypto.subtle.importKey("raw", encoder.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
   return crypto.subtle.deriveKey(
     {

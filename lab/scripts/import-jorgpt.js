@@ -84,6 +84,7 @@ const samples = transformJorgptRows(rows);
 const split = splitByQuestionGroup(samples);
 const participantAudit = participantLeakageAudit(split.splits);
 const questionRubricAudit = auditSplitLeakage(split.splits);
+// 先在内存中用参与者分组做泄漏审计，再移除参与者标识后持久化；顺序不能交换。
 const persistedSamples = minimizeJorgptSamplesForPersistence(samples);
 const governance = validateGovernedSamples(persistedSamples, source);
 if (!governance.valid) throw new Error(`JorGPT governance failed: ${governance.errors.join("; ")}`);

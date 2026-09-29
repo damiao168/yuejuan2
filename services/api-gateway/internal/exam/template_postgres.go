@@ -9,6 +9,7 @@ import (
 )
 
 func (s *PostgresStore) ListExamTemplates(ctx context.Context, scope auth.AccessScope, filter ExamTemplateFilter) ([]ExamTemplate, error) {
+	// 可见模板来自本租户或平台；学校专用模板还须满足当前学校范围。
 	rows, err := s.db.QueryContext(ctx, `
 SELECT id::text,tenant_id::text,COALESCE(school_id::text,''),code,name,description,
        education_stage,COALESCE(exam_type,''),COALESCE(region,''),COALESCE(curriculum,''),

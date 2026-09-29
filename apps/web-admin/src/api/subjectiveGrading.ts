@@ -15,6 +15,7 @@ export interface SubjectiveGradingBatchEnqueueResult {
 }
 
 export async function createSubjectiveGradingBatch(idempotencyKey: string, segmentIds: string[], scoringRunId?: string) {
+  // HTTP 回执与业务批次共用同一键；结果不明时必须保留它，才能查询或重试原批次。
   return apiClient.request<{ batch: SubjectiveGradingBatch }>("/api/v1/subjective-grading-batches", {
     method: "POST",
     headers: { "Idempotency-Key": idempotencyKey },

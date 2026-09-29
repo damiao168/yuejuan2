@@ -23,6 +23,7 @@ func presetActions(preset string) ([]string, bool) {
 	case "Publisher":
 		return []string{"read", "publish", "retire"}, true
 	case "Manager":
+		// 管理题库结构和授权不等于能读题；内容读取仍需单独的 read 权限。
 		return []string{"manage"}, true
 	default:
 		return nil, false
@@ -90,6 +91,7 @@ func (s *PostgresStore) UpdateMetadataSchema(ctx context.Context, scope auth.Acc
 			return MetadataSchema{}, ErrLocked
 		}
 		version := b.MetadataSchemaVersion + 1
+		// schema 只追加新版本，不改旧规则；历史题目的 SchemaVersion 仍指向原版。
 		fieldsRaw, _ := json.Marshal(fields)
 		taxonomiesRaw, _ := json.Marshal(taxonomies)
 		var out MetadataSchema
@@ -238,6 +240,7 @@ func (s *PostgresStore) UpdateACL(ctx context.Context, scope auth.AccessScope, b
 		if _, err = tx.ExecContext(ctx, `INSERT INTO question_bank_acl(tenant_id,bank_id,user_id,action) VALUES($1,$2,$3,'manage') ON CONFLICT DO NOTHING`, scope.TenantID, bankID, scope.ActorID); err != nil {
 			return ACLDocument{}, err
 		}
+		// 保留创建者和操作者的直接授权，其他直接授权及分组按本次请求整体重建。
 		if _, err = tx.ExecContext(ctx, `DELETE FROM question_bank_acl WHERE tenant_id=$1 AND bank_id=$2 AND user_id<>$3 AND user_id<>$4`, scope.TenantID, bankID, b.CreatedBy, scope.ActorID); err != nil {
 			return ACLDocument{}, err
 		}
@@ -343,6 +346,7 @@ func (s *PostgresStore) SearchItems(ctx context.Context, scope auth.AccessScope,
 		return page, auth.ErrForbidden
 	}
 	stats := -1
+	// 统计功能目前没有数据来源；显式要求 statistics_available=true 时返回空集。
 	if f.StatisticsAvailable != nil {
 		if *f.StatisticsAvailable {
 			stats = 1
@@ -350,6 +354,7 @@ func (s *PostgresStore) SearchItems(ctx context.Context, scope auth.AccessScope,
 			stats = 0
 		}
 	}
+	// 总数与明细共用范围条件：先过滤学校及读权限，默认展示当前发布版和本人草稿。
 	where := ` FROM question_bank_item_version v JOIN question_bank_item i ON i.tenant_id=v.tenant_id AND i.id=v.item_id JOIN question_bank b ON b.tenant_id=i.tenant_id AND b.id=i.bank_id
 WHERE v.tenant_id=$1::uuid AND ($2 OR b.school_id::text=ANY($3::text[])) AND question_bank_actor_has_action(b.tenant_id,b.id,$4::uuid,'read') AND b.status='active' AND i.status='active' AND i.kind='question'
 AND (($5='default' AND (v.id=i.current_published_version_id OR (v.workflow_status='draft' AND v.author_id=$4::uuid))) OR ($5='published' AND v.id=i.current_published_version_id) OR ($5='my_drafts' AND v.workflow_status='draft' AND v.author_id=$4::uuid) OR $5='all')

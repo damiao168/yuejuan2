@@ -39,6 +39,7 @@ type commandFinding struct {
 	Action       string `json:"action"`
 }
 
+// 修复工具默认只输出诊断；只有显式 --apply 才会执行带版本校验的幂等修复。
 func main() {
 	var databaseURL, tenantID, importID, examID string
 	var apply bool
@@ -136,7 +137,8 @@ ORDER BY session.command_completed_at,session.id`, tenantID, importID, examID)
 	}
 	before, _ := json.MarshalIndent(map[string]any{"mode": map[bool]string{true: "apply", false: "dry-run"}[apply], "count": len(findings) + len(commandFindings), "paper_import_findings": findings, "exam_command_findings": commandFindings}, "", "  ")
 	fmt.Println(string(before))
-	if !apply {
+	// 先让操作者核对发现项；干跑阶段不写数据库。
+if !apply {
 		return
 	}
 	appliedMutations := 0

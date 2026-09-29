@@ -23,6 +23,7 @@ async function allStudents() {
 function gradeBusinessLabel(grade?: Grade) {
   if (!grade) return "班级";
   const startYear = Number(grade.academic_year.split("-")[0]);
+  // 年级序号从初一 7、高一 10 起算，用当前学年倒推入学届别，仅用于显示。
   const offset = grade.education_stage === "senior" ? Math.max(grade.level_no - 10, 0) : Math.max(grade.level_no - 7, 0);
   return Number.isFinite(startYear) ? `${grade.name}（${startYear - offset}级）` : grade.name;
 }

@@ -73,6 +73,7 @@ func nullTimePointer(value sql.NullTime) *time.Time {
 	return &copy
 }
 
+// 返回当前候选和历史候选，当前项排在前面；调用方应读取 IsCurrent，不能把每条都当作当前识别结果。
 func (s *PostgresStore) listTaskAnswerCandidates(ctx context.Context, tenantID, segmentID string) ([]AnswerCandidate, error) {
 	rows, err := s.db.QueryContext(ctx, `
 SELECT id::text, answer_segment_id::text, COALESCE(scoring_run_id::text,''),

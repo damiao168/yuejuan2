@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// 只从锁定模板的实际页码签发通用版本 1 条码；模板未锁定或布局无效时不生成可扫描凭据。
 func (s *PostgresStore) IssueTemplateBarcodes(ctx context.Context, tenantID, templateID string) (IssuedTemplateBarcodes, error) {
 	var examID, contentHash string
 	var layoutRaw []byte
@@ -184,6 +185,7 @@ VALUES ($1,$2::uuid,$3,$4::uuid,$5)
 	return out, tx.Commit()
 }
 
+// 幂等比较按学生集合进行；仅改变请求顺序仍恢复原签发批次及其原有排序。
 func studentBarcodeRequestHash(studentIDs []string) string {
 	requestStudents := append([]string(nil), studentIDs...)
 	sort.Strings(requestStudents)
@@ -252,6 +254,7 @@ type barcodeEvaluation struct {
 	NeedsReview         bool
 }
 
+// 先验证每个观测，再按模板、页码和学生身份去重；出现多个可信身份时宁可转人工，也不猜测归属。
 func (s *PostgresStore) evaluateBarcodesTx(ctx context.Context, tx *sql.Tx, tenantID, examID string, observations []BarcodeObservation) barcodeEvaluation {
 	out := barcodeEvaluation{Evidence: []any{}, Candidates: []any{}}
 	unique := map[string]BarcodeClaims{}
@@ -339,6 +342,7 @@ func (s *PostgresStore) evaluateBarcodesTx(ctx context.Context, tx *sql.Tx, tena
 	return out
 }
 
+// 签名正确只证明内容来自持钥方；还需核对当前考试、锁定模板、名册和纸张撤销状态。
 func (s *PostgresStore) validateBarcodeOwnershipTx(ctx context.Context, tx *sql.Tx, tenantID, examID string, claims BarcodeClaims) string {
 	if claims.TenantID != tenantID {
 		return "tenant_mismatch"

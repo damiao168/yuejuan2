@@ -47,6 +47,7 @@ type Result struct {
 	RiskCodes              []string            `json:"risk_codes"`
 }
 
+// ScoreDelta 的方向为左分数减右分数；归一化差值除以满分，满分非正时返回 0。
 func ScoreDelta(left, right, maxScore float64) (delta, absolute, normalized float64) {
 	delta = left - right
 	absolute = math.Abs(delta)
@@ -80,6 +81,7 @@ func Compare(left, right Observation) Result {
 		required := leftCriterion.Required || rightCriterion.Required
 		statusConflict := !leftOK || !rightOK || leftCriterion.Status != rightCriterion.Status
 		scoreConflict := !leftOK || !rightOK || math.Abs(leftCriterion.Score-rightCriterion.Score) > epsilon
+		// 只有双方都声称支持该评分点时才比较证据，状态分歧另行记录。
 		evidenceConflict := leftOK && rightOK && leftCriterion.Status == "supported" && rightCriterion.Status == "supported" &&
 			!overlaps(leftCriterion.EvidenceFingerprints, rightCriterion.EvidenceFingerprints)
 		if !statusConflict && !scoreConflict && !evidenceConflict {

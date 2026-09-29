@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createBreakingBaseline, readOpenApi } from "./lib/openapi-sdk.mjs";
 
+// 此门禁比较已提取的契约子集，未覆盖全部 OpenAPI 语义；通过不能代替接口兼容性评审。
 export function findBreakingChanges(baseline, current) {
   const failures = [];
 

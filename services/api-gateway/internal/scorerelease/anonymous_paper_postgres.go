@@ -56,6 +56,7 @@ SELECT
 	if err != nil {
 		return false, err
 	}
+	// 原始页、可配准页、校验通过的匿名页和全部匿名页数量都要相等，缺页或多余旧页都会阻止发布。
 	return accepted > 0 && accepted == expected && expected == matched && matched == derived, nil
 }
 

@@ -218,6 +218,7 @@ class Runner:
                 if match.decision != "matched":
                     code = "ambiguous_template_match" if match.decision == "ambiguous" else "no_template_match"
                     raise TemplateRoutingError(code, {"guard": guard_report, "candidates": match.candidates})
+                # 重匹配只用于诊断与验证；候选更匹配也不能在任务内覆盖考试锁定的模板及哈希。
                 if match.selected_template_id != str(payload["template_id"]) or match.selected_template_content_hash != str(payload["template_content_hash"]):
                     raise TemplateRoutingError("template_conflict_with_exam_lock", {
                         "locked_template_id": str(payload["template_id"]),
@@ -370,6 +371,7 @@ class Runner:
             if not str(reference.get("file_asset_id") or "").strip() or not reference_url or not reference_sha256:
                 raise OMRExtractionError("omr_reference_missing")
             reference_bytes = self.client.download(reference_url)
+            # 差分识别必须使用任务绑定的空白参考字节，不能只信任同一个下载地址。
             if hashlib.sha256(reference_bytes).hexdigest().lower() != reference_sha256:
                 raise OMRExtractionError("omr_reference_hash_mismatch")
         result = extract_marks(

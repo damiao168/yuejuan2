@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// 队列同时返回考试冻结名册和批次中的答卷，人工绑定只能从这份名册选择学生。
 func (s *PostgresStore) GetMatchingQueue(ctx context.Context, tenantID, batchID string) (MatchingQueue, error) {
 	var queue MatchingQueue
 	queue.BatchID = batchID
@@ -129,6 +130,7 @@ func (s *PostgresStore) applyStudentIdentity(ctx context.Context, tenantID, subm
 	}
 	candidateNo := ""
 	candidateName := ""
+	// 人工绑定也必须来自本次考试冻结名册，不能直接接受当前学籍中的任意学生。
 	if status == "matched" {
 		err = tx.QueryRowContext(ctx, `SELECT student_no_snapshot,student_name_snapshot FROM exam_candidate_snapshot WHERE tenant_id=$1 AND exam_id=$2::uuid AND student_id=$3::uuid`, tenantID, examID, studentID).Scan(&candidateNo, &candidateName)
 		if err != nil {
@@ -184,6 +186,7 @@ func (s *PostgresStore) ConfirmPageMatch(ctx context.Context, tenantID, pageID, 
 	if err != nil {
 		return Page{}, err
 	}
+	// 页码决定模板坐标，人工改页码后原配准和切片都失效，必须重新处理。
 	if _, err = tx.ExecContext(ctx, `UPDATE page_registration_run SET processing_status='invalidated',updated_at=now() WHERE tenant_id=$1 AND capture_page_id=$2::uuid AND processing_status<>'invalidated'`, tenantID, pageID); err != nil {
 		return Page{}, err
 	}

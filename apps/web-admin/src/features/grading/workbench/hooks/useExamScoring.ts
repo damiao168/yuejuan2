@@ -209,6 +209,7 @@ export function useExamScoring({ initialExamId, currentUserId, currentTenantId, 
       const listed = await getScoringRunAIBatches(run.id);
       let queued = 0;
       for (const source of listed.batches.filter((batch) => batch.failed_count > 0)) {
+        // 重试键绑定原失败批次；找到已有重试批次就只续入队，防止重复创建同一批任务。
         const key = `scoring-ai-retry-${source.id}`;
         const existing = listed.batches.find((batch) => batch.idempotency_key === key);
         if (existing) {

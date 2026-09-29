@@ -23,6 +23,7 @@ def canonical(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
+# 这里只忽略空白和括号尺寸命令；代数等价由独立验证指标表达，不在此处推导。
 def normalized_formula(value: str) -> str:
     return "".join(value.split()).replace("\\left", "").replace("\\right", "")
 
@@ -31,6 +32,7 @@ def prf(expected: set[Any], actual: set[Any]) -> tuple[int, int, int]:
     return len(expected & actual), len(actual - expected), len(expected - actual)
 
 
+# 没有分母代表本批未评估该指标，保留 None，不能把空样本当作满分。
 def safe_div(numerator: float, denominator: float) -> float | None:
     return numerator / denominator if denominator else None
 

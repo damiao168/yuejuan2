@@ -9,8 +9,8 @@ const (
 	// OMRProfileModeManualOnly deliberately permits extraction as an operator
 	// suggestion while preventing it from becoming an automatic grade. The raw
 	// fill-ratio extractor cannot distinguish every printed answer-sheet design
-	// from a handwritten mark, so no current profile is eligible for automatic
-	// confirmation.
+	// from a handwritten mark.
+	// 此模式始终需要人工确认；差分模式另由已批准的校准记录决定自动确认资格。
 	OMRProfileModeManualOnly = "manual_only"
 	// OMRProfileModeTemplateDifference uses the immutable blank page that was
 	// used to configure and register the answer sheet. It removes printing
@@ -236,8 +236,7 @@ func ValidateTemplateOMRReference(reference TemplateOMRReference) error {
 // OMRAutoConfirmPolicyForTemplate resolves the only authority that may allow
 // automatic confirmation. The result is intentionally fail-closed: the raw
 // OpenCV profile is an auditable suggestion path, never an auto-grade path.
-// Future calibrated template-difference profiles can add an eligible branch
-// here without trusting a worker callback or client-provided layout flag.
+// 此兼容入口没有校准记录，因此不授权自动确认；生产调用需使用带 Calibration 的入口。
 func OMRAutoConfirmPolicyForTemplate(layout TemplateLayout, templateStatus, templateContentHash, segmentContentHash string) OMRAutoConfirmPolicy {
 	return OMRAutoConfirmPolicyForTemplateReference(layout, templateStatus, templateContentHash, segmentContentHash, TemplateOMRReference{}, "")
 }
@@ -256,8 +255,8 @@ func OMRAutoConfirmPolicyForTemplateReference(layout TemplateLayout, templateSta
 // OMRAutoConfirmPolicyForTemplateReferenceAndCalibration resolves template
 // extraction and a separately persisted calibration approval in one
 // fail-closed decision. The approval must match every immutable input that can
-// change mark recognition. Passing an arbitrary value is harmless because the
-// production store obtains it only from an approved database session.
+// change mark recognition.
+// 调用方必须从数据库加载已批准记录；此函数校验匹配范围，不鉴别对象是否来自可信存储。
 func OMRAutoConfirmPolicyForTemplateReferenceAndCalibration(layout TemplateLayout, templateStatus, templateContentHash, segmentContentHash string, currentReference TemplateOMRReference, questionID, templateID string, calibration *OMRCalibrationApproval) OMRAutoConfirmPolicy {
 	runtimeProfile := defaultOMRRuntimeProfile()
 	policy := OMRAutoConfirmPolicy{

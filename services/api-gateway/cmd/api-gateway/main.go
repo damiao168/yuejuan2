@@ -17,6 +17,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/server"
 )
 
+// 主进程同时管理公网和可选内部 TLS 监听器；收到终止信号后统一执行有超时的优雅停机。
 func main() {
 	cfg, err := config.Load(".env")
 	if err != nil {
@@ -31,7 +32,8 @@ func main() {
 		}
 		return
 	}
-	if len(os.Args) > 1 && os.Args[1] == "provision-story060-users" {
+	// STORY-060 账号只允许在 test 环境批量创建，避免运维参数误用于真实租户。
+if len(os.Args) > 1 && os.Args[1] == "provision-story060-users" {
 		if cfg.Service.Environment != "test" {
 			logg.Error(context.Background(), "STORY-060 provisioning refused outside test", nil)
 			os.Exit(1)

@@ -45,6 +45,7 @@ class Runner:
                 output = response.get("output")
                 if not isinstance(output, dict):
                     raise APIError("subjective agent response did not include output")
+                # 模型执行期间可能丢失租约；写回前再次检查，不能把旧任务结果当作当前执行完成。
                 heartbeat.raise_if_failed()
                 self.api.complete(run_id, runtime_id, lease, output, int((time.monotonic() - started) * 1000))
             except APIError:

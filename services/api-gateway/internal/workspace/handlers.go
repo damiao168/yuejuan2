@@ -17,6 +17,7 @@ func NewHandler(deps Dependencies) *Handler {
 	return &Handler{service: NewService(deps)}
 }
 
+// 先确认登录和访问范围，再把越权考试伪装成 404，避免泄露考试是否存在。
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	_, ok := auth.UserFromContext(r.Context())
 	if !ok {

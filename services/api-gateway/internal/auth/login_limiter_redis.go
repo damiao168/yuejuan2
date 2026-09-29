@@ -15,6 +15,7 @@ type RedisLoginFailureLimiter struct {
 	client   redis.UniversalClient
 	limit    int
 	window   time.Duration
+	// 本机 fallback 仅维持退化期间的局部限流；是否拒绝登录由上层结合 Degraded 决定。
 	fallback *LoginFailureLimiter
 	health   *redisLoginLimiterHealth
 }
@@ -164,6 +165,7 @@ func (l *RedisLoginFailureLimiter) redisKey(raw string) string {
 	return "edugrade:auth:login-fail:" + hex.EncodeToString(sum[:])
 }
 
+// 计数和首次设置 TTL 必须原子执行；后续失败不重置 Redis 窗口的起点。
 var redisFailureScript = redis.NewScript(`
 local count = redis.call('INCR', KEYS[1])
 if count == 1 then

@@ -48,6 +48,7 @@ export function getUserErrorMessage(error: unknown, fallback?: string): string {
 }
 
 export function getSafeUserText(value: unknown, fallback: string): string {
+  // 这里只判断是否有可读中文，不是 HTML 清洗；返回值仍应作为普通文本渲染。
   return typeof value === "string" && /[\u3400-\u9fff]/u.test(value) ? value : fallback;
 }
 

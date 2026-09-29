@@ -113,6 +113,7 @@ type FailedOMRTask struct {
 	RuntimeTaskID string `json:"runtime_task_id"`
 }
 
+// OMRRun 中的资格、阈值和校准摘要由服务端排队时冻结，不能采用 Worker 回传值代替。
 type OMRRun struct {
 	ID                       string           `json:"id"`
 	TenantID                 string           `json:"tenant_id"`

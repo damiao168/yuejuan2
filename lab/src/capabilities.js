@@ -70,6 +70,7 @@ export function resolveCapability({ subject, question_type: questionType, grade_
   if (!matrix.grade_levels.includes(gradeLevel)) {
     return { ...matrix.default_route, reason: "grade_level_out_of_scope", profile_id: matrix.profile_id };
   }
+  // 同题型先匹配学科专属配置，再匹配通配学科；超出范围时使用默认路由。
   const exact = matrix.capabilities.find((route) => route.subject === subject && route.question_type === questionType);
   const wildcard = matrix.capabilities.find((route) => route.subject === "*" && route.question_type === questionType);
   const route = exact ?? wildcard;

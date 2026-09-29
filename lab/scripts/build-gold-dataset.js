@@ -23,6 +23,7 @@ const metrics = computeInterRaterAgreement(bundles, policy);
 const gate = checkAgreementGate(metrics, args.gate ?? "dev", policy);
 mkdirSync(dirname(args.out), { recursive: true });
 mkdirSync(dirname(args.report), { recursive: true });
+// 门禁未通过也写出数据与诊断报告供复查；是否可继续使用须检查退出码和报告中的 gate。
 writeFileSync(args.out, gold.map((record) => JSON.stringify(record)).join("\n") + (gold.length ? "\n" : ""), "utf8");
 writeFileSync(args.report, `${JSON.stringify({ schema_version: "annotation-reliability-report-v1", generated_at: new Date().toISOString(), synthetic_only: bundles.every((bundle) => bundle.synthetic), metrics, gate }, null, 2)}\n`, "utf8");
 console.log(JSON.stringify({ gold_records: gold.length, synthetic_only: bundles.every((bundle) => bundle.synthetic), metrics, gate }, null, 2));

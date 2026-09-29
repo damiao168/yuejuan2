@@ -11,7 +11,7 @@ const checks = [
   {
     name: 'local environment and image mirrors',
     file: 'infra/docker-compose/.env.example',
-    includes: ['EDUGRADE_ENV=local', 'EDUGRADE_GO_BUILD_IMAGE=', 'EDUGRADE_NODE_BUILD_IMAGE=', 'EDUGRADE_MIGRATION_BASELINE_VERSION=', 'EDUGRADE_POSTGRES_TENANT_RLS=false', 'EDUGRADE_API_GATEWAY_IMAGE=', 'EDUGRADE_POSTGRES_ADMIN_DSN='],
+    includes: ['EDUGRADE_ENV=local', 'EDUGRADE_GO_BUILD_IMAGE=', 'EDUGRADE_NODE_BUILD_IMAGE=', 'EDUGRADE_MIGRATION_BASELINE_VERSION=', 'EDUGRADE_POSTGRES_TENANT_RLS=true', 'EDUGRADE_API_GATEWAY_IMAGE=', 'EDUGRADE_POSTGRES_ADMIN_DSN='],
   },
   {
     name: 'deployment preflight',

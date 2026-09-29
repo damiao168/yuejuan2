@@ -24,6 +24,7 @@ def normalize_evidence_text(value):
     return _SPACE.sub("", text)
 
 
+# 规则命中只提供风险信号；未命中不代表学生文本可信，后续仍按不可信证据处理。
 def detect_prompt_injection(value):
     text = unicodedata.normalize("NFKC", str(value or ""))
     text = _ZERO_WIDTH.sub("", text).casefold()

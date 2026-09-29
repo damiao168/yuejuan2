@@ -188,6 +188,7 @@ export function HistoryQuestionImporter({
 						command_id: crypto.randomUUID(),
 					} as QuestionBankBatchImportItem);
 				}
+				// 逐题命令先落到本地再发送；响应丢失时重放同一命令编号，服务端才能识别为同一次导入。
 				pending.current = { items: requests };
 				localStorage.setItem(storageKey, JSON.stringify(pending.current));
 				setHasPending(true);
@@ -203,6 +204,7 @@ export function HistoryQuestionImporter({
 				setHasPending(false);
 				setDrafts([]);
 			} else {
+				// 只有逐题回执确认成功后才移除该项；失败项继续保留，方便按原命令重试或重新预览。
 				const failedIDs = new Set(response.items.filter((item) => item.status !== "succeeded").map((item) => item.command_id));
 				pending.current = { items: pending.current.items.filter((item) => failedIDs.has(item.command_id)) };
 				localStorage.setItem(storageKey, JSON.stringify(pending.current));

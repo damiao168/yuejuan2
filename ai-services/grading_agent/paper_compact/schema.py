@@ -26,7 +26,6 @@ _QUESTION_NUMBER = re.compile(
 _ANSWER_MARKER = re.compile(r"^\s*[【\[]?答案[】\]]?\s*[:：]?\s*(.*)$")
 _SOLUTION_MARKER = re.compile(r"^\s*[【\[]?(?:详解|解析|分析)[】\]]?\s*[:：]?\s*(.*)$")
 _OPTION = re.compile(r"(?:^|\s)([A-DＡ-Ｄ])[.．、]\s*")
-_SCORE = re.compile(r"(?:本题|每题)?\s*(\d+(?:\.\d+)?)\s*分")
 _PAGE_FOOTER = re.compile(
     r"(?:试卷|答题卡)?\s*第\s*\d+\s*页\s*[,，、]?\s*(?:共\s*\d+\s*页)?"
 )

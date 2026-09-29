@@ -282,6 +282,7 @@ export function SubmissionCapturePage({
       await loadCaptureData(selectedExam.id);
     } catch (currentError) {
       const errorMessage = formatError(currentError);
+      // 页面关联成功后，即使后续质检或刷新失败，上传事实仍成立；不要再报“上传失败”诱发重复提交。
       if (pageUploaded) {
         patchUpload(uploadId, { status: "success", phase: "答题卡已上传，自动处理未启动", error: errorMessage, percent: 100 });
         request.onSuccess?.({ ok: true });

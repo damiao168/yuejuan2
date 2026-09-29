@@ -137,6 +137,7 @@ def match_template_candidates(
     if not ranked:
         return TemplateMatchOutcome("unknown", None, None, 0.0, 0.0, evidence_rows, None)
     top_score, top_candidate, top_registration, _ = ranked[0]
+    # 只有通过几何配准的候选参与间隔比较；近似版本得分接近时保留歧义。
     margin = top_score - ranked[1][0] if len(ranked) > 1 else top_score
     if top_score < minimum_score:
         decision = "unknown"
@@ -322,6 +323,7 @@ def register_page_manual(
         raise RegistrationError("manual_registration_mirrored")
     source_height, source_width = source_image.shape[:2]
     target_height, target_width = template_image.shape[:2]
+    # 手工点输入是 [0,1] 比例，边界 1 映射到最后一个像素；矩阵本身使用像素坐标。
     source_pixels = source_normalized * np.float32([source_width - 1, source_height - 1])
     template_pixels = template_normalized * np.float32([target_width - 1, target_height - 1])
     matrix = cv2.getPerspectiveTransform(source_pixels.astype(np.float32), template_pixels.astype(np.float32))
@@ -430,6 +432,7 @@ def _feature_homography(source: np.ndarray, template: np.ndarray, method: str, m
 def _coverage(matrix: np.ndarray, source_width: int, source_height: int, target_width: int, target_height: int) -> float:
     corners = np.float32([[[0, 0], [source_width, 0], [source_width, source_height], [0, source_height]]])
     transformed = cv2.perspectiveTransform(corners, matrix)[0]
+    # coverage 衡量变换后四角面积与模板面积之比，不是与模板边界相交后的覆盖率。
     area = abs(float(cv2.contourArea(transformed)))
     return float(np.clip(area / max(target_width * target_height, 1), 0.0, 1.25))
 

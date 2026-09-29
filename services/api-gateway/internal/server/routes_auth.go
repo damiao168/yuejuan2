@@ -6,6 +6,7 @@ import (
 	"net/http"
 )
 
+// 登录、MFA 和恢复接口按状态选择不同 guard：一次性凭据不走通用幂等收据，管理操作则要求近期认证。
 func registerAuthRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("POST /api/v1/auth/login", http.HandlerFunc(ctx.modules.Identity.AuthHandler.Login))
 	mux.Handle("POST /api/v1/auth/token", http.HandlerFunc(ctx.modules.Identity.AuthHandler.TokenLogin))

@@ -14,6 +14,7 @@ import { sampleToInput } from "../src/evaluators/runEval.js";
 import { validateGradingInput } from "../src/schemas/gradingSchema.js";
 import { getSubjectStrategy } from "../src/subjects.js";
 
+// 手工构造公开数据格式的样例；转换后的 synthetic=false 用于验证导入契约，不表示读取真实学生数据。
 function rawRow(overrides = {}) {
   return {
     entry_id: "1",

@@ -86,6 +86,7 @@ class ImageQualityRunner:
                 "pixel_height": result.quality_report["pixel_height"],
             },
         )
+        # 先完成标准化文件上传再提交结果，文件哈希与结果版本共同绑定这次处理内容。
         normalized_file_asset_id = self.client.upload_normalized(slot, job, result.normalized_png, png_hash)
         heartbeat.raise_if_failed()
         payload = {

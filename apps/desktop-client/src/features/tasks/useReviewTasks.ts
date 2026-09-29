@@ -11,6 +11,7 @@ export function useReviewTasks(client: DesktopApiClient, durableScopeKey: string
   const [taskError, setTaskError] = useState<string | null>(null);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const scopeRef = useRef(durableScopeKey);
+  // 请求使用发起时的账号；回填时再检查当前账号，避免切换登录后短暂显示旧任务。
   scopeRef.current = durableScopeKey;
 
   useEffect(() => {

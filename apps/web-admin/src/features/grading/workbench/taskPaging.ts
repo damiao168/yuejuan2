@@ -30,6 +30,7 @@ export function visibleTasks(tasks: ReviewTask[], options: {
 }
 
 export function followingVisibleActionableTask(tasks: ReviewTask[], selectedTaskId: string, options: Parameters<typeof visibleTasks>[1], wrap: boolean): ReviewTask | undefined {
+  // 先在完整列表定位锚点再筛选；已提交任务可能已不可见，但仍决定下一题从哪里开始。
   const index = tasks.findIndex((task) => task.id === selectedTaskId);
   const actionable = (items: ReviewTask[]) => visibleTasks(items, options)
     .find((task) => task.id !== selectedTaskId && !["submitted", "completed"].includes(task.status));

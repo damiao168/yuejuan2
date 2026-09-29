@@ -27,6 +27,7 @@ SELECT EXISTS (
 	return ready, err
 }
 
+// 准备度只统计当前访问范围内的 active 学校、教学结构和学生，不能把别的学校算进来。
 func (s *PostgresStore) OnboardingReadiness(ctx context.Context, tenantID string, schoolIDs []string, tenantWide bool) (OnboardingReadinessSummary, error) {
 	var summary OnboardingReadinessSummary
 	err := s.db.QueryRowContext(ctx, `

@@ -332,6 +332,7 @@ func (s *MemoryStore) FindUserByLogin(_ context.Context, tenantCode string, user
 			matches++
 		}
 	}
+	// 不同登录别名若命中多个人，拒绝登录，不能任意选择其中一个账户。
 	if matches != 1 {
 		return UserWithPassword{}, ErrInvalidCredentials
 	}
@@ -594,6 +595,7 @@ func (s *MemoryStore) MarkSessionReauthenticated(_ context.Context, tenantID str
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	session, ok := s.sessions[tokenHash]
+	// 验证发起后新增的锁屏优先，较早开始的验证不能把更新的锁屏解除。
 	if !ok || session.TenantID != tenantID || session.UserID != userID || !session.ExpiresAt.After(now) || session.LockedAt.After(startedAt) {
 		return false, nil
 	}
@@ -660,6 +662,7 @@ func (s *MemoryStore) RevokeAllSessions(_ context.Context, tenantID string, user
 }
 
 func (s *MemoryStore) UpdatePasswordAndRevokeSessions(_ context.Context, tenantID, userID, expectedPasswordHash, newPasswordHash string) (bool, int, error) {
+	// 改密、推进安全版本及撤销已存会话同锁完成；旧版本在途登录也会被拒绝。
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	found := false
@@ -1048,6 +1051,7 @@ func (s *MemoryStore) FindRecovery(_ context.Context, tokenHash string, now time
 }
 
 func (s *MemoryStore) CompleteRecovery(_ context.Context, tokenHash string, passwordHash string, now time.Time) (RecoveryResult, error) {
+	// 恢复凭据绑定发放时的安全版本，期间改密或禁用后不能再使用旧恢复链接。
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	recovery, ok := s.recoveries[tokenHash]
@@ -1101,6 +1105,7 @@ func (s *MemoryStore) UpdateManagedUserStatus(_ context.Context, actor User, act
 		return ManagedUser{}, "", ErrOrganizationScope
 	}
 	previousStatus := target.Status
+	// 邀请账户只能通过激活流程设密码，不能靠状态管理直接变成启用账户。
 	if previousStatus == "invited" {
 		return ManagedUser{}, "", ErrUserStatusForbidden
 	}

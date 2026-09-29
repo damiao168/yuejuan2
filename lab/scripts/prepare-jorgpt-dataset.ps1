@@ -26,6 +26,7 @@ if (-not (Test-VerifiedFile $DestinationPath)) {
     & curl.exe -L --fail --silent --show-error --retry 5 --retry-delay 2 -C - --output $PartialPath $Lock.file.url
     if ($LASTEXITCODE -ne 0) { throw "JorGPT dataset download failed" }
     if (-not (Test-VerifiedFile $PartialPath)) { throw "JorGPT dataset integrity verification failed" }
+    # 断点下载只写 partial，大小和两种摘要均通过后才替换正式文件。
     Move-Item -LiteralPath $PartialPath -Destination $DestinationPath -Force
 }
 

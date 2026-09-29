@@ -18,6 +18,7 @@ func (s *MemoryStore) CreateExamSession(ctx context.Context, scope auth.AccessSc
 		return ExamSession{}, ErrInvalidInput
 	}
 	if input.CommandID != "" {
+		// 锁覆盖查回执和创建全过程；同租户、操作者、命令键只能复用同一份请求。
 		commandKey = scope.TenantID + "\x00" + createdBy + "\x00" + input.CommandID
 		s.sessionMu.Lock()
 		defer s.sessionMu.Unlock()

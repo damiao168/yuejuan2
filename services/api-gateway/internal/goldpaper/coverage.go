@@ -5,6 +5,7 @@ import (
 	"sort"
 )
 
+// 调用方先筛选启用的样卷；这里只统计其当前已批准版本，任一覆盖缺口未满足就不能标记为 Ready。
 func buildCoverage(examID, questionID, subjectCode, archetypeCode, riskTier string, maxScore float64, items []GoldPaper) Coverage {
 	result := Coverage{ExamID: examID, QuestionID: questionID, SubjectCode: subjectCode, ArchetypeCode: archetypeCode, RiskTier: riskTier}
 	bands := map[string]int{"zero": 0, "middle": 0, "full": 0}

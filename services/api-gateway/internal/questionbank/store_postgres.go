@@ -329,6 +329,7 @@ func (s *PostgresStore) CreateItem(ctx context.Context, scope auth.AccessScope, 
 	})
 }
 func (s *PostgresStore) insertVersion(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, itemID string, no, schemaVersion int, source *string, content Content, scoring Scoring) (Version, error) {
+	// 整包哈希及答案、Rubric 子版本由数据库触发器维护，定义见迁移 000141。
 	raw, _ := json.Marshal(content)
 	scoreRaw, _ := json.Marshal(scoring)
 	return scanVersion(tx.QueryRowContext(ctx, `INSERT INTO question_bank_item_version(tenant_id,item_id,version_no,schema_version,source_version_id,author_id,content,content_hash,scoring) VALUES($1::uuid,$2::uuid,$3,$4,$5::uuid,$6::uuid,$7::jsonb,$8,$9::jsonb) RETURNING `+versionCols, scope.TenantID, itemID, no, schemaVersion, source, scope.ActorID, raw, contentHash(content), scoreRaw))
@@ -361,6 +362,7 @@ func (s *PostgresStore) CreateVersion(ctx context.Context, scope auth.AccessScop
 			return Version{}, ErrInvalidInput
 		}
 		var no int
+		// 此处已持有题目行锁，才能安全地用 MAX+1 分配同一题目的下一版本号。
 		err = tx.QueryRowContext(ctx, `SELECT COALESCE(max(version_no),0)+1 FROM question_bank_item_version WHERE tenant_id=$1::uuid AND item_id=$2::uuid`, scope.TenantID, itemID).Scan(&no)
 		if err != nil {
 			return Version{}, err

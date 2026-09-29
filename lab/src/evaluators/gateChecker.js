@@ -26,6 +26,7 @@ export function checkGate(report, level, config) {
   if (report.metrics?.sample_count !== report.sample_count || !Array.isArray(report.results) || report.results.length !== report.sample_count) {
     reasons.push("report sample counts and result rows must agree");
   }
+  // 汇总比例须能由正例数复算；缺少相应场景不能靠其他样本数量通过门禁。
   for (const key of ["review_trigger_recall", "prompt_injection_detection", "essay_discussion_review_rate", "ocr_low_confidence_review_rate", "high_score_recall", "low_score_recall"]) {
     const evidence = report.metrics?.recall_evidence?.[key];
     if (!evidence || !Number.isInteger(evidence.denominator) || evidence.denominator > report.sample_count || evidence.denominator < Math.max(1, gate.minimum_positive_samples ?? 1) ||
@@ -34,6 +35,7 @@ export function checkGate(report, level, config) {
       reasons.push(`${key} requires at least ${Math.max(1, gate.minimum_positive_samples ?? 1)} evaluated positive examples and consistent numerator/denominator`);
     }
   }
+  // 模拟或合成证据仅供开发验证，试点和生产还要求真实数据标识与非模拟输出。
   if (level !== "dev" && (report.model_info?.mock !== false || report.adapter === "mock" ||
       !/^[a-f0-9]{64}$/.test(report.dataset_sha256 ?? "") || report.dataset_kind !== "real" ||
       report.results?.some((item) => item.synthetic !== false || item.risk_flags?.includes("MOCK_OUTPUT")))) {

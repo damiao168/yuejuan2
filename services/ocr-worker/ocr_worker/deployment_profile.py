@@ -96,6 +96,7 @@ def _validated_recommendation(
         return None, "profile_schema_mismatch"
     if payload.get("hardware_fingerprint") != hardware_fingerprint:
         return None, "profile_hardware_mismatch"
+    # 同一硬件上的模型或运行库版本改变后，也不能沿用旧性能测量。
     if payload.get("software") != software:
         return None, "profile_software_mismatch"
     evidence = payload.get("evidence")

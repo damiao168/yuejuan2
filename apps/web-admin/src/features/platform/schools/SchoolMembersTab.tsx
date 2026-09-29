@@ -15,6 +15,7 @@ export function SchoolMembersTab({ tenantId, studentCount, focus }: { tenantId: 
   const [status, setStatus] = useState("");
 
   useEffect(() => {
+    // 切换学校后丢弃旧请求的结果，避免覆盖新学校的成员列表。
     let active = true;
     setLoading(true); setError(false);
     void listPlatformSchoolMembers(tenantId).then((result) => { if (active) setData(result); }).catch(() => { if (active) setError(true); }).finally(() => { if (active) setLoading(false); });

@@ -10,6 +10,75 @@
   min-width: 0;
 }
 
+.paper-workbench .question-list-panel,
+.paper-workbench .question-editor {
+  max-height: calc(100vh - 148px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.paper-workbench .question-editor { min-height: 560px; }
+.paper-editor-sticky-head {
+  position: sticky;
+  z-index: 3;
+  top: -1px;
+  padding: 0 0 16px;
+  background: var(--surface, #fff);
+  border-bottom: 1px solid var(--border);
+}
+
+.paper-detail-tabs {
+  display: flex;
+  gap: 22px;
+  margin: 0 0 24px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.paper-detail-tabs button {
+  flex: 0 0 auto;
+  padding: 16px 0 13px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.paper-detail-tabs button.active {
+  border-bottom-color: var(--primary);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.paper-detail-tabs button:focus-visible,
+.paper-pending-question:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+
+.paper-pending-questions { margin: 18px 0 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.paper-pending-questions > strong { display: block; margin-bottom: 8px; font-size: 12px; color: var(--text-muted); }
+.paper-pending-question {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 11px 8px; border: 0; border-radius: var(--radius);
+  background: transparent; color: var(--text); text-align: left; cursor: pointer;
+}
+.paper-pending-question span:last-child { color: var(--text-muted); font-size: 12px; }
+.paper-pending-question:hover, .paper-pending-question.is-active { background: var(--hover-bg); }
+.paper-reference-solution, .paper-source-context { padding: 18px 0; border-top: 1px solid var(--border); }
+.paper-reference-solution h3, .paper-source-context h3 { margin: 0 0 12px; font-size: 15px; }
+.paper-missing-content { color: var(--text-muted); }
+.paper-option-editor { margin-bottom: 24px; }
+.paper-option-editor h3 { margin: 0; font-size: 15px; }
+.paper-option-row { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: start; gap: 10px; }
+.paper-option-row > span { padding-top: 8px; font-weight: 700; }
+.paper-option-row .ant-form-item { margin-bottom: 10px; }
+
+@media (max-width: 1100px) {
+  .paper-workbench { grid-template-columns: minmax(0, 1fr); }
+  .paper-workbench .question-list-panel { max-height: 300px; min-height: 0; overflow: auto; }
+  .paper-workbench .question-editor { max-height: none; min-height: 0; overflow: visible; }
+  .paper-editor-sticky-head { position: static; }
+}
+
 .question-list {
   margin-top: 14px;
 }
@@ -51,6 +120,32 @@
   padding-top: 18px;
   border-top: 1px solid var(--border);
 }
+
+.rubric-editor > .section-head {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.paper-rubric-points { display: grid; gap: 12px; }
+.paper-rubric-point {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface, #fff);
+}
+.paper-rubric-point-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.paper-rubric-description, .paper-rubric-point-fields label { display: grid; gap: 7px; min-width: 0; }
+.paper-rubric-description > span, .paper-rubric-point-fields label > span { color: var(--text-muted); font-size: 12px; }
+.paper-rubric-point-fields { display: grid; grid-template-columns: minmax(120px, 180px) 1fr; align-items: end; gap: 16px; }
+.paper-rubric-evidence { border-top: 1px solid var(--border); padding-top: 10px; }
+.paper-rubric-evidence summary { color: var(--primary); cursor: pointer; }
+.paper-rubric-evidence-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.paper-rubric-evidence-row .rubric-evidence-type-select { flex: 0 1 210px; }
+.paper-rubric-evidence-row .rubric-evidence-target-input { flex: 1 1 160px; }
 
 .assessment-profile-section {
   display: flex;

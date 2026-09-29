@@ -66,6 +66,7 @@ func NewTransactionalCaptureProcessingModule(cfg config.Config, stores CapturePr
 	return newCaptureProcessingModule(cfg, stores, dependencies, true)
 }
 
+// 生产模式要求 image-quality 使用事务协调器；内存模式保留普通 handler，便于测试而不改变路由契约。
 func newCaptureProcessingModule(cfg config.Config, stores CaptureProcessingStores, dependencies CaptureProcessingDependencies, transactional bool) (*CaptureProcessingModule, error) {
 	processingService := dependencies.Processing
 	if processingService == nil {
@@ -106,6 +107,7 @@ func newCaptureProcessingModule(cfg config.Config, stores CaptureProcessingStore
 	return module, nil
 }
 
+// 启动前拒绝缺失能力，避免服务已监听后才在上传或处理请求中出现 nil 接口崩溃。
 func validateCaptureProcessingDependencies(dependencies CaptureProcessingDependencies) error {
 	values := []struct {
 		name  string

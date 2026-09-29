@@ -169,6 +169,7 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
   const errorRows = useMemo(() => flattenErrors(questions, classReports), [classReports, questions]);
   const objectiveQuestions = useMemo(() => questions.filter((item) => (item.option_distribution?.length ?? 0) > 0).slice(0, 4), [questions]);
 
+  // 样本不足时隐藏该指标；缺少统计依据不能显示成真实的 0%，否则会误导学习判断。
   const qualityData = useMemo(() => {
     if (!quality) {
       return [];

@@ -12,6 +12,7 @@ type PostgresStore struct{ db *sql.DB }
 
 func NewPostgresStore(db *sql.DB) *PostgresStore { return &PostgresStore{db: db} }
 
+// 运营汇总来自多个租户表；查询必须保留租户边界，避免把学校数据串到别的租户。
 func (s *PostgresStore) ListSummaries(ctx context.Context, windowDays int) ([]PlatformSchoolSummary, error) {
 	rows, err := s.db.QueryContext(ctx, `
 SELECT

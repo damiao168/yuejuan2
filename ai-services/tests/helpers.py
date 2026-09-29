@@ -29,6 +29,7 @@ def valid_request():
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+# 故意让模型总分与采分点之和不一致，并取消模型自报复核要求，用于验证服务端重新计算及强制复核。
 def valid_raw_output():
     return {
         "suggested_score": 0,

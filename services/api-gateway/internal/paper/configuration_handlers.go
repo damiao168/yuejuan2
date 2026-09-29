@@ -82,6 +82,7 @@ func (h *Handler) CloneTemplate(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetExamTemplateBinding(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	item, err := h.templateBinding.GetExamTemplateBinding(r.Context(), user.TenantID, r.PathValue("examId"))
+	// 尚未绑定是正常配置状态，返回空绑定供页面选择模板，不当作整个考试不存在。
 	if errors.Is(err, ErrNotFound) {
 		writeJSON(w, http.StatusOK, map[string]any{"binding": nil})
 		return

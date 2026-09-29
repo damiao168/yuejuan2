@@ -176,6 +176,7 @@ export function StudentManagementPage() {
     setSaving(true);
     try {
       const result = await importStudentsCSV(prepared.csv);
+      // 本地过滤会改变提交行号；把服务端错误映射回原 CSV 后再合并，便于用户定位原文件。
       const errors = [
         ...prepared.errors,
         ...result.result.errors.map((item) => remapStudentImportError(item, prepared.sourceRows))

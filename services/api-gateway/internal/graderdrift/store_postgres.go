@@ -43,6 +43,7 @@ RETURNING `+windowColumns, tenantID, input.ExamID, input.QuestionID, input.Grade
 		rubric, input.SevereRate, input.MiddleScoreSampleCount, middleMAE, middleExact, ewma, input.Status, input.ComputedAt))
 }
 
+// 批量写事件使用唯一键和 DO NOTHING，重算任务可安全重试而不会重复创建事故。
 func (s *PostgresStore) CreateIncidentsIfMissing(ctx context.Context, tenantID string, candidates []Incident) ([]Incident, error) {
 	if len(candidates) == 0 {
 		return []Incident{}, nil

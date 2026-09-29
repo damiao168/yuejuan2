@@ -307,6 +307,7 @@ class FormulaValidator:
             reasons.append("latex_render_failed")
             return FormulaValidationResult(True, True, False, True, None, FormulaAction.RETRY_L, tuple(reasons))
 
+        # 回渲染只比较图像形态；通过阈值不代表公式数学正确或与原图语义等价。
         similarity = formula_image_similarity(crop, rendered)
         threshold = self.render_similarity_threshold if render_similarity_threshold is None else render_similarity_threshold
         render_valid = similarity >= threshold

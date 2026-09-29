@@ -27,6 +27,7 @@ export class TaskDraftSaveQueue {
       return revision;
     });
     const tail = result.then(() => undefined, () => undefined);
+    // 对调用方保留本次错误，但队尾吞掉拒绝，让同一草稿后续保存仍能继续排队。
     this.tails.set(key, tail);
     void tail.then(() => { if (this.tails.get(key) === tail) this.tails.delete(key); });
     return result;

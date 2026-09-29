@@ -51,6 +51,7 @@ func (e EvidenceType) Valid() bool {
 	}
 }
 
+// DefaultQuestionArchetypes 定义题型可接受的证据及默认评分模式；默认模式不等于已获得外部 AI 准入。
 func DefaultQuestionArchetypes() []QuestionArchetype {
 	return []QuestionArchetype{
 		{Code: "selected_response", ResponseSchema: map[string]any{"type": "selected_response"}, EvidenceTypes: []EvidenceType{EvidenceSelectedOption}, DefaultScoringMode: ScoringRuleAuto},

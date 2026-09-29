@@ -126,6 +126,51 @@ WHERE tenant_id=$1::uuid AND action='score.roster_attendance_updated' AND target
 	}
 }
 
+func TestExamRosterFreezeBlocksUpdateAndDirectMutationE2EWithPostgresTestDatabase(t *testing.T) {
+	dsn := strings.TrimSpace(os.Getenv("EDUGRADE_E2E_DATABASE_URL"))
+	if dsn == "" {
+		t.Skip("EDUGRADE_E2E_DATABASE_URL is not set; skipping exam roster freeze PostgreSQL acceptance workflow")
+	}
+	db := e2eOpenPostgresTestDB(t, dsn)
+	e2eApplyPostgresMigrations(t, db)
+	e2eActivatePostgresDemoUsers(t, db, []string{"tenant_admin"})
+	router := e2ePostgresRouter(db)
+	adminToken := e2eLoginWithTenant(t, router, "demo", "tenant_admin", "ChangeMe123!")
+	suffix := strings.ReplaceAll(time.Now().UTC().Format("20060102150405.000000000"), ".", "")
+	fixture := e2eCreateStory056MutableTemplateFixture(t, db, router, adminToken, suffix, nil)
+
+	var gradeID string
+	if err := db.QueryRow(`SELECT grade_id::text FROM school_class WHERE tenant_id=$1::uuid AND id=$2::uuid`, fixture.TenantID, fixture.ClassID).Scan(&gradeID); err != nil {
+		t.Fatalf("lookup fixture grade: %v", err)
+	}
+	class := e2ePostJSON(t, router, http.MethodPost, "/api/v1/classes", adminToken, fmt.Sprintf(`{"school_id":"%s","grade_id":"%s","name":"Freeze Target %s","code":"freeze-target-%s"}`, fixture.SchoolID, gradeID, suffix, suffix), http.StatusCreated)["class"].(map[string]any)
+	newClassID := e2eString(t, class, "id")
+	e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+fixture.ExamID+"/readiness/confirm", adminToken, `{}`, http.StatusOK)
+
+	var revision int64
+	if err := db.QueryRow(`SELECT revision FROM exam WHERE tenant_id=$1::uuid AND id=$2::uuid`, fixture.TenantID, fixture.ExamID).Scan(&revision); err != nil {
+		t.Fatalf("lookup exam revision: %v", err)
+	}
+	// 准备确认后，API 和数据库触发器都拒绝改动 exam_class，原冻结快照必须保持不变。
+	e2ePostJSON(t, router, http.MethodPatch, "/api/v1/exams/"+fixture.ExamID, adminToken, fmt.Sprintf(`{"class_ids":["%s"],"expected_revision":%d}`, newClassID, revision), http.StatusConflict)
+	if _, err := db.Exec(`DELETE FROM exam_class WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND class_id=$3::uuid`, fixture.TenantID, fixture.ExamID, fixture.ClassID); err == nil {
+		t.Fatal("direct exam_class deletion bypassed roster freeze")
+	}
+
+	e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+fixture.ExamID+"/start-collection", adminToken, `{}`, http.StatusOK)
+	e2ePostJSON(t, router, http.MethodPatch, "/api/v1/exams/"+fixture.ExamID, adminToken, fmt.Sprintf(`{"class_ids":["%s"],"expected_revision":%d}`, newClassID, revision), http.StatusConflict)
+	var classCount, snapshotCount int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM exam_class WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND deleted_at IS NULL`, fixture.TenantID, fixture.ExamID).Scan(&classCount); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow(`SELECT COUNT(*) FROM exam_candidate_snapshot WHERE tenant_id=$1::uuid AND exam_id=$2::uuid`, fixture.TenantID, fixture.ExamID).Scan(&snapshotCount); err != nil {
+		t.Fatal(err)
+	}
+	if classCount != 1 || snapshotCount != 1 {
+		t.Fatalf("frozen roster changed: classes=%d snapshots=%d", classCount, snapshotCount)
+	}
+}
+
 func TestStory060FiveHundredStudentRosterScaleE2EWithPostgresTestDatabase(t *testing.T) {
 	dsn := strings.TrimSpace(os.Getenv("EDUGRADE_E2E_DATABASE_URL"))
 	if dsn == "" {

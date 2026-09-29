@@ -66,6 +66,7 @@ WHERE tenant_id=$1::uuid AND education_stage=$2 AND subject_code=$3 AND archetyp
 	return item, mapPanelPolicyStoreError(err)
 }
 
+// 数据库更新只允许 shadow 到 approved；实际准入还会在查询时确认评估运行已完成。
 func (s *PostgresStore) ApprovePanelPolicy(ctx context.Context, tenantID, policyID, actorID, evaluationRunID string, report gradingevaluation.PanelSliceReadiness, at time.Time) (PanelPolicy, error) {
 	if s == nil || s.db == nil || tenantID == "" || policyID == "" || actorID == "" || evaluationRunID == "" || !report.Ready {
 		return PanelPolicy{}, ErrInvalidInput

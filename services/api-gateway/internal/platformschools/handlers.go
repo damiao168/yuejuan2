@@ -14,6 +14,7 @@ type Handler struct{ service *Service }
 
 func NewHandler(store Store) *Handler { return &Handler{service: NewService(store)} }
 
+// 查询参数先在 HTTP 层解析，非法筛选直接返回 400，避免把模糊条件传到统计层。
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	limit, err := parseOptionalPositiveInt(r.URL.Query().Get("limit"))
 	if err != nil {

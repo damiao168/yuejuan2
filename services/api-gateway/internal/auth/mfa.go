@@ -90,6 +90,7 @@ func newMFACipher(masterKey string) (*mfaCipher, error) {
 	return &mfaCipher{aead: aead}, nil
 }
 
+// 将密文绑定到租户、用户及凭据记录，复制密文到另一条记录也无法通过解密校验。
 func mfaAAD(record TOTPRecord) []byte {
 	return []byte("edugrade:totp:v1:" + record.TenantID + ":" + record.UserID + ":" + record.ID)
 }

@@ -75,6 +75,8 @@ if ([string]::IsNullOrWhiteSpace($AccessToken)) {
   }
 }
 
+
+# 本脚本会创建并入队真实批次；每次运行生成新键，只观察终态，不发布最终分数。
 $idempotencyKey = "story063-smoke-$((Get-Date).ToUniversalTime().ToString('yyyyMMddHHmmss'))-$([Guid]::NewGuid().ToString('N').Substring(0, 8))"
 $created = Invoke-SubjectiveApi -Method POST -Path "/api/v1/subjective-grading-batches" -Body @{
   idempotency_key = $idempotencyKey

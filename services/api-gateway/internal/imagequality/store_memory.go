@@ -83,6 +83,7 @@ func (s *MemoryStore) ListRunsForPage(_ context.Context, tenantID string, submis
 	return runs, nil
 }
 
+// 内存领取实现模拟租约过期可回收和尝试次数递增，保证测试覆盖生产重试语义。
 func (s *MemoryStore) Claim(_ context.Context, tenantID string, input ClaimInput) ([]ClaimedJob, error) {
 	input = normalizeClaimInput(input)
 	s.mu.Lock()

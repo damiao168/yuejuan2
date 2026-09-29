@@ -57,6 +57,7 @@ func (h *Handler) ListExamGrades(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	filter := GradeListFilter{Status: status, Query: query, Limit: limit + 1}
+	// 多取一条只用于判断下一页；游标由匿名码和 ID 组成，必须与存储排序保持一致。
 	if len(cursor) == 2 {
 		filter.CursorAnonymousCode = cursor[0]
 		filter.CursorID = cursor[1]

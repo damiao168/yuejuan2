@@ -45,6 +45,7 @@ def test_runner_executes_and_completes_domain_result():
     assert not any(call[0] == "fail" for call in api.calls)
 
 
+# 即使任务 ID 和租约齐全，来源队列类型错误仍不能进入主观题执行。
 def test_runner_rejects_invalid_runtime_source():
     api = FakeAPI({"id": "task-1", "source_id": "run-1", "source_type": "ocr_task", "lease_token": "lease-1"})
     Runner(api=api, settings=settings()).process_once()

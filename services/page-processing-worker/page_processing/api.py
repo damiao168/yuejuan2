@@ -108,6 +108,7 @@ class Client:
                     existing = duplicate.get("existing_file") or {}
                 except (ResponseValidationError, UnicodeDecodeError, json.JSONDecodeError):
                     existing = {}
+                # 网关冲突响应携带已有资产时复用它，使上传成功后的任务重试无需再造副本。
                 if existing.get("id") and existing.get("hash_sha256"):
                     return existing
             raise APIError(f"decoded_page_upload_failed:{exc.code}") from exc

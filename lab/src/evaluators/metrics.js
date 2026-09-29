@@ -4,12 +4,14 @@ function mean(values) {
 
 function recall(records, predicate, predicted) {
   const positives = records.filter(predicate);
+  // 没有正例时召回率不可评估，不能用 0 或 1 冒充已测结果；门禁同时检查分母。
   if (positives.length === 0) return { value: null, numerator: 0, denominator: 0, status: "not_evaluated" };
   const numerator = positives.filter(predicted).length;
   return { value: numerator / positives.length, numerator, denominator: positives.length, status: "evaluated" };
 }
 
 export function computeMetrics(records) {
+  // 误差使用原始分值；正偏差表示偏高给分，adjacent_agreement 允许相差最多 1 分。
   const errors = records.map((record) => record.output.suggested_score - record.sample.expected_score);
   const absErrors = errors.map((value) => Math.abs(value));
   const squaredErrors = errors.map((value) => value * value);

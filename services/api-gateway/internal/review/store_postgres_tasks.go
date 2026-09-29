@@ -225,6 +225,7 @@ func (s *PostgresStore) BatchAssignTasks(ctx context.Context, tenantID string, _
 		return nil, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	// 批量分配是一次事务；任一任务不存在、版本过期或状态不允许，前面的分配也不生效。
 	out := make([]ReviewTask, 0, len(input.TaskIDs))
 	for _, id := range input.TaskIDs {
 		if stringsTrim(id) == "" {
@@ -271,11 +272,11 @@ func (s *PostgresStore) SubmitGrade(ctx context.Context, tenantID string, id str
 	}
 	defer func() { _ = tx.Rollback() }()
 	var replay SubmitResult
+	// 已成功的命令先返回原回执；任务后来已提交或删除，也不应让客户端把成功误判为失败。
 	if found, err := commandreceipt.Load(ctx, tx, tenantID, reviewerID, "review.submit", id, input, &replay); err != nil || found {
 		return replay, err
 	}
-	// Lock the parent run before the task, matching cancellation's lock order.
-	// A cancelled run must never gain a new human grade or current question grade.
+	// 先锁父评分运行再锁任务，与取消流程保持同一锁序；已取消的运行不能再写入人工成绩或当前题目成绩。
 	var runID sql.NullString
 	if err := tx.QueryRowContext(ctx, `SELECT scoring_run_id::text FROM review_task WHERE tenant_id=$1::uuid AND id::text=$2 AND deleted_at IS NULL`, tenantID, id).Scan(&runID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -338,6 +339,7 @@ RETURNING id::text, tenant_id::text, review_task_id::text, answer_segment_id::te
 		return SubmitResult{}, err
 	}
 	questionGradeID := ""
+	// 单评直接替换当前题目成绩；双评先保存各自的人工评分，等合分或仲裁后再产生当前成绩。
 	if task.GradeRound == "single" {
 		evidence, marshalErr := json.Marshal(map[string]any{
 			"human_grade_id":    grade.ID,
@@ -376,6 +378,7 @@ RETURNING `+reviewTaskColumns+`
 	if err != nil {
 		return SubmitResult{}, err
 	}
+	// 提交成绩与清除本人草稿处于同一事务，失败回滚后草稿仍可继续使用。
 	if _, err = tx.ExecContext(ctx, `UPDATE review_draft SET deleted_at=now(),updated_at=now() WHERE tenant_id=$1::uuid AND review_task_id=$2::uuid AND reviewer_id=$3::uuid AND deleted_at IS NULL`, tenantID, task.ID, reviewerID); err != nil {
 		return SubmitResult{}, err
 	}
@@ -454,6 +457,7 @@ SET status = 'returned', return_reason = $3, revision = revision + 1, updated_at
 WHERE tenant_id = $1 AND id::text = $2 AND revision = $4 AND deleted_at IS NULL
 	`
 	args := []any{tenantID, id, input.Reason, input.ExpectedRevision}
+	// 普通阅卷人的有效租约须在写入时再检查，不能只依赖 HTTP 层稍早读到的结果。
 	if input.MustOwnActiveClaim {
 		updateQuery += ` AND assigned_to = $5::uuid AND claim_expires_at > now()`
 		args = append(args, actorID)

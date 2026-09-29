@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// 转班会结束旧的在读记录、创建新记录并更新学生当前班级；整组操作必须原子提交。
 func (s *PostgresStore) TransferStudent(ctx context.Context, tenantID, studentID, classID, startDate string) (StudentEnrollment, error) {
 	if startDate == "" {
 		startDate = time.Now().UTC().Format("2006-01-02")

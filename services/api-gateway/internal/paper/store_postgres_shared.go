@@ -41,6 +41,7 @@ WHERE tenant_id = $1 AND exam_id = $2 AND id::text = $3 AND deleted_at IS NULL
 	return err
 }
 
+// 状态检查和后续配置写入必须共用事务；考试行锁使就绪确认与配置修改串行。
 func ensureExamPaperMutableTx(ctx context.Context, tx *sql.Tx, tenantID, examID string) error {
 	var status string
 	if err := tx.QueryRowContext(ctx, `SELECT status FROM exam WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, examID).Scan(&status); err != nil {

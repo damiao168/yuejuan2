@@ -40,6 +40,7 @@ func (s *Service) Create(ctx context.Context, tenantID, jobID, actorID string, i
 	if err != nil {
 		return scorerelease.Release{}, err
 	}
+	// 至少有一项通过复核并带有复核分数，才创建后继草稿；复核分数可以与原分数相同。
 	if summary.ReleasePlan == nil || summary.Job.Status != regrade.StatusReadyForRelease || summary.ReleasePlan.AffectedCount == 0 {
 		return scorerelease.Release{}, ErrNotReady
 	}

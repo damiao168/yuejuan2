@@ -73,6 +73,7 @@ func (h *Handler) StartWechatLogin(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusInternalServerError, "token_generation_failed", "failed to create login challenge")
 		return
 	}
+	// 二维码回调 state 与电脑轮询凭据分别生成；拿到扫码链接不代表能领取电脑会话。
 	pollToken, pollTokenHash, err := NewToken()
 	if err != nil {
 		httpx.Error(w, r, http.StatusInternalServerError, "token_generation_failed", "failed to create login challenge")
@@ -198,6 +199,7 @@ func (h *Handler) PollWechatLogin(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	// 先一次性消费挑战再创建会话；之后创建失败也不回退挑战，客户端需重新扫码。
 	challenge, err = repository.ConsumeWechatLoginChallenge(r.Context(), challenge.ID, HashToken(request.PollToken), now)
 	if err != nil {
 		httpx.Error(w, r, http.StatusConflict, "wechat_challenge_consumed", "login challenge was already consumed")

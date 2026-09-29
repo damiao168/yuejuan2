@@ -114,6 +114,7 @@ const controls = {
     annotationWorkflow?.final?.pilot_gate?.passed === false && frozenArtifactPaths.has("config/annotation-policy.json") &&
     frozenArtifactPaths.has("evals/reports/annotation-workflow-demo.json")
 };
+// 实验室实现验收允许试点仍为 NOT_READY；真实上线资格由独立的 readiness 决定。
 const auditPassed = Object.values(controls).every(Boolean);
 const report = {
   schema_version: "lab-graduation-audit-v1",

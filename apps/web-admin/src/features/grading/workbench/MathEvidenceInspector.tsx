@@ -142,6 +142,7 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
         after: formulaDrafts[text(formula.id)].trim()
       }
     }));
+    // 请求同时带原始工件版本和校正修订号；版本已被别人推进时由服务端拒绝，避免覆盖并发校正。
     const body: CreateMathCorrectionRequest = {
       expected_artifact_version: baseArtifact.version,
       expected_correction_revision: data?.correction_revision,

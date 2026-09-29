@@ -25,6 +25,7 @@ export function RecoveryPage({ onComplete }: { onComplete: (tenantCode?: string)
       setLoading(false);
       return () => { active = false; };
     }
+    // 保留本次重置所需令牌后清理地址栏查询串，后续渲染继续使用组件状态中的令牌。
     window.history.replaceState({}, "", "/recover");
     void verifyRecovery(token).then((response) => {
       if (active) setPreview(response.recovery);

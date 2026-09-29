@@ -15,7 +15,9 @@ func (s *PostgresStore) ClaimNextTask(ctx context.Context, tenantID, reviewerID 
 	}
 	defer tx.Rollback()
 	var id string
+	// 先续接本人已分配的任务，优先最近打开的；选中行一直锁到领取完成，并跳过其他事务已锁的行。
 	err = tx.QueryRowContext(ctx, `SELECT id::text FROM review_task WHERE tenant_id=$1::uuid AND assigned_to=$2::uuid AND status IN ('assigned','in_progress','returned') AND deleted_at IS NULL AND ($3='' OR exam_id::text=$3) AND ($4='' OR question_id::text=$4) ORDER BY last_opened_at DESC NULLS LAST,priority DESC,created_at LIMIT 1 FOR UPDATE SKIP LOCKED`, tenantID, reviewerID, input.ExamID, input.QuestionID).Scan(&id)
+	// 仅内部调用显式允许时，才接手未分配或租约过期的任务；普通 HTTP 领取接口关闭此选项。
 	if errors.Is(err, sql.ErrNoRows) && options.AllowUnassigned {
 		err = tx.QueryRowContext(ctx, `SELECT id::text FROM review_task WHERE tenant_id=$1::uuid AND ((assigned_to IS NULL AND status='pending') OR (status IN ('assigned','in_progress') AND claim_expires_at<now())) AND deleted_at IS NULL AND ($2='' OR exam_id::text=$2) AND ($3='' OR question_id::text=$3) ORDER BY priority DESC,created_at LIMIT 1 FOR UPDATE SKIP LOCKED`, tenantID, input.ExamID, input.QuestionID).Scan(&id)
 	}
@@ -66,6 +68,7 @@ func (s *PostgresStore) GetWorkspace(ctx context.Context, tenantID, taskID strin
 	return out, nil
 }
 
+// RenewTaskClaim 允许当前负责人重新建立或延长租约，不要求旧租约仍有效，也不增加任务版本。
 func (s *PostgresStore) RenewTaskClaim(ctx context.Context, tenantID, taskID, reviewerID string) error {
 	result, err := s.db.ExecContext(ctx, `UPDATE review_task SET claimed_at=COALESCE(claimed_at,now()),claim_expires_at=now()+interval '30 minutes',last_opened_at=now(),updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid AND assigned_to=$3::uuid AND status IN ('assigned','in_progress','returned') AND deleted_at IS NULL`, tenantID, taskID, reviewerID)
 	if err != nil {

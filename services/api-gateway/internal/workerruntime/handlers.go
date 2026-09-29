@@ -228,6 +228,8 @@ func writeRuntimeError(w http.ResponseWriter, r *http.Request, err error) {
 	}
 }
 
+// 这些任务的结果还会改变来源业务数据，必须走来源适配器，将业务事实与任务状态一起落库。
+// 通用完成或失败接口不能只改任务状态，否则会留下来源数据与队列状态不一致的记录。
 func requiresSourceActivation(sourceType string) bool {
 	return sourceType == "image_quality_run" || sourceType == "ocr_task" || sourceType == "capture_file" || sourceType == "omr_run" || sourceType == "subjective_grading_run" || sourceType == "math_understanding_artifact"
 }

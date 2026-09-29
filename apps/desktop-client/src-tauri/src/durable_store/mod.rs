@@ -57,6 +57,7 @@ pub(crate) fn scoped_status(app: AppHandle) -> Result<DurableStoreStatus, String
 }
 
 pub(crate) fn scoped_root(app: &AppHandle) -> Result<std::path::PathBuf, String> {
+    // 仅供已经持有 with_session 操作锁的原生命令使用，避免检查身份后账号又被切换。
     store_root(app)
 }
 

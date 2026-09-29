@@ -94,6 +94,7 @@ def render_synthetic_case(case: SyntheticOMRCase) -> bytes:
     return output.getvalue()
 
 
+# 合成用例检验选择和复核分流，不能把本套件的召回率当作真实答题卡准确率。
 def evaluate_synthetic_acceptance() -> dict[str, Any]:
     cases = build_synthetic_acceptance_cases()
     confusion = {

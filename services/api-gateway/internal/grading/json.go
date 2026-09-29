@@ -21,11 +21,9 @@ func decodeJSONB(raw []byte, dst any, field string) error {
 	return nil
 }
 
-// decodeJSONBLenient decodes a jsonb column that has no write-side schema
-// guarantee, leaving dst zero-valued when the payload does not fit. Reserve it
-// for presentational fields whose absence degrades a single row: failing the
-// whole query would let one malformed record take down an entire exam's
-// results listing.
+// decodeJSONBLenient 用于没有写入侧 schema 保证的展示字段。
+// 它忽略解码错误且不清空目标；类型不匹配时可能留下部分字段，调用方不能把结果当作完整几何数据。
+// 单条记录的异常只应降级该行展示，不能让整场成绩列表查询失败。
 func decodeJSONBLenient(raw []byte, dst any) {
 	if len(raw) == 0 {
 		return

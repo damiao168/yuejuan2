@@ -42,27 +42,34 @@ type CreatePaperInput struct {
 	File        FileAssetInput `json:"file"`
 }
 
+// PaperImportDraftQuestion 是待核对材料；完整性通过和人工确认分别检查，候选不会直接成为正式题目。
 type PaperImportDraftQuestion struct {
-	CandidateID          string                 `json:"candidate_id,omitempty"`
-	AnswerCandidateID    string                 `json:"answer_candidate_id,omitempty"`
-	SolutionCandidateID  string                 `json:"solution_candidate_id,omitempty"`
-	RubricCandidateID    string                 `json:"rubric_candidate_id,omitempty"`
-	SourceRefs           []PaperImportSourceRef `json:"source_refs"`
-	QuestionNo           string                 `json:"question_no"`
-	QuestionType         string                 `json:"question_type"`
-	AssessmentArchetype  string                 `json:"assessment_archetype,omitempty"`
-	Score                float64                `json:"score"`
-	Stem                 string                 `json:"stem"`
-	KnowledgePoints      []string               `json:"knowledge_points"`
-	AnswerKey            *AnswerKeyInput        `json:"answer_key,omitempty"`
-	Solution             *SolutionInput         `json:"solution,omitempty"`
-	Rubric               *RubricInput           `json:"rubric,omitempty"`
-	Confidence           float64                `json:"confidence"`
-	Issues               []string               `json:"issues"`
-	MatchedQuestionID    string                 `json:"matched_question_id,omitempty"`
-	MatchStatus          string                 `json:"match_status,omitempty"`
-	CompletenessStatus   string                 `json:"completeness_status,omitempty"`
-	HumanConfirmedFields []string               `json:"human_confirmed_fields,omitempty"`
+	CandidateID            string                 `json:"candidate_id,omitempty"`
+	ParentQuestionNo       string                 `json:"parent_question_no,omitempty"`
+	SubquestionNo          string                 `json:"subquestion_no,omitempty"`
+	Options                []string               `json:"options"`
+	ScoreSource            string                 `json:"score_source,omitempty"`
+	ScoreResolution        string                 `json:"score_resolution,omitempty"`
+	QuestionTypeResolution string                 `json:"question_type_resolution,omitempty"`
+	AnswerCandidateID      string                 `json:"answer_candidate_id,omitempty"`
+	SolutionCandidateID    string                 `json:"solution_candidate_id,omitempty"`
+	RubricCandidateID      string                 `json:"rubric_candidate_id,omitempty"`
+	SourceRefs             []PaperImportSourceRef `json:"source_refs"`
+	QuestionNo             string                 `json:"question_no"`
+	QuestionType           string                 `json:"question_type"`
+	AssessmentArchetype    string                 `json:"assessment_archetype,omitempty"`
+	Score                  float64                `json:"score"`
+	Stem                   string                 `json:"stem"`
+	KnowledgePoints        []string               `json:"knowledge_points"`
+	AnswerKey              *AnswerKeyInput        `json:"answer_key,omitempty"`
+	Solution               *SolutionInput         `json:"solution,omitempty"`
+	Rubric                 *RubricInput           `json:"rubric,omitempty"`
+	Confidence             float64                `json:"confidence"`
+	Issues                 []string               `json:"issues"`
+	MatchedQuestionID      string                 `json:"matched_question_id,omitempty"`
+	MatchStatus            string                 `json:"match_status,omitempty"`
+	CompletenessStatus     string                 `json:"completeness_status,omitempty"`
+	HumanConfirmedFields   []string               `json:"human_confirmed_fields,omitempty"`
 }
 
 type PaperImportSourceRef struct {
@@ -413,6 +420,7 @@ type PaperImportParseRequest struct {
 	Pages       []PaperImportDecodedPage   `json:"pages,omitempty"`
 }
 
+// PaperImportRunBinding 绑定一次识别的代次、来源版本和不可变解析输入，提交时需逐项核对。
 type PaperImportRunBinding struct {
 	ImportID       string
 	RunID          string
@@ -455,6 +463,9 @@ type AnswerKeyInput struct {
 }
 
 type Question struct {
+	ParentQuestionNo        string                 `json:"parent_question_no,omitempty"`
+	SubquestionNo           string                 `json:"subquestion_no,omitempty"`
+	Options                 []string               `json:"options"`
 	SourceType              string                 `json:"source_type,omitempty"`
 	SourceBankItemID        string                 `json:"source_bank_item_id,omitempty"`
 	SourceBankItemVersionID string                 `json:"source_bank_item_version_id,omitempty"`
@@ -505,26 +516,33 @@ type AnswerKey struct {
 }
 
 type CreateQuestionInput struct {
-	ExamPaperID     string          `json:"exam_paper_id"`
-	QuestionNo      string          `json:"question_no"`
-	QuestionType    string          `json:"question_type"`
-	Score           float64         `json:"score"`
-	Stem            string          `json:"stem"`
-	KnowledgePoints []string        `json:"knowledge_points"`
-	AnswerArea      map[string]any  `json:"answer_area"`
-	SortOrder       int             `json:"sort_order"`
-	AnswerKey       *AnswerKeyInput `json:"answer_key"`
+	ExamPaperID      string          `json:"exam_paper_id"`
+	ParentQuestionNo string          `json:"parent_question_no,omitempty"`
+	SubquestionNo    string          `json:"subquestion_no,omitempty"`
+	Options          []string        `json:"options"`
+	QuestionNo       string          `json:"question_no"`
+	QuestionType     string          `json:"question_type"`
+	Score            float64         `json:"score"`
+	Stem             string          `json:"stem"`
+	KnowledgePoints  []string        `json:"knowledge_points"`
+	AnswerArea       map[string]any  `json:"answer_area"`
+	SortOrder        int             `json:"sort_order"`
+	AnswerKey        *AnswerKeyInput `json:"answer_key"`
 }
 
+// UpdateQuestionInput 用指针区分未提交字段与明确提交的零值，局部更新不能覆盖未编辑内容。
 type UpdateQuestionInput struct {
-	QuestionNo      *string         `json:"question_no"`
-	QuestionType    *string         `json:"question_type"`
-	Score           *float64        `json:"score"`
-	Stem            *string         `json:"stem"`
-	KnowledgePoints *[]string       `json:"knowledge_points"`
-	AnswerArea      *map[string]any `json:"answer_area"`
-	SortOrder       *int            `json:"sort_order"`
-	AnswerKey       *AnswerKeyInput `json:"answer_key"`
+	ParentQuestionNo *string         `json:"parent_question_no"`
+	SubquestionNo    *string         `json:"subquestion_no"`
+	Options          *[]string       `json:"options"`
+	QuestionNo       *string         `json:"question_no"`
+	QuestionType     *string         `json:"question_type"`
+	Score            *float64        `json:"score"`
+	Stem             *string         `json:"stem"`
+	KnowledgePoints  *[]string       `json:"knowledge_points"`
+	AnswerArea       *map[string]any `json:"answer_area"`
+	SortOrder        *int            `json:"sort_order"`
+	AnswerKey        *AnswerKeyInput `json:"answer_key"`
 }
 
 type RubricPoint struct {

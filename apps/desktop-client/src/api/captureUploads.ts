@@ -99,6 +99,7 @@ export async function resumeCaptureUpload(
   const sha256 = "sha256" in input.file ? input.file.sha256 : await sha256ForFile(input.file);
   let recovered: CaptureUploadInitResponse | undefined;
   if (input.remoteUploadId) {
+    // 已保存的上传 ID 必须仍对应同一命令、考试、批次和原文件，不能直接拿来续传另一份答卷。
     const result = await recoverCaptureUpload(client, input.remoteUploadId, signal);
     const upload = result.upload;
     if (result.command_id !== input.idempotency_key || upload.exam !== input.exam || upload.batch !== input.batch || upload.sha256 !== sha256 || upload.size !== input.file.size) {
@@ -139,6 +140,7 @@ export async function resumeCaptureUpload(
       throw new ApiClientError(409, "capture_upload_invalid_offset", "server returned an invalid confirmed offset");
     }
     confirmedOffset = chunkResult.confirmed_offset;
+    // 等待调用方保存确认位置后再传下一块，使崩溃恢复可以从服务端已确认的位置继续。
     await onProgress({ remoteUploadId: initialized.remote_upload_id, confirmedOffset, totalBytes: input.file.size, status: chunkResult.status });
   }
   signal?.throwIfAborted();

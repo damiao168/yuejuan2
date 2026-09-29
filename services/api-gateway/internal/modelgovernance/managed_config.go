@@ -224,6 +224,7 @@ func NewCredentialCipher(masterKey string) (*CredentialCipher, error) {
 	return &CredentialCipher{aead: aead}, nil
 }
 
+// 密钥密文绑定租户和配置 ID；即使密文被挪到别的配置，AAD 不匹配也无法解密。
 func (c *CredentialCipher) Encrypt(plaintext, tenantID, configID string) ([]byte, []byte, error) {
 	if c == nil || strings.TrimSpace(plaintext) == "" {
 		return nil, nil, ErrInvalidManagedConfig
@@ -236,6 +237,7 @@ func (c *CredentialCipher) Encrypt(plaintext, tenantID, configID string) ([]byte
 	return ciphertext, nonce, nil
 }
 
+// 解密失败统一返回不可用，避免向调用方暴露认证标签或密文格式细节。
 func (c *CredentialCipher) Decrypt(ciphertext, nonce []byte, tenantID, configID string) (string, error) {
 	if c == nil || len(nonce) != c.aead.NonceSize() || len(ciphertext) < c.aead.Overhead() {
 		return "", ErrManagedConfigUnavailable

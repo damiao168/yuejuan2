@@ -14,6 +14,8 @@ $envPath = (Resolve-Path -LiteralPath $envCandidate).Path
 $backupRoot = (Resolve-Path -LiteralPath $BackupDirectory).Path
 $verification = & (Join-Path $scriptRoot "verify-backup.ps1") -BackupDirectory $backupRoot | ConvertFrom-Json
 $manifest = Get-Content -LiteralPath $verification.manifest -Raw -Encoding utf8 | ConvertFrom-Json
+
+# 每次演练使用独立数据库和桶；finally 仅清理本次固定前缀与随机后缀的目标。
 $suffix = [guid]::NewGuid().ToString('N').Substring(0, 12)
 $targetDatabase = "edugrade_restore_drill_$suffix"
 $targetBucket = "edugrade-restore-drill-$suffix"
@@ -32,7 +34,7 @@ $postgresUser = $envValues["EDUGRADE_POSTGRES_USER"]
 
 Push-Location $composeDir
 try {
-  & (Join-Path $scriptRoot "restore.ps1") -PostgresDump $dumpPath -TargetDatabase $targetDatabase -MinioBackupDirectory $minioPath -TargetBucket $targetBucket -ComposeFile $composePath -EnvFile $envPath -CreateTargetDatabase -ConfirmRestore
+  & (Join-Path $scriptRoot "restore.ps1") -PostgresDump $dumpPath -TargetDatabase $targetDatabase -MinioBackupDirectory $minioPath -TargetBucket $targetBucket -ComposeFile $composePath -EnvFile $envPath -CreateTargetDatabase -ConfirmRestore | Out-Null
 
   $checks = @(
     "SELECT CASE WHEN count(*) > 0 THEN 1 ELSE 0 END FROM tenant",
@@ -46,10 +48,8 @@ try {
     if ($LASTEXITCODE -ne 0 -or $result -ne "1") { throw "Restore drill database invariant failed." }
   }
 
+  # restore.ps1 已读取恢复后的数据库引用，并从目标桶下载实际字节校验 SHA-256 和大小。
   $backupObjectCount = @(Get-ChildItem -LiteralPath $minioPath -File -Recurse).Count
-  $minioScript = 'scheme=http; if [ "$EDUGRADE_MINIO_USE_SSL" = "true" ]; then scheme=https; fi; mc alias set edugrade "$scheme://minio:9000" "$EDUGRADE_MINIO_ROOT_USER" "$EDUGRADE_MINIO_ROOT_PASSWORD" >/dev/null; mc find "edugrade/{0}" --type f | wc -l' -f $targetBucket
-  $restoredObjectCount = (& docker compose --env-file $envPath -f $composePath --profile tools run --rm --entrypoint /bin/sh minio-init -ec $minioScript | Select-Object -Last 1).Trim()
-  if ($LASTEXITCODE -ne 0 -or [int]$restoredObjectCount -ne $backupObjectCount) { throw "Restore drill MinIO object count validation failed." }
 
   [ordered]@{
     succeeded = $true
@@ -59,6 +59,8 @@ try {
     database = $targetDatabase
     bucket = $targetBucket
     object_count = $backupObjectCount
+    verified_file_references = [int]$verification.reference_count
+    reference_bytes_and_hashes_verified = $true
   } | ConvertTo-Json -Depth 3
 } finally {
   if (-not $KeepDrillData) {

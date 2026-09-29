@@ -93,6 +93,7 @@ WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND lease_owner=$3 AND lease_expir
 }
 
 func (s *PostgresStore) Summary(ctx context.Context, tenantID, examID string) (Summary, error) {
+	// 汇总和阶段明细在同一只读事务中读取，避免返回相互矛盾的计数。
 	if strings.TrimSpace(tenantID) == "" || strings.TrimSpace(examID) == "" {
 		return Summary{}, ErrInvalidInput
 	}
@@ -164,6 +165,7 @@ GROUP BY issue_code ORDER BY issue_code
 }
 
 func (s *PostgresStore) ListExceptions(ctx context.Context, tenantID string, filter ExceptionFilter) (ListResult, error) {
+	// 使用创建时间加 ID 的键集游标，避免深分页 OFFSET 在异常新增时跳项或重复。
 	if strings.TrimSpace(tenantID) == "" {
 		return ListResult{}, ErrInvalidInput
 	}
@@ -280,6 +282,7 @@ RETURNING id::text,exam_id::text,page_id::text,source_type,source_id::text,code,
 }
 
 func (s *PostgresStore) RetryTarget(ctx context.Context, tenantID, exceptionID string) (RetryTarget, error) {
+	// 只允许仍处于 open/assigned 且标记 retryable 的异常取出原 worker 来源。
 	var result RetryTarget
 	var retryable bool
 	err := s.db.QueryRowContext(ctx, `
@@ -322,6 +325,7 @@ WHERE seg.tenant_id=$1::uuid AND seg.id=$2::uuid AND seg.deleted_at IS NULL
 }
 
 func parserQualityFromJSON(raw []byte) (ParserQuality, error) {
+	// 超出 0..1 或缺失的质量值转为 nil，让调用方明确 abstain，而不是使用失真的分数。
 	values := map[string]float64{}
 	if len(raw) > 0 && string(raw) != "null" {
 		if err := json.Unmarshal(raw, &values); err != nil {
@@ -506,6 +510,8 @@ WHERE ps.tenant_id=$1::uuid AND ps.exam_id=$2::uuid
     WHERE active.tenant_id=ps.tenant_id AND active.page_id=ps.page_id AND active.exam_id=$2::uuid
   )`
 
+// 已指派异常保留指派状态；人工结案且详情未变时保留结案，忽略观测时间的变化。
+// 因源数据恢复而自动关闭的异常，如果再次出现，则重新打开。
 const upsertExceptionsSQL = `
 INSERT INTO operational_exception (tenant_id,exam_id,source_type,source_id,page_id,code,severity,blocking,status,details_json,created_at,updated_at)
 SELECT ps.tenant_id,ps.exam_id,

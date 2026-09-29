@@ -70,6 +70,7 @@ func (s *MemoryStore) LoadContexts(_ context.Context, tenantID string, segmentID
 	return contexts, nil
 }
 
+// 适配器请求 ID 是成绩幂等键：相同事实返回旧成绩，事实不同则拒绝覆盖历史证据。
 func (s *MemoryStore) CreateGrade(_ context.Context, tenantID string, actorID string, grade Grade) (Grade, error) {
 	if grade.AnswerSegmentID == "" || grade.QuestionID == "" {
 		return Grade{}, ErrInvalidInput
@@ -115,6 +116,7 @@ func (s *MemoryStore) GetGradeByAdapterRequestID(_ context.Context, tenantID str
 	return Grade{}, ErrNotFound
 }
 
+// 运行创建按请求 ID 幂等；面板运行还要校验面板快照和角色，防止同一角色绑定到另一份答案。
 func (s *MemoryStore) GetOrCreateRun(_ context.Context, tenantID string, _ string, input CreateRunInput) (GradingRun, error) {
 	if tenantID == "" || input.AnswerSegmentID == "" || input.RequestID == "" {
 		return GradingRun{}, ErrInvalidInput
@@ -163,6 +165,7 @@ func (s *MemoryStore) GetOrCreateRun(_ context.Context, tenantID string, _ strin
 	return run, nil
 }
 
+// 抢占在同一把锁内完成 queued 到 processing 的转换；未抢到时调用方必须复用已有结果或等待，不能重复调用模型。
 func (s *MemoryStore) ClaimPanelRun(_ context.Context, tenantID, runID string) (GradingRun, bool, error) {
 	if tenantID == "" || runID == "" {
 		return GradingRun{}, false, ErrInvalidInput

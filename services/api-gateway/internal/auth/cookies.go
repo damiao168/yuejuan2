@@ -23,6 +23,7 @@ func (h *Handler) sessionCookie(token string, expiresAt time.Time, persistent bo
 }
 
 func (h *Handler) clearSessionCookie() *http.Cookie {
+	// 删除时 Path 必须与设置时一致，否则浏览器会保留原会话 Cookie。
 	return &http.Cookie{
 		Name:     h.cookieName,
 		Value:    "",

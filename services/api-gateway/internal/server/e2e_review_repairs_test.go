@@ -226,6 +226,19 @@ ON CONFLICT(tenant_id,exam_id) DO UPDATE SET release_id=EXCLUDED.release_id,upda
 	if trace.queries != 1 || trace.rows != 3 {
 		t.Fatalf("student question queries=%d rows=%d", trace.queries, trace.rows)
 	}
+	var unpublishedQuestionID string
+	if err := db.QueryRowContext(ctx, `INSERT INTO question(tenant_id,exam_id,question_no,question_type,score,sort_order,status)
+VALUES($1,$2::uuid,'UNPUBLISHED','short_answer',1,99,'active') RETURNING id::text`, f.TenantID, f.ExamID).Scan(&unpublishedQuestionID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO answer_segment(tenant_id,submission_id,submission_page_id,question_id,question_no,bbox,source,status)
+VALUES($1,$2::uuid,$3::uuid,$4::uuid,'UNPUBLISHED','{"x":0,"y":0,"width":1,"height":1}','configured_answer_area','accepted')`, f.TenantID, answers[0].submission, answers[0].page, unpublishedQuestionID); err != nil {
+		t.Fatal(err)
+	}
+	// 只有答题分段、没有发布题目清单关联时，整页图片也必须拒绝返回。
+	if _, err := reader.StudentPaperPageImage(ctx, f.TenantID, f.ExamID, answers[0].student, unpublishedQuestionID, false); !errors.Is(err, scorerelease.ErrNotFound) {
+		t.Fatalf("unpublished whole-page image: %v", err)
+	}
 	questionID := f.QuestionIDs["single_choice"]
 	if _, err = reader.StudentPaperPageImage(ctx, f.TenantID, f.ExamID, otherStudent, questionID, true); !errors.Is(err, scorerelease.ErrNotFound) {
 		t.Fatalf("peer whole-page image: %v", err)

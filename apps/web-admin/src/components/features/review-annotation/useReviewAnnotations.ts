@@ -90,6 +90,7 @@ export function useReviewAnnotations(taskId: string) {
       return response.annotation;
     } catch (saveError) {
       if (isRevisionConflict(saveError)) {
+        // 冲突后带回服务端最新批注供用户核对，不自动重试覆盖其他会话的修改。
         setSaveState("conflict");
         setError("批注已被其他人更新，已刷新为最新版本，请确认后再保存");
         const latest = await reloadAnnotations();

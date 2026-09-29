@@ -226,6 +226,8 @@ func reconcilePaperImportCandidates(questions []QuestionCandidate, answers []Ans
 		no := q.QuestionNoNormalized
 		draft := PaperImportDraftQuestion{
 			CandidateID: q.CandidateID, QuestionNo: no, QuestionType: q.QuestionType,
+			ParentQuestionNo: q.ParentQuestionNo, SubquestionNo: q.SubquestionNo,
+			Options:             append([]string{}, q.Options...),
 			AssessmentArchetype: defaultPaperImportArchetype(q.QuestionType),
 			Stem:                q.Stem, KnowledgePoints: q.KnowledgePointHints, Confidence: q.Confidence,
 			SourceRefs: append([]PaperImportSourceRef{}, q.SourceRefs...), Issues: append([]string{}, q.Issues...),
@@ -233,7 +235,9 @@ func reconcilePaperImportCandidates(questions []QuestionCandidate, answers []Ans
 		}
 		if q.Score != nil {
 			draft.Score = *q.Score
+			draft.ScoreSource = "material"
 		} else {
+			draft.ScoreSource = "missing"
 			issues = append(issues, candidateIssue("MISSING_SCORE", "error", "confirmed", no, "第"+no+"题未识别到分值", "请人工填写或补充包含分值的资料", q.SourceRefs))
 		}
 		if q.QuestionType == "" {
@@ -446,6 +450,7 @@ func dedupePaperImportIssues(values []PaperImportIssue) []PaperImportIssue {
 	return out
 }
 
+// 新识别结果只能更新未确认字段；已人工确认的值按题号优先、候选 ID 兜底保留。
 func preserveHumanConfirmedDrafts(fresh, existing []PaperImportDraftQuestion) []PaperImportDraftQuestion {
 	byKey := map[string]PaperImportDraftQuestion{}
 	for _, draft := range existing {
@@ -474,8 +479,11 @@ func preserveHumanConfirmedDrafts(fresh, existing []PaperImportDraftQuestion) []
 				fresh[i].QuestionType = old.QuestionType
 			case "score":
 				fresh[i].Score = old.Score
+				fresh[i].ScoreSource = old.ScoreSource
 			case "stem":
 				fresh[i].Stem = old.Stem
+			case "options":
+				fresh[i].Options = append([]string{}, old.Options...)
 			case "answer":
 				fresh[i].AnswerKey = old.AnswerKey
 			case "solution":
@@ -485,6 +493,8 @@ func preserveHumanConfirmedDrafts(fresh, existing []PaperImportDraftQuestion) []
 			}
 		}
 		fresh[i].HumanConfirmedFields = append([]string{}, old.HumanConfirmedFields...)
+		fresh[i].ScoreResolution = old.ScoreResolution
+		fresh[i].QuestionTypeResolution = old.QuestionTypeResolution
 	}
 	return fresh
 }
@@ -500,6 +510,7 @@ func paperImportDraftKeys(draft PaperImportDraftQuestion) []string {
 	return keys
 }
 
+// 应在旧值覆盖新结果之前检测冲突，否则比较到的都是人工旧值，无法提示重新核对。
 func appendHumanConfirmationConflicts(issues []PaperImportIssue, fresh, existing []PaperImportDraftQuestion) []PaperImportIssue {
 	byKey := map[string]PaperImportDraftQuestion{}
 	for _, draft := range existing {
@@ -532,6 +543,7 @@ func appendHumanConfirmationConflicts(issues []PaperImportIssue, fresh, existing
 			{"question_type", old.QuestionType, draft.QuestionType, "题型"},
 			{"score", fmt.Sprint(old.Score), fmt.Sprint(draft.Score), "分值"},
 			{"stem", old.Stem, draft.Stem, "题干"},
+			{"options", stableJSON(old.Options), stableJSON(draft.Options), "选项"},
 			{"solution", stableJSON(old.Solution), stableJSON(draft.Solution), "解析"},
 			{"rubric", stableJSON(old.Rubric), stableJSON(draft.Rubric), "评分细则"},
 		} {
@@ -559,7 +571,8 @@ func stringSet(values []string) map[string]bool {
 func normalizeHumanConfirmedFields(values []string) []string {
 	allowed := map[string]bool{
 		"question_no": true, "question_type": true, "score": true, "stem": true,
-		"answer": true, "solution": true, "rubric": true,
+		"options": true,
+		"answer":  true, "solution": true, "rubric": true,
 	}
 	if len(values) == 0 {
 		return []string{}
@@ -580,15 +593,19 @@ func requiredHumanConfirmedFields(draft PaperImportDraftQuestion) []string {
 	if questionRequiresStandardAnswerForArchetype(draftAssessmentArchetype(draft)) || draft.AnswerKey != nil {
 		fields = append(fields, "answer")
 	}
+	if len(draft.Options) > 0 {
+		fields = append(fields, "options")
+	}
 	if draft.Solution != nil {
 		fields = append(fields, "solution")
 	}
-	if !paperImportUsesAnswerKeyOnly(draft.QuestionType) && (questionRequiresRubricForArchetype(draftAssessmentArchetype(draft)) || draft.Rubric != nil) {
+	if !paperImportUsesAnswerKeyOnly(draft.QuestionType) && !isDerivedObjectiveRubric(draft) && (questionRequiresRubricForArchetype(draftAssessmentArchetype(draft)) || draft.Rubric != nil) {
 		fields = append(fields, "rubric")
 	}
 	return fields
 }
 
+// 填空题使用答案键，不沿用先前题型的 Rubric 或其人工确认标记。
 func normalizeAnswerKeyOnlyPaperImportDraft(draft *PaperImportDraftQuestion) {
 	if !paperImportUsesAnswerKeyOnly(draft.QuestionType) {
 		return
@@ -728,7 +745,7 @@ func questionCandidatesFromDrafts(drafts []PaperImportDraftQuestion) []QuestionC
 	out := make([]QuestionCandidate, 0, len(drafts))
 	for _, d := range drafts {
 		score := d.Score
-		out = append(out, QuestionCandidate{QuestionNoRaw: d.QuestionNo, QuestionNoNormalized: normalizePaperImportQuestionNumber(d.QuestionNo), QuestionType: d.QuestionType, Score: &score, Stem: d.Stem})
+		out = append(out, QuestionCandidate{QuestionNoRaw: d.QuestionNo, QuestionNoNormalized: normalizePaperImportQuestionNumber(d.QuestionNo), ParentQuestionNo: d.ParentQuestionNo, SubquestionNo: d.SubquestionNo, Options: append([]string{}, d.Options...), QuestionType: d.QuestionType, Score: &score, Stem: d.Stem})
 	}
 	return out
 }
@@ -743,6 +760,21 @@ func withoutBlueprintIssues(issues []PaperImportIssue) []PaperImportIssue {
 		out = append(out, issue)
 	}
 	return out
+}
+
+func withPaperImportReconciliationIssues(issues []PaperImportIssue, messages []string) []PaperImportIssue {
+	out := make([]PaperImportIssue, 0, len(issues)+len(messages))
+	for _, issue := range issues {
+		if issue.Code != "BLUEPRINT_RECONCILIATION" {
+			out = append(out, issue)
+		}
+	}
+	for _, message := range messages {
+		if strings.HasPrefix(message, paperImportIssuePrefix) {
+			out = append(out, candidateIssue("BLUEPRINT_RECONCILIATION", "error", "confirmed", "", message, "请对照考试配置核对题目、题型和分值", nil))
+		}
+	}
+	return dedupePaperImportIssues(out)
 }
 
 func reconcilePaperImportDrafts(drafts []PaperImportDraftQuestion, existing []paperImportExistingQuestion, expectedTotal *float64, baseIssues []string) ([]PaperImportDraftQuestion, []string) {
@@ -785,6 +817,20 @@ func reconcilePaperImportDrafts(drafts []PaperImportDraftQuestion, existing []pa
 			draft.MatchStatus = "ambiguous"
 		}
 		seenDraftNumbers[key] = key != ""
+		if len(existing) > 0 && draft.MatchStatus != "ambiguous" {
+			matches := byNumber[key]
+			if len(matches) != 1 || used[matches[0].id] {
+				draft.MatchStatus = "extra"
+				addPaperImportDraftIssue(draft, &issues, "unexpected_question", "题目 %s 不存在于考试蓝图", draft.QuestionNo)
+			} else {
+				matched := matches[0]
+				used[matched.id] = true
+				draft.MatchedQuestionID = matched.id
+				draft.MatchStatus = "matched"
+				resolvePaperImportBlueprintDraft(draft, matched, &issues)
+			}
+		}
+		normalizeAnswerKeyOnlyPaperImportDraft(draft)
 
 		if strings.TrimSpace(draft.Stem) == "" {
 			addPaperImportDraftIssue(draft, &issues, "missing_stem", "题目 %s 缺少题干", draft.QuestionNo)
@@ -810,27 +856,6 @@ func reconcilePaperImportDrafts(drafts []PaperImportDraftQuestion, existing []pa
 			draft.CompletenessStatus = "needs_review"
 		}
 
-		if len(existing) == 0 || draft.MatchStatus == "ambiguous" {
-			continue
-		}
-		matches := byNumber[key]
-		if len(matches) != 1 || used[matches[0].id] {
-			draft.MatchStatus = "extra"
-			addPaperImportDraftIssue(draft, &issues, "unexpected_question", "题目 %s 不存在于考试蓝图", draft.QuestionNo)
-			continue
-		}
-		matched := matches[0]
-		used[matched.id] = true
-		draft.MatchedQuestionID = matched.id
-		draft.MatchStatus = "matched"
-		if draft.QuestionType != matched.kind {
-			draft.MatchStatus = "mismatch"
-			addPaperImportDraftIssue(draft, &issues, "question_type_mismatch", "题目 %s 题型 AI=%s，蓝图=%s", matched.number, draft.QuestionType, matched.kind)
-		}
-		if !scoreEqual(draft.Score, matched.score) {
-			draft.MatchStatus = "mismatch"
-			addPaperImportDraftIssue(draft, &issues, "question_score_mismatch", "题目 %s 分值 AI=%.2f，蓝图=%.2f", matched.number, draft.Score, matched.score)
-		}
 	}
 
 	for _, item := range existing {
@@ -857,6 +882,59 @@ func reconcilePaperImportDrafts(drafts []PaperImportDraftQuestion, existing []pa
 	return drafts, dedupeStrings(issues)
 }
 
+func resolvePaperImportBlueprintDraft(draft *PaperImportDraftQuestion, matched paperImportExistingQuestion, issues *[]string) {
+	if draft.QuestionType != matched.kind {
+		switch draft.QuestionTypeResolution {
+		case "use_blueprint":
+			draft.QuestionType = matched.kind
+			draft.AssessmentArchetype = defaultPaperImportArchetype(matched.kind)
+		case "use_material":
+			draft.AssessmentArchetype = defaultPaperImportArchetype(draft.QuestionType)
+			if !stringSet(draft.HumanConfirmedFields)["question_type"] {
+				draft.MatchStatus = "mismatch"
+				addPaperImportDraftIssue(draft, issues, "question_type_mismatch", "题目 %s 采用资料题型前须人工确认；资料=%s，蓝图=%s", matched.number, draft.QuestionType, matched.kind)
+			}
+		default:
+			draft.MatchStatus = "mismatch"
+			addPaperImportDraftIssue(draft, issues, "question_type_mismatch", "题目 %s 题型 AI=%s，蓝图=%s；请明确选择采用资料或蓝图", matched.number, draft.QuestionType, matched.kind)
+		}
+	}
+	// Older drafts represented an absent extracted score as zero without a
+	// provenance field. They may also use the matched blueprint's known score.
+	if draft.Score <= 0 && matched.score > 0 && (draft.ScoreSource == "missing" || draft.ScoreSource == "") {
+		draft.Score = matched.score
+		draft.ScoreSource = "blueprint"
+	}
+	if !scoreEqual(draft.Score, matched.score) {
+		switch draft.ScoreResolution {
+		case "use_blueprint":
+			draft.Score = matched.score
+			draft.ScoreSource = "blueprint"
+			if draft.Rubric != nil && len(draft.Rubric.Points) == 1 && draft.Rubric.Points[0].ID == "objective-correct" {
+				draft.Rubric = deterministicObjectiveRubric(draft.QuestionType, draft.Score)
+			}
+		case "use_material":
+			if !stringSet(draft.HumanConfirmedFields)["score"] {
+				draft.MatchStatus = "mismatch"
+				addPaperImportDraftIssue(draft, issues, "question_score_mismatch", "题目 %s 采用资料分值前须人工确认；资料=%.2f，蓝图=%.2f", matched.number, draft.Score, matched.score)
+			}
+		default:
+			draft.MatchStatus = "mismatch"
+			addPaperImportDraftIssue(draft, issues, "question_score_mismatch", "题目 %s 分值 AI=%.2f，蓝图=%.2f；请明确选择采用资料或蓝图", matched.number, draft.Score, matched.score)
+		}
+	}
+	// Resolve the final type and score before deriving fixed objective points.
+	// A fill-blank candidate may become a choice question after blueprint review.
+	if draft.Rubric == nil && objectiveRubricEligible(*draft) {
+		draft.Rubric = deterministicObjectiveRubric(draft.QuestionType, draft.Score)
+	}
+}
+
+func isDerivedObjectiveRubric(draft PaperImportDraftQuestion) bool {
+	return draft.RubricCandidateID == "" && objectiveRubricEligible(draft) && draft.Rubric != nil &&
+		stableJSON(draft.Rubric) == stableJSON(deterministicObjectiveRubric(draft.QuestionType, draft.Score))
+}
+
 func paperImportIssue(code, format string, args ...any) string {
 	return paperImportIssuePrefix + code + ": " + fmt.Sprintf(format, args...)
 }
@@ -878,6 +956,7 @@ func filterPaperImportReconciliationIssues(values []string) []string {
 	return out
 }
 
+// 资料齐全不等于已核对：存在候选时仍要求人工确认，结构化 error 和旧版问题也阻断导入。
 func paperImportHasBlockingIssues(job PaperImportJob) bool {
 	if len(job.Questions) == 0 {
 		return true
@@ -903,7 +982,7 @@ func paperImportHasBlockingIssues(job PaperImportJob) bool {
 		return true
 	}
 	for _, draft := range job.Questions {
-		if len(job.QuestionCandidates) > 0 && !paperImportUsesAnswerKeyOnly(draft.QuestionType) && draft.Rubric != nil && !stringSet(draft.HumanConfirmedFields)["rubric"] {
+		if len(job.QuestionCandidates) > 0 && !paperImportUsesAnswerKeyOnly(draft.QuestionType) && !isDerivedObjectiveRubric(draft) && draft.Rubric != nil && !stringSet(draft.HumanConfirmedFields)["rubric"] {
 			return true
 		}
 		if len(draft.Issues) > 0 || draft.MatchStatus == "extra" || draft.MatchStatus == "ambiguous" || draft.MatchStatus == "mismatch" {

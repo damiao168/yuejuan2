@@ -50,8 +50,7 @@ WHERE dm.tenant_id=$1::uuid AND dm.id=$2::uuid AND dm.deleted_at IS NULL`, tenan
 	return nil
 }
 
-// A double-mark session contributes one final question grade only after both
-// blind marks agree or an arbitrator resolves their disagreement.
+// 双评分差未超过阈值，或仲裁已经给出终分后，才写入一条当前题目成绩。
 func (s *PostgresStore) recordScoringDoubleMarkGradeTx(ctx context.Context, tx *sql.Tx, tenantID, runID, reviewTaskID, actorID string, final *FinalGrade) (string, error) {
 	if final == nil {
 		return "", nil
@@ -82,6 +81,7 @@ WHERE rt.tenant_id=$1::uuid AND rt.id=$2::uuid AND rt.scoring_run_id=$3::uuid RE
 
 func (s *PostgresStore) syncScoringDoubleMarkRunTx(ctx context.Context, tx *sql.Tx, tenantID, runID string) error {
 	var review, confirmed int
+	// 待复核数按答题切片去重；同一份答案的两次评分和仲裁不能算成三道待处理题。
 	err := tx.QueryRowContext(ctx, `SELECT
  (SELECT count(DISTINCT pending.answer_segment_id) FROM (
     SELECT answer_segment_id FROM review_task WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND status IN ('pending','assigned','in_progress','returned') AND deleted_at IS NULL

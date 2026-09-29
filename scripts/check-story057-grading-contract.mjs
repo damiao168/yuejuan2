@@ -106,6 +106,7 @@ const bindingParts = [
   requestV2.media_evidence.sha256,
   ...[bbox.x, bbox.y, bbox.width, bbox.height].map((value) => String(Math.round(value * 1_000_000))),
 ];
+// 按 UTF-8 字节长度前缀拼接，坐标先取百万分之一整数；需与各语言绑定哈希实现一致。
 const bindingMaterial = bindingParts.map((part) => `${Buffer.byteLength(part, "utf8")}:${part}`).join("");
 assert.equal(createHash("sha256").update(bindingMaterial).digest("hex"), requestV2.media_evidence.binding_hash);
 assert.ok(bbox.width * bbox.height < contractV2.maximum_source_bbox_area);

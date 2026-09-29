@@ -141,6 +141,7 @@ export function SchoolAIChatPage({ user }: { user: SessionUser }) {
   useEffect(() => () => { for (const controller of controllers.current.values()) controller.abort(); }, []);
 
   useEffect(() => {
+    // 公共电脑不落盘；个人电脑只保留附件信息，正文仅留在当前页面内存。
     if (user.publicComputer) return;
     try {
       window.localStorage.setItem(storageKey, JSON.stringify(threads.slice(0, 20).map((thread) => ({
@@ -180,6 +181,7 @@ export function SchoolAIChatPage({ user }: { user: SessionUser }) {
   const complete = useCallback(async (threadId: string, messages: SchoolChatMessage[]) => {
     if (controllers.current.has(threadId) || controllers.current.size >= MAX_ACTIVE_CHATS) return;
     const controller = new AbortController();
+    // ref 立即登记在途请求，防止 React 状态提交前连续操作突破单对话或全局并发限制。
     controllers.current.set(threadId, controller);
     setPending((current) => ({ ...current, [threadId]: { content: "", reasoning: "" } }));
     setSendErrors((current) => { const next = { ...current }; delete next[threadId]; return next; });

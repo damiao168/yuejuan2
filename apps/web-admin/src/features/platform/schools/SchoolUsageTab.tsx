@@ -15,6 +15,7 @@ export function SchoolUsageTab({ tenantId }: { tenantId: string }) {
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    // 自定义日期尚未选齐时不发查询；换学校或时间范围后丢弃此前请求的回填。
     if (windowValue === "custom" && !customRange) return;
     let active = true;
     setLoading(true); setError(false);

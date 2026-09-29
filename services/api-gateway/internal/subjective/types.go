@@ -68,6 +68,18 @@ type Context struct {
 	OCRConfidence      *float64
 	AnswerCreatedAt    time.Time
 	MathEvidence       *MathEvidenceContext
+	ReferenceContext   *GradingReferenceContext
+}
+
+// GradingReferenceContext contains only the authored facts frozen at exam
+// confirmation. A nil value represents a legacy exam without an import snapshot.
+type GradingReferenceContext struct {
+	Source            string               `json:"source"`
+	SnapshotHash      string               `json:"snapshot_hash"`
+	StandardAnswer    any                  `json:"standard_answer"`
+	EquivalentAnswers []any                `json:"equivalent_answers"`
+	SolutionText      string               `json:"solution_text"`
+	SolutionSteps     []paper.SolutionStep `json:"solution_steps"`
 }
 
 type AdapterInput struct {
@@ -89,6 +101,7 @@ type AdapterInput struct {
 	// call as authority to issue an independently final score.
 	OutputConstraint aieligibility.OutputConstraint `json:"output_constraint"`
 	MathEvidence     *MathEvidenceContext           `json:"math_evidence,omitempty"`
+	ReferenceContext *GradingReferenceContext       `json:"reference_context,omitempty"`
 	// ActiveCrop is verified locally and encoded only by the v2 adapter. It is
 	// never included by generic JSON serialization or persisted with a run.
 	ActiveCrop *ResolvedActiveCrop `json:"-"`
@@ -146,6 +159,7 @@ type ModelTokenUsage struct {
 	TotalTokens       int64 `json:"total_tokens,omitempty"`
 }
 
+// Grade 保存模型建议和证据快照；SuggestedScore 只供教师流程参考，最终成绩不由模型字段直接决定。
 type Grade struct {
 	ID                     string                `json:"id"`
 	TenantID               string                `json:"tenant_id"`
@@ -198,6 +212,7 @@ type Grade struct {
 	CreatedAt              time.Time             `json:"created_at"`
 }
 
+// GradingRun 固定答案、量规和模型版本，状态与成绩通过同一 request_id 关联，便于重试和审计。
 type GradingRun struct {
 	ID                     string     `json:"id"`
 	TenantID               string     `json:"tenant_id"`

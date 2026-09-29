@@ -72,6 +72,7 @@ export function useScanQueue({
         .then((items) => {
           if (scopeRef.current !== durableScopeKey) return;
           const current = queueRef.current;
+          // 恢复列表返回前可能已加入新扫描件；以当前项为先合并，避免旧快照覆盖刚入队的文件。
           const currentIDs = new Set(current.map((item) => item.id));
           const merged = [...current, ...items.filter((item) => !currentIDs.has(item.id))];
           queueRef.current = merged;

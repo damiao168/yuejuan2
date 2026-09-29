@@ -4,6 +4,7 @@ import (
 	"net/http"
 )
 
+// 租户变更和组织数据都经过组织权限；创建租户等高影响操作额外要求近期认证。
 func registerOrganizationRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("POST /api/v1/tenants", ctx.guards.requireRecentPermission("tenant:manage", ctx.modules.Identity.OrgHandler.CreateTenant))
 	mux.Handle("GET /api/v1/tenants", ctx.guards.requireAuth(http.HandlerFunc(ctx.modules.Identity.OrgHandler.ListTenants)))

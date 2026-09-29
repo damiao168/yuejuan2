@@ -100,6 +100,7 @@ func (h *Handler) CreateManagedUser(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_request", "user fields exceed supported size limits")
 		return
 	}
+	// 邀请账户没有可登录密码；只保存激活令牌哈希，原令牌仅在本次响应交给调用方。
 	passwordHash := "!activation-required"
 	activationToken := ""
 	if invited {

@@ -57,6 +57,7 @@ func NewService(store Store, gold goldpaper.ActiveApprovedReader, qualification 
 	return service
 }
 
+// 保存策略时先绑定当前已发布 Gold 集合的指纹；Gold 变更后旧策略必须重新确认。
 func (s *Service) PutPolicy(ctx context.Context, tenantID, examID, questionID, actorID string, input PutPolicyInput) (Policy, error) {
 	if !validPolicyInput(tenantID, examID, questionID, actorID, input) {
 		return Policy{}, ErrInvalidInput
@@ -83,7 +84,8 @@ func (s *Service) MaybeIssue(ctx context.Context, tenantID, examID, questionID, 
 		return Task{}, false, ErrInvalidInput
 	}
 	policy, err := s.store.GetPolicy(ctx, tenantID, examID, questionID)
-	if errors.Is(err, ErrNotFound) || policy.Status == PolicyPaused {
+	// 没有策略或策略已暂停时放行普通队列，不能因为 Seed 配置缺失阻塞阅卷。
+if errors.Is(err, ErrNotFound) || policy.Status == PolicyPaused {
 		return Task{}, false, nil
 	}
 	if err != nil {
@@ -100,7 +102,8 @@ func (s *Service) MaybeIssue(ctx context.Context, tenantID, examID, questionID, 
 	if fingerprint == "" {
 		return Task{}, false, ErrGoldSetMissing
 	}
-	if fingerprint != policy.ActiveGoldFingerprint {
+	// Gold 集合发生变化时拒绝继续抽样，避免同一策略混用不同版本的参考答案。
+if fingerprint != policy.ActiveGoldFingerprint {
 		return Task{}, false, ErrGoldSetChanged
 	}
 	gold := samples[s.random.Intn(len(samples))]
@@ -108,7 +111,8 @@ func (s *Service) MaybeIssue(ctx context.Context, tenantID, examID, questionID, 
 	if width := policy.MaxInterval - policy.MinInterval + 1; width > 1 {
 		next += s.random.Intn(width)
 	}
-	return s.store.AdvanceAndMaybeCreate(ctx, tenantID, IssueDecision{
+	// 随机数只负责给出本次决策；游标递增和任务创建必须由存储层原子完成，避免并发重复发题。
+return s.store.AdvanceAndMaybeCreate(ctx, tenantID, IssueDecision{
 		Policy: policy, QuestionNo: strings.TrimSpace(questionNo), GraderID: graderID, Gold: gold,
 		Probability: s.random.Float64(), NextInterval: next, Now: s.now(),
 	})
@@ -135,7 +139,8 @@ func (s *Service) TrySubmit(ctx context.Context, tenantID, taskID, graderID stri
 	}
 	selections := cloneObject(input.RubricSelections)
 	agreement, detail := compareCriteria(task.ExpectedCriteria, selections)
-	kind := ObservationCriterion
+	// 扩展题按 trait 记录，其他题按 rubric criterion 记录；两种数据对应不同的质量统计维度。
+kind := ObservationCriterion
 	traits, criteria := map[string]any(nil), detail
 	if task.ArchetypeCode == "extended_response" {
 		kind, traits, criteria = ObservationTrait, selections, nil
@@ -146,7 +151,8 @@ func (s *Service) TrySubmit(ctx context.Context, tenantID, taskID, graderID stri
 		ReferenceScore: task.ReferenceScore, RubricSelections: selections,
 		AbsoluteError: math.Abs(input.Score - task.ReferenceScore), RubricAgreement: agreement,
 		ObservationKind: kind, TraitObservation: traits, CriterionObservation: criteria, ObservedAt: now}
-	completed, _, err := s.store.CompleteTask(ctx, tenantID, taskID, graderID, input, observation)
+	// 完成时保存内部参考信息供审计，但接口只返回任务状态和版本，不能泄露 Gold 答案。
+completed, _, err := s.store.CompleteTask(ctx, tenantID, taskID, graderID, input, observation)
 	if err != nil {
 		return SubmitReceipt{}, true, err
 	}
@@ -179,6 +185,7 @@ func (s *Service) GetTaskForGrader(ctx context.Context, tenantID, taskID, grader
 	return task, true, nil
 }
 
+// 只取当前 active 且已批准的版本，并按稳定顺序计算指纹，保证重试得到同一套 Gold 集合。
 func activeSamples(items []goldpaper.GoldPaper) ([]GoldSample, string) {
 	samples := make([]GoldSample, 0, len(items))
 	for _, item := range items {
@@ -227,6 +234,7 @@ func validRate(value float64) bool {
 }
 func validScore(value float64) bool { return !math.IsNaN(value) && !math.IsInf(value, 0) && value >= 0 }
 
+// 没有期望 rubric 时保留 agreement 为空；缺少规则不能被误算成零分一致率。
 func compareCriteria(expected, submitted map[string]any) (*float64, map[string]any) {
 	if len(expected) == 0 {
 		return nil, cloneObject(submitted)

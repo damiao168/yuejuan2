@@ -93,6 +93,7 @@ export function PanelModelBindingsSection({ tenantID, configs, loadingConfigs = 
     const draft = drafts[role];
     const config = configs.find((item) => item.id === draft.managed_model_api_config_id);
     const existing = bindings.find((item) => item.agent_role === role);
+    // 已移除的模型仍允许停用原绑定，不能因为模型库缺项而让失效绑定无法关闭。
     const canDisableMissing = draft.status === "disabled" && existing?.managed_model_api_config_id === draft.managed_model_api_config_id;
     if (!tenantID || loadingConfigs || (!config && !canDisableMissing) || !draft.prompt_version.trim() || !draft.strength_rank ||
       (draft.status === "active" && (!config || !capabilityVerified(config)))) {

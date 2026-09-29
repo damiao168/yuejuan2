@@ -14,6 +14,7 @@ var (
 	ErrDuplicateFile     = errors.New("capture file already registered")
 )
 
+// Batch 汇总采集文件、页面和身份处理状态；计数由存储层聚合，不应在接口层自行推算。
 type Batch struct {
 	ID              string     `json:"id"`
 	TenantID        string     `json:"tenant_id"`
@@ -58,6 +59,7 @@ type File struct {
 	CreatedAt      time.Time `json:"created_at"`
 }
 
+// Page 的 Revision 用于人工改页、删除和恢复的乐观并发校验；状态变化必须随版本一起保存。
 type Page struct {
 	ID                 string         `json:"id"`
 	TenantID           string         `json:"tenant_id"`
@@ -166,6 +168,7 @@ type DecodedPageInput struct {
 	Barcodes    []BarcodeObservation `json:"barcodes,omitempty"`
 }
 
+// BarcodeObservation 是解码器看到的原始条码，尚未通过签名、模板归属和打印台账校验。
 type BarcodeObservation struct {
 	Format      string           `json:"format"`
 	Text        string           `json:"text"`
@@ -320,6 +323,7 @@ type FileFailureInput struct {
 	DurationMS  int            `json:"duration_ms"`
 }
 
+// RegistrationRun 保存一次页面配准的输入版本、算法结果和人工确认状态，旧运行不会覆盖新版本。
 type RegistrationRun struct {
 	ID                    string         `json:"id"`
 	CapturePageID         string         `json:"capture_page_id"`
@@ -392,6 +396,7 @@ type TemplateMatchFailureInput struct {
 	DurationMS  int            `json:"duration_ms"`
 }
 
+// 切片同时携带归一化框和像素框；两者都来自同一张已校验的配准结果，哈希用于核对产物。
 type SegmentCropInput struct {
 	QuestionID     string         `json:"question_id"`
 	Label          string         `json:"label"`
@@ -434,6 +439,7 @@ type RegistrationDecisionInput struct {
 	Reason string `json:"reason"`
 }
 
+// NormalizedPoint 以图像左上角为原点，X、Y 分别按宽、高归一到 0 到 1。
 type NormalizedPoint struct {
 	X float64 `json:"x"`
 	Y float64 `json:"y"`

@@ -202,6 +202,7 @@ func (h *Handler) ListAvailableManagedAPIModels(w http.ResponseWriter, r *http.R
 	})
 }
 
+// 自动配置先做租户范围校验，再探测并保存；只把脱敏结果返回给调用方，密钥始终留在存储层。
 func (h *Handler) AutoCreateManagedAPIConfig(w http.ResponseWriter, r *http.Request) {
 	store, ok := h.managedAPIStore(w, r)
 	if !ok {

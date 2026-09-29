@@ -295,6 +295,7 @@ def _dashscope_response_facts(response):
             status=502,
             request_id=request_id,
         )
+    # 截断或异常结束的内容即使能解成 JSON，也不能当作一次完整的候选响应。
     if finish_reason != "stop":
         raise AgentError(
             "model_output_invalid",

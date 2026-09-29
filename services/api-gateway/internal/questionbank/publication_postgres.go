@@ -16,6 +16,7 @@ func (s *PostgresStore) scoringIDs(ctx context.Context, q queryer, tenant string
 }
 
 func (s *PostgresStore) lockedVersion(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, id, action string) (Version, Item, error) {
+	// 按题库、题目、版本的顺序取锁，再重读版本，防止编辑与审核基于不同状态写入。
 	v, err := s.version(ctx, tx, scope, id, action)
 	if err != nil {
 		return v, Item{}, err
@@ -120,6 +121,7 @@ func (s *PostgresStore) Transition(ctx context.Context, scope auth.AccessScope, 
 			return v, err
 		}
 		if status == "published" {
+			// 发布状态、审核记录和当前版本指针在同一事务提交，读取者不会看到只完成一半的发布。
 			_, err = tx.ExecContext(ctx, `UPDATE question_bank_item SET current_published_version_id=$3 WHERE tenant_id=$1 AND id=$2`, scope.TenantID, i.ID, id)
 		}
 		return v, err
@@ -206,6 +208,7 @@ func (s *PostgresStore) checkExam(ctx context.Context, q queryer, scope auth.Acc
 	return nil
 }
 func (s *PostgresStore) Materialize(ctx context.Context, scope auth.AccessScope, id string, in MaterializeInput) (MaterializeResult, error) {
+	// 将指定已发布版本复制进尚可配置的考试；后续题库变化不会自动替换考试里的内容。
 	if !validID(id) || in.ExpectedRevision <= 0 || len(in.Selections) == 0 || len(in.Selections) > 100 {
 		return MaterializeResult{}, ErrInvalidInput
 	}

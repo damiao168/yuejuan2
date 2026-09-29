@@ -44,6 +44,7 @@ func (s *ImageService) ReadCropImage(ctx context.Context, tenantID, segmentID st
 		return binaryresource.Resource{}, err
 	}
 	if evidence.ProcessingStatus != "completed" || evidence.RegistrationStatus != "completed" || evidence.CropFileAssetID == "" || evidence.CropSHA256 == "" {
+		// 切题和配准都完成，且裁剪图已有资产 ID 与哈希，才能继续读取评分图片。
 		return binaryresource.Resource{}, ErrEvidenceUnavailable
 	}
 	asset, err := s.files.Get(ctx, tenantID, evidence.CropFileAssetID)
@@ -79,6 +80,7 @@ func (s *ImageService) ReadPageImage(ctx context.Context, tenantID, segmentID st
 	assetID := ""
 	for _, page := range pages {
 		if page.ID == evidence.SubmissionPageID {
+			// 优先使用质检后的规范化文件；没有规范化版本时才回退到原始上传文件。
 			assetID = page.NormalizedFileAssetID
 			if assetID == "" {
 				assetID = page.FileAssetID

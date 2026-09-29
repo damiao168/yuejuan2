@@ -3,6 +3,7 @@ import { detectPromptInjection } from "./guardrails/promptInjection.js";
 
 const CHINESE_PUNCTUATION = /[，。！？；：“”‘’（）【】《》、]/g;
 
+// 用于证据片段检索的宽松归一化，会忽略标点与空白；不用于判断数学表达式等价。
 export function normalizeText(text) {
   return String(text ?? "")
     .normalize("NFKC")
@@ -101,6 +102,7 @@ export function verifyEvidence(input, output) {
         idLinksValid = false;
       }
     }
+    // 片段必须能在学生原文的归一化结果中找到；这里只核对引用来源，不判断语义正确性。
     const evidenceIsValid = linkedEvidence.every((evidence) => {
       const excerpt = normalizeText(evidence.text_excerpt);
       return excerpt.length > 0 && normalizedAnswer.includes(excerpt);
@@ -154,6 +156,7 @@ export function verifyEvidence(input, output) {
   };
 }
 
+// 证据校验只追加风险并提升复核要求；不会清除模型已有风险，也不在此处重算分数。
 export function applyEvidenceVerification(input, output) {
   const safeOutput = output !== null && typeof output === "object" && !Array.isArray(output) ? output : {};
   const verification = verifyEvidence(input, safeOutput);

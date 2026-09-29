@@ -15,6 +15,7 @@ const observations = JSON.parse(text);
 const calibrationSet = observations.filter((item) => item.partition === "calibration");
 const evaluationSet = observations.filter((item) => item.partition === "evaluation");
 if (!calibrationSet.length || !evaluationSet.length) throw new Error("both calibration and evaluation partitions are required");
+// 拟合只使用 calibration 分区；evaluation 分区留给独立度量，避免用同一批结果证明校准效果。
 const model = fitIsotonicCalibration(calibrationSet);
 const calibration = evaluateCalibration(evaluationSet, model);
 const config = JSON.parse(readFileSync("config/calibration-gates.json", "utf8"));

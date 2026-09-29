@@ -914,7 +914,15 @@ export type PaperImportRubricInput = { "status": string; "max_score": number; "p
 
 export type PaperImportSolutionInput = { "raw_text": string; "steps": Array<PaperImportSolutionStep>; "source_refs": Array<PaperImportSourceRef>; };
 
-export type PaperImportDraftQuestion = { "candidate_id"?: string; "answer_candidate_id"?: string; "solution_candidate_id"?: string; "rubric_candidate_id"?: string; "source_refs": Array<PaperImportSourceRef>; "question_no": string; "question_type": string; "assessment_archetype"?: "selected_response" | "exact_text" | "numeric_expression" | "structured_steps" | "short_constructed" | "extended_response" | "diagram_graph" | "table_experiment"; "score": number; "stem": string; "knowledge_points": Array<string>; "answer_key"?: PaperImportAnswerKeyInput; "solution"?: PaperImportSolutionInput; "rubric"?: PaperImportRubricInput; "confidence": number; "issues": Array<string>; "matched_question_id"?: string; "match_status"?: "create" | "matched" | "matched_by_order" | "mismatch" | "extra" | "ambiguous"; "completeness_status"?: "complete" | "needs_review"; "human_confirmed_fields"?: Array<string>; };
+export type MathRubricDraftRequest = { "candidate_id": string; "expected_generation": number; "expected_updated_at": string; };
+
+export type MathRubricDraftPoint = { "id": string; "description": string; "suggested_score": unknown; "evidence_step_ids": Array<string>; "source_refs": Array<PaperImportSourceRef>; "review_note": string; };
+
+export type MathRubricDraftSuggestion = { "candidate_id": string; "question_no_normalized": string; "max_score": unknown; "points": Array<MathRubricDraftPoint>; "origin": "ai_suggestion_from_solution"; "status": "review_required"; "provenance": Record<string, unknown>; "issues": Array<string>; };
+
+export type MathRubricDraftResponse = { "suggested_rubric_candidates": Array<MathRubricDraftSuggestion>; };
+
+export type PaperImportDraftQuestion = { "candidate_id"?: string; "answer_candidate_id"?: string; "solution_candidate_id"?: string; "rubric_candidate_id"?: string; "source_refs": Array<PaperImportSourceRef>; "question_no": string; "question_type": string; "assessment_archetype"?: "selected_response" | "exact_text" | "numeric_expression" | "structured_steps" | "short_constructed" | "extended_response" | "diagram_graph" | "table_experiment"; "score": number; "stem": string; "knowledge_points": Array<string>; "answer_key"?: PaperImportAnswerKeyInput; "solution"?: PaperImportSolutionInput; "rubric"?: PaperImportRubricInput; "confidence": number; "issues": Array<string>; "matched_question_id"?: string; "match_status"?: "create" | "matched" | "matched_by_order" | "mismatch" | "extra" | "ambiguous"; "completeness_status"?: "complete" | "needs_review"; "human_confirmed_fields"?: Array<string>; "parent_question_no"?: string; "subquestion_no"?: string; "options"?: Array<string>; "score_source"?: "material" | "missing" | "blueprint" | "human"; "score_resolution"?: "use_blueprint" | "use_material"; "question_type_resolution"?: "use_blueprint" | "use_material"; };
 
 export type ReviewPaperImportRequest = { "expected_generation": number; "questions": Array<PaperImportDraftQuestion>; };
 
@@ -1635,6 +1643,10 @@ export interface components {
     "PaperImportRubricPoint": PaperImportRubricPoint;
     "PaperImportRubricInput": PaperImportRubricInput;
     "PaperImportSolutionInput": PaperImportSolutionInput;
+    "MathRubricDraftRequest": MathRubricDraftRequest;
+    "MathRubricDraftPoint": MathRubricDraftPoint;
+    "MathRubricDraftSuggestion": MathRubricDraftSuggestion;
+    "MathRubricDraftResponse": MathRubricDraftResponse;
     "PaperImportDraftQuestion": PaperImportDraftQuestion;
     "ReviewPaperImportRequest": ReviewPaperImportRequest;
     "PaperImportRuntimeProgress": PaperImportRuntimeProgress;

@@ -23,6 +23,7 @@ export function dependencyLabel(status: "ok" | "error" | "not_configured") {
 }
 
 export function estimateLocalCacheBytes() {
+  // 这里只统计浏览器键和值的字符串长度，用于缓存提示，不代表原生扫描文件的实际磁盘占用。
   let total = 0;
   for (let index = 0; index < window.localStorage.length; index += 1) {
     const key = window.localStorage.key(index);
@@ -95,6 +96,7 @@ function readImageResolution(file: File) {
 }
 
 export function previewUrlForFile(file: File) {
+  // 返回的 Blob 地址由使用方在替换文件或卸载时释放，不能持久化到恢复队列。
   return file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined;
 }
 
@@ -126,6 +128,7 @@ export function readPersistedScanQueue(): SyncQueueItem[] {
     const parsed = JSON.parse(raw) as SyncQueueItem[];
     if (!Array.isArray(parsed)) return [];
     return parsed.map((item) => {
+      // 浏览器重启后没有原文件句柄；中断上传改为失败，尚无服务端文件时要求用户重选。
       if (item.kind !== "scan_upload" || item.status === "succeeded") return item;
       return {
         ...item,

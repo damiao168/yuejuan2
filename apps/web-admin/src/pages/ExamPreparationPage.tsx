@@ -13,6 +13,7 @@ export function readinessCheckRoute(examId: string, section: string) {
   return `/exams/${encodeURIComponent(examId)}/${routeSection}`;
 }
 
+// 每个年级只替换本组勾选，保留其他年级已选班级。
 export function mergeClassSelection(selected: string[], groupIds: string[], groupValues: string[]) {
   const group = new Set(groupIds);
   return [...selected.filter((id) => !group.has(id)), ...groupValues];
@@ -50,6 +51,7 @@ export function ExamStudentScopePage({ examId, canManage, onExamChanged }: { exa
   const [saving, setSaving] = useState(false);
 	const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string>();
+  // 考试标识隔离跨考试结果，请求序号另外淘汰同一考试的旧刷新。
   const currentExamId = useRef(examId);
   currentExamId.current = examId;
   const loadVersion = useRef(0);

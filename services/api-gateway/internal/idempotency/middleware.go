@@ -150,6 +150,7 @@ func Middleware(store Store, options Options) func(http.Handler) http.Handler {
 			next.ServeHTTP(captured, r)
 			body := captured.Body.Bytes()
 			if retryableStatus(captured.Code) {
+				// 暂时失败和补充认证不消耗命令键，让客户端完成前置条件后仍能原样重试。
 				_ = store.Abort(r.Context(), input)
 				copyResponse(w, captured.Header(), captured.Code, body, "false")
 				return
@@ -169,6 +170,8 @@ func Middleware(store Store, options Options) func(http.Handler) http.Handler {
 	}
 }
 
+// 计算指纹时先暂存请求体，随后回卷供业务处理器读取；调用方必须执行 cleanup。
+// 可恢复命令另存不可变 JSON，避免恢复时使用客户端后来修改过的输入。
 func prepareRequestHash(r *http.Request, route string, persistBody bool) (string, []byte, func(), error) {
 	temp, err := os.CreateTemp("", "edugrade-idempotency-*")
 	if err != nil {

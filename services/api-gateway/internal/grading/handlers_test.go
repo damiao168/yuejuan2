@@ -239,6 +239,7 @@ func testRouter(authStore *auth.MemoryStore, gradingStore grading.Store, runtime
 	})
 }
 
+// 此替身验证 HTTP 处理器与 runtime 的协作；状态直接在内存改变，不覆盖生产数据库事务和并发。
 type scoringRecoveryTestStore struct {
 	*grading.MemoryStore
 	run                  grading.ScoringRun

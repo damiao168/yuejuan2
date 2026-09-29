@@ -27,6 +27,7 @@ for (const viewport of viewports) {
 
     const image = await page.screenshot({ fullPage: false, animations: "disabled", scale: "css" });
     await testInfo.attach(`exam-create-${viewport.name}`, { body: image, contentType: "image/png" });
+    // 像素基线来自 Windows；其他平台继续验证布局并附截图，避免字体栅格差异误报。
     if (process.platform === "win32") {
       await expect(page).toHaveScreenshot(`exam-create-${viewport.name}.png`, { animations: "disabled", caret: "hide", scale: "css" });
     }

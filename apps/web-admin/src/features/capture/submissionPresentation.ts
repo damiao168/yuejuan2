@@ -132,6 +132,7 @@ function summaryBoolean(row: SubmissionView, key: string) {
 
 type SubmissionProcessingState = "pending" | "processing" | "completed" | "failed";
 
+// 列表可能只带服务端汇总而未展开页面/任务详情，展示状态需兼容这两种数据形态。
 export function processingState(row: SubmissionView): SubmissionProcessingState {
   const task = latestTask(row.ocrTasks);
   const taskStatus = task?.status ?? summaryString(row, "latest_ocr_status");

@@ -60,6 +60,7 @@ func (b regradeBlocker) BlockingRegradeCount(ctx context.Context, tenantID, exam
 	return count, nil
 }
 
+// 生产启动先完成基础设施和事务存储图，再创建路由；任一装配失败都会关闭已打开资源，避免半初始化服务继续运行。
 func New(cfg config.Config, logg *logger.Logger) (*Server, func(), error) {
 	infra, err := newInfrastructure(cfg, logg)
 	if err != nil {
@@ -126,6 +127,7 @@ func NewMemoryRouter(cfg config.Config, logg *logger.Logger, checkers []deps.Che
 	return NewRouterWithApplicationStores(cfg, logg, checkers, objectStore, stores)
 }
 
+// 路由先注册资源，再统一套恢复、请求 ID、审计、指标、CSRF 和请求体限制中间件；单独的导入 mux 仍经过同一条链。
 func NewRouterComplete(dependencies RouterDependencies) http.Handler {
 	ctx := buildRouterContext(dependencies)
 	mux := http.NewServeMux()
@@ -184,6 +186,7 @@ func useRealAIService(cfg config.Config) bool {
 	return true
 }
 
+// mock 只允许开发/测试环境，demo 还必须显式开启且没有真实 AI 地址；生产等环境始终拒绝。
 func allowMockAI(cfg config.Config) bool {
 	environment := strings.ToLower(strings.TrimSpace(cfg.Service.Environment))
 	switch environment {

@@ -214,6 +214,7 @@ func (s *MemoryStore) readinessLocked(tenantID string, examID string) ReadinessR
 			templates = append(templates, item)
 		}
 	}
+	// 内存夹具只保存班级和学生数量；真实人员身份与冻结名册由 PostgreSQL 路径验证。
 	result := buildReadiness(state.Total, state.ClassCount, state.StudentCount, papers, questions, templates)
 	if confirmed, ok := s.readiness[examID]; ok && confirmed.ConfigurationHash == result.ConfigurationHash {
 		result.Confirmed, result.ConfirmedAt, result.ConfirmedBy = true, confirmed.ConfirmedAt, confirmed.ConfirmedBy

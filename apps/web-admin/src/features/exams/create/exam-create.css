@@ -183,6 +183,7 @@
 @media (max-width: 959px) {
   .exam-composer-inner { width: min(calc(100% - 32px), 820px); }
   .exam-composer-summary { display: none; }
+  /* 同一断点已有底部移动操作条，隐藏正文提交区避免出现两套提交入口。 */
   .exam-composer-submit { display: none; }
 }
 

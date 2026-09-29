@@ -24,6 +24,7 @@ var (
 const DefaultChunkSize int64 = 4 * 1024 * 1024
 
 const completionTimeout = 2 * time.Minute
+// 完成租约长于单次请求超时；请求退出后的清理仍用令牌区分新旧持有者。
 const completionLeaseDuration = 3 * time.Minute
 
 type InitInput struct {
@@ -95,9 +96,8 @@ func initResponse(session Session, existing bool) InitResponse {
 	}
 }
 
-// Store persists both the resumable transfer state and its unconfirmed
-// chunks.  Chunks are removed once the immutable FileAsset is materialized;
-// the verified file hash and audit event remain the durable evidence.
+// Store 保存断点状态及已收到的分块；完成登记或判定为不可恢复失败后清理分块。
+// 临时失败用 Resume 保留分块，后续请求可重新完成对象写入和采集登记。
 type Store interface {
 	Init(context.Context, string, string, InitInput, int64) (Session, bool, error)
 	Get(context.Context, string, string) (Session, error)

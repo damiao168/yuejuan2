@@ -50,6 +50,15 @@ describe("paper import workflow controller", () => {
   let root: Root;
   let container: HTMLDivElement;
   let current: ReturnType<typeof usePaperImportWorkflow>;
+  let activeImport: PaperImportJob;
+
+  function Probe() {
+    current = usePaperImportWorkflow({
+      canManage: true, selectedExam: { id: "exam-1" } as never,
+      papers: [], paperImports: [activeImport], loadConfig: mocks.loadConfig
+    });
+    return null;
+  }
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -69,15 +78,50 @@ describe("paper import workflow controller", () => {
     container.remove();
   });
   async function mount(importJob: PaperImportJob) {
-    function Probe() {
-      current = usePaperImportWorkflow({
-        canManage: true, selectedExam: { id: "exam-1" } as never,
-        papers: [], paperImports: [importJob], loadConfig: mocks.loadConfig
-      });
-      return null;
-    }
+    activeImport = importJob;
     await act(async () => { root.render(<Probe />); });
   }
+
+  it("preserves local edits during polling but replaces them for a new generation", async () => {
+    const review = { ...job("review_required"), questions: [{ question_no: "1", question_type: "fill_blank", score: 2, stem: "原题" }] } as PaperImportJob;
+    await mount(review);
+    act(() => current.updateReviewDraft(0, "stem", { stem: "人工校对" }));
+    await mount({ ...review });
+    expect(current.reviewDrafts[0].stem).toBe("人工校对");
+    expect(current.reviewDirty).toBe(true);
+
+    await mount({ ...review, generation: 8, questions: [{ ...review.questions[0], stem: "重新识别" }] });
+    expect(current.reviewDrafts[0].stem).toBe("重新识别");
+    expect(current.reviewDirty).toBe(false);
+    await act(async () => { await current.confirmPaperImport(review); });
+    expect(mocks.savePaperImportReview).not.toHaveBeenCalled();
+    expect(mocks.warning).toHaveBeenCalledWith("资料已更新，请核对当前识别结果后再确认");
+  });
+
+  it("does not apply a saved review after the active generation changes", async () => {
+    const review = { ...job("review_required"), questions: [{ question_no: "1", question_type: "fill_blank", score: 2, stem: "原题" }] } as PaperImportJob;
+    let resolveSave!: () => void;
+    mocks.savePaperImportReview.mockReturnValueOnce(new Promise<void>((resolve) => { resolveSave = resolve; }));
+    await mount(review);
+    let confirmation!: Promise<void>;
+    act(() => { confirmation = current.confirmPaperImport(review); });
+    await mount({ ...review, generation: 8 });
+    await act(async () => { resolveSave(); await confirmation; });
+    expect(mocks.applyPaperImport).not.toHaveBeenCalled();
+    expect(mocks.warning).toHaveBeenCalledWith("资料已更新，本轮核对结果未导入，请核对最新结果");
+  });
+
+  it("requires saving local review edits before source changes restart recognition", async () => {
+    const review = { ...job("review_required"), questions: [{ question_no: "1", question_type: "fill_blank", score: 2, stem: "原题" }] } as PaperImportJob;
+    await mount(review);
+    act(() => current.updateReviewDraft(0, "stem", { stem: "人工修改" }));
+    await act(async () => { await current.replaceImportSources(review, review.sources); });
+    await act(async () => { await current.importPastedText("## 第 1 题\n\n已知 $x^2=4$，求 $x$ 的值，并写出完整步骤。", "question"); });
+    expect(mocks.replacePaperImportSources).not.toHaveBeenCalled();
+    expect(mocks.uploadFile).not.toHaveBeenCalled();
+    expect(current.reviewDrafts[0].stem).toBe("人工修改");
+    expect(mocks.warning).toHaveBeenCalledTimes(2);
+  });
 
   it("retries only a failed parse with its current generation", async () => {
     const failed = job("failed");
@@ -241,6 +285,19 @@ describe("paper import workflow controller", () => {
     expect(confirmedQuestions[0].rubric_candidate_id).toBeUndefined();
     expect(confirmedQuestions[0].human_confirmed_fields).toContain("answer");
     expect(confirmedQuestions[0].human_confirmed_fields).not.toContain("rubric");
+    expect(mocks.applyPaperImport).toHaveBeenCalledWith("import-1");
+  });
+
+  it("marks choice options as human-confirmed when confirming the import", async () => {
+    const review = { ...job("review_required"), questions: [{
+      question_no: "1", question_type: "single_choice", score: 5, stem: "选择正确结论",
+      options: ["A. 1", "B. 2"], answer_key: { standard_answer: "A" }
+    }] } as PaperImportJob;
+    await mount(review);
+    await act(async () => { await current.confirmPaperImport(review); });
+    const confirmedQuestions = mocks.savePaperImportReview.mock.calls[0][2] as PaperImportJob["questions"];
+    expect(confirmedQuestions[0].human_confirmed_fields).toContain("options");
+    expect(confirmedQuestions[0].options).toEqual(["A. 1", "B. 2"]);
     expect(mocks.applyPaperImport).toHaveBeenCalledWith("import-1");
   });
 });

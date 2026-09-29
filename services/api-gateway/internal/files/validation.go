@@ -145,6 +145,7 @@ func ValidateFileType(filename string, declaredContentType string, sniffedConten
 	return sniffedContentType, nil
 }
 
+// BuildStorageKey 只从原文件名取扩展名；随机后缀使相同内容也不必共用同一个对象。
 func BuildStorageKey(tenantID string, hashSHA256 string, filename string) (string, error) {
 	random, err := randomHex(8)
 	if err != nil {

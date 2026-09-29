@@ -11,6 +11,7 @@ export function createSubjectDraft(subject: string): SubjectExamDraft {
 }
 
 export function subjectDraftFromTemplate(subject: ExamTemplateSubject): SubjectExamDraft {
+  // 分区使用本地编辑 ID，不复用模板记录 ID；考试创建后由服务端建立自己的分区记录。
   return {
     subject: subject.subject,
     totalScore: subject.total_score,

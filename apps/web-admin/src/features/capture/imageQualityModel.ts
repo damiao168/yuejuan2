@@ -72,6 +72,7 @@ export function buildQualityDimensionRows(run?: ImageQualityRun): QualityDimensi
 }
 
 export function qualityDecision(run?: ImageQualityRun): string {
+  // 报告决定优先；旧格式只能在处理完成后回退到质量状态，不能把处理中当作通过。
   const decision = run?.quality_report.decision;
   if (typeof decision === "string") return decision;
   if (run?.processing_status !== "completed") return "PENDING";

@@ -164,6 +164,7 @@ export function normalizeLocalModelOutput(raw, input, modelVersion) {
       throw new LocalModelError("matched rubric point contained invalid evidence links", "EVIDENCE_LINK_INVALID");
     }
     classified.add(point.rubric_point_id);
+    // 严格别名未命中时将模型命中降为缺失，并移除关联证据后再计算建议分。
     if (rubricPoint.match_policy === "strict_alias") {
       const strictMatch = (rubricPoint.aliases ?? []).some((alias) => {
         const normalizedAlias = normalizeText(alias);
@@ -212,6 +213,7 @@ export function normalizeLocalModelOutput(raw, input, modelVersion) {
     }
   }
 
+  // 建议分由保留的采分点重算；模型自报分数与未校准置信度不能直接作为试点评分依据。
   const score = matchedPoints.reduce((total, point) => total + point.score, 0);
   const riskFlags = [...new Set([...(raw.risk_flags ?? []), "SCORE_NEEDS_REVIEW", "HUMAN_REVIEW_REQUIRED"])];
   const usesChinese = /[\u3400-\u9fff]/u.test(input.question_text);
@@ -275,10 +277,12 @@ export class LocalModelAdapter {
     return true;
   }
 
+  // 超时按单次请求计，grade 的重试会重新分配该预算；不是整个评分过程的总超时。
   async request(input, repairContext = undefined) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     const messages = buildLocalGradingMessages(input);
+    // 只追加固定修复提示，不把上一轮完整输出或错误细节重新送入模型。
     if (repairContext) {
       messages.push({ role: "user", content: "Your previous response failed the required schema. Return a fresh complete JSON object only." });
     }

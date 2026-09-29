@@ -273,6 +273,8 @@ func requiredForReadiness(checker Checker) bool {
 	return true
 }
 
+// CheckAll 依次检查依赖，timeout 分别应用于每一项；返回布尔值只反映必需依赖是否就绪。
+// 可选能力仍会报告自身错误，不能把 API 就绪理解为所有外部能力都可用。
 func CheckAll(ctx context.Context, timeout time.Duration, checkers []Checker) ([]CheckResult, bool) {
 	results := make([]CheckResult, 0, len(checkers))
 	allHealthy := true

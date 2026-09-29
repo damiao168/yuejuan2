@@ -10,6 +10,7 @@ export const PILOT_REQUIREMENTS = Object.freeze([
   ["operational_latency_passed", "Local one-request latency stays within the pilot ceiling"]
 ]);
 
+// 这里只聚合调用方提供的检查事实；通过结果允许影子试点，不授权发布最终成绩。
 export function evaluatePilotReadiness(evidence) {
   const checks = PILOT_REQUIREMENTS.map(([id, description]) => ({
     id,

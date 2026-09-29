@@ -41,6 +41,7 @@ class SymbolicVerificationRunner:
                 payload = runtime_task["payload"]
                 if binding["id"] != task_id or binding["artifact_id"] != runtime_task["source_id"]:
                     raise ValueError("symbolic task identity mismatch")
+                # 绑定冻结证据版本及人工修订号，防止旧任务把核验结果写到更新后的证据上。
                 for key in ("artifact_id", "artifact_version", "input_hash", "correction_revision"):
                     if binding[key] != payload[key]:
                         raise ValueError("symbolic task version mismatch")

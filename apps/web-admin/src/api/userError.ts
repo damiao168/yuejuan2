@@ -149,6 +149,7 @@ export function getApiErrorMessage(code: string | undefined, status: number | un
 }
 
 export function getUserErrorMessage(error: unknown, fallback?: string): string {
+  // API 错误优先按受控代码翻译，不直接向用户透传响应中的内部 message。
   if (isApiClientError(error)) return getApiErrorMessage(error.code, error.status);
   if (isNetworkError(error)) return NETWORK_USER_ERROR_MESSAGE;
   if (isAbortError(error)) return "操作已取消，请重新发起。";

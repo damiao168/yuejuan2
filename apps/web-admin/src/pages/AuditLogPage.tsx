@@ -50,6 +50,7 @@ function isSensitiveKey(key: string) {
   return sensitiveKeys.some((item) => normalized.includes(item));
 }
 
+// 展示前递归遮盖已知敏感键和常见凭据格式；这是界面兜底，不能替代服务端日志脱敏。
 function maskSensitive(value: unknown, key = ""): unknown {
   if (isSensitiveKey(key)) {
     return "***";
@@ -403,6 +404,7 @@ export function AuditLogPage({ canRead, canExport, tenantName }: AuditLogPagePro
       onOk: async () => {
         setExporting(true);
         try {
+          // 导出使用已提交的服务端筛选；下方关键字只过滤已加载列表，不改变导出范围。
           const result = await exportAuditLogs({ ...filter, limit: 200 });
           setLastWatermark(result.watermark ?? "");
           saveBlob(result.blob, result.filename ?? "audit-logs.csv");

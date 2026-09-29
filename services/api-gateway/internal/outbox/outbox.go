@@ -28,6 +28,8 @@ type Store interface {
 	MarkFailed(context.Context, string, string, string, time.Duration) error
 }
 
+// Publisher 可能收到重复事件：外部发布成功后，记录发布状态仍可能失败。
+// 有副作用的实现应使用 Event.ID 去重，不能假设每条事件只投递一次。
 type Publisher interface {
 	Publish(context.Context, Event) error
 }

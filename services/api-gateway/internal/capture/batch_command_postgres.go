@@ -39,6 +39,7 @@ func (s *PostgresStore) createBatchCommand(ctx context.Context, tenantID, examID
 		return Batch{}, ErrConflict
 	}
 	hash := batchCommandHash(examID, input)
+	// 先恢复已接受命令，再检查当前考试状态；考试后来离开采集阶段也应能找回原批次。
 	if len(ids) == 1 {
 		batch, err := scanBatch(tx.QueryRowContext(ctx, `SELECT `+batchColumns+` FROM capture_batch WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, ids[0]))
 		if err != nil {

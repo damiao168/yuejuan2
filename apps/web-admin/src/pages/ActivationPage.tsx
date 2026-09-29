@@ -25,6 +25,7 @@ export function ActivationPage({ onComplete }: { onComplete: (tenantCode?: strin
       setLoading(false);
       return () => { active = false; };
     }
+    // 令牌已保存在本次组件状态中；移除地址栏查询串，减少后续浏览记录和复制链接暴露。
     window.history.replaceState({}, "", "/activate");
     void verifyActivation(token).then((response) => {
       if (active) setPreview(response.activation);

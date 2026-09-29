@@ -21,6 +21,9 @@ apps/desktop-client/src-tauri/gen/schemas/
 /tmp/
 output/
 infra/docker-compose/backups/
+# 本地集成测试生成的数据和临时编排文件不进入仓库。
+/.tmp-pg-migration-verify/
+infra/docker-compose/.recovery-test-*.yml
 infra/docker-compose/.cookies
 infra/docker-compose/certs/
 .env

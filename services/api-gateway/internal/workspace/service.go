@@ -78,6 +78,7 @@ func NewService(deps Dependencies) *Service {
 	return &Service{deps: deps}
 }
 
+// 工作台把各子系统的读取失败降级为 warning，只有考试本身不可访问才让整个请求失败。
 func (s *Service) Get(ctx context.Context, scope auth.AccessScope, examID string) (Projection, error) {
 	if s.deps.Exams == nil || s.deps.Papers == nil || s.deps.Submissions == nil || s.deps.Reviews == nil {
 		return Projection{}, fmt.Errorf("workspace dependencies are incomplete")

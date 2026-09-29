@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+// 桶边界单位为秒；Prometheus 直方图是累计计数，一次观测会进入所有不小于它的桶。
 var durationBuckets = [...]float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10}
 
 type requestKey struct {
@@ -295,6 +296,7 @@ func (r *Registry) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	dbStats := r.dbStats
 	authLimiterDegraded := r.authLimiterDegraded
 	r.mu.RUnlock()
+	// 复制指标后再释放锁并生成响应，外部状态回调和网络写出都不占用统计写锁。
 
 	var output strings.Builder
 	output.WriteString("# HELP edugrade_http_requests_total Total HTTP requests.\n# TYPE edugrade_http_requests_total counter\n")

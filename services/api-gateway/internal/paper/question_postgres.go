@@ -21,15 +21,16 @@ func (s *PostgresStore) CreateQuestion(ctx context.Context, tenantID string, exa
 	}
 	kp, _ := json.Marshal(input.KnowledgePoints)
 	area, _ := json.Marshal(input.AnswerArea)
+	options, _ := json.Marshal(wireList(input.Options))
 	sortOrder := input.SortOrder
 	if sortOrder == 0 {
 		_ = tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(sort_order), 0) + 1 FROM question WHERE tenant_id = $1 AND exam_id = $2`, tenantID, examID).Scan(&sortOrder)
 	}
 	row := tx.QueryRowContext(ctx, `
-INSERT INTO question (tenant_id, exam_id, exam_paper_id, question_no, question_type, score, stem, knowledge_points, answer_area, sort_order, status)
-VALUES ($1, $2, NULLIF($3, '')::uuid, $4, $5, $6, $7, $8, $9, $10, 'active')
+INSERT INTO question (tenant_id, exam_id, exam_paper_id, question_no, question_type, score, stem, knowledge_points, answer_area, sort_order, status, parent_question_no, subquestion_no, options)
+VALUES ($1, $2, NULLIF($3, '')::uuid, $4, $5, $6, $7, $8, $9, $10, 'active', $11, $12, $13)
 RETURNING id::text, tenant_id::text, exam_id::text, COALESCE(exam_paper_id::text, ''), question_no, question_type, score::float8, COALESCE(stem, ''), knowledge_points, answer_area, sort_order, status
-`, tenantID, examID, input.ExamPaperID, input.QuestionNo, input.QuestionType, input.Score, input.Stem, kp, area, sortOrder)
+`, tenantID, examID, input.ExamPaperID, input.QuestionNo, input.QuestionType, input.Score, input.Stem, kp, area, sortOrder, input.ParentQuestionNo, input.SubquestionNo, options)
 	var out Question
 	if err := scanQuestion(row, &out); err != nil {
 		return Question{}, err
@@ -41,6 +42,7 @@ RETURNING id::text, tenant_id::text, exam_id::text, COALESCE(exam_paper_id::text
 		}
 		out.AnswerKey = &key
 	}
+	out.ParentQuestionNo, out.SubquestionNo, out.Options = input.ParentQuestionNo, input.SubquestionNo, wireList(input.Options)
 	if err := tx.Commit(); err != nil {
 		return Question{}, err
 	}
@@ -76,9 +78,14 @@ ORDER BY sort_order, question_no
 	if err := rows.Close(); err != nil {
 		return nil, err
 	}
+	// 后续查询可能复用同一事务连接，因此要先读完并关闭上面的结果集。
 	for index := range out {
 		var bankContent []byte
-		if err := queryer.QueryRowContext(ctx, `SELECT source_type,COALESCE(source_bank_item_id::text,''),COALESCE(source_bank_item_version_id::text,''),COALESCE(source_content_hash,''),bank_content FROM question WHERE tenant_id=$1 AND id=$2`, tenantID, out[index].ID).Scan(&out[index].SourceType, &out[index].SourceBankItemID, &out[index].SourceBankItemVersionID, &out[index].SourceContentHash, &bankContent); err != nil {
+		var options []byte
+		if err := queryer.QueryRowContext(ctx, `SELECT source_type,COALESCE(source_bank_item_id::text,''),COALESCE(source_bank_item_version_id::text,''),COALESCE(source_content_hash,''),bank_content,parent_question_no,subquestion_no,options FROM question WHERE tenant_id=$1 AND id=$2`, tenantID, out[index].ID).Scan(&out[index].SourceType, &out[index].SourceBankItemID, &out[index].SourceBankItemVersionID, &out[index].SourceContentHash, &bankContent, &out[index].ParentQuestionNo, &out[index].SubquestionNo, &options); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(options, &out[index].Options); err != nil {
 			return nil, err
 		}
 		if len(bankContent) > 0 {
@@ -127,7 +134,23 @@ func (s *PostgresStore) UpdateQuestion(ctx context.Context, tenantID string, id 
 	if err := ensureExamPaperMutableTx(ctx, tx, tenantID, current.ExamID); err != nil {
 		return Question{}, err
 	}
+	var currentOptions []byte
+	if err := tx.QueryRowContext(ctx, `SELECT parent_question_no,subquestion_no,options FROM question WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, id).Scan(&current.ParentQuestionNo, &current.SubquestionNo, &currentOptions); err != nil {
+		return Question{}, err
+	}
+	if err := json.Unmarshal(currentOptions, &current.Options); err != nil {
+		return Question{}, err
+	}
 	merged := current
+	if input.ParentQuestionNo != nil {
+		merged.ParentQuestionNo = *input.ParentQuestionNo
+	}
+	if input.SubquestionNo != nil {
+		merged.SubquestionNo = *input.SubquestionNo
+	}
+	if input.Options != nil {
+		merged.Options = wireList(*input.Options)
+	}
 	if input.QuestionNo != nil {
 		merged.QuestionNo = *input.QuestionNo
 	}
@@ -151,12 +174,13 @@ func (s *PostgresStore) UpdateQuestion(ctx context.Context, tenantID string, id 
 	}
 	kp, _ := json.Marshal(merged.KnowledgePoints)
 	area, _ := json.Marshal(merged.AnswerArea)
+	options, _ := json.Marshal(wireList(merged.Options))
 	row := tx.QueryRowContext(ctx, `
 UPDATE question
-SET question_no = $3, question_type = $4, score = $5, stem = $6, knowledge_points = $7, answer_area = $8, sort_order = $9, updated_at = now()
+SET question_no = $3, question_type = $4, score = $5, stem = $6, knowledge_points = $7, answer_area = $8, sort_order = $9, parent_question_no=$10, subquestion_no=$11, options=$12, updated_at = now()
 WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL
 RETURNING id::text, tenant_id::text, exam_id::text, COALESCE(exam_paper_id::text, ''), question_no, question_type, score::float8, COALESCE(stem, ''), knowledge_points, answer_area, sort_order, status
-`, tenantID, id, merged.QuestionNo, merged.QuestionType, merged.Score, merged.Stem, kp, area, merged.SortOrder)
+`, tenantID, id, merged.QuestionNo, merged.QuestionType, merged.Score, merged.Stem, kp, area, merged.SortOrder, merged.ParentQuestionNo, merged.SubquestionNo, options)
 	var out Question
 	if err := scanQuestion(row, &out); err != nil {
 		return Question{}, err
@@ -168,6 +192,7 @@ RETURNING id::text, tenant_id::text, exam_id::text, COALESCE(exam_paper_id::text
 		}
 		out.AnswerKey = &key
 	}
+	out.ParentQuestionNo, out.SubquestionNo, out.Options = merged.ParentQuestionNo, merged.SubquestionNo, wireList(merged.Options)
 	if err := tx.Commit(); err != nil {
 		return Question{}, err
 	}

@@ -69,6 +69,7 @@ impl StoredDesktopCredentials {
 }
 
 impl Drop for StoredDesktopCredentials {
+    // 结构释放时清除密码缓冲区，避免自动登录凭据在进程内存中长期残留。
     fn drop(&mut self) {
         self.password.zeroize();
     }
@@ -245,6 +246,7 @@ fn runtime_diagnostics(app: AppHandle) -> RuntimeDiagnostics {
 
 #[tauri::command]
 fn append_local_log(app: AppHandle, entry: LocalLogEntry) -> Result<(), String> {
+    // 原生入口仍需自行校验和脱敏，不能依赖 WebView 调用方已经处理过敏感字段。
     entry.validate()?;
     let entry = entry.redact();
     entry.validate()?;
@@ -374,6 +376,7 @@ fn begin_spool_local_asset(
     session_id: String,
     input: durable_store::SpoolAssetInput,
 ) -> Result<durable_store::SpoolAssetSession, String> {
+    // 本地数据命令统一在同一会话锁内完成身份核对和读写；新增命令也需保持这个边界。
     durable_store::with_session(&session_id, || {
         durable_store::begin_spool_local_asset(app, input)
     })

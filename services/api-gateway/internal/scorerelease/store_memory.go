@@ -64,6 +64,7 @@ func (s *MemoryStore) SetGateIssues(examID string, issues []GateIssue) {
 func (s *MemoryStore) Create(_ context.Context, tenantID, examID, actorID string, input CreateInput) (Release, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// 内存实现也按租户、考试和幂等键复用同一草稿，并在锁内复制事实快照。
 	key := tenantID + ":" + examID + ":" + input.IdempotencyKey
 	if id := s.idempotency[key]; id != "" {
 		return cloneRelease(s.releases[id]), nil
@@ -198,6 +199,7 @@ func (s *MemoryStore) Publish(_ context.Context, tenantID, id, actorID string) (
 	if release.Status != StatusDraft {
 		return Release{}, ErrInvalidTransition
 	}
+	// 发布时重新检查门禁；来自重评计划的草稿还要确认基础版本仍是当前发布版本。
 	gate := s.gateLocked(tenantID, release.ExamID, id)
 	if !gate.Passed {
 		return Release{}, ErrGateBlocked

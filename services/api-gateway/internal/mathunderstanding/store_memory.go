@@ -19,6 +19,7 @@ func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{next: 1, current: map[string]Artifact{}, artifacts: map[string]Artifact{}}
 }
 
+// CreateArtifact 在内存中保存版本历史。同一题块和输入哈希会返回原识别记录，不重新激活旧版本。
 func (s *MemoryStore) CreateArtifact(_ context.Context, tenantID string, input CreateArtifactInput) (Artifact, error) {
 	if tenantID == "" || ValidateCreateArtifact(input) != nil {
 		return Artifact{}, ErrInvalidInput
@@ -112,6 +113,8 @@ func cloneInput(input CreateArtifactInput) CreateArtifactInput {
 	_ = json.Unmarshal(raw, &out)
 	return out
 }
+
+// 对外返回深拷贝，避免调用方通过嵌套切片或 map 修改内存中的审计证据。
 func cloneArtifact(item Artifact) Artifact {
 	raw, _ := json.Marshal(item)
 	var out Artifact

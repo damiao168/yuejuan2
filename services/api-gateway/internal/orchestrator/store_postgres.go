@@ -73,6 +73,7 @@ ORDER BY created_at, id
 	return out, rows.Err()
 }
 
+// 建立任务和把运行标为 running 必须同一事务提交，避免只写了一半导致流程状态失真。
 func (s *PostgresStore) CreateTask(ctx context.Context, tenantID string, runID string, actorID string, input CreateTaskInput) (Task, error) {
 	input = NormalizeTaskInput(input)
 	if err := ValidateTaskInput(input); err != nil {
@@ -136,6 +137,7 @@ RETURNING id::text, tenant_id::text, orchestration_run_id::text, agent_type, sta
 	return out, nil
 }
 
+// 任务结果与运行汇总状态同一事务落库，提交失败时不会留下半完成的智能体任务。
 func (s *PostgresStore) CompleteTask(ctx context.Context, tenantID string, id string, input CompleteTaskInput) (Task, error) {
 	task, err := s.getTask(ctx, tenantID, id)
 	if err != nil {

@@ -54,6 +54,7 @@ func (r ProviderRegistry) ProbePolicy(providerKey string) string {
 	return ""
 }
 
+// 显式 provider 优先于模型名前缀；custom 必须带受 HTTPS 校验的地址，避免把未知模型误发到任意端点。
 func (r ProviderRegistry) Resolve(modelName, providerKey, customBaseURL string) (ProviderDefinition, error) {
 	modelName = strings.ToLower(strings.TrimSpace(modelName))
 	providerKey = strings.ToLower(strings.TrimSpace(providerKey))

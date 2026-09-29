@@ -34,6 +34,7 @@ type Task struct {
 	SourceType           string         `json:"source_type"`
 	SourceID             string         `json:"source_id"`
 	Status               string         `json:"status"`
+	// Priority 数值越小越优先；同优先级按创建时间和 ID 排序。
 	Priority             int            `json:"priority"`
 	Payload              map[string]any `json:"payload"`
 	PayloadSchemaVersion string         `json:"payload_schema_version"`

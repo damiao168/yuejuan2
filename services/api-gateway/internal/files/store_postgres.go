@@ -181,6 +181,7 @@ func (s *PostgresStore) BeginDelete(ctx context.Context, scope auth.AccessScope,
 	if asset.Revision != expectedRevision {
 		return FileAsset{}, ErrConflict
 	}
+	// 题库版本引用的是持久内容；即使调用方能读取资产，也不能删除被版本固定的文件。
 	var pinned bool
 	if err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM question_bank_item_asset WHERE tenant_id=$1 AND file_asset_id=$2)`, scope.TenantID, id).Scan(&pinned); err != nil {
 		return FileAsset{}, err
@@ -203,6 +204,7 @@ func (s *PostgresStore) MarkDeleteFailed(ctx context.Context, tenantID, id strin
 }
 
 func (s *PostgresStore) transition(ctx context.Context, tenantID, id string, expectedRevision int64, from []string, to, detail string, deleted bool) (FileAsset, error) {
+	// 前置读取不代表状态仍有效；实际更新同时比较修订号和允许的来源状态。
 	placeholders := make([]string, len(from))
 	args := []any{tenantID, id, expectedRevision, to, detail, deleted}
 	for index, state := range from {

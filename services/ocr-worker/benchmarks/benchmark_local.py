@@ -173,6 +173,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     if args.run_id == "local-baseline-v1":
         # Do not misreport the CLI thread candidate as the legacy implicit value.
         engine.cpu_threads = None
+    # 就绪检查和随后五轮预热不计入页面计时，报告主要反映热运行耗时。
     engine.initialize()
     warmup = [items[index % len(items)] for index in range(5)]
     for item in warmup:

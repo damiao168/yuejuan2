@@ -30,6 +30,7 @@ func NewHandler(store Store, papers paper.QuestionRepository, submissions submis
 }
 
 func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {
+	// 旧接口只负责把已配置的答题区域转换为片段；提交物必须先进入 ready_for_ocr，避免对未完成质检的页面生成坐标。
 	w.Header().Set("Deprecation", "true")
 	w.Header().Set("Sunset", "Thu, 01 Oct 2026 00:00:00 GMT")
 	w.Header().Set("Warning", `299 EduGrade "Legacy direct segmentation is deprecated; use the capture batch registration pipeline"`)
@@ -91,6 +92,7 @@ func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {
 			Status:           "generated",
 		})
 	}
+	// 即使部分题目配置有误，也返回可生成的片段和逐题问题，便于维护人员修正配置后重试。
 	segments := []Segment{}
 	if len(inputs) > 0 {
 		segments, err = h.store.CreateSegments(r.Context(), inputs)
@@ -181,6 +183,7 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
 }
 
 func writeStoreError(w http.ResponseWriter, r *http.Request, err error) {
+	// 将领域错误稳定映射为客户端可处理的状态码；底层数据库错误不泄露细节。
 	switch {
 	case errors.Is(err, ErrNotFound):
 		httpx.Error(w, r, http.StatusNotFound, "answer_segment_not_found", "answer segment not found")

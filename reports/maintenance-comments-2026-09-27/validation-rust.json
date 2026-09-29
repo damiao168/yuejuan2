@@ -1,0 +1,57 @@
+{
+  "method": "Changed lines are ordinary Rust line comments; each insertion context manually inspected outside strings and attributes",
+  "checked": 10,
+  "passed": true,
+  "files": [
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/claim.rs",
+      "passed": true,
+      "changed_comment_lines": 1
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs",
+      "passed": true,
+      "changed_comment_lines": 1
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/mod.rs",
+      "passed": true,
+      "changed_comment_lines": 1
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/paths.rs",
+      "passed": true,
+      "changed_comment_lines": 2
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/queue.rs",
+      "passed": true,
+      "changed_comment_lines": 3
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/schema.rs",
+      "passed": true,
+      "changed_comment_lines": 1
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/spool.rs",
+      "passed": true,
+      "changed_comment_lines": 3
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/durable_store/types.rs",
+      "passed": true,
+      "changed_comment_lines": 1
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/lib.rs",
+      "passed": true,
+      "changed_comment_lines": 3
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/src/scanner.rs",
+      "passed": true,
+      "changed_comment_lines": 2
+    }
+  ]
+}

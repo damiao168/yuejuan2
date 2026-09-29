@@ -6,6 +6,7 @@ import (
 	"net/http"
 )
 
+// 考试配置由 exam:manage 控制，评估资料只读权限单独开放；数学理解的 worker 回调还必须绑定任务租约。
 func registerExamRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("POST /api/v1/exams", ctx.guards.requireExamManage(ctx.modules.Exam.ExamHandler.CreateExam))
 	mux.Handle("GET /api/v1/exam-templates", ctx.guards.requireExamManage(ctx.modules.Exam.ExamHandler.ListExamTemplates))

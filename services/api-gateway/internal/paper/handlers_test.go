@@ -369,6 +369,7 @@ func TestAnswerTemplateRejectsUnknownFieldsAndCrossExamPaper(t *testing.T) {
 	}
 }
 
+// 使用真实路由与认证中间件、内存业务存储；这些用例不覆盖数据库锁、触发器和落库原子性。
 func testRouter(authStore *auth.MemoryStore, paperStore *paper.MemoryStore) http.Handler {
 	cfg := config.Config{
 		Service: config.ServiceConfig{Name: "test", Environment: "test", ReadinessTimeout: time.Millisecond},

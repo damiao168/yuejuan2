@@ -314,6 +314,7 @@ ORDER BY managed_model_api_config_id
 	return ids, rows.Err()
 }
 
+// SQL 更新同时校验租户、期望版本和托管配置能力状态；并发修改会返回版本冲突而不是覆盖。
 func (s *PostgresStore) UpdatePolicy(ctx context.Context, tenantID string, _ string, input PolicyUpdateInput) (TenantPolicy, error) {
 	if input.AllowedDeployments == nil {
 		input.AllowedDeployments = []string{}
@@ -425,6 +426,7 @@ ORDER BY approval.created_at DESC, approval.id
 	return out, rows.Err()
 }
 
+// 数据库审批写入同时绑定租户、供应商和部署；托管模型路径不会混用旧版 provider/deployment 外键。
 func (s *PostgresStore) CreateSandboxApproval(
 	ctx context.Context,
 	tenantID string,
@@ -1029,6 +1031,7 @@ ORDER BY created_at DESC, id
 	return out, rows.Err()
 }
 
+// 使用事务和 advisory lock 串行化同一租户/模型范围的审批，避免并发请求产生两个有效审批。
 func (s *PostgresStore) CreateModelApproval(
 	ctx context.Context,
 	tenantID string,
@@ -1201,6 +1204,7 @@ type rowScanner interface {
 	Scan(dest ...any) error
 }
 
+// 扫描器把数据库中的密钥引用转成脱敏 Provider；查询层不应把 secret 内容映射到公开字段。
 func scanProvider(row rowScanner) (Provider, error) {
 	var item Provider
 	var dataPolicy []byte

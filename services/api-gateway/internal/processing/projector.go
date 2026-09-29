@@ -21,6 +21,7 @@ type Projector struct {
 }
 
 func NewProjector(store ProjectionStore, options ProjectorOptions) *Projector {
+	// 默认值保证后台投影即使未配置参数也有有限租约、轮询间隔和重试退避。
 	if options.Owner == "" {
 		options.Owner = fmt.Sprintf("processing-projector-%d", time.Now().UTC().UnixNano())
 	}
@@ -40,6 +41,7 @@ func NewProjector(store ProjectionStore, options ProjectorOptions) *Projector {
 }
 
 func (p *Projector) RunOnce(ctx context.Context) (bool, error) {
+	// 一次循环只处理一个租约；应用失败后保留版本并写入退避时间，避免忙等重试。
 	if p == nil || p.store == nil {
 		return false, ErrInvalidInput
 	}
@@ -55,6 +57,7 @@ func (p *Projector) RunOnce(ctx context.Context) (bool, error) {
 }
 
 func (p *Projector) Run(ctx context.Context, onError func(error)) {
+	// 没有可处理版本时定时轮询；收到取消信号立即停止，不再领取新租约。
 	for {
 		worked, err := p.RunOnce(ctx)
 		if err != nil && onError != nil && !errors.Is(err, context.Canceled) {

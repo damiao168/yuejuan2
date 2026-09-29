@@ -9,6 +9,7 @@ if (!baseUrl) throw new Error("Usage: shared-client-contract.mjs <handler-fixtur
 const directory = await mkdtemp(path.join(os.tmpdir(), "edugrade-shared-client-"));
 try {
   const outfile = path.join(directory, "client.mjs");
+  // 在 Node 中调用生产 SDK/runtime；此测试不覆盖浏览器 cookie、CORS 或页面交互。
   await build({ entryPoints: ["tests/integration/shared-client-contract.ts"], outfile,
     bundle: true, platform: "node", format: "esm", define: { "import.meta.env": "{}" } });
   const { run } = await import(pathToFileURL(outfile).href);

@@ -377,6 +377,7 @@ FROM question_appeal WHERE tenant_id = $1 AND id = $2::uuid FOR UPDATE
 	return item, err
 }
 
+// 事件与申诉状态共用事务，避免留下有状态无历史或有历史无状态的记录。
 func insertPublishedQuestionAppealEvent(ctx context.Context, tx *sql.Tx, tenantID, appealID, actorID, eventType string, payload map[string]any) error {
 	encoded, err := json.Marshal(payload)
 	if err != nil {
@@ -404,6 +405,7 @@ SELECT EXISTS (
 	return exists, err
 }
 
+// 重评任务必须锚定同一考试、题目和原发布版本，不能借用其他批次的重评任务。
 func matchingAppealRegradeJob(ctx context.Context, tx *sql.Tx, tenantID string, item PublishedQuestionAppeal, jobID string) (bool, error) {
 	var exists bool
 	err := tx.QueryRowContext(ctx, `
@@ -416,6 +418,7 @@ SELECT EXISTS (
 	return exists, err
 }
 
+// 结案版本不仅要更新且已发布，还必须包含原学生、原答卷和原题目的成绩事实。
 func successorPublishedReleaseExists(ctx context.Context, tx *sql.Tx, tenantID string, item PublishedQuestionAppeal, releaseID string) (bool, error) {
 	var exists bool
 	err := tx.QueryRowContext(ctx, `

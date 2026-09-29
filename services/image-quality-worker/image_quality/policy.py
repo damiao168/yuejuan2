@@ -312,6 +312,7 @@ def _decision(
     hard_gates: list[dict[str, Any]],
     enhancements: list[str],
 ) -> tuple[str, str]:
+    # 硬门槛优先于综合分，不能用其他维度的高分抵消分辨率或严重模糊失败。
     if any(gate["status"] == "failed" for gate in hard_gates):
         return "REJECT", "failed"
     if issues:

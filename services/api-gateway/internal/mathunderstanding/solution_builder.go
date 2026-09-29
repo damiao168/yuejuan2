@@ -16,6 +16,7 @@ type SolutionBuildInput struct {
 	MinimumEdgeScore    float64
 }
 
+// BuildSolutionGraph 把达到阈值的空间关系转成步骤连线；发现环时返回错误，不自动删边。
 func BuildSolutionGraph(input SolutionBuildInput) (SolutionGraph, error) {
 	if input.AnswerSegmentID == "" || input.BuilderVersion == "" || input.FormulaModelVersion == "" {
 		return SolutionGraph{}, ErrInvalidInput
@@ -52,6 +53,7 @@ func BuildSolutionGraph(input SolutionBuildInput) (SolutionGraph, error) {
 		}
 		return edges[i].FromStepID < edges[j].FromStepID
 	})
+	// 整体置信度取最弱步骤，避免其他步骤的高分掩盖一个识别不清的步骤。
 	confidence := 1.0
 	if len(steps) == 0 {
 		confidence = 0

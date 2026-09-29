@@ -34,6 +34,7 @@ func (s *PostgresStore) SaveDraft(ctx context.Context, tenantID, taskID, reviewe
 	}
 	defer tx.Rollback()
 	var ownedTask int
+	// 先锁任务再锁草稿，防止保存过程中任务被转派或提交；首次保存也受任务行锁保护。
 	err = tx.QueryRowContext(ctx, `SELECT 1 FROM review_task t WHERE t.tenant_id=$1::uuid AND t.id=$2::uuid AND t.assigned_to=$3::uuid AND t.deleted_at IS NULL AND t.status IN ('assigned','in_progress','returned','pending') FOR UPDATE`, tenantID, taskID, reviewerID).Scan(&ownedTask)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ReviewDraft{}, ErrForbidden
@@ -44,6 +45,7 @@ func (s *PostgresStore) SaveDraft(ctx context.Context, tenantID, taskID, reviewe
 	var current int
 	err = tx.QueryRowContext(ctx, `SELECT d.revision FROM review_draft d JOIN review_task t ON t.tenant_id=d.tenant_id AND t.id=d.review_task_id WHERE d.tenant_id=$1::uuid AND d.review_task_id=$2::uuid AND d.reviewer_id=$3::uuid AND d.deleted_at IS NULL AND t.deleted_at IS NULL AND t.assigned_to=$3::uuid AND t.status IN ('assigned','in_progress','returned','pending') FOR UPDATE OF d`, tenantID, taskID, reviewerID).Scan(&current)
 	var out ReviewDraft
+	// 草稿版本控制覆盖冲突；客户端时间仅作记录，不能决定哪次保存生效。
 	if errors.Is(err, sql.ErrNoRows) {
 		if input.ExpectedRevision != 0 {
 			return out, ErrRevisionConflict

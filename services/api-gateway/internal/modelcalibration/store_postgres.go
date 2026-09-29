@@ -110,6 +110,7 @@ func (s *PostgresStore) Complete(ctx context.Context, tenantID, calibrationID st
 	if err != nil {
 		return Calibration{}, err
 	}
+	// 完成时锁住校准记录并重新核对证据数量，避免并发新增证据被漏进已签名 artifact。
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Calibration{}, err

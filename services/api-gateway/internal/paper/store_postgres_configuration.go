@@ -196,6 +196,7 @@ RETURNING id::text, tenant_id::text, exam_id::text, exam_paper_id::text, version
 	if err := scanTemplate(row, &item); err != nil {
 		return AnswerSheetTemplate{}, err
 	}
+	// 锁定模板同时把区域同步到正式题目；任一区域引用无效时整笔事务回滚。
 	for _, page := range item.Layout.Pages {
 		for _, region := range page.QuestionRegions {
 			result, err := tx.ExecContext(ctx, `
@@ -249,6 +250,7 @@ WHERE tenant_id = $1::uuid AND id = $2::uuid AND deleted_at IS NULL
 	if err != nil {
 		return AnswerSheetTemplate{}, err
 	}
+	// 模板创建已单独提交；继承校准失败时副本仍存在，调用方不能把错误当成没有创建。
 	if err := s.inheritApprovedOMRCalibrationForClone(ctx, tenantID, source.ID, cloned); err != nil {
 		return AnswerSheetTemplate{}, err
 	}
@@ -493,6 +495,7 @@ ORDER BY confirmed_at DESC LIMIT 1
 	return result, nil
 }
 
+// 准备阶段使用当前在读名册，后续阶段使用冻结的考试考生快照；摘要包含具体人员身份。
 func calculateReadiness(ctx context.Context, queryer postgresQueryer, tenantID string, examID string) (ReadinessResult, string, []string, error) {
 	var total float64
 	var status string

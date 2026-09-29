@@ -27,6 +27,7 @@ def fixture(name):
     return json.loads(FIXTURES.joinpath(name).read_text(encoding="utf-8"))
 
 
+# 单像素合成图只用于裁剪传输契约，不用于衡量图像识别质量。
 def approved_crop(**changes):
     crop = ApprovedImageCrop(
         binding=CROP_BINDING,

@@ -10,6 +10,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
+// 创建质量运行记录和 Worker Runtime 任务必须同一事务提交，避免出现有运行记录却没有可执行任务。
 func (s *PostgresStore) CreateRunsWithTasks(ctx context.Context, tenantID, actorID string, input CreateRunsInput) ([]Run, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -43,6 +44,7 @@ func qualityRuntimeCreateInput(run Run) workerruntime.CreateTaskInput {
 	}
 }
 
+// 结果提交把幂等收据、质量运行和答题页状态放在同一提交边界内，重试不会重复推进页面。
 func (s *PostgresStore) SubmitResultCommand(ctx context.Context, tenantID, actorID, runID string, input ResultInput) (Run, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {

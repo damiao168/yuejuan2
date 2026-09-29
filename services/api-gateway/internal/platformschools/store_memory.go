@@ -46,6 +46,7 @@ func (s *MemoryStore) PutActivity(tenantID string, item ActivityResult) {
 	s.activities[tenantID] = item
 }
 
+// 内存实现按租户汇总测试数据，字段含义与平台学校运营页保持一致。
 func (s *MemoryStore) ListSummaries(_ context.Context, days int) ([]PlatformSchoolSummary, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

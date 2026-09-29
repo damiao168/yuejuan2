@@ -111,6 +111,7 @@ export interface SchoolActivityResponse {
 }
 
 const base = "/api/v1/platform/schools";
+// 平台学校详情按租户 ID 寻址，不能传摘要中的 school_id。
 const detailPath = (tenantId: string) => `${base}/${encodeURIComponent(tenantId)}`;
 
 export function listPlatformSchools(filter: PlatformSchoolListFilter = {}) {

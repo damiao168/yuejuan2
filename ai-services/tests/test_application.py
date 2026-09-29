@@ -78,6 +78,7 @@ class ApplicationTests(unittest.TestCase):
         suggestion, _ = app.grade(request, request["request_id"])
         self.assertIn("prompt_injection_suspected", suggestion["risk_flags"])
 
+    # 两个线程同时进入同键请求，验证共享一次推理而不只是顺序缓存重放。
     def test_concurrent_identical_requests_share_one_inference(self):
         model = FakeModel([valid_raw_output()])
         app = GradingAgentApplication(settings(), model=model)

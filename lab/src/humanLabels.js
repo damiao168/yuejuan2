@@ -1,5 +1,6 @@
 import { validateRubric } from "./schemas/gradingSchema.js";
 
+// 这些模式用于拦截常见敏感信息，不能代替导入前的完整匿名化审核。
 const SENSITIVE_PATTERNS = [
   { id: "phone", pattern: /\b1[3-9]\d{9}\b/ },
   { id: "student-number", pattern: /\b\d{8,18}\b/ },

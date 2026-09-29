@@ -59,6 +59,7 @@ func (h *Handler) CreateExamSession(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &input) {
 		return
 	}
+	// HTTP 重放缓存与业务恢复回执必须使用同一命令键，避免产生两套操作身份。
 	headerCommandID := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	if input.CommandID == "" {
 		input.CommandID = headerCommandID

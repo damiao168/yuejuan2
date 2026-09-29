@@ -49,6 +49,7 @@ def visual_ref(page_no=1):
     return {**ref(), "page_no": page_no, "text_start": None, "text_end": None}
 
 
+# 合成字节只供模型替身检查页面绑定和哈希，不能据此验证真实图片识别效果。
 def with_visual_page(request, raw=b"synthetic-png-page", page_no=1):
     request["visual_pages"] = [{
         "source_id": "source-1",
@@ -231,6 +232,22 @@ def test_answer_only_is_valid_and_does_not_hallucinate_question():
     result = PaperParser(FakeStructuredModel(output("answer", answers=[answer]))).parse(payload())
     assert result["question_candidates"] == []
     assert result["answer_candidates"][0]["standard_answer"] == "A"
+
+
+def test_full_model_cannot_turn_story_points_into_exam_marks_without_a_mark_anchor():
+    def candidate(score):
+        return {"candidate_id": "q8", "question_no_raw": "8", "question_no_normalized": "8",
+                "question_type": "single_choice", "score": score, "confidence": .95,
+                "source_refs": [ref()], "issues": []}
+
+    story = "8. 取到红球得4分，取到白球得1分。求期望。"
+    result = PaperParser(FakeStructuredModel(output("question", questions=[candidate(4)]))).parse(payload(story))
+    assert result["question_candidates"][0]["score"] is None
+    assert result["question_candidates"][0]["issues"]
+
+    marked = "8. 取到红球得4分，取到白球得1分。（本题满分5分）"
+    result = PaperParser(FakeStructuredModel(output("question", questions=[candidate(5)]))).parse(payload(marked))
+    assert result["question_candidates"][0]["score"] == 5
 
 
 def test_full_model_progress_reports_real_route_and_completed_request():

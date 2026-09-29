@@ -143,6 +143,7 @@ export function QuestionAppealWorkspace({ examId = "", canManage, canWork, onCha
 }
 
 function RegionOverlay({ region }: { region: Record<string, unknown> }) {
+  // 只接受标准答题图的归一化框；其他坐标系不能直接按图片百分比定位。
   const values = [region.x, region.y, region.width, region.height];
   if (region.coordinate_space !== "canonical_image_normalized" || values.some((value) => typeof value !== "number")) return null;
   const [x, y, width, height] = values as number[];

@@ -61,6 +61,7 @@ export function runEvaluation({ datasetPath, adapterName = "mock", filters = {} 
       throw new Error(`Invalid sample input ${sample.sample_id}: ${inputValidation.errors.join("; ")}`);
     }
     const rawOutput = adapter.grade(input);
+    // 先应用证据校验的降级结果，再统计结构和证据有效性；报告记录调整后的建议。
     const adjustedOutput = applyEvidenceVerification(input, rawOutput);
     const schemaValidation = validateGradingOutput(adjustedOutput, input);
     const verification = verifyEvidence(input, adjustedOutput);
@@ -109,6 +110,7 @@ export async function runEvaluationAsync({ datasetPath, adapterName = "mock", ad
       throw new Error(`Invalid sample input ${sample.sample_id}: ${inputValidation.errors.join("; ")}`);
     }
     const rawOutput = await adapter.grade(input);
+    // 先应用证据校验的降级结果，再统计结构和证据有效性；报告记录调整后的建议。
     const adjustedOutput = applyEvidenceVerification(input, rawOutput);
     records.push({
       sample,

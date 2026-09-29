@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { loginAsSchoolAdmin } from "../fixtures/schoolAdminLogin";
 
+// 依赖隔离 STORY-060 环境预置账号和考试；本文件没有 API 拦截，验证浏览器到真实网关的路径。
 test("学校管理员通过真实网关登录并查看已持久化考试", async ({ page }, testInfo) => {
   const serverErrors: string[] = [];
   const forbiddenResponses: string[] = [];

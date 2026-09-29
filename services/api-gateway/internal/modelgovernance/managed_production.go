@@ -66,6 +66,7 @@ type managedProductionCandidate struct {
 	CapabilityVersion string
 }
 
+// 生产候选必须能解密出足够强的密钥，并通过能力探测、默认绑定和角色范围校验。
 func validateManagedProductionCandidate(item managedProductionCandidate, apiKey string, decryptErr error) error {
 	parsed, parseErr := url.Parse(item.Endpoint)
 	if parseErr != nil || parsed.Scheme != "https" || parsed.Host == "" ||

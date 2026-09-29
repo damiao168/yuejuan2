@@ -32,6 +32,7 @@ func NewEnvironmentSecretResolver(dockerSecretDir string) *EnvironmentSecretReso
 	return &EnvironmentSecretResolver{dockerSecretDir: dockerSecretDir}
 }
 
+// Probe 只返回是否配置和强度，不读取或返回密钥；路径、查询参数和目录穿越一律拒绝。
 func (r *EnvironmentSecretResolver) Probe(reference string) (SecretProbe, error) {
 	parsed, err := url.Parse(strings.TrimSpace(reference))
 	if err != nil || parsed.Scheme == "" || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {

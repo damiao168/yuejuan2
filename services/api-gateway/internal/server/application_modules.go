@@ -46,6 +46,7 @@ func NewTransactionalApplicationModules(dependencies ApplicationDependencies, st
 	return newApplicationModules(dependencies, stores, true)
 }
 
+// transactional 只控制需要数据库事务一致性的模块构造；内存路由仍使用同一组模块接口，便于端到端测试覆盖相同路由。
 func newApplicationModules(dependencies ApplicationDependencies, stores ApplicationStores, transactional bool) (ApplicationModules, error) {
 	identity := NewIdentityModule(dependencies.Config, stores.Identity, dependencies.LoginGuard)
 	processingService := processing.NewService(stores.Capture.Processing, stores.Capture.WorkerRuntime)
@@ -108,6 +109,7 @@ func NewPostgresApplicationModules(infra *Infrastructure) (ApplicationModules, e
 	}, stores)
 }
 
+// 只有托管配置存储支持按租户解析模型；内存或旧实现没有该能力时返回 nil，让调用方继续走本地模型路径。
 func newDocumentModelResolver(store modelgovernance.Store) func(context.Context, string) (*paper.DocumentModelConfig, error) {
 	managed, ok := store.(modelgovernance.ManagedAPIConfigStore)
 	if !ok {

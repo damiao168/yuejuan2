@@ -47,6 +47,7 @@ def login_with_retry(
             retryable = exc.status_code is None or exc.status_code in LOGIN_RETRYABLE_STATUS_CODES
             if not retryable or attempt >= max_attempts:
                 raise
+            # 服务端 Retry-After 优先；本地上限仅约束指数退避值，不截短服务端等待要求。
             wait_seconds = exc.retry_after if exc.retry_after is not None else delay
             wait_seconds = max(0.0, wait_seconds)
             print(

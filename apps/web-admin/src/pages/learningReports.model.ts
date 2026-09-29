@@ -84,6 +84,7 @@ export function emptyReason(reason?: string) {
   return "当前考试暂无报告数据。";
 }
 
+// 跨班掌握率按累计得分/累计满分重算，避免把不同样本权重的百分比直接平均。
 export function aggregateKnowledge(classes: ClassReport[]): KnowledgeRow[] {
   const grouped = new Map<string, KnowledgeRow>();
   for (const classReport of classes) {
@@ -118,6 +119,7 @@ export function flattenErrors(questions: QuestionAnalysis[], classes: ClassRepor
       score_rate: question.score_rate
     }))
   );
+  // 题目级线索存在时优先使用它；仅在完全缺失时退回班级高频错题，避免重复展示两种口径。
   if (fromQuestions.length > 0) {
     return fromQuestions.sort((a, b) => b.count - a.count).slice(0, 8);
   }

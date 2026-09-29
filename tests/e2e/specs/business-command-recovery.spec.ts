@@ -19,6 +19,7 @@ test("stale human-submit command resumes after reload without changing score or 
   await page.getByRole("spinbutton", { name: "最终得分" }).fill("4");
   const submit = page.getByRole("button", { name: "提交并下一份" });
   await expect(submit).toBeEnabled();
+  // 同一事件循环连续触发两次，绕过常规点击等待，验证提交锁能挡住同步双击。
   await submit.evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
   await expect.poll(() => requests.length).toBe(1);
   await page.reload();

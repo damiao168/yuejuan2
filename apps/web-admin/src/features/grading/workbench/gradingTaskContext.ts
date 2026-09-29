@@ -27,6 +27,7 @@ function resolveTaskAISuggestion(value: unknown): { grade?: AiGrade; warning?: s
 export async function loadTaskContext(taskId: string, allowOriginalImage: boolean): Promise<WorkbenchContext> {
   const reviewContext = await appQueryClient.fetchQuery(reviewTaskContextQueryOptions(taskId));
   const task = reviewContext.task;
+  // 初次加载仍遵守第二意见的显式揭示规则，不能因预取任务而提前填入 AI 建议。
   const metadata = secondOpinionMetadata(reviewContext, false);
   const suggestion = metadata ? resolveTaskAISuggestion(metadata) : {};
   const history = metadata ? (reviewContext.ai_second_opinion?.history ?? []).flatMap((item) => {

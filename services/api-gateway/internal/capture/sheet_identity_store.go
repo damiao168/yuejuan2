@@ -164,6 +164,7 @@ RETURNING id::text,issued_at
 		return IssuedStudentBarcodes{}, err
 	}
 
+	// 新序列签发、旧序列撤销及已扫描页的冲突标记共用事务，不产生两个同时有效的替代品。
 	newSerial := uuid.NewString()
 	if _, err = tx.ExecContext(ctx, `
 INSERT INTO answer_sheet_print_sheet (
@@ -227,6 +228,7 @@ type sheetCapturePageState struct {
 	ConflictPageID string
 }
 
+// 纸张状态与所有已扫描页一起锁定重算；撤销、重复和冲突都要回写页面与批次聚合。
 func (s *PostgresStore) reconcileSheetSerialTx(
 	ctx context.Context,
 	tx *sql.Tx,
@@ -358,6 +360,7 @@ WHERE tenant_id=$1 AND id=$2::uuid
 			}
 			continue
 		}
+		// 删除重复扫描后只解除重复页这一种冲突，并回到质检结果对应阶段，不直接标为就绪。
 		page := group[0]
 		if page.ConflictCode != "sheet_page_duplicate" {
 			continue

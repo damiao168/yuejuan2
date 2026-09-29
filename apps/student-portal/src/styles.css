@@ -331,6 +331,7 @@ button:focus-visible { outline: 3px solid rgba(22, 119, 255, .3); outline-offset
 .paper-toolbar button:disabled { color: #a9b0ba; background: #f7f7f8; cursor: not-allowed; }
 .paper-toolbar .high-score.active { border-color: #52c41a; color: #237804; background: #f6ffed; }
 .paper-stage { min-height: 640px; overflow: auto; padding: 28px; border: 1px solid #bfc5ce; border-top: 0; background: #d9dde2; }
+/* 整卷图片和批注共用相对容器；批注坐标按显示矩形的百分比定位，缩放时才不会漂移。 */
 .paper-page { position: relative; width: 100%; min-width: 680px; margin: 0 auto; transition: width .18s ease; }
 .paper-page > img { display: block; width: 100%; height: auto; background: #fff; box-shadow: 0 4px 16px rgb(16 24 40 / 18%); }
 .paper-score-mark { position: absolute; z-index: 3; transform: translateX(-100%); color: #e60012; font-size: clamp(12px, 1.15vw, 18px); font-weight: 800; line-height: 1; white-space: nowrap; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff; }

@@ -254,6 +254,7 @@ func (s *MemoryStore) completeLocked(tenantID string, taskID string, input Compl
 		return Task{}, ErrNotFound
 	}
 	if task.Status == StatusSucceeded {
+		// 完成回调可能重发；只允许同一租约和同一结果返回原成功记录，不能覆盖已接受结果。
 		if task.LeaseToken != input.LeaseToken {
 			return Task{}, ErrLeaseMismatch
 		}

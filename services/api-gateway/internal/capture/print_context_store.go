@@ -22,6 +22,7 @@ WHERE tenant_id=$1 AND id=$2::uuid AND status='locked' AND deleted_at IS NULL
 		return StudentPrintContext{}, mapNotFound(err)
 	}
 
+	// 名册取考试冻结快照；活动打印只看同一模板和内容哈希的最新未撤销纸张。
 	candidateRows, err := s.db.QueryContext(ctx, `
 SELECT
   candidate.student_id::text,candidate.student_no_snapshot,candidate.student_name_snapshot,

@@ -78,6 +78,7 @@ function Initialize-DeploymentEnv([string]$Path) {
     Set-EnvValue $Path "EDUGRADE_POSTGRES_APP_PASSWORD" $postgresAppPassword
     Set-EnvValue $Path "EDUGRADE_POSTGRES_ADMIN_DSN" "postgres://edugrade:$postgresAdminPassword@postgres:5432/edugrade?sslmode=disable"
     Set-EnvValue $Path "EDUGRADE_POSTGRES_DSN" "postgres://edugrade_app:$postgresAppPassword@postgres:5432/edugrade?sslmode=disable"
+    Set-EnvValue $Path "EDUGRADE_POSTGRES_TENANT_RLS" "true"
     Set-EnvValue $Path "EDUGRADE_REDIS_PASSWORD" (New-HexSecret)
     Set-EnvValue $Path "EDUGRADE_MINIO_ROOT_PASSWORD" (New-HexSecret)
     Set-EnvValue $Path "EDUGRADE_MINIO_APP_SECRET_KEY" (New-HexSecret)
@@ -134,6 +135,9 @@ function Assert-GeneratedEnv([string]$Path) {
     }
     if ($values["EDUGRADE_POSTGRES_DSN"] -notlike "*:$($values['EDUGRADE_POSTGRES_APP_PASSWORD'])@postgres:*") {
         throw "Generated PostgreSQL application DSN does not match its password."
+    }
+    if ($values["EDUGRADE_POSTGRES_TENANT_RLS"] -ne "true") {
+        throw "Generated PostgreSQL application connection must enable tenant RLS."
     }
 }
 
@@ -229,6 +233,8 @@ $firstInstall = -not (Test-Path -LiteralPath $installMarker -PathType Leaf)
 $envExists = Test-Path -LiteralPath $envFile -PathType Leaf
 $envCreatedThisRun = $false
 
+
+# DryRun 只在临时文件中检验生成配置，结束后删除；不会调用 Docker 或写部署 .env。
 if ($DryRun) {
     $testEnvFile = [IO.Path]::GetTempFileName()
     try {
@@ -250,6 +256,8 @@ if ($DryRun) {
 
 Ensure-Docker
 
+
+# 只为首次创建的配置生成随机密钥；已有配置必须保留，避免数据库密码与持久化数据脱节。
 if (-not $envExists) {
     Write-Step "Creating a secure local deployment configuration"
     Copy-Item -LiteralPath $envExampleFile -Destination $envFile
@@ -267,6 +275,7 @@ if (-not $SkipLocalModel) {
     $labRoot = Join-Path $repositoryRoot "lab"
     $runtimeBinary = Join-Path (Join-Path $labRoot $manifest.runtime.install_dir) $manifest.runtime.server_binary
     $modelFile = Join-Path $labRoot $manifest.model.model_path
+    # 这里只做快速存在性和大小检查；下载准备及启动脚本负责各自完整性检查。
     $modelReady = (Test-Path -LiteralPath $runtimeBinary -PathType Leaf) -and
         (Test-Path -LiteralPath $modelFile -PathType Leaf) -and
         ((Get-Item -LiteralPath $modelFile).Length -eq [long]$manifest.model.expected_bytes)

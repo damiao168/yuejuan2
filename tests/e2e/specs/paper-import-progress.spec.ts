@@ -40,6 +40,7 @@ test("识别轮询在短暂失败后恢复，停止及重试保留资料和滚�
   }));
   const before = await scrollPosition();
   const startPolls = polls;
+  // 只失败一次，并等待后续成功轮询；验证短暂网络错误不会清空已显示的任务与位置。
   failNext = true;
   await expect.poll(() => polls, { timeout: 15_000 }).toBeGreaterThanOrEqual(startPolls + 2);
   await expect(page.getByRole("progressbar")).toBeVisible();

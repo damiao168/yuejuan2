@@ -30,6 +30,8 @@ type PilotGateDecision struct {
 	Scope    string   `json:"scope"`
 }
 
+// EvaluatePilotGate 将提交的指标逐项与阈值比较，返回教师建议范围的评估结果。
+// 此函数不启用模型，也不授权写入正式成绩。
 func EvaluatePilotGate(subject string, metrics PilotMetrics, policy PilotPolicy) PilotGateDecision {
 	decision := PilotGateDecision{Scope: "teacher_suggestion_only", Blockers: []string{}}
 	if !set("mathematics", "physics", "chemistry")[subject] {

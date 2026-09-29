@@ -349,6 +349,7 @@ func managedChatCompletion(connection ManagedAPIConnection, content, finishReaso
 	}, nil
 }
 
+// 统一限制消息、附件和总字符数，并要求最后一条来自用户，避免把后台对话接口当成任意代理。
 func normalizeManagedChatMessages(messages []ManagedChatMessage) ([]ManagedChatMessage, error) {
 	if len(messages) == 0 || len(messages) > managedChatMaxMessages {
 		return nil, ErrManagedChatInvalidRequest
@@ -488,6 +489,7 @@ func (h *Handler) CreateManagedChatCompletion(w http.ResponseWriter, r *http.Req
 	httpx.JSON(w, http.StatusOK, map[string]any{"completion": completion})
 }
 
+// 并发额度按租户和用户分别计数；调用方必须执行返回的释放函数，异常路径也不能泄漏额度。
 func (h *Handler) reserveManagedChat(r *http.Request) (func(), bool) {
 	user := mustUser(r)
 	key := user.TenantID + ":" + user.ID

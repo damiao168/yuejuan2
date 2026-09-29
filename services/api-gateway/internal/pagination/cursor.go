@@ -10,6 +10,8 @@ import (
 
 var ErrInvalidCursor = errors.New("invalid pagination cursor")
 
+// Cursor 使用时间与 ID 共同定位，避免相同创建时间的记录在翻页时丢失或重复。
+// 它只承载位置；查询仍须独立执行权限过滤，并采用一致的排序字段。
 type Cursor struct {
 	CreatedAt time.Time
 	ID        string

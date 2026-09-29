@@ -31,6 +31,7 @@ def merge_compact_chunks(parsed_chunks, documents):
             for item in observations
             if item["detected_role"] != "unknown"
         }
+        # 同一来源的不同分片可能分别是题目和答案；保留 mixed，避免后一个分片覆盖前者。
         if len(known_roles) > 1 or "mixed" in known_roles:
             role = "mixed"
         elif known_roles:

@@ -11,6 +11,7 @@ export function useSubmissionQuality(client: DesktopApiClient, scanSubmissionId:
   const [qualityError, setQualityError] = useState<string | null>(null);
   const [isCheckingQuality, setIsCheckingQuality] = useState(false);
   const scopeRef = useRef(durableScopeKey);
+  // 保存最新账号作用域供异步回调核对，旧账号的质量检查结果不得回填当前页面。
   scopeRef.current = durableScopeKey;
 
   useEffect(() => {

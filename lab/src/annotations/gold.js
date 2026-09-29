@@ -91,6 +91,7 @@ function evidenceSignature(label) {
     .join(";");
 }
 
+// 总分接近仍可能有采分点分歧；证据差异是否仲裁由策略单独控制。
 export function labelsRequireAdjudication(first, second, policy = loadAnnotationPolicy()) {
   if (Math.abs(first.score - second.score) > policy.score_dispute_tolerance) return true;
   const pointSignature = (label) => label.point_decisions
@@ -139,6 +140,7 @@ export function validateAnnotationBundle(bundle, policy = loadAnnotationPolicy()
 export function buildGoldRecord(bundle, policy = loadAnnotationPolicy()) {
   const validation = validateAnnotationBundle(bundle, policy);
   if (!validation.valid) throw new Error(`Invalid annotation bundle ${bundle.bundle_id}: ${validation.errors.join("; ")}`);
+  // 校验已保证有分歧时存在独立仲裁；无仲裁才使用首份一致标注作为 Gold。
   const selected = bundle.adjudication ?? bundle.labels[0];
   return {
     ...bundle.sample,
@@ -180,6 +182,7 @@ function quadraticWeightedKappa(pairs, bins) {
 
 export function computeInterRaterAgreement(bundles, policy = loadAnnotationPolicy()) {
   const bins = policy.normalized_score_bins;
+  // 先除以各题满分再离散到统一档位，避免不同满分题直接混算一致性。
   const normalizedPairs = bundles.map((bundle) => bundle.labels.map((label) => label.score / bundle.sample.max_score));
   const binPairs = normalizedPairs.map(([first, second]) => [Math.round(first * bins), Math.round(second * bins)]);
   let pointTotal = 0;

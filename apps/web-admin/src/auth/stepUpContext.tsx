@@ -128,6 +128,7 @@ export function StepUpProvider({ children, onReauthenticate }: { children: React
     }
     retryingRef.current = true;
     try {
+      // 再认证后只重试一次；第二次仍失败直接交还调用方，避免反复弹窗或重放操作。
       const result = await pending.action();
       pending.resolve(result);
     } catch (retryError) {

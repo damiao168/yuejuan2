@@ -385,6 +385,7 @@ def normalize_model_output(raw, request, route, model_version, prompt_version, p
     if telemetry.get("repair_attempted"):
         _append_unique(risk_flags, "schema_repaired")
 
+    # 只对证据校验后保留的采分点重算建议总分，不采用模型自行报告的总分。
     score = sum(point["score"] for point in matched)
     uses_chinese = any("\u3400" <= character <= "\u9fff" for character in request["question_text"])
     matched_labels = [point["label"] for point in matched]
@@ -403,6 +404,7 @@ def normalize_model_output(raw, request, route, model_version, prompt_version, p
         "delivery": route["delivery"],
         "suggested_score": max(0, min(score, request["max_score"])),
         "max_score": request["max_score"],
+        # 模型自报置信度尚未校准，不能把它转换成可自动放行的可靠度。
         "confidence": 0,
         "matched_points": matched,
         "missing_points": missing,

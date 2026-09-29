@@ -232,6 +232,7 @@ func (s *Service) streamToObject(ctx context.Context, session Session, asset fil
 		errCh <- err
 	}()
 	putErr := s.objects.Put(ctx, asset.StorageBucket, asset.StorageKey, reader, asset.SizeBytes, asset.ContentType)
+	// 写入提前失败时也要关闭管道读端，唤醒仍在写分块的协程后再等待它退出。
 	_ = reader.Close()
 	readErr := <-errCh
 	if putErr != nil {

@@ -176,7 +176,16 @@ export function useGradingReviewActions({
           student_feedback: draft.studentFeedback,
           reason: draft.reason || "教师复核完成"
         });
-        if (nominateAsGold) {
+        removeReviewDraftFallback(currentUserId, submittedTaskId);
+        // 查询缓存和任务队列属于当前登录会话；旧账号的迟到响应不能清掉或改写新账号的状态。
+        if (activeUserId.current !== currentUserId) return;
+        appQueryClient.removeQueries({ queryKey: reviewTaskContextKeys.detail(submittedTaskId) });
+        prefetchedTaskRef.current.delete(submittedTaskId);
+        setTasks((current) => current.map((task) => task.id === submittedTaskId ? { ...task, status: "submitted" } : task));
+
+        // 提交期间用户仍可切换题目；只有当前仍显示刚提交的任务时，才清空编辑器并推进到下一题。
+        const stillActive = activeTask.current === submittedTaskId;
+        if (nominateAsGold && stillActive) {
           setGoldPaperCandidate({
             examId: ctx.task.exam_id,
             questionId: ctx.task.question_id,
@@ -191,26 +200,26 @@ export function useGradingReviewActions({
             rubricSelections: { ...draft.rubricSelections }
           });
         }
-        removeReviewDraftFallback(currentUserId, submittedTaskId);
-        appQueryClient.removeQueries({ queryKey: reviewTaskContextKeys.detail(submittedTaskId) });
-        contextRequestRef.current += 1;
-        invalidateViewerContent();
-        setTasks((current) => current.map((task) => task.id === submittedTaskId ? { ...task, status: "submitted" } : task));
-        setCtx(null);
-        if (!nextTaskId && hasMoreTasks) {
-          pendingNextRef.current = submittedTaskId;
-          suppressAutoSelectRef.current = true;
-          void loadMoreTasks();
+        if (stillActive) {
+          contextRequestRef.current += 1;
+          invalidateViewerContent();
+          setCtx(null);
+          if (!nextTaskId && hasMoreTasks) {
+            pendingNextRef.current = submittedTaskId;
+            suppressAutoSelectRef.current = true;
+            void loadMoreTasks();
+          }
+          setSelectedTaskId(nextTaskId);
+          setDraft(createInitialDraft(null));
+          scoreShortcuts.reset();
+          setDraftHydrated(false);
+          setDraftSaveStatus("idle");
+          lastSavedDraft.current = "";
         }
-        setSelectedTaskId(nextTaskId);
-        setDraft(createInitialDraft(null));
-        scoreShortcuts.reset();
-        setDraftHydrated(false);
-        setDraftSaveStatus("idle");
-        lastSavedDraft.current = "";
         await refreshTaskAggregate();
+        if (activeUserId.current !== currentUserId) return;
         await examScoring.loadSummary();
-        if (!nextTaskId && !canManageTasks && !hasMoreTasks) {
+        if (stillActive && activeUserId.current === currentUserId && !activeTask.current && !nextTaskId && !canManageTasks && !hasMoreTasks) {
           notify.info("当前没有更多已分配给你的阅卷任务");
         }
       },
@@ -249,6 +258,7 @@ export function useGradingReviewActions({
     if (subjectCode === "mathematics") {
       if (mathActionLock.current) return;
       const taskId = selectedTaskId;
+      // 刷新证据期间教师仍可修改草稿；采纳建议前要同时确认任务、证据版本和本地评分快照仍未变化。
       const before = JSON.stringify({ score: draft.score, selections: draft.rubricSelections });
       mathActionLock.current = true;
       setMathRequesting(true);
@@ -315,6 +325,7 @@ export function useGradingReviewActions({
     const serverSnapshot = JSON.stringify(conflict.server);
     const mergedSnapshot = JSON.stringify(merged);
     conflictedDrafts.current.delete(draftKey);
+    // 合并结果以服务端最新修订号续存；旧版本号不能再次提交，否则会把已解决的冲突重新带回去。
     draftSaves.current.observeRevision(draftKey, conflict.serverRevision);
     if (mergedSnapshot === serverSnapshot) removeReviewDraftFallback(currentUserId, conflict.taskId);
     else saveReviewDraftFallback(currentUserId, conflict.taskId, merged);

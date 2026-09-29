@@ -8,6 +8,7 @@ import (
 )
 
 func TestSummaryProjectsOperationalIssueWithoutChangingSourceFacts(t *testing.T) {
+	// 查询应只读取投影，异常详情仍指向可解释的源页面，不修改源事实。
 	store := NewMemoryStore()
 	store.PutState("tenant-a", PageState{PageID: "page-a", SubmissionID: "submission-a", ExamID: "exam-a", CurrentStage: StageQualityChecked, Blocking: true, IssueCode: IssueLowImageQuality})
 	store.PutState("tenant-a", PageState{PageID: "page-b", SubmissionID: "submission-b", ExamID: "exam-a", CurrentStage: StageReady})
@@ -30,6 +31,7 @@ func TestSummaryProjectsOperationalIssueWithoutChangingSourceFacts(t *testing.T)
 }
 
 func TestParserQualityNeverSubstitutesTextForStructuredEvidence(t *testing.T) {
+	// 数学等结构化题型缺少专用质量信号时必须保持 nil，让上层选择 abstain。
 	text, math, table := 0.93, 0.78, 0.81
 	quality := ParserQuality{Text: &text, MathExpression: &math, TableStructure: &table}
 	if got := quality.For(assessment.SubjectMathematics, "numeric_expression"); got == nil || *got != math {

@@ -144,6 +144,7 @@ func (s *MemoryStore) MarkDeleteFailed(_ context.Context, tenantID, id string, e
 }
 
 func (s *MemoryStore) transition(tenantID, id string, expectedRevision int64, from []string, to, detail string, deleted bool) (FileAsset, error) {
+	// 状态与修订号在同一把锁内检查，旧请求不能推进已被其他请求修改的资产。
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	asset, ok := s.assets[id]
@@ -194,6 +195,7 @@ func (s *MemoryStore) Delete(_ context.Context, tenantID string, id string) (Fil
 }
 
 func (s *MemoryStore) findDuplicateLocked(tenantID string, ownerType string, ownerID string, hashSHA256 string) (FileAsset, bool) {
+	// 失败或待处理的资产也参与查重，上传重试才可续用原记录与对象路径。
 	for _, asset := range s.assets {
 		if asset.TenantID == tenantID && asset.OwnerType == ownerType && asset.OwnerID == ownerID && asset.HashSHA256 == hashSHA256 && asset.DeletedAt == nil {
 			return asset, true

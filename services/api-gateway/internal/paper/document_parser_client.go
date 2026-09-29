@@ -108,6 +108,7 @@ type documentStreamError struct {
 	} `json:"error"`
 }
 
+// 整条流累计限额，并读到 EOF 后才接受唯一 result；结果帧后的错误也必须让本次解析失败。
 func parseDocumentStream(body io.Reader, onProgress func(map[string]any) error) (DocumentParseResponse, error) {
 	scanner := bufio.NewScanner(io.LimitReader(body, maxDocumentParseResponseBytes+1))
 	scanner.Buffer(make([]byte, 64<<10), maxDocumentParseResponseBytes+1)

@@ -33,6 +33,7 @@ def _reading_order(items, depth=0):
     ordered = []
     remaining_left = list(left)
     remaining_right = list(right)
+    # 跨栏标题把左右栏切成上下段，每段先左后右，不能一次读完整左栏再处理全宽标题。
     for separator in sorted(spanning, key=_geometric_key):
         separator_box = _box(separator)
         separator_y = separator_box[1] if separator_box else float("inf")

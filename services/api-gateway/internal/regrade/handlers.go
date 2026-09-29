@@ -30,10 +30,8 @@ func (h *Handler) WithSegmentImage(reader segment.CropImageReader) *Handler {
 	return h
 }
 
-// RegisterRoutes deliberately keeps creation/finalization under a management
-// permission, while a qualified reviewer may only claim and propose an item.
-// A future server integration should pass the same policy middleware used by
-// A18 and review work; no route can publish a score release.
+// RegisterRoutes 将创建、复核和收尾交给管理权限，将领题和候选提交交给阅卷权限。
+// 具体权限与资源范围由调用方传入的中间件检查；这里的收尾操作不会发布成绩。
 func RegisterRoutes(mux *http.ServeMux, h *Handler, requireManage, requireWork func(http.HandlerFunc) http.Handler) {
 	mux.Handle("POST /api/v1/exams/{examId}/questions/{questionId}/regrade-preview", requireManage(h.Preview))
 	mux.Handle("POST /api/v1/exams/{examId}/questions/{questionId}/regrade-jobs", requireManage(h.Create))
@@ -233,8 +231,7 @@ func (h *Handler) Review(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"regrade_item": item})
 }
 
-// jobTransition keeps response and strong-audit handling identical for each
-// lifecycle change without allowing a generic unvalidated status endpoint.
+// jobTransition 统一响应和审计调用；每种操作仍由自己的服务方法检查允许的状态变化。
 func (h *Handler) jobTransition(w http.ResponseWriter, r *http.Request, event string, transition func(context.Context, string, string, string) (Job, error)) {
 	user, ok := currentUser(w, r)
 	if !ok {

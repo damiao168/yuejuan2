@@ -134,6 +134,32 @@ func (h *Handler) SavePaperImportReview(w http.ResponseWriter, r *http.Request) 
 	httpx.JSON(w, http.StatusOK, map[string]any{"import": out})
 }
 
+func (h *Handler) SuggestMathRubricDraft(w http.ResponseWriter, r *http.Request) {
+	if h.documentImport == nil {
+		httpx.Error(w, r, http.StatusServiceUnavailable, "paper_import_unavailable", "考试资料解析服务未配置")
+		return
+	}
+	user := mustUser(r)
+	var input MathRubricDraftInput
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	if input.ExpectedGeneration <= 0 || strings.TrimSpace(input.CandidateID) == "" || strings.TrimSpace(input.ExpectedUpdatedAt) == "" {
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_math_rubric_draft", "请指定当前导入版本、审阅时间和题目")
+		return
+	}
+	result, err := h.documentImport.SuggestMathRubricDraft(r.Context(), user.TenantID, r.PathValue("id"), input)
+	if err != nil {
+		if errors.Is(err, ErrInvalidInput) || errors.Is(err, ErrConflict) || errors.Is(err, ErrNotFound) {
+			writeStoreError(w, r, err)
+			return
+		}
+		httpx.Error(w, r, http.StatusBadGateway, "math_rubric_draft_failed", "数学评分点建议暂不可用，请稍后重试")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, result)
+}
+
 func (h *Handler) ListPaperImports(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	out, err := h.imports.ListPaperImports(r.Context(), user.TenantID, r.PathValue("examId"))
@@ -185,6 +211,7 @@ func (h *Handler) CancelPaperImport(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
+	// 先按代次写入取消状态，再停止本机计算；即使计算未及时停止，存储层也会拒绝过期提交。
 	if h.documentImport != nil {
 		h.documentImport.Cancel(user.TenantID, out.ID)
 	}
@@ -461,6 +488,8 @@ func writeStoreError(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.Error(w, r, http.StatusConflict, "template_not_locked", "template must be locked before it can be used for an exam")
 	case errors.Is(err, ErrExamFrozen):
 		httpx.Error(w, r, http.StatusConflict, "exam_frozen", "exam paper configuration is frozen after readiness confirmation")
+	case errors.Is(err, ErrImportedObjectiveRuleConflict):
+		httpx.Error(w, r, http.StatusConflict, "objective_rule_draft_conflict", "existing scoring rule draft conflicts with imported question type or score; review the rule before applying this import")
 	case errors.Is(err, ErrConflict):
 		httpx.Error(w, r, http.StatusConflict, "configuration_conflict", "configuration changed; refresh before saving")
 	case errors.Is(err, ErrInvalidInput):
@@ -490,6 +519,7 @@ func writeConfigurationError(w http.ResponseWriter, r *http.Request, status int,
 	httpx.Error(w, r, status, code, message)
 }
 
+// 路由须先经过认证中间件；这里仅取上下文身份，不自行认证，也不采用请求体中的租户。
 func mustUser(r *http.Request) auth.User {
 	user, _ := auth.UserFromContext(r.Context())
 	return user

@@ -43,6 +43,7 @@ func hashUserAgent(value string) string {
 	return fmt.Sprintf("%x", sum[:])
 }
 
+// 风险关联只保留 IPv4 /24 或 IPv6 /64 网段，不把完整 IP 作为设备特征保存。
 func networkPrefix(value string) string {
 	ip := net.ParseIP(strings.TrimSpace(value))
 	if ip == nil {

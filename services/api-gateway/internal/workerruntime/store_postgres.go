@@ -714,6 +714,7 @@ func getTaskForUpdate(ctx context.Context, tx *sql.Tx, tenantID string, taskID s
 	return scanTask(row)
 }
 
+// 租约判断和到期时间使用同一事务的数据库时钟，避免 API 实例时钟偏差影响接管。
 func databaseNow(ctx context.Context, tx *sql.Tx) (time.Time, error) {
 	var now time.Time
 	if err := tx.QueryRowContext(ctx, `SELECT transaction_timestamp()`).Scan(&now); err != nil {

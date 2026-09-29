@@ -77,6 +77,7 @@ def calibrate_formula_runtime(
     baseline_started = clock()
     baseline_results = engine.recognize_formulas(images, batch_size=1)
     baseline_duration = max(0.0, (clock() - baseline_started) * 1000)
+    # 单张批次是输出一致性基准；没有标注答案，不能把一致性视为公式识别准确率。
     baseline = [result.canonical_latex for result in baseline_results]
     measurements: list[dict[str, Any]] = []
     completed_runs = 0

@@ -136,6 +136,7 @@ export function OrganizationSetupPage({ onNavigate }: { onNavigate: (path: strin
   }, [data]);
 
   useEffect(() => {
+    // 仅首次载入按已有数据定位；后续刷新不能把用户从正在填写的步骤自动跳走。
     if (data && !stepInitialized) {
       const firstIncomplete = completed.slice(0, 5).findIndex((value) => !value);
       setStep(firstIncomplete >= 0 ? firstIncomplete : completed[5] ? 6 : 5);

@@ -119,6 +119,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: ${{ matrix.command }}
+      - name: Compose deployment regressions
+        if: matrix.story == '052'
+        shell: pwsh
+        run: |
+          ./scripts/test-compose-deployment.ps1
+          ./infra/docker-compose/scripts/tests/recovery.tests.ps1
 
   web-e2e-mocked:
     runs-on: ubuntu-latest
@@ -310,12 +316,19 @@ jobs:
           EDUGRADE_E2E_DATABASE_URL: postgres://edugrade:edugrade@127.0.0.1:5432/edugrade_e2e?sslmode=disable
         run: |
           test -n "${EDUGRADE_E2E_DATABASE_URL}"
-          go test ./internal/server -run 'PostgresTestDatabase|PostgresMigrationUpgrade|PostgresManagedConfig|Story056.*E2E|Reliability.*Postgres|TestTeacherAccountSecurityE2EWithPostgres|TestPostgresMathRubricScoreUsesOnlyFrozenExamRubric|TestCancelledScoringRunCannotReassignOrSubmitReview|TestRuleConfirmationWaitsForConcurrentCancellation|TestScoringAIBatchCancellationBlocksNewTasks|TestFailedScoringAIBatchSegmentsRequireOpenTeacherTask|TestReleaseFeedbackUsesFinalArbitrationAndFreezesIt' -count=1 -v
+          go test ./internal/server -count=1 -timeout 20m -v
 
       - name: Authorization contract against migrated PostgreSQL
         env:
           EDUGRADE_E2E_DATABASE_URL: postgres://edugrade:edugrade@127.0.0.1:5432/edugrade_e2e?sslmode=disable
         run: go test ./internal/auth -run '^TestAuthorizationContractPostgres$' -count=1 -v
+
+      - name: Recovery bucket remapping against PostgreSQL
+        shell: pwsh
+        working-directory: .
+        env:
+          EDUGRADE_RECOVERY_TEST_DATABASE_URL: postgres://edugrade:edugrade@127.0.0.1:5432/edugrade_e2e?sslmode=disable
+        run: ./infra/docker-compose/scripts/tests/recovery-postgres.tests.ps1 -PostgresTestURL $env:EDUGRADE_RECOVERY_TEST_DATABASE_URL
 
       - name: Validate actual handler responses in both clients
         env:
@@ -555,6 +568,7 @@ jobs:
           path: sbom-*.cdx.json
           if-no-files-found: error
 
+  # API/数据库/worker 使用隔离真实栈；模型使用协议替身，测试不证明真实模型评分质量。
   real-system-e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -620,6 +634,7 @@ jobs:
         if: always()
         run: docker compose -f infra/docker-compose/docker-compose.story060-e2e.yml down --volumes --remove-orphans
 
+  # 即使依赖失败或跳过也执行汇总，只有每个必需任务都成功才放行。
   ci-gate:
     name: CI Gate
     if: ${{ always() }}

@@ -169,6 +169,7 @@ func (s *PostgresStore) MergeSubmissions(ctx context.Context, tenantID, batchID,
 	return s.GetMatchingQueue(ctx, tenantID, batchID)
 }
 
+// 拆合答卷后重新排页并清空双方身份绑定；旧配准与切片失效，不能沿用原答卷的识别结论。
 func movePagesTx(ctx context.Context, tx *sql.Tx, tenantID, batchID, sourceID, targetID string, pageIDs []string) error {
 	for i, id := range pageIDs {
 		var oldPageID, newPageID string

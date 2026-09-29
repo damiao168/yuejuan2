@@ -137,6 +137,7 @@ export class DesktopApiClient {
 }
 
 function addIdempotencyHeader(path: string, method: string | undefined, headers: Headers) {
+  // 默认键只覆盖这一次请求；跨重试保持同一业务操作时，调用方必须传入已保存的键。
   const normalizedMethod = (method ?? "GET").toUpperCase();
   if (!["POST", "PUT", "PATCH", "DELETE"].includes(normalizedMethod) || path.startsWith("/api/v1/auth/")) {
     return;
@@ -177,6 +178,7 @@ function isLoopbackHost(hostname: string) {
 export async function apiClientErrorFromResponse(response: Response): Promise<ApiClientError> {
   try {
     const payload = (await response.json()) as ApiErrorPayload;
+    // 页面只展示已知错误码的本地文案，追踪号和字段冲突信息另存，避免直接显示服务端内部消息。
     const code = payload.error?.code ?? payload.code ?? "request_failed";
     return new ApiClientError(response.status, code, getApiErrorMessage(code, response.status), payload);
   } catch {

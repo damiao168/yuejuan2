@@ -144,6 +144,7 @@ func (s *MemoryStore) ListObservations(_ context.Context, tenantID, runID string
 	return append([]Observation(nil), s.observations[itemKey(tenantID, runID)]...), nil
 }
 
+// 内存实现复现生产的完成边界：锁定草稿、核对观测数后一次性写入派生指标并关闭运行。
 func (s *MemoryStore) ReplaceComputed(_ context.Context, tenantID, runID string, expectedCount int, slices []SliceMetric, difficulty []ResponseDifficulty, at time.Time) (Run, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

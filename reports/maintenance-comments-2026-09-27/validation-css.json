@@ -1,0 +1,62 @@
+{
+  "method": "PostCSS AST comparison excluding comments, source positions and formatting; directive lines preserved",
+  "checked": 11,
+  "passed": false,
+  "files": [
+    {
+      "path": "apps/student-portal/src/experience.css",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "apps/student-portal/src/styles.css",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "apps/web-admin/src/components/features/review-annotation/reviewAnnotations.css",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "apps/web-admin/src/experience.css",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/exam-create.css",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "apps/web-admin/src/pages/school-ai-chat.css",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/correction.css",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/exam-preparation.css",
+      "equivalent": false,
+      "directives_unchanged": true
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/member-management.css",
+      "equivalent": true,
+      "directives_unchanged": true
+    },
+    {
+      "path": "apps/web-admin/src/styles/layout.css",
+      "equivalent": false,
+      "directives_unchanged": true
+    },
+    {
+      "path": "packages/ui/src/styles.css",
+      "equivalent": true,
+      "directives_unchanged": true
+    }
+  ]
+}

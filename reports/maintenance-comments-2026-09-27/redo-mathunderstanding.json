@@ -1,0 +1,146 @@
+{
+  "scope": "services/api-gateway/internal/mathunderstanding",
+  "rechecked_at": "2026-09-27T20:41:59.778139+08:00",
+  "files": [
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/access_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/correction.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/correction_postgres.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/correction_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/effective_handler_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/handlers.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/mixed_perception_migration_test.go",
+      "status": "protected",
+      "reason": "迁移文本只做内容断言，历史 SQL 不直接插入注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/pilot_gate.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/pilot_store.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/pilot_store_postgres.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/rubric.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/rubric_gate_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/runtime_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/scorer.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/scorer_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/scoring_handler.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/solution_builder.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/spatial.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/spatial_solution_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/step_segmenter.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/store.go",
+      "status": "existing_sufficient",
+      "reason": "接口定义直观且无额外实现边界，已有代码足够表达职责。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/store_memory.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/store_postgres.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/types.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/types_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/verification_runtime.go",
+      "status": "annotated",
+      "reason": "重新完整审读并补充版本绑定、权限、事务、异步租约、数学证据边界等维护说明。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/verification_runtime_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    },
+    {
+      "path": "services/api-gateway/internal/mathunderstanding/workbench_preview_test.go",
+      "status": "self_explanatory",
+      "reason": "测试名称、场景和断言已说明要保护的维护规则，无需逐句解释。"
+    }
+  ]
+}

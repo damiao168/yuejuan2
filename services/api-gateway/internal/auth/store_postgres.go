@@ -24,6 +24,7 @@ func NewPostgresStore(db *sql.DB) *PostgresStore {
 }
 
 func (s *PostgresStore) FindUserByLogin(ctx context.Context, tenantCode string, username string) (UserWithPassword, error) {
+	// 用户名、工号和手机号共同查找；只有唯一候选才登录，别名冲突不能选第一条放行。
 	phone, _ := NormalizePhone(username)
 	row := s.db.QueryRowContext(ctx, `
 WITH candidates AS (
@@ -136,6 +137,7 @@ WHERE tenant_id = $1::uuid AND id = $2::uuid AND password_hash = $3 AND status =
 }
 
 func (s *PostgresStore) CreateSession(ctx context.Context, input CreateSessionInput) (DeviceSession, error) {
+	// 会话写入时再次比较登录验证阶段的安全版本，改密/禁用后的旧请求不能复活会话。
 	var session DeviceSession
 	riskEvaluatedAt := input.RiskEvaluatedAt
 	if riskEvaluatedAt.IsZero() {
@@ -227,6 +229,7 @@ GROUP BY u.id, t.code, s.session_type, s.auth_level, s.reauthenticated_at, s.ris
 	if user.Status != "active" {
 		return User{}, ErrUnauthenticated
 	}
+	// 活跃时间最多每五分钟写一次；刷新失败记录日志，不把已成功验证的身份改成失败。
 	cutoff := now.Add(-5 * time.Minute)
 	if _, err := s.db.ExecContext(ctx, `
 UPDATE auth_session
@@ -410,6 +413,7 @@ WHERE s.tenant_id = $1::uuid
 }
 
 func (s *PostgresStore) MarkSessionReauthenticated(ctx context.Context, tenantID string, userID string, tokenHash string, startedAt time.Time, now time.Time) (bool, error) {
+	// startedAt 限制可解除的锁屏时间；在途验证不能撤销它开始后发生的新锁屏。
 	result, err := s.db.ExecContext(ctx, `
 UPDATE auth_session s
 SET reauthenticated_at = $4, locked_at = NULL, last_seen_at = $4, updated_at = $4
@@ -469,6 +473,7 @@ SELECT
 		scope.ExamIDs = append(scope.ExamIDs, examIDs...)
 	}
 	if kinds["class"] {
+		// 学校/年级是班级关系的导航投影，不代表取得该学校或年级的完整数据权限。
 		var schoolIDs, gradeIDs, classIDs, examIDs []string
 		err = s.db.QueryRowContext(ctx, `
 WITH scoped_class AS (
@@ -614,6 +619,7 @@ WHERE tenant_id=$1::uuid AND user_id=$2::uuid AND revoked_at IS NULL
 }
 
 func (s *PostgresStore) UpdatePasswordAndRevokeSessions(ctx context.Context, tenantID, userID, expectedPasswordHash, newPasswordHash string) (bool, int, error) {
+	// 新密码、安全版本及会话/设备撤销同事务，任一步失败都不留下部分改密状态。
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return false, 0, err
@@ -1312,6 +1318,7 @@ WHERE recovery.token_hash=$1
 }
 
 func (s *PostgresStore) CompleteRecovery(ctx context.Context, tokenHash string, passwordHash string, now time.Time) (RecoveryResult, error) {
+	// 持锁校验恢复令牌和发放时的安全版本；令牌消费、改密及撤销旧登录状态一起提交。
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return RecoveryResult{}, err
@@ -1437,6 +1444,7 @@ ORDER BY r.code
 		return ManagedUser{}, "", ErrUserStatusForbidden
 	}
 	if status == "disabled" && slices.Contains(user.Roles, "school_admin") {
+		// 同校管理员可被不同请求同时禁用；学校级锁把存量检查和禁用串行化。
 		if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, actor.TenantID+"|"+user.SchoolID+"|school-admin-status"); err != nil {
 			return ManagedUser{}, "", err
 		}

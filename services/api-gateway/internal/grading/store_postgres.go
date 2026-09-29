@@ -44,6 +44,7 @@ RETURNING id::text, tenant_id::text, answer_segment_id::text, answer_text, answe
 	return out, nil
 }
 
+// LoadContext 使用最新记录的答案；若有已发布评分规则，其配置整体优先于答案键 tolerance，不逐字段合并。
 func (s *PostgresStore) LoadContext(ctx context.Context, tenantID string, segmentID string) (Context, error) {
 	row := s.db.QueryRowContext(ctx, `
 SELECT

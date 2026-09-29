@@ -4,8 +4,8 @@
   "exception_ledger": "contracts/openapi/registered-route-exceptions.json",
   "policy": "Every registered route is covered by OpenAPI or an exact, reviewed exception-ledger entry; generation never invents approvals.",
   "counts": {
-    "registered": 508,
-    "openapi": 256,
+    "registered": 509,
+    "openapi": 257,
     "registered_gaps": 252
   },
   "routes": [
@@ -3389,6 +3389,13 @@
       "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "openapi",
       "operation_id": "savePaperImportReview"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/paper-imports/{id}/rubric-draft",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "suggestPaperImportMathRubricDraft"
     },
     {
       "method": "POST",

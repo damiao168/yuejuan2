@@ -21,6 +21,7 @@ type routerContext struct {
 	guards                routerGuards
 }
 
+// 路由上下文集中创建系统与 onboarding 读模型，确保所有注册函数共享同一套存储和权限 guard。
 func buildRouterContext(dependencies RouterDependencies) routerContext {
 	cfg := dependencies.Config
 	if strings.TrimSpace(cfg.Auth.SessionCookieName) == "" {

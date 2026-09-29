@@ -32,6 +32,7 @@ func (r onboardingTenantReader) HasManagedTenant(ctx context.Context) (bool, err
 
 type onboardingOrganizationReader struct{ store org.Store }
 
+// 回退实现逐项读取并按 scope 过滤；不能使用 readiness 专用查询时，也不能把其他学校的组织数据算入当前向导。
 func (r onboardingOrganizationReader) Summary(ctx context.Context, tenantID string, scope onboarding.ResourceScope) (onboarding.OrganizationSummary, error) {
 	if readinessStore, ok := r.store.(org.OnboardingReadinessStore); ok {
 		summary, err := readinessStore.OnboardingReadiness(ctx, tenantID, scope.SchoolIDs, scope.TenantWide)
@@ -91,6 +92,7 @@ func (r onboardingOrganizationReader) Summary(ctx context.Context, tenantID stri
 
 type onboardingUserReader struct{ store auth.Store }
 
+// 向导只关心仍可用的业务账号；每个角色最多取一条，避免为布尔结论加载整租户用户列表。
 func (r onboardingUserReader) HasBusinessUser(ctx context.Context, tenantID string, scope onboarding.ResourceScope) (bool, error) {
 	for _, role := range []string{"school_admin", "teacher", "grader", "arbitrator"} {
 		users, err := r.store.ListManagedUsers(ctx, tenantID, auth.ManagedUserFilter{
@@ -141,6 +143,7 @@ func (r onboardingGovernanceReader) DataPolicy(ctx context.Context, tenantID str
 	}, nil
 }
 
+// tenant-wide 作用域允许全租户，否则学校 ID 必须来自身份解析出的白名单。
 func allowsOnboardingSchool(scope onboarding.ResourceScope, schoolID string) bool {
 	return scope.TenantWide || slices.Contains(scope.SchoolIDs, schoolID)
 }

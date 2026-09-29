@@ -27,6 +27,7 @@ import {
   orderedSourcesAfterRemoval,
   pastedMarkdownFile
 } from "./materials";
+import { importAnswerShapeError, resolveImportAnswerValue } from "./answerShape";
 
 function formatError(error: unknown) {
   return getUserErrorMessage(error, "操作失败，请稍后重试");
@@ -43,17 +44,24 @@ function reviewRubricHasScoreMismatch(draft: PaperImportDraftQuestion) {
       || Math.abs(pointTotal(draft.rubric.points) - draft.score) > 0.0001));
 }
 
-function confirmedImportDrafts(drafts: PaperImportDraftQuestion[]) {
-  return drafts.map((draft) => {
+function confirmedImportDrafts(drafts: PaperImportDraftQuestion[], originalDrafts: PaperImportDraftQuestion[]) {
+  return drafts.map((draft, index) => {
+    const original = originalDrafts.find((item) => item.candidate_id && item.candidate_id === draft.candidate_id) ?? originalDrafts[index];
+    // 填空题按答案评分；不能把解析建议误存成已确认的主观题评分细则。
     const answerKeyOnly = draft.question_type === "fill_blank";
     const fields = new Set(draft.human_confirmed_fields ?? []);
     if (answerKeyOnly) fields.delete("rubric");
     for (const field of ["question_no", "question_type", "score", "stem"]) fields.add(field);
+    if (draft.options?.length) fields.add("options");
     if (draft.answer_key) fields.add("answer");
     if (draft.solution) fields.add("solution");
     if (draft.rubric && !answerKeyOnly) fields.add("rubric");
     return {
       ...draft,
+      answer_key: draft.answer_key ? {
+        ...draft.answer_key,
+        standard_answer: resolveImportAnswerValue(draft.answer_key.standard_answer, original?.answer_key?.standard_answer)
+      } : undefined,
       rubric_candidate_id: answerKeyOnly ? undefined : draft.rubric_candidate_id,
       rubric: answerKeyOnly ? undefined : draft.rubric,
       human_confirmed_fields: [...fields]
@@ -80,12 +88,28 @@ export function usePaperImportWorkflow({
   const materialUploadRef = useRef<(files: File[]) => void>(() => undefined);
   const [parsing, setParsing] = useState(false);
   const [reviewDrafts, setReviewDrafts] = useState<PaperImportDraftQuestion[]>([]);
+  const [reviewDirty, setReviewDirty] = useState(false);
+  const [reviewJsonErrors, setReviewJsonErrors] = useState<Record<string, string>>({});
+  const [reviewJsonTexts, setReviewJsonTexts] = useState<Record<string, string>>({});
+  const loadedReviewJobKey = useRef<string | null>(null);
+  const activeReviewJob = paperImports[0];
+  const activeReviewJobKey = activeReviewJob ? `${activeReviewJob.id}:${activeReviewJob.generation}` : null;
+  const activeReviewJobKeyRef = useRef(activeReviewJobKey);
+  activeReviewJobKeyRef.current = activeReviewJobKey;
   const [savingImportReview, setSavingImportReview] = useState(false);
   const [updatingImportSources, setUpdatingImportSources] = useState(false);
   const [stoppingImport, setStoppingImport] = useState(false);
   const [retryingParse, setRetryingParse] = useState(false);
 
-  useEffect(() => { setReviewDrafts(paperImports[0]?.questions ?? []); }, [paperImports]);
+  useEffect(() => {
+    // 同一任务同一代次的轮询保留脏草稿，资料换代后才用新识别结果替换。
+    if (reviewDirty && activeReviewJobKey === loadedReviewJobKey.current) return;
+    loadedReviewJobKey.current = activeReviewJobKey;
+    setReviewDrafts(activeReviewJob?.questions ?? []);
+    setReviewDirty(false);
+    setReviewJsonErrors({});
+    setReviewJsonTexts({});
+  }, [activeReviewJob?.questions, activeReviewJob?.updated_at, reviewDirty, activeReviewJobKey]);
 
   useEffect(() => {
     const onPaste = (event: ClipboardEvent) => {
@@ -101,6 +125,7 @@ export function usePaperImportWorkflow({
 
   const handleMaterialFiles = async (files: File[], roleHint: PaperImportRole = "auto") => {
     if (!selectedExam || !files.length) { message.error("请先选择考试，再添加考试资料"); return false; }
+    if (reviewDirty) { message.warning("请先保存人工核对，再添加资料，避免重新识别覆盖未保存修改"); return false; }
     if (paperImports.some((item) => item.status === "processing")) { message.warning("当前资料仍在识别，请完成后再继续添加"); return false; }
     const supportedFiles = files.filter(isSupportedPaperImportFile);
     if (supportedFiles.length !== files.length) message.warning("已忽略不支持的文件，仅接受 PDF、Word、图片、Markdown 或 TXT");
@@ -117,6 +142,7 @@ export function usePaperImportWorkflow({
         })).file);
       }
       const activeImport = paperImports.find((item) => ["review_required", "failed", "cancelled"].includes(item.status));
+      // 上传端可能复用同一文件资产；新增资料需同时排除历史来源与本批重复资产。
       const existingAssetIDs = new Set(activeImport?.sources.map((source) => source.file_asset_id).filter(Boolean) ?? []);
       const acceptedAssetIDs = new Set<string>();
       const newAssets = uploaded.filter((file) => {
@@ -187,6 +213,7 @@ export function usePaperImportWorkflow({
 
   const replaceImportSources = async (job: PaperImportJob, sources: PaperImportJob["sources"]) => {
     if (!["processing", "review_required", "failed", "cancelled"].includes(job.status)) return;
+    if (reviewDirty) { message.warning("请先保存人工核对，再调整资料，避免重新识别覆盖未保存修改"); return; }
     setUpdatingImportSources(true);
     try {
       await replacePaperImportSources(job.id, job.generation, sources.map((source, documentIndex) => ({
@@ -258,12 +285,22 @@ export function usePaperImportWorkflow({
 
   const confirmPaperImport = async (job: PaperImportJob) => {
     if (!selectedExam) return;
+    const jobKey = `${job.id}:${job.generation}`;
+    if (activeReviewJobKeyRef.current !== jobKey || loadedReviewJobKey.current !== jobKey) { message.warning("资料已更新，请核对当前识别结果后再确认"); return; }
     const invalidRubric = reviewDrafts.find(reviewRubricHasScoreMismatch);
     if (invalidRubric) { message.error(`第${invalidRubric.question_no}题评分细则分值不一致，不能确认`); return; }
+    if (Object.keys(reviewJsonErrors).length) { message.error("高级评分数据包含无效 JSON，请先修正"); return; }
+    const invalidAnswer = reviewDrafts.find((draft, index) => importAnswerShapeError(draft.answer_key?.standard_answer,
+      job.questions.find((item) => item.candidate_id && item.candidate_id === draft.candidate_id)?.answer_key?.standard_answer ?? job.questions[index]?.answer_key?.standard_answer));
+    if (invalidAnswer) { message.error(`第${invalidAnswer.question_no}题标准答案格式不正确，不能确认`); return; }
     setParsing(true);
     try {
-      await savePaperImportReview(job.id, job.generation, confirmedImportDrafts(reviewDrafts));
+      await savePaperImportReview(job.id, job.generation, confirmedImportDrafts(reviewDrafts, job.questions));
+      if (activeReviewJobKeyRef.current !== jobKey) { message.warning("资料已更新，本轮核对结果未导入，请核对最新结果"); return; }
       await applyPaperImport(job.id);
+      setReviewDirty(false);
+      setReviewJsonErrors({});
+      setReviewJsonTexts({});
       message.success("题目、标准答案、教师解析和评分点已写入当前考试");
       await loadConfig(selectedExam.id);
       onChanged?.();
@@ -276,11 +313,21 @@ export function usePaperImportWorkflow({
 
   const saveImportReview = async (job: PaperImportJob) => {
     if (!selectedExam) return;
+    const jobKey = `${job.id}:${job.generation}`;
+    if (activeReviewJobKeyRef.current !== jobKey || loadedReviewJobKey.current !== jobKey) { message.warning("资料已更新，请核对当前识别结果后再保存"); return; }
     const invalidRubric = reviewDrafts.find(reviewRubricHasScoreMismatch);
     if (invalidRubric) { message.error(`第${invalidRubric.question_no}题评分细则分值不一致，不能确认`); return; }
+    if (Object.keys(reviewJsonErrors).length) { message.error("高级评分数据包含无效 JSON，请先修正"); return; }
+    const invalidAnswer = reviewDrafts.find((draft, index) => importAnswerShapeError(draft.answer_key?.standard_answer,
+      job.questions.find((item) => item.candidate_id && item.candidate_id === draft.candidate_id)?.answer_key?.standard_answer ?? job.questions[index]?.answer_key?.standard_answer));
+    if (invalidAnswer) { message.error(`第${invalidAnswer.question_no}题标准答案格式不正确，不能保存`); return; }
     setSavingImportReview(true);
     try {
-      await savePaperImportReview(job.id, job.generation, confirmedImportDrafts(reviewDrafts));
+      await savePaperImportReview(job.id, job.generation, confirmedImportDrafts(reviewDrafts, job.questions));
+      if (activeReviewJobKeyRef.current !== jobKey) return;
+      setReviewDirty(false);
+      setReviewJsonErrors({});
+      setReviewJsonTexts({});
       message.success("人工核对结果已保存，后续追加资料不会覆盖已确认字段");
       await loadConfig(selectedExam.id);
     } catch (error) {
@@ -291,14 +338,46 @@ export function usePaperImportWorkflow({
   };
 
   const updateReviewDraft = (index: number, field: string, patch: Partial<PaperImportDraftQuestion>) => {
+    setReviewDirty(true);
     setReviewDrafts((current) => current.map((draft, draftIndex) =>
       draftIndex === index ? markImportFieldConfirmed(draft, field, patch) : draft
     ));
   };
 
+  const setReviewJsonText = (key: string, value: string, error?: string) => {
+    setReviewJsonTexts((current) => ({ ...current, [key]: value }));
+    setReviewJsonErrors((current) => {
+      if (!error && !current[key]) return current;
+      const next = { ...current };
+      if (error) next[key] = error;
+      else delete next[key];
+      return next;
+    });
+    setReviewDirty(true);
+  };
+
+  const clearReviewJsonTexts = (keyPrefix: string) => {
+    setReviewJsonTexts((current) => Object.fromEntries(Object.entries(current).filter(([key]) => !key.startsWith(keyPrefix))));
+    setReviewJsonErrors((current) => Object.fromEntries(Object.entries(current).filter(([key]) => !key.startsWith(keyPrefix))));
+  };
+
+  const discardImportReviewDraft = () => {
+    setReviewDrafts(paperImports[0]?.questions ?? []);
+    setReviewDirty(false);
+    setReviewJsonErrors({});
+    setReviewJsonTexts({});
+  };
+
+  const invalidReviewAnswer = reviewDrafts.some((draft, index) => importAnswerShapeError(draft.answer_key?.standard_answer,
+    paperImports[0]?.questions.find((item) => item.candidate_id && item.candidate_id === draft.candidate_id)?.answer_key?.standard_answer
+      ?? paperImports[0]?.questions[index]?.answer_key?.standard_answer));
+
   return {
-    uploadProps, parsing, reviewDrafts, savingImportReview, updatingImportSources,
+    uploadProps, parsing, reviewDrafts, reviewDirty, discardImportReviewDraft, savingImportReview, updatingImportSources,
     stoppingImport, retryingParse, invalidReviewRubric: reviewDrafts.some(reviewRubricHasScoreMismatch),
+    invalidReviewScore: reviewDrafts.some((draft) => !Number.isFinite(draft.score) || draft.score <= 0),
+    invalidReviewAnswer, invalidReviewJson: Object.keys(reviewJsonErrors).length > 0,
+    reviewJsonTexts, setReviewJsonText, clearReviewJsonTexts,
     replaceImportSources, stopPaperImport, retryImportParse, removeImportSource,
     openImportSource, confirmPaperImport, saveImportReview, updateReviewDraft, importPastedText
   };
