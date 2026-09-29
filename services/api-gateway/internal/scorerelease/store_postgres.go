@@ -723,6 +723,7 @@ ORDER BY seg.updated_at DESC,seg.id DESC LIMIT 1
 
 func (s *PostgresStore) currentFactsTx(ctx context.Context, tx *sql.Tx, tenantID, examID string) ([]SubmissionFact, error) {
 	// 单评反馈只采用终评分数、满分一致且时间来源唯一的记录；无法对应时留空，避免错贴评语。
+	// 发布事实只收录考试准备时冻结的题目；后来新增的题目即使有终评，也不能进入学生可见快照。
 	rows, err := tx.QueryContext(ctx, `
 SELECT sg.student_id::text, sg.submission_id::text, sg.total_score::float8, sg.max_score::float8, sg.status,
   fg.question_id::text, fg.question_no, fg.id::text, fg.score::float8, fg.max_score::float8, fg.source,
@@ -762,6 +763,8 @@ LEFT JOIN LATERAL (
   ORDER BY hg.created_at DESC, hg.id DESC LIMIT 1
 ) human_source ON human_source.score = fg.score AND human_source.max_score = fg.max_score AND human_source.timestamp_peers = 1
 WHERE sg.tenant_id = $1 AND sg.exam_id = $2::uuid AND sg.deleted_at IS NULL
+  AND EXISTS (SELECT 1 FROM exam_question_snapshot eqs
+    WHERE eqs.tenant_id=fg.tenant_id AND eqs.exam_id=fg.exam_id AND eqs.question_id=fg.question_id)
 ORDER BY sg.submission_id, fg.question_no, fg.id
 `, tenantID, examID)
 	if err != nil {
@@ -1036,32 +1039,47 @@ func applyRegradeChanges(facts []SubmissionFact, input CreateRegradeInput) bool 
 
 func (s *PostgresStore) gateTx(ctx context.Context, tx *sql.Tx, tenantID, examID, releaseID string, dashboard []GateIssue) (Gate, error) {
 	gate := emptyGate(s.now().UTC())
+	// 题目覆盖、终评缺失和总分核对只统计准备时冻结的题目；后来新增的题目不参与这些检查。
 	checks := []struct{ code, message, route, query string }{
 		{"unfinished_review_tasks", "there are unfinished review tasks", "review", `SELECT COUNT(*) FROM review_task WHERE tenant_id = $1 AND exam_id = $2::uuid AND deleted_at IS NULL AND status NOT IN ('submitted', 'completed')`},
 		{"unfinished_arbitration_tasks", "there are unresolved arbitration tasks", "arbitration", `SELECT COUNT(*) FROM arbitration_task WHERE tenant_id = $1 AND exam_id = $2::uuid AND deleted_at IS NULL AND status <> 'submitted'`},
 		{"ocr_failed_unhandled", "there are failed OCR tasks", "processing", `SELECT COUNT(*) FROM ocr_task ot JOIN submission sub ON sub.tenant_id = ot.tenant_id AND sub.id = ot.submission_id AND sub.deleted_at IS NULL WHERE ot.tenant_id = $1 AND sub.exam_id = $2::uuid AND ot.deleted_at IS NULL AND ot.status = 'failed'`},
-		{"missing_final_grades", "there are answer segments without final grades", "review", `SELECT COUNT(*) FROM answer_segment seg WHERE seg.tenant_id = $1 AND seg.deleted_at IS NULL AND EXISTS (SELECT 1 FROM submission sub WHERE sub.tenant_id = seg.tenant_id AND sub.id = seg.submission_id AND sub.exam_id = $2::uuid AND sub.deleted_at IS NULL) AND NOT EXISTS (SELECT 1 FROM final_grade fg WHERE fg.tenant_id = seg.tenant_id AND fg.answer_segment_id = seg.id AND fg.deleted_at IS NULL)`},
+		{"missing_final_grades", "there are answer segments without final grades", "review", `SELECT COUNT(*) FROM answer_segment seg
+JOIN submission sub ON sub.tenant_id=seg.tenant_id AND sub.id=seg.submission_id AND sub.deleted_at IS NULL
+WHERE seg.tenant_id=$1::uuid AND sub.exam_id=$2::uuid AND seg.deleted_at IS NULL
+  AND EXISTS (SELECT 1 FROM exam_question_snapshot eqs
+    WHERE eqs.tenant_id=seg.tenant_id AND eqs.exam_id=sub.exam_id AND eqs.question_id=seg.question_id)
+  AND NOT EXISTS (SELECT 1 FROM final_grade fg
+    WHERE fg.tenant_id=seg.tenant_id AND fg.answer_segment_id=seg.id AND fg.deleted_at IS NULL)`},
 		{"missing_submission_unresolved", "expected students have no matched submission", "capture", `WITH roster AS (SELECT candidate.student_id AS id FROM exam_candidate_snapshot candidate LEFT JOIN exam_student_attendance ea ON ea.tenant_id=candidate.tenant_id AND ea.exam_id=candidate.exam_id AND ea.student_id=candidate.student_id AND ea.deleted_at IS NULL WHERE candidate.tenant_id=$1::uuid AND candidate.exam_id=$2::uuid AND COALESCE(ea.status,'expected')<>'absent') SELECT COUNT(*) FROM roster r WHERE NOT EXISTS (SELECT 1 FROM submission sub WHERE sub.tenant_id=$1::uuid AND sub.exam_id=$2::uuid AND sub.student_id=r.id AND sub.deleted_at IS NULL)`},
 		{"unidentified_submission", "submissions are not uniquely matched to an expected student", "capture", `WITH roster AS (SELECT student_id AS id FROM exam_candidate_snapshot WHERE tenant_id=$1::uuid AND exam_id=$2::uuid), counts AS (SELECT student_id,COUNT(*) AS count FROM submission WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND deleted_at IS NULL GROUP BY student_id) SELECT COUNT(*) FROM submission sub LEFT JOIN counts c ON c.student_id=sub.student_id LEFT JOIN exam_student_attendance ea ON ea.tenant_id=sub.tenant_id AND ea.exam_id=sub.exam_id AND ea.student_id=sub.student_id AND ea.deleted_at IS NULL WHERE sub.tenant_id=$1::uuid AND sub.exam_id=$2::uuid AND sub.deleted_at IS NULL AND (sub.student_id IS NULL OR NOT EXISTS (SELECT 1 FROM roster r WHERE r.id=sub.student_id) OR COALESCE(ea.status,'expected')='absent' OR COALESCE(c.count,0)>1)`},
 		{"missing_pages_unresolved", "matched submissions have unresolved missing or rejected pages", "capture", `SELECT COUNT(*) FROM submission sub WHERE sub.tenant_id = $1 AND sub.exam_id = $2::uuid AND sub.deleted_at IS NULL AND (sub.actual_page_count < sub.expected_page_count OR sub.quality_status = 'failed' OR sub.status = 'rejected')`},
 		{"no_submission_grades", "there are no submission grades to release", "grades", `SELECT CASE WHEN EXISTS (SELECT 1 FROM submission_grade WHERE tenant_id = $1 AND exam_id = $2::uuid AND deleted_at IS NULL) THEN 0 ELSE 1 END`},
 		{"grades_not_confirmed", "there are grades not confirmed for release", "grades", `SELECT COUNT(*) FROM submission_grade WHERE tenant_id = $1 AND exam_id = $2::uuid AND deleted_at IS NULL AND status NOT IN ('confirmed', 'published', 'locked')`},
 		{"question_coverage_incomplete", "a submission does not cover the exact official question set or maximum scores", "grades", `WITH official AS (
-  SELECT q.id,q.score::float8 FROM question q WHERE q.tenant_id=$1::uuid AND q.exam_id=$2::uuid AND q.deleted_at IS NULL AND COALESCE(q.status,'active')<>'deleted'
+  SELECT q.id,q.score::float8 FROM question q
+  WHERE q.tenant_id=$1::uuid AND q.exam_id=$2::uuid AND q.deleted_at IS NULL
+    AND EXISTS (SELECT 1 FROM exam_question_snapshot eqs
+      WHERE eqs.tenant_id=q.tenant_id AND eqs.exam_id=q.exam_id AND eqs.question_id=q.id)
 ), official_summary AS (
   SELECT COUNT(*)::int AS question_count,COALESCE(SUM(score),0)::float8 AS total FROM official
 )
 SELECT COUNT(*) FROM submission sub CROSS JOIN official_summary summary JOIN exam e ON e.tenant_id=sub.tenant_id AND e.id=sub.exam_id
 WHERE sub.tenant_id=$1::uuid AND sub.exam_id=$2::uuid AND sub.deleted_at IS NULL AND (
-  summary.question_count<>(SELECT COUNT(DISTINCT seg.question_id) FROM answer_segment seg WHERE seg.tenant_id=sub.tenant_id AND seg.submission_id=sub.id AND seg.deleted_at IS NULL)
+  summary.question_count<>(SELECT COUNT(DISTINCT seg.question_id) FROM answer_segment seg JOIN official q ON q.id=seg.question_id WHERE seg.tenant_id=sub.tenant_id AND seg.submission_id=sub.id AND seg.deleted_at IS NULL)
   OR EXISTS (SELECT 1 FROM official q WHERE NOT EXISTS (SELECT 1 FROM answer_segment seg WHERE seg.tenant_id=sub.tenant_id AND seg.submission_id=sub.id AND seg.question_id=q.id AND seg.deleted_at IS NULL))
-  OR EXISTS (SELECT 1 FROM answer_segment seg WHERE seg.tenant_id=sub.tenant_id AND seg.submission_id=sub.id AND seg.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM official q WHERE q.id=seg.question_id))
   OR ABS(summary.total-e.total_score::float8)>0.000001
-  OR summary.question_count<>(SELECT COUNT(DISTINCT fg.question_id) FROM final_grade fg WHERE fg.tenant_id=sub.tenant_id AND fg.submission_id=sub.id AND fg.deleted_at IS NULL)
-  OR ABS(summary.total-(SELECT COALESCE(SUM(fg.max_score),0)::float8 FROM final_grade fg WHERE fg.tenant_id=sub.tenant_id AND fg.submission_id=sub.id AND fg.deleted_at IS NULL))>0.000001
+  OR summary.question_count<>(SELECT COUNT(DISTINCT fg.question_id) FROM final_grade fg JOIN official q ON q.id=fg.question_id WHERE fg.tenant_id=sub.tenant_id AND fg.submission_id=sub.id AND fg.deleted_at IS NULL)
+  OR ABS(summary.total-(SELECT COALESCE(SUM(fg.max_score),0)::float8 FROM final_grade fg JOIN official q ON q.id=fg.question_id WHERE fg.tenant_id=sub.tenant_id AND fg.submission_id=sub.id AND fg.deleted_at IS NULL))>0.000001
   OR EXISTS (SELECT 1 FROM final_grade fg JOIN official q ON q.id=fg.question_id WHERE fg.tenant_id=sub.tenant_id AND fg.submission_id=sub.id AND fg.deleted_at IS NULL AND ABS(fg.max_score::float8-q.score)>0.000001)
 )`},
-		{"score_integrity_mismatch", "submission total does not match final-grade total", "grades", `SELECT COUNT(*) FROM submission_grade sg LEFT JOIN LATERAL (SELECT COALESCE(SUM(fg.score), 0)::float8 AS total FROM final_grade fg WHERE fg.tenant_id = sg.tenant_id AND fg.exam_id = sg.exam_id AND fg.submission_id = sg.submission_id AND fg.deleted_at IS NULL) fg ON true WHERE sg.tenant_id = $1 AND sg.exam_id = $2::uuid AND sg.deleted_at IS NULL AND abs(sg.total_score::float8 - fg.total) > 0.000001`},
+		{"score_integrity_mismatch", "submission total does not match final-grade total", "grades", `SELECT COUNT(*) FROM submission_grade sg LEFT JOIN LATERAL (
+  SELECT COALESCE(SUM(fg.score),0)::float8 AS total FROM final_grade fg
+  WHERE fg.tenant_id=sg.tenant_id AND fg.exam_id=sg.exam_id AND fg.submission_id=sg.submission_id AND fg.deleted_at IS NULL
+    AND EXISTS (SELECT 1 FROM exam_question_snapshot eqs
+      WHERE eqs.tenant_id=fg.tenant_id AND eqs.exam_id=fg.exam_id AND eqs.question_id=fg.question_id)
+) fg ON true WHERE sg.tenant_id=$1::uuid AND sg.exam_id=$2::uuid AND sg.deleted_at IS NULL
+  AND ABS(sg.total_score::float8-fg.total)>0.000001`},
 	}
 	for _, check := range checks {
 		count, err := scalar(ctx, tx, check.query, tenantID, examID)

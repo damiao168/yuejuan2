@@ -1,7 +1,6 @@
 from contextlib import nullcontext
 
 import pytest
-
 from grading_agent.errors import AgentError
 from grading_agent.math_rubric_draft import MathRubricDraftGenerator
 

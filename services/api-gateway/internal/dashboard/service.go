@@ -211,7 +211,7 @@ func (s *Service) Summary(ctx context.Context, user auth.User, accessScope auth.
 		return result.ActiveExams[i].CreatedAt.After(result.ActiveExams[j].CreatedAt)
 	})
 	// 阻塞项只从统计结果推导，前端可据此直接跳转处理会卡住阅卷或成绩发布的问题。
-result.BlockingIssues = blockingIssues(result.Statistics)
+	result.BlockingIssues = blockingIssues(result.Statistics)
 	return result, nil
 }
 

@@ -33,7 +33,7 @@ func main() {
 		return
 	}
 	// STORY-060 账号只允许在 test 环境批量创建，避免运维参数误用于真实租户。
-if len(os.Args) > 1 && os.Args[1] == "provision-story060-users" {
+	if len(os.Args) > 1 && os.Args[1] == "provision-story060-users" {
 		if cfg.Service.Environment != "test" {
 			logg.Error(context.Background(), "STORY-060 provisioning refused outside test", nil)
 			os.Exit(1)

@@ -4,7 +4,6 @@ import pickle
 import time
 
 import pytest
-
 from math_verification_worker import server
 from math_verification_worker.verifier import VerificationError
 

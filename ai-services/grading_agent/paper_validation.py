@@ -6,7 +6,6 @@ import re
 from .errors import AgentError
 from .paper_schema import FORMULA_SUBJECTS, QUESTION_TYPES, ROLES
 
-
 # A model may still confuse points earned in a word problem with exam marks.
 # This conservative direct-text guard only clears a proposed mark when none of
 # the cited documents contains any explicit question/section mark notation.

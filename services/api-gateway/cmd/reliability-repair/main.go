@@ -138,7 +138,7 @@ ORDER BY session.command_completed_at,session.id`, tenantID, importID, examID)
 	before, _ := json.MarshalIndent(map[string]any{"mode": map[bool]string{true: "apply", false: "dry-run"}[apply], "count": len(findings) + len(commandFindings), "paper_import_findings": findings, "exam_command_findings": commandFindings}, "", "  ")
 	fmt.Println(string(before))
 	// 先让操作者核对发现项；干跑阶段不写数据库。
-if !apply {
+	if !apply {
 		return
 	}
 	appliedMutations := 0

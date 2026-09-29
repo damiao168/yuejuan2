@@ -23,7 +23,7 @@ func (s *PostgresOrganizationSummaryStore) DashboardOrganizationSummary(ctx cont
 	}
 	result := OrganizationStatistics{}
 	// 每个组织计数都先带租户条件，再追加学校/年级/班级范围，避免跨范围统计。
-queries := []struct {
+	queries := []struct {
 		target *int
 		base   string
 		filter scopedColumns

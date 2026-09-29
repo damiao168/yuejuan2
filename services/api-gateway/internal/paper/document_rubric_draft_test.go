@@ -90,7 +90,7 @@ func TestSuggestMathRubricDraftRejectsReviewSavedDuringInference(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(MathRubricDraftResponse{SuggestedRubricCandidates: []MathRubricDraftSuggestion{{
 			QuestionNoNormalized: "1", MaxScore: &maximum, Origin: "ai_suggestion_from_solution", Status: "review_required",
 			Provenance: map[string]any{"solution_candidate_id": "s1"},
-			Points: []MathRubricDraftPoint{{ID: "p1", Description: "先计算", EvidenceStepIDs: []string{"step-1"}, SourceRefs: []PaperImportSourceRef{{SourceID: "source-1"}}}},
+			Points:     []MathRubricDraftPoint{{ID: "p1", Description: "先计算", EvidenceStepIDs: []string{"step-1"}, SourceRefs: []PaperImportSourceRef{{SourceID: "source-1"}}}},
 		}}})
 	}))
 	defer server.Close()
@@ -111,7 +111,7 @@ func TestMathRubricDraftRejectsUnboundModelResponse(t *testing.T) {
 			result := MathRubricDraftResponse{SuggestedRubricCandidates: []MathRubricDraftSuggestion{{
 				QuestionNoNormalized: "1", MaxScore: &score, Origin: "ai_suggestion_from_solution", Status: "review_required",
 				Provenance: map[string]any{"solution_candidate_id": "s1"},
-				Points: []MathRubricDraftPoint{{ID: "p1", Description: "Solve correctly", SuggestedScore: &pointScore, EvidenceStepIDs: []string{"step-1"}, SourceRefs: solution.SourceRefs}},
+				Points:     []MathRubricDraftPoint{{ID: "p1", Description: "Solve correctly", SuggestedScore: &pointScore, EvidenceStepIDs: []string{"step-1"}, SourceRefs: solution.SourceRefs}},
 			}}}
 			suggestion := &result.SuggestedRubricCandidates[0]
 			switch invalid {

@@ -146,9 +146,11 @@ class HTTPTests(unittest.TestCase):
             headers={"Content-Type": "application/json", "Authorization": f"Bearer {self.settings.service_token}"},
             method="POST",
         )
-        with patch("grading_agent.server.paper_model", return_value=DraftModel()):
-            with urlrequest.urlopen(request, timeout=2) as response:
-                result = json.loads(response.read())
+        with (
+            patch("grading_agent.server.paper_model", return_value=DraftModel()),
+            urlrequest.urlopen(request, timeout=2) as response,
+        ):
+            result = json.loads(response.read())
         draft = result["suggested_rubric_candidates"][0]
         self.assertEqual(draft["status"], "review_required")
         self.assertIsNone(draft["max_score"])

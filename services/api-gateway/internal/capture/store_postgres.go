@@ -914,6 +914,7 @@ func scanFile(r scanner) (File, error) {
 	}
 	return x, nil
 }
+
 // 页面附带的 JSON 证据来自历史行；解析失败不让整条记录消失，空值统一成可安全遍历的空集合。
 func scanPage(r scanner) (Page, error) {
 	var x Page

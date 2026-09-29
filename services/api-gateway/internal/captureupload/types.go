@@ -24,6 +24,7 @@ var (
 const DefaultChunkSize int64 = 4 * 1024 * 1024
 
 const completionTimeout = 2 * time.Minute
+
 // 完成租约长于单次请求超时；请求退出后的清理仍用令牌区分新旧持有者。
 const completionLeaseDuration = 3 * time.Minute
 

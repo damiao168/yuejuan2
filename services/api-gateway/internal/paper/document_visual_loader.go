@@ -14,6 +14,7 @@ import (
 )
 
 const maxDocumentVisualPageBytes = 8 << 20
+
 // 此限额统计编码前的图像字节，Base64 和 JSON 封装还会增加请求大小。
 const maxDocumentVisualPayloadBytes = 32 << 20
 

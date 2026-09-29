@@ -231,11 +231,31 @@ ON CONFLICT(tenant_id,exam_id) DO UPDATE SET release_id=EXCLUDED.release_id,upda
 VALUES($1,$2::uuid,'UNPUBLISHED','short_answer',1,99,'active') RETURNING id::text`, f.TenantID, f.ExamID).Scan(&unpublishedQuestionID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.ExecContext(ctx, `INSERT INTO answer_segment(tenant_id,submission_id,submission_page_id,question_id,question_no,bbox,source,status)
-VALUES($1,$2::uuid,$3::uuid,$4::uuid,'UNPUBLISHED','{"x":0,"y":0,"width":1,"height":1}','configured_answer_area','accepted')`, f.TenantID, answers[0].submission, answers[0].page, unpublishedQuestionID); err != nil {
+	var unpublishedSegmentID string
+	if err := db.QueryRowContext(ctx, `INSERT INTO answer_segment(tenant_id,submission_id,submission_page_id,question_id,question_no,bbox,source,status)
+VALUES($1,$2::uuid,$3::uuid,$4::uuid,'UNPUBLISHED','{"x":0,"y":0,"width":1,"height":1}','configured_answer_area','accepted') RETURNING id::text`, f.TenantID, answers[0].submission, answers[0].page, unpublishedQuestionID).Scan(&unpublishedSegmentID); err != nil {
 		t.Fatal(err)
 	}
-	// 只有答题分段、没有发布题目清单关联时，整页图片也必须拒绝返回。
+	// 冻结后新增的题目没有进入正式清单；无论只有分段还是又产生终评，都不应阻断发布或混入发布事实。
+	gate, err := svc.Gate(ctx, f.TenantID, f.ExamID)
+	if err != nil || !gate.Passed {
+		t.Fatalf("unpublished segment gate: %+v %v", gate, err)
+	}
+	var unpublishedFinalGradeID string
+	if err := db.QueryRowContext(ctx, `INSERT INTO final_grade(
+  tenant_id,exam_id,question_id,question_no,answer_segment_id,submission_id,anonymous_code,
+  score,max_score,source,status,locked,created_by)
+SELECT fg.tenant_id,fg.exam_id,$3::uuid,'UNPUBLISHED',$4::uuid,fg.submission_id,fg.anonymous_code,
+  1,1,'rule_auto','confirmed',false,$5::uuid
+FROM final_grade fg WHERE fg.tenant_id=$1::uuid AND fg.submission_id=$2::uuid AND fg.deleted_at IS NULL
+LIMIT 1 RETURNING id::text`, f.TenantID, answers[0].submission, unpublishedQuestionID, unpublishedSegmentID, f.AdminID).Scan(&unpublishedFinalGradeID); err != nil {
+		t.Fatal(err)
+	}
+	gate, err = svc.Gate(ctx, f.TenantID, f.ExamID)
+	if err != nil || !gate.Passed {
+		t.Fatalf("unpublished final grade gate: %+v %v", gate, err)
+	}
+	// 题目没有发布清单关联时，即使存在答题分段和终评，整页图片也必须拒绝返回。
 	if _, err := reader.StudentPaperPageImage(ctx, f.TenantID, f.ExamID, answers[0].student, unpublishedQuestionID, false); !errors.Is(err, scorerelease.ErrNotFound) {
 		t.Fatalf("unpublished whole-page image: %v", err)
 	}
@@ -249,6 +269,11 @@ VALUES($1,$2::uuid,$3::uuid,$4::uuid,'UNPUBLISHED','{"x":0,"y":0,"width":1,"heig
 	totals, err := svc.Create(ctx, f.TenantID, f.ExamID, f.AdminID, scorerelease.CreateInput{Source: scorerelease.SourceMigration, Reason: "totals only", IdempotencyKey: "repair-release-totals"})
 	if err != nil {
 		t.Fatal(err)
+	}
+	var unpublishedFacts int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM score_release_question
+WHERE tenant_id=$1::uuid AND release_id=$2::uuid AND question_id=$3::uuid`, f.TenantID, totals.ID, unpublishedQuestionID).Scan(&unpublishedFacts); err != nil || unpublishedFacts != 0 {
+		t.Fatalf("unpublished release facts=%d: %v", unpublishedFacts, err)
 	}
 	if _, err = svc.Publish(ctx, f.TenantID, totals.ID, f.AdminID); err != nil {
 		t.Fatal(err)

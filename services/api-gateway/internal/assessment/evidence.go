@@ -19,7 +19,7 @@ type CreateScoringEvidenceInput struct {
 	Payload                map[string]any `json:"payload"`
 	BoundingBox            *BoundingBox   `json:"bbox,omitempty"`
 	// Quality 取值为 0 到 1；nil 表示未提供质量数据，不应当作满质量。
-	Quality                *float64       `json:"quality,omitempty"`
+	Quality *float64 `json:"quality,omitempty"`
 }
 
 type ScoringEvidence struct {

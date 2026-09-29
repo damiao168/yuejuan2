@@ -12,9 +12,9 @@ import (
 )
 
 type RedisLoginFailureLimiter struct {
-	client   redis.UniversalClient
-	limit    int
-	window   time.Duration
+	client redis.UniversalClient
+	limit  int
+	window time.Duration
 	// 本机 fallback 仅维持退化期间的局部限流；是否拒绝登录由上层结合 Degraded 决定。
 	fallback *LoginFailureLimiter
 	health   *redisLoginLimiterHealth

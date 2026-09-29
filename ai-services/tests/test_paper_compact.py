@@ -1,5 +1,4 @@
 import pytest
-
 from grading_agent.errors import AgentError
 from grading_agent.paper_compact import (
     MAX_BLOCKS_PER_CHUNK,

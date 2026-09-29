@@ -1,3 +1,5 @@
+import { getUserErrorMessage } from "../../api/userError";
+
 export function isStructuredAnswer(value: unknown): value is unknown[] | Record<string, unknown> {
   return value !== null && typeof value === "object";
 }
@@ -20,6 +22,6 @@ export function importAnswerShapeError(value: unknown, original: unknown): strin
     resolveImportAnswerValue(value, original);
     return undefined;
   } catch (error) {
-    return error instanceof Error ? error.message : "标准答案格式不正确";
+    return getUserErrorMessage(error, "标准答案格式不正确");
   }
 }

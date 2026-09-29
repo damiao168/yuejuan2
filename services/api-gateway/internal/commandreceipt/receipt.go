@@ -51,6 +51,7 @@ func fingerprint(operation, target string, input any) (string, error) {
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:]), nil
 }
+
 // Load 在业务事务内锁定命令身份并读取原结果；同一命令键改变输入时返回 ErrConflict。
 // 调用方必须在同一事务内完成业务写入和 Save，确保结果回执与业务事实一起提交。
 func Load(ctx context.Context, tx *sql.Tx, tenant, actor, operation, target string, input any, out any) (bool, error) {

@@ -85,7 +85,7 @@ func (s *Service) MaybeIssue(ctx context.Context, tenantID, examID, questionID, 
 	}
 	policy, err := s.store.GetPolicy(ctx, tenantID, examID, questionID)
 	// 没有策略或策略已暂停时放行普通队列，不能因为 Seed 配置缺失阻塞阅卷。
-if errors.Is(err, ErrNotFound) || policy.Status == PolicyPaused {
+	if errors.Is(err, ErrNotFound) || policy.Status == PolicyPaused {
 		return Task{}, false, nil
 	}
 	if err != nil {
@@ -103,7 +103,7 @@ if errors.Is(err, ErrNotFound) || policy.Status == PolicyPaused {
 		return Task{}, false, ErrGoldSetMissing
 	}
 	// Gold 集合发生变化时拒绝继续抽样，避免同一策略混用不同版本的参考答案。
-if fingerprint != policy.ActiveGoldFingerprint {
+	if fingerprint != policy.ActiveGoldFingerprint {
 		return Task{}, false, ErrGoldSetChanged
 	}
 	gold := samples[s.random.Intn(len(samples))]
@@ -112,7 +112,7 @@ if fingerprint != policy.ActiveGoldFingerprint {
 		next += s.random.Intn(width)
 	}
 	// 随机数只负责给出本次决策；游标递增和任务创建必须由存储层原子完成，避免并发重复发题。
-return s.store.AdvanceAndMaybeCreate(ctx, tenantID, IssueDecision{
+	return s.store.AdvanceAndMaybeCreate(ctx, tenantID, IssueDecision{
 		Policy: policy, QuestionNo: strings.TrimSpace(questionNo), GraderID: graderID, Gold: gold,
 		Probability: s.random.Float64(), NextInterval: next, Now: s.now(),
 	})
@@ -140,7 +140,7 @@ func (s *Service) TrySubmit(ctx context.Context, tenantID, taskID, graderID stri
 	selections := cloneObject(input.RubricSelections)
 	agreement, detail := compareCriteria(task.ExpectedCriteria, selections)
 	// 扩展题按 trait 记录，其他题按 rubric criterion 记录；两种数据对应不同的质量统计维度。
-kind := ObservationCriterion
+	kind := ObservationCriterion
 	traits, criteria := map[string]any(nil), detail
 	if task.ArchetypeCode == "extended_response" {
 		kind, traits, criteria = ObservationTrait, selections, nil
@@ -152,7 +152,7 @@ kind := ObservationCriterion
 		AbsoluteError: math.Abs(input.Score - task.ReferenceScore), RubricAgreement: agreement,
 		ObservationKind: kind, TraitObservation: traits, CriterionObservation: criteria, ObservedAt: now}
 	// 完成时保存内部参考信息供审计，但接口只返回任务状态和版本，不能泄露 Gold 答案。
-completed, _, err := s.store.CompleteTask(ctx, tenantID, taskID, graderID, input, observation)
+	completed, _, err := s.store.CompleteTask(ctx, tenantID, taskID, graderID, input, observation)
 	if err != nil {
 		return SubmitReceipt{}, true, err
 	}

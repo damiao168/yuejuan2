@@ -27,13 +27,13 @@ var (
 )
 
 type Task struct {
-	ID                   string         `json:"id"`
-	TenantID             string         `json:"tenant_id"`
-	TaskType             string         `json:"task_type"`
-	QueueName            string         `json:"queue_name"`
-	SourceType           string         `json:"source_type"`
-	SourceID             string         `json:"source_id"`
-	Status               string         `json:"status"`
+	ID         string `json:"id"`
+	TenantID   string `json:"tenant_id"`
+	TaskType   string `json:"task_type"`
+	QueueName  string `json:"queue_name"`
+	SourceType string `json:"source_type"`
+	SourceID   string `json:"source_id"`
+	Status     string `json:"status"`
 	// Priority 数值越小越优先；同优先级按创建时间和 ID 排序。
 	Priority             int            `json:"priority"`
 	Payload              map[string]any `json:"payload"`

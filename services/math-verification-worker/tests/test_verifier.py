@@ -1,5 +1,4 @@
 import pytest
-
 from math_verification_worker.parser import parse_restricted_latex
 from math_verification_worker.verifier import (
     VerificationError,
