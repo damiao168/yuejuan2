@@ -8,8 +8,8 @@ dependencies = [
   "numpy==2.4.6",
   "opencv-python-headless==5.0.0.93",
   "pillow==12.3.0",
-  "pypdfium2==5.12.1",
-  "zxing-cpp==3.1.0",
+  "pypdfium2==5.13.0",
+  "zxing-cpp==3.1.1",
 ]
 
 [build-system]
