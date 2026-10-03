@@ -8,6 +8,6 @@
     "./styles.css": "./src/styles.css"
   },
   "peerDependencies": {
-    "react": "^19.0.0"
+    "react": "^19.3.0"
   }
 }
