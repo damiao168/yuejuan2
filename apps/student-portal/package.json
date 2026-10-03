@@ -12,14 +12,14 @@
   "dependencies": {
     "@edugrade/design-tokens": "0.1.0",
     "@edugrade/sdk": "0.1.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/react": "^16.3.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^5.0.0",
     "jsdom": "^26.1.0",
     "typescript": "^5.7.0",
